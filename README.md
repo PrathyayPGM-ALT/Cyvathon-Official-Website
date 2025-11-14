@@ -10,8 +10,8 @@ The site is built using simple, clean HTML/CSS and is designed to act as the pub
 The Cyvathon Official Website is a lightweight static website that introduces visitors to:
 
 - The Cyvathon world and lore  
-- Characters, factions, and story elements  
-- Game updates and announcements  
+- Code Conquers
+- Our community of creativity
 - Artwork, media, and visual elements (as you expand the project)
 
 This project is ideal for learning and practising:
@@ -29,8 +29,6 @@ This project is ideal for learning and practising:
 ```text
 Cyvathon-Official-Website/
 ├── index.html
-├── assets/        (images, icons, logos)
-├── styles/        (CSS files)
 └── README.md
 ```
 
@@ -122,13 +120,12 @@ This is your official home for Cyvathon — expand it as the game evolves.
 
 ## 📜 License
 
-No license file has been added yet.  
-If you want others to reuse or contribute freely, consider adding a **LICENSE** file (MIT recommended).
+https://cyvathon.neocities.org/
 
 ---
 
 ## 🌟 Acknowledgement
 
-Cyvathon is a creative universe built by **Prathyay**, blending imagination, game design, and storytelling.  
+Cyvathon is a creative universe built by **Prathyay** and **VeeR**, blending imagination, coding, and creativity.  
 This website is the first digital gateway into that universe.
 
