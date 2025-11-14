@@ -126,6 +126,6 @@ https://cyvathon.neocities.org/
 
 ## 🌟 Acknowledgement
 
-Cyvathon is a creative universe built by **Prathyay** and **VeeR**, blending imagination, coding, and creativity.  
+Cyvathon is a creative universe built by **Prathyay** and **Veer**, blending imagination, coding, and creativity.  
 This website is the first digital gateway into that universe.
 
