@@ -1,0 +1,728 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyvathon - Code. Conquer. Crush The Competition</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a192f 0%, #112240 100%);
+            color: #e6f1ff;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        header {
+            background: rgba(7, 15, 33, 0.95);
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: transform 0.3s;
+        }
+        
+
+        
+        .logo h1 {
+            font-size: 2rem;
+            background: linear-gradient(90deg, #64ffda 0%, #00a8cc 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
+        }
+        
+        .logo-icon {
+            color: #64ffda;
+            font-size: 2.5rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .nav-links a {
+            color: #ccd6f6;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            position: relative;
+            padding: 0.5rem 0;
+        }
+        
+        .nav-links a:hover {
+            color: #64ffda;
+        }
+        
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #64ffda;
+            transition: width 0.3s ease;
+        }
+        
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+        
+        .hero {
+            text-align: center;
+            padding: 8rem 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(100, 255, 218, 0.1) 0%, transparent 70%);
+            z-index: -1;
+        }
+        
+        .hero h2 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(90deg, #64ffda 0%, #00a8cc 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: fadeInUp 1s ease;
+        }
+        
+        .hero p {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: #a8b2d1;
+            animation: fadeInUp 1s ease 0.2s both;
+        }
+        
+        .cybucks {
+            background: rgba(100, 255, 218, 0.1);
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            display: inline-block;
+            margin: 1rem 0;
+            font-weight: bold;
+            color: #64ffda;
+            border: 1px solid rgba(100, 255, 218, 0.3);
+            animation: fadeInUp 1s ease 0.4s both;
+        }
+        
+        .section {
+            padding: 6rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: 2.5rem;
+            color: #ccd6f6;
+            position: relative;
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #64ffda, transparent);
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+        
+        .feature-card {
+            background: rgba(23, 42, 69, 0.5);
+            padding: 2.5rem 2rem;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid rgba(100, 255, 218, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(100, 255, 218, 0.05) 0%, transparent 100%);
+            z-index: -1;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(100, 255, 218, 0.3);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            color: #64ffda;
+            margin-bottom: 1.5rem;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #ccd6f6;
+        }
+        
+        .feature-card p {
+            color: #a8b2d1;
+        }
+        
+        .rules {
+            background: rgba(7, 15, 33, 0.9);
+            border-radius: 10px;
+            padding: 3rem;
+            margin-top: 2rem;
+            border: 1px solid rgba(100, 255, 218, 0.1);
+        }
+        
+        .rule {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+            border-left: 3px solid #64ffda;
+            transition: transform 0.3s;
+        }
+        
+        .rule:hover {
+            transform: translateX(5px);
+        }
+        
+        .team {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+        
+        .member {
+            text-align: center;
+            background: rgba(23, 42, 69, 0.5);
+            padding: 2rem;
+            border-radius: 10px;
+            transition: transform 0.3s;
+            border: 1px solid rgba(100, 255, 218, 0.1);
+        }
+        
+        .member:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .member-img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 1rem;
+            border: 3px solid #64ffda;
+
+        }
+        
+
+        
+        .allies-section {
+            text-align: center;
+            background: rgba(7, 15, 33, 0.9);
+            padding: 3rem;
+            border-radius: 10px;
+            margin-top: 3rem;
+            border: 1px solid rgba(100, 255, 218, 0.1);
+        }
+        
+        .allies-title {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: #64ffda;
+        }
+        
+        .allies-text {
+            font-size: 1.2rem;
+            color: #a8b2d1;
+            margin-bottom: 1rem;
+        }
+        
+        .pufferfish-logo {
+            font-size: 4rem;
+            color: #64ffda;
+            margin: 0rem 7;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: rgba(7, 15, 33, 0.9);
+            margin-top: 5rem;
+            border-top: 1px solid rgba(100, 255, 218, 0.1);
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 1.5rem 0;
+        }
+        
+        .footer-links a {
+            color: #a8b2d1;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer-links a:hover {
+            color: #64ffda;
+        }
+        
+        .chatbase-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #64ffda 0%, #00a8cc 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            transition: transform 0.3s;
+        }
+        
+        .chatbase-widget:hover {
+            transform: scale(1.1);
+        }
+        
+        .chat-icon {
+            color: #0a192f;
+            font-size: 1.8rem;
+        }
+        
+        .chat-window {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 450px;
+            height: 650px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: none;
+            overflow: hidden;
+            flex-direction: column;
+            animation: slideInUp 0.3s ease;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #64ffda 0%, #00a8cc 100%);
+            color: #0a192f;
+            padding: 1rem;
+            font-weight: bold;
+            text-align: center;
+            height: 50px;
+            flex-shrink: 0;
+        }
+        
+        .chat-iframe {
+            width: 100%;
+            height: calc(100% - 50px);
+            border: none;
+            flex-grow: 1;
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero h2 {
+                font-size: 2.5rem;
+            }
+            
+            .hero p {
+                font-size: 1.2rem;
+            }
+            
+            .nav-links {
+                gap: 1rem;
+            }
+            
+            .features, .team {
+                grid-template-columns: 1fr;
+            }
+            
+            .chat-window {
+                width: 300px;
+                height: 400px;
+            }
+            
+            .section {
+                padding: 4rem 1.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .logo h1 {
+                font-size: 1.5rem;
+            }
+            
+            .logo-icon {
+                font-size: 2rem;
+            }
+            
+            .hero {
+                padding: 6rem 1rem;
+            }
+            
+            .hero h2 {
+                font-size: 2rem;
+            }
+            
+            .hero p {
+                font-size: 1rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+            
+            .rules {
+                padding: 1.5rem;
+            }
+            
+            .chat-window {
+                width: 280px;
+                height: 380px;
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">
+                <i class="fas fa-code logo-icon"></i>
+                <h1>CYVATHON</h1>
+            </div>
+            <div class="nav-links">
+                <a href="#about">About</a>
+                <a href="#rules">Rules</a>
+                <a href="#team">Team</a>
+                <a href="#cybucks">Economy</a>
+                <a href='#allies'>Religion</a>
+                <a href="https://docs.google.com/forms/d/19x4K8DLgznW63x0Zymy9wVwa5edBY41qgy0c3bGELKE/edit?pli=1">Alliance Requests</a>
+                <a href="https://www.youtube.com/@Cyvathon">Our Channel</a>
+                
+            </div>
+        </nav>
+    </header>
+    
+    <section class="hero">
+        <h2>Code. Conquer. Cause Creativity.</h2>
+        <p>We're Cyvathon - a micronation focused on coding excellence and building a thriving community.</p>
+        <div class="cybucks">
+            <i class="fas fa-coins"></i> 1 Cybuck = 5 Pufferbuck
+        </div>
+    </section>
+    
+    <section class="section" id="about">
+        <h2 class="section-title">What We Do</h2>
+        <div class="features">
+            <div class="feature-card">
+                <i class="fas fa-laptop-code feature-icon"></i>
+                <h3>Python, C, And Web Development</h3>
+                <p>We build high-performance applications and systems in Python and C, and create stunning websites and web applications using modern technologies.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-terminal feature-icon"></i>
+                <h3>Cybersecurity & Ethical Hacking</h3>
+                <p>We explore cybersecurity concepts and ethical hacking techniques for educational purposes and system protection.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-earth-americas feature-icon"></i>
+                <h3>Inclusive Community</h3>
+                <p>We welcome and support people from all backgrounds, fostering an environment of equality and collaboration.</p>
+            </div>
+        </div>
+    </section>
+    
+    <section class="section" id="rules">
+        <h2 class="section-title">Our Rules</h2>
+        <div class="rules">
+            <div class="rule">
+                <h3>Rule 1</h3>
+                <p>Respect all nations and communities, including our allies.</p>
+            </div>
+            <div class="rule">
+                <h3>Rule 2</h3>
+                <p>Support the Cyvathon community and its members.</p>
+            </div>
+            <div class="rule">
+                <h3>Rule 3</h3>
+                <p>Only accept Cybucks and Pufferbucks in our economy.</p>
+            </div>
+            <div class="rule">
+                <h3>Rule 4</h3>
+                <p>Be respectful to all nations/communities and their members.</p>
+            </div>
+            <div class="rule">
+                <h3>Rule 5</h3>
+                <p>Follow the laws and regulations of Cyvathon.</p>
+            </div>
+            <div class="rule">
+                <h3>Rule 6</h3>
+                <p>No inappropriate language or behavior.</p>
+            </div>
+            <div class="rule">
+                <h3>Rule 7</h3>
+                <p>According to our zoning laws, attacks are not permitted.</p>
+            </div>
+            <div class="rule">
+                <h3>Rule 8</h3>
+                <p>Though we allow anyone into our community, we recommend you practice chairism - as it is the best.</p>
+            </div>
+            <div class="rule">
+                <h3>Rule 9</h3>
+                <p>If you don't follow the rule stated above, you might have to pay extra tax.</p>
+            </div>
+            <div class="rule">
+                <h3>Rule 10</h3>
+                <p>No theft, murder or illegal activities.</p>
+            </div>
+        </div>
+    </section>
+    
+    <section class="section" id="team">
+        <h2 class="section-title">Our Team</h2>
+        <div class="team">
+        
+            <div class="member">
+                <img src="https://wallpapercave.com/wp/wp6245385.jpg" alt="Chundi" class="member-img">
+                <h3>Chundi</h3>
+                <p>Head Of IT</p>
+              </div>
+            </div>
+            <div class="member">
+                <img src="https://images.unsplash.com/photo-1486286701208-1d58e9338013?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Zm9vdGJhbGx8ZW58MHx8MHx8fDA%3D" alt="Vivaan" class="member-img">
+                <h3>Vivaan</h3>
+                <p>Head of Army</p>
+            </div>
+            <div class="member">
+                <img src="https://i.pinimg.com/1200x/1f/67/93/1f67931cdaa6ae7772dd6aed9b49360e.jpg" alt="Veer" class="member-img">
+                <h3>Veer</h3>
+                <p>CEO, CoFounder</p>
+            </div>
+            <div class="member">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTc-Ova3BLiK3RGtvYN8SJx7ksayWzEKLXD8Q&s" alt="Prathyay" class="member-img">
+                <h3>Prathyay</h3>
+                <p>CoFounder, Spokesperson, BOD, Head Of Hacking</p>
+            </div>
+
+
+            <div class="member">
+                <img src="https://woz-u.com/wp-content/uploads/2022/06/Evolution-of-Coding-scaled.jpg" alt="Sidhart" class="member-img">
+                <h3>Sidhart Banglani</h3>
+                <p>Head of Coding Department</p>
+            </div>
+
+            
+
+        </div>
+    </section>
+    
+    <section class="section" id="cybucks">
+        <h2 class="section-title">Cybucks Economy</h2>
+        <div class="features">
+            <div class="feature-card">
+                <i class="fas fa-money-bill-wave feature-icon"></i>
+                <h3>Digital Currency</h3>
+                <p>Cybucks (CB) are our entirely web-based currency, powering the Cyvathon economy with secure transactions.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-exchange-alt feature-icon"></i>
+                <h3>Exchange Rate</h3>
+                <p>1 Cybuck = 5 Pufferbuck, ensuring stable economic relationships with our allies.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-money-bill-trend-up feature-icon"></i>
+                <h3>Economic Growth</h3>
+                <p>GDP: 300,000 CB with official payday once every week to support our community members.</p>
+            </div>
+        </div>
+    </section>
+    
+    <section class="section" id="allies">
+        <h2 class="section-title">Our Valued Religion</h2>
+        <div class="allies-section">
+            
+            <h3 class="allies-title">Chairism</h3>
+            <p class="allies-text">We're proud to maintain strong relationships with the prophets of the chair.</p>
+            <p class="allies-text">Our love for the chair goes on as we stay loyal.</p>
+            <p class="allies-text">Together, we will say ALL HAIL THE CHAIR.</p>
+        </div>
+    </section>
+    
+    <footer>
+        <p>© 2025 Cyvathon | All Rights Reserved</p>
+        <p>Official AI of the Cyvathon Micronation</p>
+        <div class="footer-links">
+            <a href="#about">About</a>
+            <a href="#rules">Rules</a>
+            <a href="#team">Team</a>
+            <a href="#cybucks">Economy</a>
+            <a href="#allies">Religion</a>
+        </div>
+    </footer>
+    
+    <div class="chatbase-widget" id="chatbase-toggle">
+        <i class="fas fa-robot chat-icon"></i>
+    </div>
+    
+    <div class="chat-window" id="chat-window">
+        <div class="chat-header">Cyvathon AI Assistant</div>
+        <iframe class="chat-iframe" src="https://www.chatbase.co/chatbot-iframe/ycmJf5eRJPQVimvT1zY0M"></iframe>
+    </div>
+
+    <script>
+        // Chatbot toggle functionality
+        document.getElementById('chatbase-toggle').addEventListener('click', function() {
+            const chatWindow = document.getElementById('chat-window');
+            if (chatWindow.style.display === 'block') {
+                chatWindow.style.display = 'none';
+            } else {
+                chatWindow.style.display = 'block';
+            }
+        });
+        
+        // Add interactive features to cards
+        document.querySelectorAll('.feature-card, .member').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.boxShadow = '0 10px 30px rgba(100, 255, 218, 0.2)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.boxShadow = 'none';
+            });
+        });
+        
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Close chat window if open
+                    document.getElementById('chat-window').style.display = 'none';
+                }
+            });
+        });
+        
+        // Add animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+        
+        // Observe elements for animation
+        document.querySelectorAll('.feature-card, .member, .rule').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
