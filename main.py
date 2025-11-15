@@ -4,9 +4,8 @@ from flask_cors import CORS
 import os
 import logging
 
-# ----------------- FLASK + CORS SETUP -----------------
-
-app = Flask(__name__)
+# Serve static files (like bank.html) from the repo root
+app = Flask(__name__, static_folder=".", static_url_path="")
 CORS(app)
 
 logging.basicConfig(level=logging.INFO)  # Enable info level logging
@@ -19,8 +18,21 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ----------------- AUTH / LOGIN -----------------------
 
+# ---------- PAGES ----------
+
+@app.route("/bank")
+def bank_page():
+    # This serves bank.html from the repo root
+    return app.send_static_file("bank.html")
+
+
+@app.route("/")
+def home():
+    return "Cybucks backend running!"
+
+
+# ---------- API: AUTH & BALANCE ----------
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -37,7 +49,7 @@ def login():
 
         result = supabase.table("cybucks").select("*").eq("username", username).execute()
 
-        # Register new user if not exists
+        # New user: create with 0 balance
         if not result.data:
             supabase.table("cybucks").insert({
                 "username": username,
@@ -60,94 +72,7 @@ def login():
         return jsonify(success=False, error=str(e)), 500
 
 
-# ----------------- LIST USERS (FOR DROPDOWN) ----------
-
-
-@app.route("/users", methods=["GET"])
-def get_users():
-    """Return list of all usernames so frontend can build dropdown."""
-    try:
-        result = supabase.table("cybucks").select("username").execute()
-        usernames = [row["username"] for row in result.data]
-        return jsonify(success=True, users=usernames)
-    except Exception as e:
-        logging.exception("Exception in /users")
-        return jsonify(success=False, error=str(e)), 500
-
-
-# ----------------- TRANSFER CYBUCKS -------------------
-
-
-@app.route("/transfer", methods=["POST"])
-def transfer():
-    """
-    Body: { "from_username": "...", "to_username": "...", "amount": 10 }
-    Moves Cybucks from one user to another.
-    """
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify(success=False, error="Missing JSON body"), 400
-
-        from_username = data.get("from_username")
-        to_username = data.get("to_username")
-        amount = data.get("amount")
-
-        if not from_username or not to_username or amount is None:
-            return jsonify(success=False, error="from_username, to_username and amount are required"), 400
-
-        if from_username == to_username:
-            return jsonify(success=False, error="You cannot send Cybucks to yourself"), 400
-
-        amount = int(amount)
-        if amount <= 0:
-            return jsonify(success=False, error="Amount must be positive"), 400
-
-        # Fetch both users
-        from_res = supabase.table("cybucks").select("*").eq("username", from_username).execute()
-        to_res = supabase.table("cybucks").select("*").eq("username", to_username).execute()
-
-        if not from_res.data:
-            return jsonify(success=False, error="Sender not found"), 404
-        if not to_res.data:
-            return jsonify(success=False, error="Recipient not found"), 404
-
-        from_user = from_res.data[0]
-        to_user = to_res.data[0]
-
-        if from_user["balance"] < amount:
-            return jsonify(success=False, error="Insufficient funds"), 400
-
-        new_from_balance = from_user["balance"] - amount
-        new_to_balance = to_user["balance"] + amount
-
-        # Update balances (simple two-step update – fine for your use case)
-        supabase.table("cybucks").update({"balance": new_from_balance}).eq(
-            "username", from_username
-        ).execute()
-
-        supabase.table("cybucks").update({"balance": new_to_balance}).eq(
-            "username", to_username
-        ).execute()
-
-        logging.info(
-            f"Transfer {amount} from {from_username} to {to_username}. "
-            f"New balances: {from_username}={new_from_balance}, {to_username}={new_to_balance}"
-        )
-
-        return jsonify(success=True, balance=new_from_balance)
-
-    except Exception as e:
-        logging.exception("Exception in /transfer")
-        return jsonify(success=False, error=str(e)), 500
-
-
-# ----------------- OPTIONAL: KEEP OLD ENDPOINTS -------
-
-# You can keep /deposit and /withdraw if you still want them for future,
-# or delete them if you are sure you will not use them. For now I am leaving
-# them as they are; the frontend just will not call them.
-
+# ---------- API: OPTIONAL DEPOSIT/WITHDRAW (not used by UI, but kept) ----------
 
 @app.route("/deposit", methods=["POST"])
 def deposit():
@@ -222,13 +147,86 @@ def withdraw():
         return jsonify(success=False, error=str(e)), 500
 
 
-# ----------------- ROOT -------------------------------
+# ---------- API: USERS & TRANSFERS ----------
+
+@app.route("/users", methods=["GET"])
+def get_users():
+    """Return list of all usernames."""
+    try:
+        result = supabase.table("cybucks").select("username, balance").execute()
+        users = [row["username"] for row in (result.data or [])]
+        return jsonify(success=True, users=users)
+    except Exception as e:
+        logging.exception("Exception in /users")
+        return jsonify(success=False, error=str(e)), 500
 
 
-@app.route("/")
-def home():
-    return "Cybucks backend running!"
+@app.route("/transfer", methods=["POST"])
+def transfer():
+    """
+    Transfer Cybucks from one user to another.
+
+    Body: { "from_user": "...", "to_user": "...", "amount": 10 }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify(success=False, error="Missing JSON body"), 400
+
+        from_user = data.get("from_user")
+        to_user = data.get("to_user")
+        amount = data.get("amount")
+
+        if not from_user or not to_user or amount is None:
+            return jsonify(success=False, error="from_user, to_user, and amount are required"), 400
+
+        if from_user == to_user:
+            return jsonify(success=False, error="Cannot send Cybucks to yourself"), 400
+
+        amount = int(amount)
+        if amount <= 0:
+            return jsonify(success=False, error="Amount must be positive"), 400
+
+        # Get sender
+        sender_result = supabase.table("cybucks").select("*").eq("username", from_user).execute()
+        if not sender_result.data:
+            return jsonify(success=False, error="Sender not found"), 404
+        sender = sender_result.data[0]
+
+        # Get recipient
+        recipient_result = supabase.table("cybucks").select("*").eq("username", to_user).execute()
+        if not recipient_result.data:
+            return jsonify(success=False, error="Recipient not found"), 404
+        recipient = recipient_result.data[0]
+
+        if sender["balance"] < amount:
+            return jsonify(success=False, error="Insufficient funds"), 400
+
+        new_sender_balance = sender["balance"] - amount
+        new_recipient_balance = recipient["balance"] + amount
+
+        # Update both balances
+        supabase.table("cybucks").update(
+            {"balance": new_sender_balance}
+        ).eq("username", from_user).execute()
+
+        supabase.table("cybucks").update(
+            {"balance": new_recipient_balance}
+        ).eq("username", to_user).execute()
+
+        logging.info(
+            f"Transfer: {from_user} sent {amount} to {to_user}. "
+            f"New sender balance: {new_sender_balance}, "
+            f"recipient balance: {new_recipient_balance}"
+        )
+
+        return jsonify(success=True, balance=new_sender_balance)
+
+    except Exception as e:
+        logging.exception("Exception in /transfer")
+        return jsonify(success=False, error=str(e)), 500
 
 
 if __name__ == "__main__":
+    # Render sets PORT env var
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
