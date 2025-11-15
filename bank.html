@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cybucks Banking System</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0d0d0d;
+      color: #fff;
+      padding: 20px;
+    }
+    .container {
+      max-width: 450px;
+      margin: auto;
+      background: #1a1a1a;
+      padding: 25px;
+      border-radius: 10px;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+    button {
+      background: #00b894;
+      color: white;
+      font-weight: bold;
+      border: none;
+    }
+    button:hover { background: #019371; cursor: pointer; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>Cybucks Banking System</h2>
+    <div id="loginBox">
+      <input id="username" placeholder="Username">
+      <button onclick="login()">Login</button>
+    </div>
+
+    <div id="bankBox" style="display:none;">
+      <h3>Welcome, <span id="userDisplay"></span></h3>
+      <p>Balance: <b id="balance">0</b> Cybucks</p>
+
+      <input id="amount" type="number" placeholder="Amount">
+      <button onclick="deposit()">Deposit</button>
+      <button onclick="withdraw()">Withdraw</button>
+    </div>
+  </div>
+
+<script>
+let currentUser = null;
+
+async function login() {
+  const user = document.getElementById("username").value;
+  if (!user) return alert("Enter username");
+
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ username: user })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    currentUser = user;
+    document.getElementById("userDisplay").innerText = user;
+    document.getElementById("balance").innerText = data.balance;
+
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("bankBox").style.display = "block";
+  } else {
+    alert(data.error);
+  }
+}
+
+async function deposit() {
+  const amount = parseInt(document.getElementById("amount").value);
+  if (!amount) return;
+
+  const res = await fetch("/deposit", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ username: currentUser, amount })
+  });
+
+  const data = await res.json();
+  document.getElementById("balance").innerText = data.balance;
+}
+
+async function withdraw() {
+  const amount = parseInt(document.getElementById("amount").value);
+  if (!amount) return;
+
+  const res = await fetch("/withdraw", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ username: currentUser, amount })
+  });
+
+  const data = await res.json();
+  if (!data.success) return alert(data.error);
+
+  document.getElementById("balance").innerText = data.balance;
+}
+</script>
+
+</body>
+</html>
