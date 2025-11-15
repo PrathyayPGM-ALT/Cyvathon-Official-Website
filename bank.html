@@ -16,20 +16,24 @@
       background: #1a1a1a;
       padding: 25px;
       border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
     }
-    input, select, button {
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input, button, select {
       width: 100%;
       padding: 10px;
       margin-top: 10px;
       border-radius: 6px;
       border: none;
+      box-sizing: border-box;
       font-size: 14px;
     }
     input, select {
-      background: #111;
+      background: #2c2c2c;
       color: #fff;
-      box-sizing: border-box;
     }
     button {
       background: #00b894;
@@ -37,17 +41,21 @@
       font-weight: bold;
       cursor: pointer;
     }
-    button:hover {
-      background: #019371;
-    }
-    h2 {
-      text-align: center;
-    }
+    button:hover { background: #019371; }
     label {
       display: block;
       margin-top: 15px;
       font-size: 13px;
-      opacity: 0.9;
+      color: #ccc;
+    }
+    .info {
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    .small {
+      font-size: 12px;
+      color: #888;
+      margin-top: 5px;
     }
   </style>
 </head>
@@ -66,147 +74,169 @@
     <!-- BANK SYSTEM -->
     <div id="bankBox" style="display:none;">
       <h3>Welcome, <span id="userDisplay"></span></h3>
-      <p>Your Balance: <b id="balance">0</b> Cybucks</p>
+      <p class="info">Balance: <b id="balance">0</b> Cybucks</p>
 
-      <label for="userSelect">Send to user:</label>
-      <select id="userSelect">
+      <label for="recipientSelect">Send Cybucks to:</label>
+      <select id="recipientSelect">
         <!-- options filled by JS -->
       </select>
+      <p class="small" id="recipientHint"></p>
 
       <label for="amount">Amount to send:</label>
-      <input id="amount" type="number" min="1" placeholder="Amount">
+      <input id="amount" type="number" min="1" placeholder="Enter amount">
 
-      <button onclick="sendMoney()">Send Cybucks</button>
+      <button onclick="sendCybucks()">Send Cybucks</button>
+      <p class="small" id="statusMsg"></p>
     </div>
   </div>
 
 <script>
-const API_BASE = ""; // same origin as /bank
-let currentUser = null;
+  // IMPORTANT: keep this pointing to your backend Render URL
+  const API_BASE = "https://cyvathon-official-website.onrender.com";
+  let currentUser = null;
 
-// POST helper
-async function postJSON(path, bodyObj) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(bodyObj)
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.success) {
-    const msg = data.error || `Request failed with status ${res.status}`;
-    throw new Error(msg);
-  }
-  return data;
-}
-
-// GET helper
-async function getJSON(path) {
-  const res = await fetch(`${API_BASE}${path}`);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.success) {
-    const msg = data.error || `Request failed with status ${res.status}`;
-    throw new Error(msg);
-  }
-  return data;
-}
-
-// LOGIN FUNCTION
-async function login() {
-  try {
-    const user = document.getElementById("username").value.trim();
-    const pass = document.getElementById("password").value;
-
-    if (!user || !pass) {
-      alert("Fill all fields");
-      return;
-    }
-
-    const data = await postJSON("/login", {
-      username: user,
-      password: pass
+  // Helper to POST JSON and parse response
+  async function postJSON(path, bodyObj) {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bodyObj)
     });
 
-    currentUser = user;
-    document.getElementById("userDisplay").innerText = user;
-    document.getElementById("balance").innerText = data.balance;
-
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("bankBox").style.display = "block";
-
-    await loadUsers();
-  } catch (err) {
-    console.error(err);
-    alert("Login failed: " + err.message);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+    }
+    return res.json();
   }
-}
 
-// LOAD USERS INTO DROPDOWN
-async function loadUsers() {
-  try {
-    const data = await getJSON("/users");
-    const select = document.getElementById("userSelect");
-    select.innerHTML = "";
+  // Helper to GET JSON
+  async function getJSON(path) {
+    const res = await fetch(`${API_BASE}${path}`);
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+    }
+    return res.json();
+  }
 
-    const users = data.users || [];
+  // LOGIN FUNCTION
+  async function login() {
+    try {
+      const user = document.getElementById("username").value.trim();
+      const pass = document.getElementById("password").value.trim();
 
-    users
-      .filter(u => u.username !== currentUser) // do not show yourself
-      .forEach(u => {
-        const opt = document.createElement("option");
-        opt.value = u.username;
-        opt.textContent = `${u.username} (${u.balance} CB)`;
-        select.appendChild(opt);
+      if (!user || !pass) {
+        alert("Fill all fields");
+        return;
+      }
+
+      const data = await postJSON("/login", {
+        username: user,
+        password: pass
       });
 
-    // If no other users exist
-    if (select.options.length === 0) {
-      const opt = document.createElement("option");
-      opt.value = "";
-      opt.textContent = "No other users yet";
-      select.appendChild(opt);
+      if (!data.success) {
+        alert(data.error || "Login failed");
+        return;
+      }
+
+      currentUser = user;
+      document.getElementById("userDisplay").innerText = user;
+      document.getElementById("balance").innerText = data.balance;
+
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("bankBox").style.display = "block";
+
+      // Load user list for dropdown
+      await loadUsersDropdown();
+    } catch (err) {
+      console.error(err);
+      alert("Could not talk to bank server: " + err.message);
     }
-  } catch (err) {
-    console.error(err);
-    alert("Could not load users: " + err.message);
   }
-}
 
-// SEND CYBUCKS
-async function sendMoney() {
-  try {
-    const toUser = document.getElementById("userSelect").value;
-    const amount = parseInt(document.getElementById("amount").value, 10);
+  // LOAD ALL USERS INTO DROPDOWN
+  async function loadUsersDropdown() {
+    try {
+      const data = await getJSON("/users");
+      if (!data.success) {
+        throw new Error(data.error || "Could not load users");
+      }
 
-    if (!toUser) {
-      alert("Pick a user to send to");
-      return;
+      const allUsers = data.users || [];
+      const select = document.getElementById("recipientSelect");
+      const hint = document.getElementById("recipientHint");
+
+      // Clear existing options
+      select.innerHTML = "";
+
+      const others = allUsers.filter(u => u !== currentUser);
+
+      if (others.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No other users yet";
+        select.appendChild(option);
+        select.disabled = true;
+        hint.textContent = "Ask your friends to log in once so they appear here.";
+      } else {
+        select.disabled = false;
+        for (const u of others) {
+          const option = document.createElement("option");
+          option.value = u;
+          option.textContent = u;
+          select.appendChild(option);
+        }
+        hint.textContent = "Choose a user to send Cybucks to.";
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Could not load user list: " + err.message);
     }
-
-    if (!amount || amount <= 0) {
-      alert("Enter a positive amount");
-      return;
-    }
-
-    const data = await postJSON("/transfer", {
-      from_username: currentUser,
-      to_username: toUser,
-      amount: amount
-    });
-
-    // Update your own balance
-    document.getElementById("balance").innerText = data.balance;
-    document.getElementById("amount").value = "";
-
-    // Refresh dropdown balances
-    await loadUsers();
-
-    alert(`Sent ${amount} Cybucks to ${toUser}!`);
-  } catch (err) {
-    console.error(err);
-    alert("Transfer failed: " + err.message);
   }
-}
+
+  // SEND CYBUCKS TO SELECTED USER
+  async function sendCybucks() {
+    try {
+      const recipient = document.getElementById("recipientSelect").value;
+      const amountValue = document.getElementById("amount").value;
+      const statusMsg = document.getElementById("statusMsg");
+
+      statusMsg.textContent = "";
+
+      if (!recipient) {
+        alert("Choose a user to send Cybucks to.");
+        return;
+      }
+
+      const amount = parseInt(amountValue, 10);
+      if (!amount || amount <= 0) {
+        alert("Enter a valid amount (greater than 0).");
+        return;
+      }
+
+      const data = await postJSON("/transfer", {
+        from_username: currentUser,
+        to_username: recipient,
+        amount: amount
+      });
+
+      if (!data.success) {
+        alert(data.error || "Transfer failed");
+        return;
+      }
+
+      // Update your balance after transfer
+      document.getElementById("balance").innerText = data.balance;
+      statusMsg.textContent = `Sent ${amount} Cybucks to ${recipient}! 🎉`;
+      document.getElementById("amount").value = "";
+
+    } catch (err) {
+      console.error(err);
+      alert("Could not talk to bank server: " + err.message);
+    }
+  }
 </script>
 
 </body>
