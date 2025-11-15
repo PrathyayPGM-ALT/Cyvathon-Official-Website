@@ -3,159 +3,209 @@
 <head>
   <meta charset="UTF-8">
   <title>Cybucks Banking System</title>
-
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #0d0d0d;
       color: #fff;
-      margin: 0;
-      padding: 40px;
+      padding: 20px;
     }
-
     .container {
       max-width: 450px;
       margin: auto;
       background: #1a1a1a;
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 0 20px rgba(0, 255, 200, 0.2);
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
     }
-
-    input, button {
+    input, select, button {
       width: 100%;
-      padding: 12px;
-      margin-top: 12px;
-      border-radius: 8px;
-      font-size: 16px;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
       border: none;
+      font-size: 14px;
     }
-
-    input {
-      background: #333;
-      color: white;
+    input, select {
+      background: #111;
+      color: #fff;
+      box-sizing: border-box;
     }
-
     button {
-      background: #00c090;
+      background: #00b894;
       color: white;
       font-weight: bold;
-    }
-
-    button:hover {
-      background: #009f74;
       cursor: pointer;
+    }
+    button:hover {
+      background: #019371;
+    }
+    h2 {
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-size: 13px;
+      opacity: 0.9;
     }
   </style>
 </head>
 
 <body>
-
   <div class="container">
     <h2>Cybucks Banking System</h2>
 
-    <!-- LOGIN -->
+    <!-- LOGIN BOX -->
     <div id="loginBox">
       <input id="username" placeholder="Username">
       <input id="password" type="password" placeholder="Password">
       <button onclick="login()">Login / Register</button>
     </div>
 
-    <!-- BANK APP -->
+    <!-- BANK SYSTEM -->
     <div id="bankBox" style="display:none;">
       <h3>Welcome, <span id="userDisplay"></span></h3>
-      <p>Balance: <b id="balance">0</b> Cybucks</p>
+      <p>Your Balance: <b id="balance">0</b> Cybucks</p>
 
-      <input id="amount" type="number" placeholder="Amount">
-      <button onclick="deposit()">Deposit</button>
-      <button onclick="withdraw()">Withdraw</button>
+      <label for="userSelect">Send to user:</label>
+      <select id="userSelect">
+        <!-- options filled by JS -->
+      </select>
+
+      <label for="amount">Amount to send:</label>
+      <input id="amount" type="number" min="1" placeholder="Amount">
+
+      <button onclick="sendMoney()">Send Cybucks</button>
     </div>
   </div>
 
-
 <script>
-// --- IMPORTANT ---
-// API_BASE = "" means use SAME ORIGIN (the backend)
-// This avoids all CORS issues.
-const API_BASE = "";
-
+const API_BASE = ""; // same origin as /bank
 let currentUser = null;
 
-async function callAPI(path, body) {
+// POST helper
+async function postJSON(path, bodyObj) {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(body)
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(bodyObj)
   });
 
-  const text = await res.text();
-  let data;
-
-  try { data = JSON.parse(text); }
-  catch { throw new Error("Invalid JSON: " + text); }
-
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) {
+    const msg = data.error || `Request failed with status ${res.status}`;
+    throw new Error(msg);
+  }
   return data;
 }
 
-// LOGIN
+// GET helper
+async function getJSON(path) {
+  const res = await fetch(`${API_BASE}${path}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) {
+    const msg = data.error || `Request failed with status ${res.status}`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// LOGIN FUNCTION
 async function login() {
-  const user = document.getElementById("username").value;
-  const pass = document.getElementById("password").value;
+  try {
+    const user = document.getElementById("username").value.trim();
+    const pass = document.getElementById("password").value;
 
-  if (!user || !pass) return alert("Enter username and password.");
+    if (!user || !pass) {
+      alert("Fill all fields");
+      return;
+    }
 
-  const data = await callAPI("/login", {
-    username: user,
-    password: pass
-  });
+    const data = await postJSON("/login", {
+      username: user,
+      password: pass
+    });
 
-  if (!data.success) {
-    alert(data.error);
-    return;
+    currentUser = user;
+    document.getElementById("userDisplay").innerText = user;
+    document.getElementById("balance").innerText = data.balance;
+
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("bankBox").style.display = "block";
+
+    await loadUsers();
+  } catch (err) {
+    console.error(err);
+    alert("Login failed: " + err.message);
   }
-
-  currentUser = user;
-  document.getElementById("userDisplay").innerText = user;
-  document.getElementById("balance").innerText = data.balance;
-
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("bankBox").style.display = "block";
 }
 
-// DEPOSIT
-async function deposit() {
-  const amount = parseInt(document.getElementById("amount").value);
-  if (!amount) return alert("Enter an amount.");
+// LOAD USERS INTO DROPDOWN
+async function loadUsers() {
+  try {
+    const data = await getJSON("/users");
+    const select = document.getElementById("userSelect");
+    select.innerHTML = "";
 
-  const data = await callAPI("/deposit", {
-    username: currentUser,
-    amount
-  });
+    const users = data.users || [];
 
-  if (!data.success) {
-    alert(data.error);
-    return;
+    users
+      .filter(u => u.username !== currentUser) // do not show yourself
+      .forEach(u => {
+        const opt = document.createElement("option");
+        opt.value = u.username;
+        opt.textContent = `${u.username} (${u.balance} CB)`;
+        select.appendChild(opt);
+      });
+
+    // If no other users exist
+    if (select.options.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "No other users yet";
+      select.appendChild(opt);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Could not load users: " + err.message);
   }
-
-  document.getElementById("balance").innerText = data.balance;
 }
 
-// WITHDRAW
-async function withdraw() {
-  const amount = parseInt(document.getElementById("amount").value);
-  if (!amount) return alert("Enter an amount.");
+// SEND CYBUCKS
+async function sendMoney() {
+  try {
+    const toUser = document.getElementById("userSelect").value;
+    const amount = parseInt(document.getElementById("amount").value, 10);
 
-  const data = await callAPI("/withdraw", {
-    username: currentUser,
-    amount
-  });
+    if (!toUser) {
+      alert("Pick a user to send to");
+      return;
+    }
 
-  if (!data.success) {
-    alert(data.error);
-    return;
+    if (!amount || amount <= 0) {
+      alert("Enter a positive amount");
+      return;
+    }
+
+    const data = await postJSON("/transfer", {
+      from_username: currentUser,
+      to_username: toUser,
+      amount: amount
+    });
+
+    // Update your own balance
+    document.getElementById("balance").innerText = data.balance;
+    document.getElementById("amount").value = "";
+
+    // Refresh dropdown balances
+    await loadUsers();
+
+    alert(`Sent ${amount} Cybucks to ${toUser}!`);
+  } catch (err) {
+    console.error(err);
+    alert("Transfer failed: " + err.message);
   }
-
-  document.getElementById("balance").innerText = data.balance;
 }
 </script>
 
