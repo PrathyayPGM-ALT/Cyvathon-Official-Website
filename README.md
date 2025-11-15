@@ -30,6 +30,9 @@ This project is ideal for learning and practising:
 Cyvathon-Official-Website/
 ├── index.html
 └── README.md
+└── Procfile
+└── bank.html
+└── main.py
 ```
 
 Directory names may vary depending on your current layout, but this is the recommended structure as the project grows.
