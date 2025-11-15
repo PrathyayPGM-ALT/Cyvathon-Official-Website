@@ -59,7 +59,7 @@ def login():
             supabase.table("cybucks").insert({
                 "username": username,
                 "password": password,
-                "balance": 0
+                "balance": 50
             }).execute()
 
             logging.info(f"New user created: {username}")
