@@ -16,19 +16,18 @@
       background: #1a1a1a;
       padding: 25px;
       border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      box-shadow: 0 0 15px rgba(0,0,0,0.6);
     }
     h2, h3 {
       text-align: center;
     }
-    input, button, select {
+    input, select, button {
       width: 100%;
       padding: 10px;
       margin-top: 10px;
       border-radius: 6px;
       border: none;
       box-sizing: border-box;
-      font-size: 14px;
     }
     input, select {
       background: #2b2b2b;
@@ -43,15 +42,21 @@
     button:hover {
       background: #019371;
     }
-    .small {
-      font-size: 12px;
-      color: #aaa;
-      margin-top: 5px;
+    .label {
+      margin-top: 15px;
+      font-size: 0.9rem;
+      opacity: 0.8;
     }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-size: 14px;
+    .balance {
+      font-size: 1.1rem;
+      margin-top: 5px;
+      margin-bottom: 15px;
+    }
+    .small {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      text-align: center;
+      margin-top: 15px;
     }
   </style>
 </head>
@@ -65,32 +70,39 @@
       <input id="username" placeholder="Username">
       <input id="password" type="password" placeholder="Password">
       <button onclick="login()">Login / Register</button>
-      <p class="small">New users will be created automatically with 0 Cybucks.</p>
     </div>
 
     <!-- BANK SYSTEM -->
     <div id="bankBox" style="display:none;">
       <h3>Welcome, <span id="userDisplay"></span></h3>
-      <p>Balance: <b id="balance">0</b> Cybucks</p>
+      <div class="balance">
+        Balance: <b id="balance">0</b> Cybucks
+      </div>
 
-      <label for="recipient">Send Cybucks to:</label>
-      <select id="recipient"></select>
+      <div class="label">Send to user:</div>
+      <select id="receiverSelect">
+        <!-- options populated by JS -->
+      </select>
 
-      <input id="amount" type="number" placeholder="Amount to send">
-      <button onclick="sendCybucks()">Send</button>
+      <div class="label">Amount to send:</div>
+      <input id="amount" type="number" min="1" placeholder="Amount">
 
-      <p class="small" id="infoText"></p>
+      <button onclick="sendCybucks()">Send Cybucks</button>
+
+      <div class="small">
+        Tip: You cannot send Cybucks to yourself. Make sure your friend has logged in once so their account exists.
+      </div>
     </div>
   </div>
 
 <script>
-  // Since bank.html is served from the same Flask app,
-  // we can use same-origin requests.
+  // Same origin backend – no need for full URL
   const API_BASE = "";
   let currentUser = null;
 
-  async function fetchJSON(path, bodyObj) {
-    const res = await fetch(`${API_BASE}${path}`, {
+  // Helper to POST JSON and get JSON back
+  async function postJSON(path, bodyObj) {
+    const res = await fetch(API_BASE + path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(bodyObj)
@@ -103,16 +115,9 @@
     return res.json();
   }
 
-  async function fetchGETJSON(path) {
-    const res = await fetch(`${API_BASE}${path}`);
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
-    }
-    return res.json();
-  }
-
-  // LOGIN FUNCTION
+  // -------------------------------------------------
+  // Login / Register
+  // -------------------------------------------------
   async function login() {
     try {
       const user = document.getElementById("username").value.trim();
@@ -123,7 +128,7 @@
         return;
       }
 
-      const data = await fetchJSON("/login", {
+      const data = await postJSON("/login", {
         username: user,
         password: pass
       });
@@ -140,27 +145,34 @@
       document.getElementById("loginBox").style.display = "none";
       document.getElementById("bankBox").style.display = "block";
 
-      await loadUsers();
+      await loadUsersDropdown();
+
     } catch (err) {
       console.error(err);
       alert("Could not talk to bank server: " + err.message);
     }
   }
 
-  // Load all usernames and populate dropdown (excluding current user)
-  async function loadUsers() {
+  // -------------------------------------------------
+  // Load users for dropdown
+  // -------------------------------------------------
+  async function loadUsersDropdown() {
     try {
-      const data = await fetchGETJSON("/users");
+      const res = await fetch(API_BASE + "/users");
+      const data = await res.json();
+
       if (!data.success) {
-        alert(data.error || "Could not load users");
+        console.error("Failed to load users:", data.error);
         return;
       }
 
-      const allUsers = data.users || [];
-      const select = document.getElementById("recipient");
+      const select = document.getElementById("receiverSelect");
       select.innerHTML = "";
 
-      const otherUsers = allUsers.filter(u => u !== currentUser);
+      const users = data.users || [];
+
+      // Filter out the current user from list
+      const otherUsers = users.filter(u => u !== currentUser);
 
       if (otherUsers.length === 0) {
         const opt = document.createElement("option");
@@ -168,49 +180,51 @@
         opt.textContent = "No other users yet";
         select.appendChild(opt);
         select.disabled = true;
-        document.getElementById("infoText").innerText =
-          "Ask your friends to log in once so they appear here.";
       } else {
+        select.disabled = false;
         otherUsers.forEach(u => {
           const opt = document.createElement("option");
           opt.value = u;
           opt.textContent = u;
           select.appendChild(opt);
         });
-        select.disabled = false;
-        document.getElementById("infoText").innerText =
-          "Select a user and send them Cybucks.";
       }
+
     } catch (err) {
       console.error(err);
-      alert("Could not load users: " + err.message);
+      alert("Could not load user list: " + err.message);
     }
   }
 
-  // SEND CYBUCKS FUNCTION
+  // -------------------------------------------------
+  // Send Cybucks
+  // -------------------------------------------------
   async function sendCybucks() {
     try {
       if (!currentUser) {
-        alert("You are not logged in.");
+        alert("Please log in first.");
         return;
       }
 
-      const select = document.getElementById("recipient");
-      const toUser = select.value;
-      const amount = parseInt(document.getElementById("amount").value, 10);
+      const receiverSelect = document.getElementById("receiverSelect");
+      const toUser = receiverSelect.value;
+      const amountVal = document.getElementById("amount").value;
+
+      const amount = parseInt(amountVal, 10);
 
       if (!toUser) {
-        alert("Choose a user to send to.");
+        alert("Select a user to send Cybucks to.");
         return;
       }
+
       if (!amount || amount <= 0) {
         alert("Enter a positive amount.");
         return;
       }
 
-      const data = await fetchJSON("/transfer", {
-        from_user: currentUser,
-        to_user: toUser,
+      const data = await postJSON("/send", {
+        from_username: currentUser,
+        to_username: toUser,
         amount: amount
       });
 
@@ -219,8 +233,10 @@
         return;
       }
 
-      document.getElementById("balance").innerText = data.balance;
+      // update sender balance
+      document.getElementById("balance").innerText = data.sender_balance;
       document.getElementById("amount").value = "";
+
       alert(`Sent ${amount} Cybucks to ${toUser}!`);
 
     } catch (err) {
