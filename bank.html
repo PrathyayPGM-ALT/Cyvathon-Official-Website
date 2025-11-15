@@ -36,11 +36,15 @@
 <body>
   <div class="container">
     <h2>Cybucks Banking System</h2>
+
+    <!-- LOGIN BOX -->
     <div id="loginBox">
       <input id="username" placeholder="Username">
-      <button onclick="login()">Login</button>
+      <input id="password" type="password" placeholder="Password">
+      <button onclick="login()">Login / Register</button>
     </div>
 
+    <!-- BANK SYSTEM -->
     <div id="bankBox" style="display:none;">
       <h3>Welcome, <span id="userDisplay"></span></h3>
       <p>Balance: <b id="balance">0</b> Cybucks</p>
@@ -54,14 +58,17 @@
 <script>
 let currentUser = null;
 
+// LOGIN FUNCTION
 async function login() {
   const user = document.getElementById("username").value;
-  if (!user) return alert("Enter username");
+  const pass = document.getElementById("password").value;
+
+  if (!user || !pass) return alert("Fill all fields");
 
   const res = await fetch("/login", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ username: user })
+    body: JSON.stringify({ username: user, password: pass })
   });
 
   const data = await res.json();
@@ -78,9 +85,10 @@ async function login() {
   }
 }
 
+// DEPOSIT FUNCTION
 async function deposit() {
   const amount = parseInt(document.getElementById("amount").value);
-  if (!amount) return;
+  if (!amount) return alert("Enter amount");
 
   const res = await fetch("/deposit", {
     method: "POST",
@@ -92,9 +100,10 @@ async function deposit() {
   document.getElementById("balance").innerText = data.balance;
 }
 
+// WITHDRAW FUNCTION
 async function withdraw() {
   const amount = parseInt(document.getElementById("amount").value);
-  if (!amount) return;
+  if (!amount) return alert("Enter amount");
 
   const res = await fetch("/withdraw", {
     method: "POST",
@@ -103,6 +112,7 @@ async function withdraw() {
   });
 
   const data = await res.json();
+
   if (!data.success) return alert(data.error);
 
   document.getElementById("balance").innerText = data.balance;
