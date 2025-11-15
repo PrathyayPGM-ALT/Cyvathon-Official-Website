@@ -4,60 +4,171 @@
   <meta charset="UTF-8">
   <title>Cybucks Banking System</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0d0d0d;
-      color: #fff;
-      padding: 20px;
-    }
-    .container {
-      max-width: 450px;
-      margin: auto;
-      background: #1a1a1a;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.6);
-    }
-    h2, h3 {
-      text-align: center;
-    }
-    input, select, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 6px;
-      border: none;
-      box-sizing: border-box;
-    }
-    input, select {
-      background: #2b2b2b;
-      color: #fff;
-    }
-    button {
-      background: #00b894;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #019371;
-    }
-    .label {
-      margin-top: 15px;
-      font-size: 0.9rem;
-      opacity: 0.8;
-    }
-    .balance {
-      font-size: 1.1rem;
-      margin-top: 5px;
-      margin-bottom: 15px;
-    }
-    .small {
-      font-size: 0.8rem;
-      opacity: 0.7;
-      text-align: center;
-      margin-top: 15px;
-    }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  background: radial-gradient(circle at top, #1f2937 0, #020617 45%, #000 100%);
+  color: #f9fafb;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* Card */
+.container {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(15, 23, 42, 0.96);
+  padding: 28px 24px 24px;
+  border-radius: 16px;
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(148, 163, 184, 0.12);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+/* Headings */
+h2, h3 {
+  text-align: center;
+  letter-spacing: 0.03em;
+}
+
+h2 {
+  font-size: 1.4rem;
+  font-weight: 650;
+  margin-bottom: 4px;
+}
+
+h3 {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #9ca3af;
+  margin-bottom: 18px;
+}
+
+/* Labels */
+.label {
+  margin-top: 14px;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  color: #d1d5db;
+  opacity: 0.95;
+}
+
+/* Balance display */
+.balance {
+  font-size: 1.1rem;
+  margin-top: 2px;
+  margin-bottom: 14px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.balance span {
+  color: #22c55e;
+}
+
+/* Inputs + select */
+input,
+select {
+  width: 100%;
+  padding: 10px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(55, 65, 81, 0.9);
+  background: radial-gradient(circle at top left, #111827, #020617 60%);
+  color: #f9fafb;
+  font-size: 0.9rem;
+  outline: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease,
+    transform 0.08s ease;
+}
+
+input::placeholder {
+  color: #6b7280;
+}
+
+input:focus,
+select:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.7), 0 0 18px rgba(34, 197, 94, 0.35);
+  transform: translateY(-1px);
+}
+
+/* Buttons */
+button {
+  width: 100%;
+  padding: 11px 10px;
+  margin-top: 14px;
+  border-radius: 999px;
+  border: none;
+  font-weight: 650;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #020617;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  box-shadow:
+    0 14px 30px rgba(22, 163, 74, 0.4),
+    0 0 0 1px rgba(21, 128, 61, 0.4);
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.12s ease,
+    filter 0.12s ease,
+    background 0.2s ease;
+}
+
+button:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow:
+    0 18px 40px rgba(22, 163, 74, 0.55),
+    0 0 0 1px rgba(21, 128, 61, 0.6);
+}
+
+button:active {
+  transform: translateY(0);
+  box-shadow:
+    0 10px 24px rgba(22, 163, 74, 0.45),
+    0 0 0 1px rgba(21, 128, 61, 0.7);
+}
+
+/* Disabled state (if you ever use disabled attr) */
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+  filter: grayscale(0.2);
+}
+
+/* Tiny footer text */
+.small {
+  font-size: 0.78rem;
+  opacity: 0.7;
+  text-align: center;
+  margin-top: 16px;
+  color: #9ca3af;
+}
+
+/* Optional: subtle divider between sections */
+.section-divider {
+  height: 1px;
+  background: radial-gradient(circle, rgba(75, 85, 99, 0.8), transparent 70%);
+  margin: 16px 0 10px;
+  border-radius: 999px;
+}
+
   </style>
 </head>
 
