@@ -56,70 +56,110 @@
   </div>
 
 <script>
-const API_BASE = "https://cyvathon-bank.onrender.com"; // your backend URL
-
+const API_BASE = "https://cyvathon-official-website.onrender.com"; // <-- BACKEND URL
 let currentUser = null;
+
+// helper to handle errors better
+async function fetchJSON(path, bodyObj) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(bodyObj)
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
 
 // LOGIN FUNCTION
 async function login() {
-  const user = document.getElementById("username").value;
-  const pass = document.getElementById("password").value;
+  try {
+    const user = document.getElementById("username").value;
+    const pass = document.getElementById("password").value;
 
-  if (!user || !pass) return alert("Fill all fields");
+    if (!user || !pass) {
+      alert("Fill all fields");
+      return;
+    }
 
-  const res = await fetch(`${API_BASE}/login`, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ username: user, password: pass })
-  });
+    const data = await fetchJSON("/login", {
+      username: user,
+      password: pass
+    });
 
-  const data = await res.json();
+    if (!data.success) {
+      alert(data.error || "Login failed");
+      return;
+    }
 
-  if (data.success) {
     currentUser = user;
     document.getElementById("userDisplay").innerText = user;
     document.getElementById("balance").innerText = data.balance;
 
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("bankBox").style.display = "block";
-  } else {
-    alert(data.error);
+  } catch (err) {
+    console.error(err);
+    alert("Could not talk to bank server: " + err.message);
   }
 }
 
 // DEPOSIT FUNCTION
 async function deposit() {
-  const amount = parseInt(document.getElementById("amount").value);
-  if (!amount) return alert("Enter amount");
+  try {
+    const amount = parseInt(document.getElementById("amount").value);
+    if (!amount) {
+      alert("Enter amount");
+      return;
+    }
 
-  const res = await fetch(`${API_BASE}/deposit`, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ username: currentUser, amount })
-  });
+    const data = await fetchJSON("/deposit", {
+      username: currentUser,
+      amount
+    });
 
-  const data = await res.json();
-  document.getElementById("balance").innerText = data.balance;
+    if (!data.success) {
+      alert(data.error || "Deposit failed");
+      return;
+    }
+
+    document.getElementById("balance").innerText = data.balance;
+  } catch (err) {
+    console.error(err);
+    alert("Could not talk to bank server: " + err.message);
+  }
 }
 
 // WITHDRAW FUNCTION
 async function withdraw() {
-  const amount = parseInt(document.getElementById("amount").value);
-  if (!amount) return alert("Enter amount");
+  try {
+    const amount = parseInt(document.getElementById("amount").value);
+    if (!amount) {
+      alert("Enter amount");
+      return;
+    }
 
-  const res = await fetch(`${API_BASE}/withdraw`, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ username: currentUser, amount })
-  });
+    const data = await fetchJSON("/withdraw", {
+      username: currentUser,
+      amount
+    });
 
-  const data = await res.json();
+    if (!data.success) {
+      alert(data.error || "Withdraw failed");
+      return;
+    }
 
-  if (!data.success) return alert(data.error);
-
-  document.getElementById("balance").innerText = data.balance;
+    document.getElementById("balance").innerText = data.balance;
+  } catch (err) {
+    console.error(err);
+    alert("Could not talk to bank server: " + err.message);
+  }
 }
 </script>
+
 
 </body>
 </html>
