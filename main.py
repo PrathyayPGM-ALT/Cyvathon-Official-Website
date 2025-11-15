@@ -1,32 +1,44 @@
 from flask import Flask, request, jsonify
-from supabase import create_client, Client
+from supabase import create_client
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
+CORS(app)
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Table used: cybucks (columns: username text PK, balance int)
 
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
-    username = data["username"]
+    try:
+        data = request.get_json()
+        username = data["username"]
+        password = data["password"]
 
-    # Check if user exists
-    res = supabase.table("cybucks").select("*").eq("username", username).execute()
+        result = supabase.table("cybucks").select("*").eq("username", username).execute()
 
-    if len(res.data) == 0:
-        # Create user with balance 0
-        supabase.table("cybucks").insert({"username": username, "balance": 0}).execute()
-        balance = 0
-    else:
-        balance = res.data[0]["balance"]
+        if not result.data:
+            supabase.table("cybucks").insert({
+                "username": username,
+                "password": password,
+                "balance": 0
+            }).execute()
 
-    return jsonify(success=True, balance=balance)
+            return jsonify(success=True, balance=0)
+
+        user = result.data[0]
+
+        if user["password"] != password:
+            return jsonify(success=False, error="Incorrect password")
+
+        return jsonify(success=True, balance=user["balance"])
+
+    except Exception as e:
+        return jsonify(success=False, error=str(e))
 
 
 @app.route("/deposit", methods=["POST"])
@@ -35,7 +47,6 @@ def deposit():
     username = data["username"]
     amount = int(data["amount"])
 
-    # Fetch current balance
     user = supabase.table("cybucks").select("*").eq("username", username).execute().data[0]
     new_balance = user["balance"] + amount
 
@@ -57,6 +68,7 @@ def withdraw():
         return jsonify(success=False, error="Insufficient funds")
 
     new_balance = balance - amount
+
     supabase.table("cybucks").update({"balance": new_balance}).eq("username", username).execute()
 
     return jsonify(success=True, balance=new_balance)
@@ -64,7 +76,4 @@ def withdraw():
 
 @app.route("/")
 def home():
-    return "Cybucks backend running."
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    return "Cybucks backend running!"
