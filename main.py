@@ -4,45 +4,30 @@ from supabase import create_client
 import os
 import logging
 
-# -------------------------------------------------
-# FLASK APP SETUP
-# -------------------------------------------------
-
-# static_folder="." lets Flask serve files from the repo root
-# static_url_path="" means /bank.html etc map directly
-app = Flask(__name__, static_folder=".", static_url_path="")
-CORS(app)  # you technically do not need CORS now, but it is okay to keep
+# -------------------------------------------------------------------
+# Flask app setup
+# static_folder='.' lets us serve bank.html directly from the repo root
+# -------------------------------------------------------------------
+app = Flask(__name__, static_folder='.', static_url_path='')
+CORS(app)  # you technically do not need this once same-origin, but it is fine
 
 logging.basicConfig(level=logging.INFO)
 
+# -------------------------------------------------------------------
+# Supabase client
+# -------------------------------------------------------------------
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    raise RuntimeError("Supabase URL or Key not set in environment variables!")
+    logging.error("Supabase URL or Key not set in environment variables!")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# -------------------------------------------------
-# ROUTES FOR BANK FRONTEND
-# -------------------------------------------------
 
-@app.route("/")
-def home():
-    # You can change this to send the bank directly if you want:
-    # return app.send_static_file("bank.html")
-    return "Cybucks backend running!"
-
-@app.route("/bank")
-def bank_page():
-    # Serve bank.html from the repo root
-    return app.send_static_file("bank.html")
-
-
-# -------------------------------------------------
-# API ENDPOINTS
-# -------------------------------------------------
-
+# -------------------------------------------------------------------
+# API ROUTES
+# -------------------------------------------------------------------
 @app.route("/login", methods=["POST"])
 def login():
     try:
@@ -58,7 +43,7 @@ def login():
 
         result = supabase.table("cybucks").select("*").eq("username", username).execute()
 
-        # New user -> create with 0 balance
+        # New user → create with balance 0
         if not result.data:
             supabase.table("cybucks").insert({
                 "username": username,
@@ -154,10 +139,23 @@ def withdraw():
         return jsonify(success=False, error=str(e)), 500
 
 
-# -------------------------------------------------
-# MAIN
-# -------------------------------------------------
+# -------------------------------------------------------------------
+# FRONTEND ROUTES (serving bank.html from Flask)
+# -------------------------------------------------------------------
+@app.route("/bank")
+def bank_page():
+    """Serve the Cybucks Banking System UI."""
+    return app.send_static_file("bank.html")
 
+
+@app.route("/")
+def home():
+    return "Cybucks backend running! Go to /bank for the banking UI."
+
+
+# -------------------------------------------------------------------
+# Local dev entrypoint
+# -------------------------------------------------------------------
 if __name__ == "__main__":
-    # Render will override PORT in production; this is fine for local testing.
+    # Render will override PORT env variable. Locally it will default to 5000.
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
