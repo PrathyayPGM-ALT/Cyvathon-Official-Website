@@ -67,7 +67,7 @@ async function login() {
 
   if (!user || !pass) return alert("Fill all fields");
 
-  const res = await fetch(API_BASE + "/login", {
+  const res = await fetch(`${API_BASE}/login`, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({ username: user, password: pass })
@@ -92,7 +92,7 @@ async function deposit() {
   const amount = parseInt(document.getElementById("amount").value);
   if (!amount) return alert("Enter amount");
 
-  const res = await fetch("/deposit", {
+  const res = await fetch(`${API_BASE}/deposit`, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({ username: currentUser, amount })
@@ -107,7 +107,7 @@ async function withdraw() {
   const amount = parseInt(document.getElementById("amount").value);
   if (!amount) return alert("Enter amount");
 
-  const res = await fetch("/withdraw", {
+  const res = await fetch(`${API_BASE}/withdraw`, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({ username: currentUser, amount })
