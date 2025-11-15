@@ -5,7 +5,9 @@ import os
 import logging
 
 app = Flask(__name__)
-CORS(app)
+
+# Explicit CORS: only your static site origin allowed
+CORS(app, resources={r"/*": {"origins": "https://cyvathon.onrender.com"}})
 
 logging.basicConfig(level=logging.INFO)  # Enable info level logging
 
