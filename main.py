@@ -4,6 +4,11 @@ from supabase import create_client
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import logging
+from time import time
+
+recent_registrations = {}
+REGISTRATION_LIMIT_WINDOW = 15
+
 
 # ----------------------------------------------------
 # APP SETUP
@@ -60,6 +65,16 @@ def bank_page():
 # ----------------------------------------------------
 @app.route("/register", methods=["POST"])
 def register():
+    client_ip = request.remote_addr
+
+    now = time()
+    last_time = recent_registrations.get(client_ip, 0)
+
+    if now - last_time < REGISTRATION_LIMIT_WINDOW:
+        return jsonify(success=False, error="Too many accounts from this IP"), 429
+
+   
+    recent_registrations[client_ip] = now
     try:
         data = request.get_json()
         if not data:
