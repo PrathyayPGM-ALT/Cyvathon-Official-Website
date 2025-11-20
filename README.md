@@ -1,4 +1,4 @@
-```markdown
+
 # Cyvathon – Official Website & Banking System
 
 > **Code. Conquer. Cause Creativity.**
@@ -151,4 +151,4 @@ Cyvathon is a creative universe built around:
 This repo powers the official website + Cybucks economy.
 
 Welcome to Cyvathon, citizen 👾  
-```
+
