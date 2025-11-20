@@ -1,134 +1,154 @@
-# Cyvathon – Official Website
+```markdown
+# Cyvathon – Official Website & Banking System
 
-This repository contains the **official website for Cyvathon**, a creative game and world-building initiative.  
-The site is built using simple, clean HTML/CSS and is designed to act as the public-facing hub for Cyvathon’s story, universe, and upcoming releases.
+> **Code. Conquer. Cause Creativity.**
 
----
-
-## 🚀 Overview
-
-The Cyvathon Official Website is a lightweight static website that introduces visitors to:
-
-- The Cyvathon world and lore  
-- Code Conquers
-- Our community of creativity
-- Artwork, media, and visual elements (as you expand the project)
-
-This project is ideal for learning and practising:
-
-- HTML structure  
-- CSS styling  
-- Website layout and design  
-- How to organise a small web project  
-- How to publish a static site using GitHub Pages  
+Cyvathon is a playful micronation built around coding, creativity, and community.  
+This repository contains the code for the **Cyvathon Official Website** and the **Cybucks Banking System**, the virtual economy inside Cyvathon.
 
 ---
 
-## 📁 Project Structure
+## 🌍 Live Websites
 
-```text
+- **Main Cyvathon Website:**  
+  https://cyvathon.onrender.com  
+
+- **Cybucks Banking System (from this repo):**  
+  https://cyvathon-official-website.onrender.com  
+
+---
+
+## 🧱 Project Overview
+
+### 1. Cyvathon Official Website
+A simple HTML-based site introducing:
+- What Cyvathon is  
+- Citizen information  
+- Links to alliances, YouTube, and the banking system  
+
+### 2. Cyvathon Banking System
+A fun in-world currency manager built for:
+- User registration  
+- Login  
+- Account balance tracking  
+- Sending Cybucks to other users  
+
+> **Note:** This is a fun/learning project, not a real banking system.
+
+---
+
+## 🛠 Tech Stack
+
+**Frontend:**  
+- HTML  
+- CSS  
+
+**Backend:**  
+- Python (Flask or similar micro-framework)
+
+**Database:**  
+- SQLite (local DB file)
+
+**Deployment:**  
+- Render.com
+
+---
+
+## 📁 Directory Structure
+
+```
 Cyvathon-Official-Website/
-├── index.html
-└── README.md
-└── Procfile
-└── bank.html
-└── main.py
+├── index.html          # Main website page
+├── bank.html           # Banking system UI
+├── main.py             # Python backend
+├── cyvathon.db         # SQLite database (auto-created if missing)
+├── requirements.txt    # Python dependencies
+├── Procfile            # Render startup command
+└── README.md           # Documentation
 ```
 
-Directory names may vary depending on your current layout, but this is the recommended structure as the project grows.
-
 ---
 
-## 🛠 Getting Started
+## 🚀 Run the Project Locally
 
-### 1. Clone the repository
-
+### 1. Clone the repo
 ```bash
 git clone https://github.com/PrathyayPGM-ALT/Cyvathon-Official-Website.git
 cd Cyvathon-Official-Website
 ```
 
-### 2. Open the website
-
-You can view the site locally by simply opening the main file in a browser:
-
-- Double-click **index.html**
-- Or right-click → **Open With** → your browser
-- Or use:
-
-**macOS:**
+### 2. Create a virtual environment (optional)
 ```bash
-open index.html
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
 ```
 
-**Windows:**
+### 3. Install dependencies
 ```bash
-start index.html
+pip install -r requirements.txt
 ```
 
-No server setup is required.
-
----
-
-## 🎨 Customisation
-
-You can customise the website by editing:
-
-### HTML Content (`index.html`)
-- Update text, lore, and world information  
-- Add new pages (characters, maps, abilities, game modes, etc.)  
-- Insert artwork, logos, screenshots  
-
-### CSS Styling (`styles/`)
-- Change fonts, colours, spacing, themes  
-- Add animations or hover effects  
-- Improve responsiveness for mobile  
-
-### Assets (`assets/`)
-- Add images, icons, illustrations, concept art  
-- Update the Cyvathon logo  
-- Organise media by type  
-
----
-
-## 🌐 Deploying to GitHub Pages
-
-You can make the website public in less than one minute.
-
-1. Go to **Settings** → **Pages**
-2. Under *Source*, select:  
-   **main branch / root**
-3. Save
-
-Your website will be live at:
-
-```
-https://prathyaypgm-alt.github.io/Cyvathon-Official-Website/
+### 4. Set your secret key
+```bash
+# Windows (PowerShell)
+$env:SECRET_KEY="your-secret-key"
+# macOS/Linux
+export SECRET_KEY="your-secret-key"
 ```
 
----
+### 5. Run the app
+```bash
+python main.py
+```
 
-## 🤝 Contributing
-
-You are welcome to:
-
-- Fork the repo  
-- Add improvements to design or layout  
-- Create new pages  
-- Submit a pull request  
-
-This is your official home for Cyvathon — expand it as the game evolves.
+Visit:  
+**http://localhost:5000**
 
 ---
 
-## 📜 License
+## 🧩 Customizing the Project
 
-https://cyvathon.neocities.org/
+### Website (`index.html`)
+- Change text, layout, images  
+- Add new pages like quests, ranks, badges  
+
+### Bank UI (`bank.html`)
+- Update UI  
+- Add transaction logs, leaderboards, achievements  
+
+### Backend (`main.py`)
+- Add APIs (earn, missions, admin panel)  
+- Improve security  
+- Add anti-fake-user protection  
 
 ---
 
-## 🌟 Acknowledgement
+## 🌐 Deploying to Render
 
-Cyvathon is a creative universe built by **Prathyay** and **Veer**, blending imagination, coding, and creativity.  
-This website is the first digital gateway into that universe.
+This repo is configured for Render using:
+- `requirements.txt`
+- `Procfile`
 
+Steps:
+1. Create a **Web Service**
+2. Connect your GitHub repo
+3. Auto-build & deploy  
+4. Done — Render gives you a public URL
+
+---
+
+## 🧡 Credits
+
+Cyvathon is a creative universe built around:
+
+- Coding  
+- World-building  
+- Imagination  
+
+This repo powers the official website + Cybucks economy.
+
+Welcome to Cyvathon, citizen 👾  
+```
