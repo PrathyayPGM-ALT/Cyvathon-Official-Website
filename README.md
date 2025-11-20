@@ -58,8 +58,9 @@ A fun in-world currency manager built for:
 
 ```
 Cyvathon-Official-Website/
-├── index.html          # Main website page
-├── bank.html           # Banking system UI
+├── static         
+  ├── index.html          # Main website page
+  ├── bank.html           # Banking system UI
 ├── main.py             # Python backend
 ├── cyvathon.db         # SQLite database (auto-created if missing)
 ├── requirements.txt    # Python dependencies
