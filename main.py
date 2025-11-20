@@ -18,7 +18,15 @@ app = Flask(__name__, static_folder="static", static_url_path="/static")
 # IMPORTANT: change this in Render env later
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-this-secret-vro")
 
-# Allow CORS if ever used cross-origin; same-origin is fine too
+app.config["SESSION_COOKIE_NAME"] = "cyvathon_session"
+
+# Make cookies safer
+app.config["SESSION_COOKIE_HTTPONLY"] = True   
+app.config["SESSION_COOKIE_SECURE"] = True    
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"  
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=6)
+
+
 CORS(app, supports_credentials=True)
 
 logging.basicConfig(level=logging.INFO)
