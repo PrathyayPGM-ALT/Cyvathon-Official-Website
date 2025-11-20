@@ -13,7 +13,7 @@ REGISTRATION_LIMIT_WINDOW = 15
 # ----------------------------------------------------
 # APP SETUP
 # ----------------------------------------------------
-app = Flask(__name__, static_folder=".", static_url_path="")
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 
 # IMPORTANT: change this in Render env later
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-this-secret-vro")
