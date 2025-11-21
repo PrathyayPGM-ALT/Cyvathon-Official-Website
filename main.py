@@ -20,12 +20,8 @@ REGISTRATION_LIMIT_WINDOW = 15
 # ----------------------------------------------------
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 
-# IMPORTANT: change this in Render env later
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-this-secret-vro")
-
 app.config["SESSION_COOKIE_NAME"] = "cyvathon_session"
-
-# Make cookies safer
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
@@ -36,15 +32,11 @@ logging.basicConfig(level=logging.INFO)
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    logging.error("Supabase URL or Key not set in environment variables!")
-
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 # ----------------------------------------------------
-# FIREWALL SETUP (Flask-Limiter)
+# FIREWALL
 # ----------------------------------------------------
 limiter = Limiter(
     key_func=get_remote_address,
@@ -54,31 +46,37 @@ limiter = Limiter(
 
 
 # ----------------------------------------------------
-# HELPERS
+# BANK HELPERS
 # ----------------------------------------------------
 def get_current_user():
     username = session.get("username")
     if not username:
         return None
-
     result = supabase.table("cybucks").select("*").eq("username", username).execute()
-    if not result.data:
+    return result.data[0] if result.data else None
+
+
+# ----------------------------------------------------
+# CHAT HELPERS (SEPARATE LOGIN)
+# ----------------------------------------------------
+def get_chat_user():
+    username = session.get("chat_username")
+    if not username:
         return None
-    return result.data[0]
+    result = supabase.table("chat_users").select("*").eq("username", username).execute()
+    return result.data[0] if result.data else None
 
 
 # ----------------------------------------------------
 # STATIC PAGES
 # ----------------------------------------------------
 @app.route("/")
-def root():
+def home():
     return app.send_static_file("bank.html")
-
 
 @app.route("/bank")
 def bank_page():
     return app.send_static_file("bank.html")
-
 
 @app.route("/chat")
 def chat_page():
@@ -86,273 +84,200 @@ def chat_page():
 
 
 # ----------------------------------------------------
-# AUTH ROUTES
+# BANK AUTH
 # ----------------------------------------------------
-@limiter.limit("5 per minute")
+@limiter.limit("5/min")
 @app.route("/register", methods=["POST"])
 def register():
     client_ip = request.remote_addr
-
     now = time()
-    last_time = recent_registrations.get(client_ip, 0)
-
-    if now - last_time < REGISTRATION_LIMIT_WINDOW:
-        return jsonify(success=False, error="Too many accounts from this IP"), 429
-
+    last = recent_registrations.get(client_ip, 0)
+    if now - last < REGISTRATION_LIMIT_WINDOW:
+        return jsonify(success=False, error="Too many accounts"), 429
     recent_registrations[client_ip] = now
 
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify(success=False, error="Missing JSON body"), 400
+    data = request.get_json()
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+    if not username or not password:
+        return jsonify(success=False, error="Missing credentials"), 400
 
-        username = data.get("username", "").strip()
-        password = data.get("password", "").strip()
+    exists = supabase.table("cybucks").select("id").eq("username", username).execute()
+    if exists.data:
+        return jsonify(success=False, error="Username exists"), 400
 
-        if not username or not password:
-            return jsonify(success=False, error="Username and password required"), 400
+    hashed = generate_password_hash(password)
+    supabase.table("cybucks").insert({"username": username, "password": hashed, "balance": 0}).execute()
+    session["username"] = username
 
-        result = supabase.table("cybucks").select("id").eq("username", username).execute()
-        if result.data:
-            return jsonify(success=False, error="Username already taken"), 400
-
-        hashed = generate_password_hash(password)
-
-        supabase.table("cybucks").insert({
-            "username": username,
-            "password": hashed,
-            "balance": 0
-        }).execute()
-
-        logging.info(f"New user registered: {username}")
-
-        session["username"] = username
-        return jsonify(success=True, balance=0, username=username)
-
-    except Exception as e:
-        logging.exception("Exception in /register")
-        return jsonify(success=False, error=str(e)), 500
+    return jsonify(success=True, username=username, balance=0)
 
 
-@limiter.limit("10 per minute")
+@limiter.limit("10/min")
 @app.route("/login", methods=["POST"])
 def login():
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify(success=False, error="Missing JSON body"), 400
+    data = request.get_json()
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
 
-        username = data.get("username", "").strip()
-        password = data.get("password", "").strip()
+    res = supabase.table("cybucks").select("*").eq("username", username).execute()
+    if not res.data:
+        return jsonify(success=False, error="User not found"), 404
 
-        if not username or not password:
-            return jsonify(success=False, error="Username and password required"), 400
+    user = res.data[0]
+    if not check_password_hash(user["password"], password):
+        return jsonify(success=False, error="Incorrect password"), 401
 
-        result = supabase.table("cybucks").select("*").eq("username", username).execute()
-        if not result.data:
-            return jsonify(success=False, error="User not found"), 404
-
-        user = result.data[0]
-
-        if not check_password_hash(user["password"], password):
-            return jsonify(success=False, error="Incorrect password"), 401
-
-        session["username"] = username
-
-        logging.info(f"User logged in: {username}")
-        return jsonify(success=True, balance=user["balance"], username=username)
-
-    except Exception as e:
-        logging.exception("Exception in /login")
-        return jsonify(success=False, error=str(e)), 500
+    session["username"] = username
+    return jsonify(success=True, username=username, balance=user["balance"])
 
 
 @app.route("/logout", methods=["POST"])
 def logout():
-    session.clear()
+    session.pop("username", None)
     return jsonify(success=True)
 
 
 # ----------------------------------------------------
-# USER / BALANCE INFO
+# BANK FEATURES
 # ----------------------------------------------------
-@app.route("/me", methods=["GET"])
+@app.route("/me")
 def me():
     user = get_current_user()
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-
-    return jsonify(
-        success=True,
-        username=user["username"],
-        balance=user["balance"]
-    )
+    return jsonify(success=True, username=user["username"], balance=user["balance"])
 
 
-@app.route("/users", methods=["GET"])
-def list_users():
+@app.route("/users")
+def users():
+    user = get_current_user()
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    res = supabase.table("cybucks").select("username").neq("username", user["username"]).execute()
+    return jsonify(success=True, users=[u["username"] for u in res.data])
+
+
+@limiter.limit("5/min")
+@app.route("/transfer", methods=["POST"])
+def transfer():
     user = get_current_user()
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
 
-    result = supabase.table("cybucks").select("username").neq("username", user["username"]).execute()
-    usernames = [row["username"] for row in result.data]
+    data = request.get_json()
+    to_username = data.get("to_username", "").strip()
+    amount = int(data.get("amount") or 0)
 
-    return jsonify(success=True, users=usernames)
+    if amount <= 0:
+        return jsonify(success=False, error="Invalid amount"), 400
 
+    sender = supabase.table("cybucks").select("*").eq("username", user["username"]).execute().data[0]
+    if sender["balance"] < amount:
+        return jsonify(success=False, error="Insufficient funds"), 400
 
-# ----------------------------------------------------
-# TRANSFER CYBUCKS
-# ----------------------------------------------------
-@limiter.limit("5 per minute")
-@app.route("/transfer", methods=["POST"])
-def transfer():
-    try:
-        user = get_current_user()
-        if not user:
-            return jsonify(success=False, error="Not logged in"), 401
+    receiver_res = supabase.table("cybucks").select("*").eq("username", to_username).execute()
+    if not receiver_res.data:
+        return jsonify(success=False, error="User not found"), 404
 
-        data = request.get_json()
-        if not data:
-            return jsonify(success=False, error="Missing JSON body"), 400
+    receiver = receiver_res.data[0]
 
-        to_username = data.get("to_username", "").strip()
-        amount = data.get("amount")
+    supabase.table("cybucks").update({"balance": sender["balance"] - amount}).eq("username", user["username"]).execute()
+    supabase.table("cybucks").update({"balance": receiver["balance"] + amount}).eq("username", to_username).execute()
 
-        if not to_username or amount is None:
-            return jsonify(success=False, error="Recipient and amount required"), 400
-
-        amount = int(amount)
-        if amount <= 0:
-            return jsonify(success=False, error="Amount must be positive"), 400
-
-        if to_username == user["username"]:
-            return jsonify(success=False, error="Cannot send cybucks to yourself"), 400
-
-        sender_res = supabase.table("cybucks").select("*").eq("username", user["username"]).execute()
-        if not sender_res.data:
-            return jsonify(success=False, error="Sender not found"), 404
-
-        sender = sender_res.data[0]
-
-        if sender["balance"] < amount:
-            return jsonify(success=False, error="Insufficient funds"), 400
-
-        receiver_res = supabase.table("cybucks").select("*").eq("username", to_username).execute()
-        if not receiver_res.data:
-            return jsonify(success=False, error="Recipient not found"), 404
-
-        receiver = receiver_res.data[0]
-
-        new_sender_balance = sender["balance"] - amount
-        new_receiver_balance = receiver["balance"] + amount
-
-        supabase.table("cybucks").update({"balance": new_sender_balance}).eq("username", sender["username"]).execute()
-        supabase.table("cybucks").update({"balance": new_receiver_balance}).eq("username", to_username).execute()
-
-        logging.info(f"{amount} transferred from {sender['username']} to {to_username}")
-
-        return jsonify(
-            success=True,
-            balance=new_sender_balance,
-            to_username=to_username,
-            sent=amount
-        )
-
-    except Exception as e:
-        logging.exception("Exception in /transfer")
-        return jsonify(success=False, error=str(e)), 500
+    return jsonify(success=True, balance=sender["balance"] - amount)
 
 
 # ----------------------------------------------------
-# CHAT SYSTEM
+# CHAT AUTH (SEPARATE SYSTEM)
+# ----------------------------------------------------
+@app.route("/chat_register", methods=["POST"])
+def chat_register():
+    data = request.get_json()
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+
+    if not username or not password:
+        return jsonify(success=False, error="Missing credentials"), 400
+
+    exists = supabase.table("chat_users").select("id").eq("username", username).execute()
+    if exists.data:
+        return jsonify(success=False, error="Username exists"), 400
+
+    hashed = generate_password_hash(password)
+    supabase.table("chat_users").insert({"username": username, "password": hashed}).execute()
+
+    session["chat_username"] = username
+    return jsonify(success=True)
+
+
+@app.route("/chat_login", methods=["POST"])
+def chat_login():
+    data = request.get_json()
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+
+    res = supabase.table("chat_users").select("*").eq("username", username).execute()
+    if not res.data:
+        return jsonify(success=False, error="User not found"), 404
+
+    user = res.data[0]
+    if not check_password_hash(user["password"], password):
+        return jsonify(success=False, error="Incorrect password"), 401
+
+    session["chat_username"] = username
+    return jsonify(success=True)
+
+
+@app.route("/chat_logout", methods=["POST"])
+def chat_logout():
+    session.pop("chat_username", None)
+    return jsonify(success=True)
+
+
+# ----------------------------------------------------
+# CHAT MESSAGES
 # ----------------------------------------------------
 @app.route("/messages", methods=["POST"])
 def send_message():
-    try:
-        user = get_current_user()
-        if not user:
-            return jsonify(success=False, error="Not logged in"), 401
+    user = get_chat_user()
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
 
-        data = request.get_json()
-        if not data:
-            return jsonify(success=False, error="Missing JSON body"), 400
+    data = request.get_json()
+    content = data.get("content", "").strip()
+    if not content:
+        return jsonify(success=False, error="Empty message"), 400
 
-        content = (data.get("content") or "").strip()
-        recipient = (data.get("recipient") or "").strip() or None
+    supabase.table("messages").insert({
+        "sender": user["username"],
+        "recipient": None,
+        "content": content
+    }).execute()
 
-        if not content:
-            return jsonify(success=False, error="Message cannot be empty"), 400
-
-        if len(content) > 500:
-            return jsonify(success=False, error="Message too long"), 400
-
-        if recipient:
-            res = supabase.table("cybucks").select("id").eq("username", recipient).execute()
-            if not res.data:
-                return jsonify(success=False, error="Recipient not found"), 404
-
-        insert_data = {
-            "sender": user["username"],
-            "recipient": recipient,
-            "content": content,
-        }
-
-        res = supabase.table("messages").insert(insert_data).execute()
-        msg = res.data[0]
-
-        return jsonify(success=True, message=msg)
-
-    except Exception as e:
-        logging.exception("Exception in /messages (POST)")
-        return jsonify(success=False, error=str(e)), 500
+    return jsonify(success=True)
 
 
 @app.route("/messages", methods=["GET"])
 def get_messages():
-    try:
-        user = get_current_user()
-        if not user:
-            return jsonify(success=False, error="Not logged in"), 401
+    user = get_chat_user()
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
 
-        since_id = request.args.get("since_id", type=int)
-
-        query = supabase.table("messages").select("*").order("id", desc=False)
-
-        if since_id is not None:
-            query = query.gt("id", since_id)
-
-        res = query.execute()
-        all_msgs = res.data or []
-
-        visible = []
-        for m in all_msgs:
-            if (
-                m["recipient"] is None or
-                m["sender"] == user["username"] or
-                m["recipient"] == user["username"]
-            ):
-                visible.append(m)
-
-        visible = visible[-100:]
-
-        return jsonify(success=True, messages=visible)
-
-    except Exception as e:
-        logging.exception("Exception in /messages (GET)")
-        return jsonify(success=False, error=str(e)), 500)
+    res = supabase.table("messages").select("*").order("id").limit(100).execute()
+    return jsonify(success=True, messages=res.data)
 
 
 # ----------------------------------------------------
-# HEALTH CHECK
+# HEALTH
 # ----------------------------------------------------
 @app.route("/health")
 def health():
-    return "Cybucks backend running securely, vro!"
+    return "Backend secure, vro!"
 
 
 # ----------------------------------------------------
-# MAIN
+# RUN
 # ----------------------------------------------------
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
