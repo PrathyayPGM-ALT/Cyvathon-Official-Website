@@ -281,7 +281,7 @@ def get_messages():
 
     except Exception as e:
         logging.exception("Exception in /messages (GET)")
-        return jsonify(success=False, error=str(e)), 500)
+        return jsonify(success=False, error=str(e)), 500
 
 
 
