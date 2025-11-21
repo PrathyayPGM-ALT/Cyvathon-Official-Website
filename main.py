@@ -7,6 +7,12 @@ import logging
 from time import time
 from datetime import timedelta
 
+# ----------------------------------------------
+# RATE LIMITER (APPLICATION FIREWALL)
+# ----------------------------------------------
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 
 recent_registrations = {}
 REGISTRATION_LIMIT_WINDOW = 15
@@ -23,14 +29,12 @@ app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-this-secret-vro")
 app.config["SESSION_COOKIE_NAME"] = "cyvathon_session"
 
 # Make cookies safer
-app.config["SESSION_COOKIE_HTTPONLY"] = True   
-app.config["SESSION_COOKIE_SECURE"] = True    
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"  
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=6)
 
-
 CORS(app, supports_credentials=True)
-
 logging.basicConfig(level=logging.INFO)
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -40,6 +44,16 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     logging.error("Supabase URL or Key not set in environment variables!")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+# ----------------------------------------------------
+# FIREWALL SETUP (Flask-Limiter)
+# ----------------------------------------------------
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"]  # global limits
+)
 
 
 # ----------------------------------------------------
@@ -61,7 +75,6 @@ def get_current_user():
 # ----------------------------------------------------
 @app.route("/")
 def root():
-    # send the bank UI directly
     return app.send_static_file("bank.html")
 
 
@@ -73,6 +86,7 @@ def bank_page():
 # ----------------------------------------------------
 # AUTH ROUTES
 # ----------------------------------------------------
+@limiter.limit("5 per minute")  # Firewall: Registration anti-spam
 @app.route("/register", methods=["POST"])
 def register():
     client_ip = request.remote_addr
@@ -83,8 +97,8 @@ def register():
     if now - last_time < REGISTRATION_LIMIT_WINDOW:
         return jsonify(success=False, error="Too many accounts from this IP"), 429
 
-   
     recent_registrations[client_ip] = now
+
     try:
         data = request.get_json()
         if not data:
@@ -110,9 +124,8 @@ def register():
         }).execute()
 
         logging.info(f"New user registered: {username}")
-        # Auto-login after register
-        session["username"] = username
 
+        session["username"] = username
         return jsonify(success=True, balance=0, username=username)
 
     except Exception as e:
@@ -120,6 +133,7 @@ def register():
         return jsonify(success=False, error=str(e)), 500
 
 
+@limiter.limit("10 per minute")  # Firewall: protect from password brute force
 @app.route("/login", methods=["POST"])
 def login():
     try:
@@ -142,7 +156,6 @@ def login():
         if not check_password_hash(user["password"], password):
             return jsonify(success=False, error="Incorrect password"), 401
 
-        # store in session
         session["username"] = username
 
         logging.info(f"User logged in: {username}")
@@ -181,7 +194,6 @@ def list_users():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
 
-    # get all other users
     result = supabase.table("cybucks").select("username").neq("username", user["username"]).execute()
     usernames = [row["username"] for row in result.data]
 
@@ -189,8 +201,9 @@ def list_users():
 
 
 # ----------------------------------------------------
-# TRANSFER CYBUCKS (NO MORE DIRECT DEPOSIT/WITHDRAW)
+# TRANSFER CYBUCKS
 # ----------------------------------------------------
+@limiter.limit("5 per minute")  # Firewall: prevent abuse of transfer API
 @app.route("/transfer", methods=["POST"])
 def transfer():
     try:
@@ -215,7 +228,7 @@ def transfer():
         if to_username == user["username"]:
             return jsonify(success=False, error="Cannot send cybucks to yourself"), 400
 
-        # refresh sender from DB
+        # refresh sender
         sender_res = supabase.table("cybucks").select("*").eq("username", user["username"]).execute()
         if not sender_res.data:
             return jsonify(success=False, error="Sender not found"), 404
@@ -225,7 +238,6 @@ def transfer():
         if sender["balance"] < amount:
             return jsonify(success=False, error="Insufficient funds"), 400
 
-        # lookup receiver
         receiver_res = supabase.table("cybucks").select("*").eq("username", to_username).execute()
         if not receiver_res.data:
             return jsonify(success=False, error="Recipient not found"), 404
@@ -235,9 +247,7 @@ def transfer():
         new_sender_balance = sender["balance"] - amount
         new_receiver_balance = receiver["balance"] + amount
 
-        # Update sender
         supabase.table("cybucks").update({"balance": new_sender_balance}).eq("username", sender["username"]).execute()
-        # Update receiver
         supabase.table("cybucks").update({"balance": new_receiver_balance}).eq("username", to_username).execute()
 
         logging.info(f"{amount} transferred from {sender['username']} to {to_username}")
