@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cyvathon Global Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0d0d0d;
+            color: white;
+            padding: 20px;
+        }
+
+        #chat-box {
+            border: 2px solid #444;
+            height: 350px;
+            padding: 10px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            background: #111;
+        }
+
+        .msg {
+            padding: 4px 0;
+            border-bottom: 1px solid #222;
+        }
+
+        #input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 6px;
+        }
+
+        input {
+            flex: 1;
+            border: 1px solid #666;
+            background: #222;
+            color: white;
+        }
+
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Cyvathon Global Chat</h1>
+    <p>Welcome to the chat room! Messages update every 1.5 seconds.</p>
+
+    <div id="chat-box"></div>
+
+    <div id="input-area">
+        <input id="msg" placeholder="Type message..." autocomplete="off">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        let lastId = 0;
+
+        async function loadMessages() {
+            const url = lastId ? `/messages?since_id=${lastId}` : `/messages`;
+            const res = await fetch(url, { credentials: "include" });
+            const data = await res.json();
+
+            if (!data.success) return;
+
+            const box = document.getElementById("chat-box");
+
+            data.messages.forEach(m => {
+                const div = document.createElement("div");
+                div.className = "msg";
+
+                let toText = m.recipient ? ` → ${m.recipient}` : "";
+                div.textContent = `[${m.sender}${toText}] ${m.content}`;
+
+                box.appendChild(div);
+                lastId = m.id;
+            });
+
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const text = document.getElementById("msg").value.trim();
+            if (!text) return;
+
+            await fetch("/messages", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ content: text })
+            });
+
+            document.getElementById("msg").value = "";
+            loadMessages();
+        }
+
+        setInterval(loadMessages, 1500);
+        loadMessages();
+    </script>
+
+</body>
+</html>
