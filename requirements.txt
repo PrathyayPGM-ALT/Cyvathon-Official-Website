@@ -2,3 +2,4 @@ flask
 flask-cors
 supabase
 gunicorn
+flask_limiter
