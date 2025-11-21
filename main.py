@@ -311,6 +311,63 @@ def send_message():
         logging.exception("Exception in /messages (POST)")
         return jsonify(success=False, error=str(e)), 500
 
+@app.route("/messages", methods=["GET"])
+def get_messages():
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify(success=False, error="Not logged in"), 401
+
+        # last message id you already have (optional)
+        since_id = request.args.get("since_id", type=int)
+
+        query = (
+            supabase
+            .table("messages")
+            .select("*")
+            .order("id", desc=False)
+        )
+
+        if since_id is not None:
+            query = query.gt("id", since_id)
+
+        # Only show:
+        # - public messages (recipient is null)
+        # - messages sent by the user
+        # - messages sent TO the user
+        res = query.execute()
+        all_msgs = res.data or []
+
+        visible = []
+        for m in all_msgs:
+            if (
+                m["recipient"] is None or
+                m["sender"] == user["username"] or
+                m["recipient"] == user["username"]
+            ):
+                visible.append(m)
+
+        # Maybe cap to latest 100
+        visible = visible[-100:]
+
+        messages = [
+            {
+                "id": m["id"],
+                "sender": m["sender"],
+                "recipient": m.get("recipient"),
+                "content": m["content"],
+                "created_at": m["created_at"],
+            }
+            for m in visible
+        ]
+
+        return jsonify(success=True, messages=messages)
+
+    except Exception as e:
+        logging.exception("Exception in /messages (GET)")
+        return jsonify(success=False, error=str(e)), 500
+
+
 
 
 # ----------------------------------------------------
