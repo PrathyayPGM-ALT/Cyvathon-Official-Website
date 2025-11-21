@@ -2,40 +2,131 @@
 <html>
 <head>
     <title>Cyvathon Chat</title>
+
     <style>
-        body { background:#0d0d0d; color:white; font-family:Arial; padding:20px; }
+        body {
+            background: radial-gradient(circle at top, #0d0d0d, #050505);
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #6fb1ff;
+            text-shadow: 0 0 15px #3b82f6;
+        }
+
+        /* CONTAINER */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(20,20,20,0.9);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 153, 255, 0.3);
+            backdrop-filter: blur(6px);
+        }
+
+        /* INPUTS */
+        input {
+            width: calc(100% - 20px);
+            padding: 12px;
+            margin: 6px 0;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #111;
+            color: #ddd;
+            font-size: 16px;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 10px #3b82f6;
+        }
+
+        /* BUTTONS */
+        button {
+            padding: 12px 18px;
+            margin: 6px 4px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            background: #3b82f6;
+            color: white;
+            font-size: 16px;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #60a5fa;
+            box-shadow: 0 0 10px #3b82f6;
+        }
+
+        /* CHAT BOX */
         #chat-box {
-            height:320px; overflow-y:auto; border:1px solid #444;
-            padding:10px; background:#111; margin-bottom:10px;
+            height: 350px;
+            overflow-y: auto;
+            border: 1px solid #222;
+            padding: 12px;
+            background: #0b0b0b;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            box-shadow: inset 0 0 10px #000;
         }
-        input, button {
-            padding:10px; font-size:16px; margin:4px;
-            border-radius:5px; border:1px solid #444; background:#222; color:white;
+
+        .msg {
+            padding: 6px 10px;
+            margin: 6px 0;
+            border-radius: 6px;
+            background: #1a1a1a;
+            border-left: 3px solid #3b82f6;
         }
-        button { background:#3b82f6; cursor:pointer; }
+
+        .msg span {
+            font-weight: bold;
+            color: #60a5fa;
+        }
+
+        #login-status {
+            color: #ff6b6b;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
 
 <h1>Cyvathon Chat</h1>
 
-<div id="login-section">
-    <h2>Login to Chat</h2>
-    <input id="login-username" placeholder="Username">
-    <input id="login-password" placeholder="Password" type="password">
-    <button onclick="chatLogin()">Login</button>
-    <button onclick="chatRegister()">Register</button>
-    <p id="login-status"></p>
+<div class="container">
+
+    <!-- LOGIN -->
+    <div id="login-section">
+        <h2>Login to Chat</h2>
+
+        <input id="login-username" placeholder="Username">
+        <input id="login-password" placeholder="Password" type="password">
+
+        <button onclick="chatLogin()">Login</button>
+        <button onclick="chatRegister()">Register</button>
+
+        <p id="login-status"></p>
+    </div>
+
+    <!-- CHAT -->
+    <div id="chat-section" style="display:none;">
+        <button onclick="chatLogout()">Logout</button>
+
+        <div id="chat-box"></div>
+
+        <input id="msg" placeholder="Type message...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
 </div>
-
-<div id="chat-section" style="display:none;">
-    <button onclick="chatLogout()">Logout</button>
-    <div id="chat-box"></div>
-
-    <input id="msg" placeholder="Type message..." style="width:70%;">
-    <button onclick="sendMessage()">Send</button>
-</div>
-
 
 <script>
 function el(id) {
@@ -119,7 +210,8 @@ async function loadMessages() {
 
     data.messages.forEach(m=>{
         let div = document.createElement("div");
-        div.textContent = `${m.sender}: ${m.content}`;
+        div.className="msg";
+        div.innerHTML = `<span>${m.sender}</span>: ${m.content}`;
         box.appendChild(div);
     });
 
@@ -128,8 +220,6 @@ async function loadMessages() {
 
 setInterval(loadMessages, 1500);
 </script>
-
-
 
 </body>
 </html>
