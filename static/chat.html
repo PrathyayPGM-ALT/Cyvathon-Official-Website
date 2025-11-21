@@ -1,115 +1,122 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Cyvathon Global Chat</title>
+    <title>Cyvathon Chat</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #0d0d0d;
-            color: white;
-            padding: 20px;
-        }
-
+        body { background:#0d0d0d; color:white; font-family:Arial; padding:20px; }
         #chat-box {
-            border: 2px solid #444;
-            height: 350px;
-            padding: 10px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            background: #111;
+            height:320px; overflow-y:auto; border:1px solid #444;
+            padding:10px; background:#111; margin-bottom:10px;
         }
-
-        .msg {
-            padding: 4px 0;
-            border-bottom: 1px solid #222;
-        }
-
-        #input-area {
-            display: flex;
-            gap: 10px;
-        }
-
         input, button {
-            padding: 10px;
-            font-size: 16px;
-            border-radius: 6px;
+            padding:10px; font-size:16px; margin:4px;
+            border-radius:5px; border:1px solid #444; background:#222; color:white;
         }
-
-        input {
-            flex: 1;
-            border: 1px solid #666;
-            background: #222;
-            color: white;
-        }
-
-        button {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #2563eb;
-        }
+        button { background:#3b82f6; cursor:pointer; }
     </style>
 </head>
 <body>
 
-    <h1>Cyvathon Global Chat</h1>
-    <p>Welcome to the chat room! Messages update every 1.5 seconds.</p>
+<h1>Cyvathon Chat</h1>
 
+<div id="login-section">
+    <h2>Login to Chat</h2>
+    <input id="login-username" placeholder="Username">
+    <input id="login-password" placeholder="Password" type="password">
+    <button onclick="chatLogin()">Login</button>
+    <button onclick="chatRegister()">Register</button>
+    <p id="login-status"></p>
+</div>
+
+<div id="chat-section" style="display:none;">
+    <button onclick="chatLogout()">Logout</button>
     <div id="chat-box"></div>
 
-    <div id="input-area">
-        <input id="msg" placeholder="Type message..." autocomplete="off">
-        <button onclick="sendMessage()">Send</button>
-    </div>
+    <input id="msg" placeholder="Type message..." style="width:70%;">
+    <button onclick="sendMessage()">Send</button>
+</div>
 
-    <script>
-        let lastId = 0;
+<script>
+async function chatLogin() {
+    let user = login_username.value;
+    let pass = login_password.value;
 
-        async function loadMessages() {
-            const url = lastId ? `/messages?since_id=${lastId}` : `/messages`;
-            const res = await fetch(url, { credentials: "include" });
-            const data = await res.json();
+    let res = await fetch("/chat_login", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        credentials:"include",
+        body:JSON.stringify({username:user, password:pass})
+    });
 
-            if (!data.success) return;
-
-            const box = document.getElementById("chat-box");
-
-            data.messages.forEach(m => {
-                const div = document.createElement("div");
-                div.className = "msg";
-
-                let toText = m.recipient ? ` → ${m.recipient}` : "";
-                div.textContent = `[${m.sender}${toText}] ${m.content}`;
-
-                box.appendChild(div);
-                lastId = m.id;
-            });
-
-            box.scrollTop = box.scrollHeight;
-        }
-
-        async function sendMessage() {
-            const text = document.getElementById("msg").value.trim();
-            if (!text) return;
-
-            await fetch("/messages", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ content: text })
-            });
-
-            document.getElementById("msg").value = "";
-            loadMessages();
-        }
-
-        setInterval(loadMessages, 1500);
+    let data = await res.json();
+    if (data.success) {
+        login-section.style.display="none";
+        chat-section.style.display="block";
         loadMessages();
-    </script>
+    } else {
+        login-status.textContent = data.error;
+    }
+}
+
+async function chatRegister() {
+    let user = login_username.value;
+    let pass = login_password.value;
+
+    let res = await fetch("/chat_register", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        credentials:"include",
+        body:JSON.stringify({username:user, password:pass})
+    });
+
+    let data = await res.json();
+    if (data.success) {
+        login-section.style.display="none";
+        chat-section.style.display="block";
+        loadMessages();
+    } else {
+        login-status.textContent = data.error;
+    }
+}
+
+async function chatLogout() {
+    await fetch("/chat_logout", {method:"POST", credentials:"include"});
+    chat-section.style.display="none";
+    login-section.style.display="block";
+}
+
+async function sendMessage() {
+    let text = msg.value.trim();
+    if (!text) return;
+
+    await fetch("/messages", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        credentials:"include",
+        body:JSON.stringify({content:text})
+    });
+
+    msg.value="";
+    loadMessages();
+}
+
+async function loadMessages() {
+    let res = await fetch("/messages", {credentials:"include"});
+    let data = await res.json();
+    if (!data.success) return;
+
+    chat-box.innerHTML="";
+    data.messages.forEach(m=>{
+        let div=document.createElement("div");
+        div.textContent = `${m.sender}: ${m.content}`;
+        chat-box.appendChild(div);
+    });
+
+    chat-box.scrollTop = chat-box.scrollHeight;
+}
+
+setInterval(loadMessages, 1500);
+</script>
 
 </body>
 </html>
