@@ -261,6 +261,57 @@ def transfer():
         logging.exception("Exception in /transfer")
         return jsonify(success=False, error=str(e)), 500
 
+@app.route("/messages", methods=["POST"])
+def send_message():
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify(success=False, error="Not logged in"), 401
+
+        data = request.get_json()
+        if not data:
+            return jsonify(success=False, error="Missing JSON body"), 400
+
+        content = (data.get("content") or "").strip()
+        recipient = (data.get("recipient") or "").strip() or None  # None = public chat
+
+        if not content:
+            return jsonify(success=False, error="Message cannot be empty"), 400
+
+        if len(content) > 500:
+            return jsonify(success=False, error="Message too long"), 400
+
+        # Optional: if recipient is set, verify that user exists
+        if recipient:
+            res = supabase.table("cybucks").select("id").eq("username", recipient).execute()
+            if not res.data:
+                return jsonify(success=False, error="Recipient not found"), 404
+
+        insert_data = {
+            "sender": user["username"],
+            "recipient": recipient,
+            "content": content,
+        }
+
+        res = supabase.table("messages").insert(insert_data).execute()
+        msg = res.data[0]
+
+        return jsonify(
+            success=True,
+            message={
+                "id": msg["id"],
+                "sender": msg["sender"],
+                "recipient": msg["recipient"],
+                "content": msg["content"],
+                "created_at": msg["created_at"],
+            },
+        )
+
+    except Exception as e:
+        logging.exception("Exception in /messages (POST)")
+        return jsonify(success=False, error=str(e)), 500
+
+
 
 # ----------------------------------------------------
 # HEALTH CHECK
