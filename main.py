@@ -7,7 +7,6 @@ import logging
 from time import time
 from datetime import timedelta
 
-
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -50,7 +49,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
-    default_limits=["200 per day", "50 per hour"]  # global limits
+    default_limits=["200 per day", "50 per hour"]
 )
 
 
@@ -69,7 +68,7 @@ def get_current_user():
 
 
 # ----------------------------------------------------
-# STATIC PAGE (BANK UI)
+# STATIC PAGES
 # ----------------------------------------------------
 @app.route("/")
 def root():
@@ -81,10 +80,15 @@ def bank_page():
     return app.send_static_file("bank.html")
 
 
+@app.route("/chat")
+def chat_page():
+    return app.send_static_file("chat.html")
+
+
 # ----------------------------------------------------
 # AUTH ROUTES
 # ----------------------------------------------------
-@limiter.limit("5 per minute")  # Firewall: Registration anti-spam
+@limiter.limit("5 per minute")
 @app.route("/register", methods=["POST"])
 def register():
     client_ip = request.remote_addr
@@ -108,7 +112,6 @@ def register():
         if not username or not password:
             return jsonify(success=False, error="Username and password required"), 400
 
-        # Check if user already exists
         result = supabase.table("cybucks").select("id").eq("username", username).execute()
         if result.data:
             return jsonify(success=False, error="Username already taken"), 400
@@ -131,7 +134,7 @@ def register():
         return jsonify(success=False, error=str(e)), 500
 
 
-@limiter.limit("10 per minute")  # Firewall: protect from password brute force
+@limiter.limit("10 per minute")
 @app.route("/login", methods=["POST"])
 def login():
     try:
@@ -201,7 +204,7 @@ def list_users():
 # ----------------------------------------------------
 # TRANSFER CYBUCKS
 # ----------------------------------------------------
-@limiter.limit("5 per minute")  # Firewall: prevent abuse of transfer API
+@limiter.limit("5 per minute")
 @app.route("/transfer", methods=["POST"])
 def transfer():
     try:
@@ -226,7 +229,6 @@ def transfer():
         if to_username == user["username"]:
             return jsonify(success=False, error="Cannot send cybucks to yourself"), 400
 
-        # refresh sender
         sender_res = supabase.table("cybucks").select("*").eq("username", user["username"]).execute()
         if not sender_res.data:
             return jsonify(success=False, error="Sender not found"), 404
@@ -261,6 +263,10 @@ def transfer():
         logging.exception("Exception in /transfer")
         return jsonify(success=False, error=str(e)), 500
 
+
+# ----------------------------------------------------
+# CHAT SYSTEM
+# ----------------------------------------------------
 @app.route("/messages", methods=["POST"])
 def send_message():
     try:
@@ -273,7 +279,7 @@ def send_message():
             return jsonify(success=False, error="Missing JSON body"), 400
 
         content = (data.get("content") or "").strip()
-        recipient = (data.get("recipient") or "").strip() or None  # None = public chat
+        recipient = (data.get("recipient") or "").strip() or None
 
         if not content:
             return jsonify(success=False, error="Message cannot be empty"), 400
@@ -281,7 +287,6 @@ def send_message():
         if len(content) > 500:
             return jsonify(success=False, error="Message too long"), 400
 
-        # Optional: if recipient is set, verify that user exists
         if recipient:
             res = supabase.table("cybucks").select("id").eq("username", recipient).execute()
             if not res.data:
@@ -296,20 +301,12 @@ def send_message():
         res = supabase.table("messages").insert(insert_data).execute()
         msg = res.data[0]
 
-        return jsonify(
-            success=True,
-            message={
-                "id": msg["id"],
-                "sender": msg["sender"],
-                "recipient": msg["recipient"],
-                "content": msg["content"],
-                "created_at": msg["created_at"],
-            },
-        )
+        return jsonify(success=True, message=msg)
 
     except Exception as e:
         logging.exception("Exception in /messages (POST)")
         return jsonify(success=False, error=str(e)), 500
+
 
 @app.route("/messages", methods=["GET"])
 def get_messages():
@@ -318,23 +315,13 @@ def get_messages():
         if not user:
             return jsonify(success=False, error="Not logged in"), 401
 
-        # last message id you already have (optional)
         since_id = request.args.get("since_id", type=int)
 
-        query = (
-            supabase
-            .table("messages")
-            .select("*")
-            .order("id", desc=False)
-        )
+        query = supabase.table("messages").select("*").order("id", desc=False)
 
         if since_id is not None:
             query = query.gt("id", since_id)
 
-        # Only show:
-        # - public messages (recipient is null)
-        # - messages sent by the user
-        # - messages sent TO the user
         res = query.execute()
         all_msgs = res.data or []
 
@@ -347,27 +334,13 @@ def get_messages():
             ):
                 visible.append(m)
 
-        # Maybe cap to latest 100
         visible = visible[-100:]
 
-        messages = [
-            {
-                "id": m["id"],
-                "sender": m["sender"],
-                "recipient": m.get("recipient"),
-                "content": m["content"],
-                "created_at": m["created_at"],
-            }
-            for m in visible
-        ]
-
-        return jsonify(success=True, messages=messages)
+        return jsonify(success=True, messages=visible)
 
     except Exception as e:
         logging.exception("Exception in /messages (GET)")
-        return jsonify(success=False, error=str(e)), 500
-
-
+        return jsonify(success=False, error=str(e)), 500)
 
 
 # ----------------------------------------------------
