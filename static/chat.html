@@ -37,9 +37,14 @@
 </div>
 
 <script>
+<script>
+function el(id) {
+    return document.getElementById(id);
+}
+
 async function chatLogin() {
-    let user = login_username.value;
-    let pass = login_password.value;
+    let user = el("login-username").value;
+    let pass = el("login-password").value;
 
     let res = await fetch("/chat_login", {
         method:"POST",
@@ -50,17 +55,17 @@ async function chatLogin() {
 
     let data = await res.json();
     if (data.success) {
-        login-section.style.display="none";
-        chat-section.style.display="block";
+        el("login-section").style.display="none";
+        el("chat-section").style.display="block";
         loadMessages();
     } else {
-        login-status.textContent = data.error;
+        el("login-status").textContent = data.error;
     }
 }
 
 async function chatRegister() {
-    let user = login_username.value;
-    let pass = login_password.value;
+    let user = el("login-username").value;
+    let pass = el("login-password").value;
 
     let res = await fetch("/chat_register", {
         method:"POST",
@@ -71,22 +76,26 @@ async function chatRegister() {
 
     let data = await res.json();
     if (data.success) {
-        login-section.style.display="none";
-        chat-section.style.display="block";
+        el("login-section").style.display="none";
+        el("chat-section").style.display="block";
         loadMessages();
     } else {
-        login-status.textContent = data.error;
+        el("login-status").textContent = data.error;
     }
 }
 
 async function chatLogout() {
-    await fetch("/chat_logout", {method:"POST", credentials:"include"});
-    chat-section.style.display="none";
-    login-section.style.display="block";
+    await fetch("/chat_logout", {
+        method:"POST",
+        credentials:"include"
+    });
+
+    el("chat-section").style.display="none";
+    el("login-section").style.display="block";
 }
 
 async function sendMessage() {
-    let text = msg.value.trim();
+    let text = el("msg").value.trim();
     if (!text) return;
 
     await fetch("/messages", {
@@ -96,7 +105,7 @@ async function sendMessage() {
         body:JSON.stringify({content:text})
     });
 
-    msg.value="";
+    el("msg").value="";
     loadMessages();
 }
 
@@ -105,17 +114,21 @@ async function loadMessages() {
     let data = await res.json();
     if (!data.success) return;
 
-    chat-box.innerHTML="";
+    let box = el("chat-box");
+    box.innerHTML="";
+
     data.messages.forEach(m=>{
-        let div=document.createElement("div");
+        let div = document.createElement("div");
         div.textContent = `${m.sender}: ${m.content}`;
-        chat-box.appendChild(div);
+        box.appendChild(div);
     });
 
-    chat-box.scrollTop = chat-box.scrollHeight;
+    box.scrollTop = box.scrollHeight;
 }
 
 setInterval(loadMessages, 1500);
+</script>
+
 </script>
 
 </body>
