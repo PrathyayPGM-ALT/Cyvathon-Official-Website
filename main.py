@@ -260,12 +260,29 @@ def send_message():
 
 @app.route("/messages", methods=["GET"])
 def get_messages():
-    user = get_chat_user()
-    if not user:
-        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        user = get_chat_user()
+        if not user:
+            return jsonify(success=False, error="Not logged in"), 401
 
-    res = supabase.table("messages").select("*").order("id").limit(100).execute()
-    return jsonify(success=True, messages=res.data)
+        res = (
+            supabase
+            .table("messages")
+            .select("*")
+            .order("id", desc=False)
+            .limit(200)  # show last 200 messages
+            .execute()
+        )
+
+        # Only public messages
+        public = [m for m in res.data if m["recipient"] is None]
+
+        return jsonify(success=True, messages=public)
+
+    except Exception as e:
+        logging.exception("Exception in /messages (GET)")
+        return jsonify(success=False, error=str(e)), 500)
+
 
 
 # ----------------------------------------------------
