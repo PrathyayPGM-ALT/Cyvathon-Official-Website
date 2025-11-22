@@ -6,20 +6,13 @@ import os
 import logging
 from time import time
 from datetime import timedelta
-
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-
 
 recent_registrations = {}
 REGISTRATION_LIMIT_WINDOW = 15
 
-
-# ----------------------------------------------------
-# APP SETUP
-# ----------------------------------------------------
 app = Flask(__name__, static_folder="static", static_url_path="/static")
-
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-this-secret-vro")
 app.config["SESSION_COOKIE_NAME"] = "cyvathon_session"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -34,20 +27,12 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-
-# ----------------------------------------------------
-# FIREWALL
-# ----------------------------------------------------
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
     default_limits=["200 per day", "50 per hour"]
 )
 
-
-# ----------------------------------------------------
-# BANK HELPERS
-# ----------------------------------------------------
 def get_current_user():
     username = session.get("username")
     if not username:
@@ -55,10 +40,6 @@ def get_current_user():
     result = supabase.table("cybucks").select("*").eq("username", username).execute()
     return result.data[0] if result.data else None
 
-
-# ----------------------------------------------------
-# CHAT HELPERS (SEPARATE LOGIN)
-# ----------------------------------------------------
 def get_chat_user():
     username = session.get("chat_username")
     if not username:
@@ -66,10 +47,6 @@ def get_chat_user():
     result = supabase.table("chat_users").select("*").eq("username", username).execute()
     return result.data[0] if result.data else None
 
-
-# ----------------------------------------------------
-# STATIC PAGES
-# ----------------------------------------------------
 @app.route("/")
 def home():
     return app.send_static_file("bank.html")
@@ -82,23 +59,19 @@ def bank_page():
 def chat_page():
     return app.send_static_file("chat.html")
 
-
-# ----------------------------------------------------
-# BANK AUTH
-# ----------------------------------------------------
 @limiter.limit("5/min")
 @app.route("/register", methods=["POST"])
 def register():
     client_ip = request.remote_addr
     now = time()
-    last = recent_registrations.get(client_ip, 0)
-    if now - last < REGISTRATION_LIMIT_WINDOW:
+    if now - recent_registrations.get(client_ip, 0) < REGISTRATION_LIMIT_WINDOW:
         return jsonify(success=False, error="Too many accounts"), 429
     recent_registrations[client_ip] = now
 
     data = request.get_json()
     username = data.get("username", "").strip()
     password = data.get("password", "").strip()
+
     if not username or not password:
         return jsonify(success=False, error="Missing credentials"), 400
 
@@ -111,7 +84,6 @@ def register():
     session["username"] = username
 
     return jsonify(success=True, username=username, balance=0)
-
 
 @limiter.limit("10/min")
 @app.route("/login", methods=["POST"])
@@ -131,23 +103,17 @@ def login():
     session["username"] = username
     return jsonify(success=True, username=username, balance=user["balance"])
 
-
 @app.route("/logout", methods=["POST"])
 def logout():
     session.pop("username", None)
     return jsonify(success=True)
 
-
-# ----------------------------------------------------
-# BANK FEATURES
-# ----------------------------------------------------
 @app.route("/me")
 def me():
     user = get_current_user()
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     return jsonify(success=True, username=user["username"], balance=user["balance"])
-
 
 @app.route("/users")
 def users():
@@ -156,7 +122,6 @@ def users():
         return jsonify(success=False, error="Not logged in"), 401
     res = supabase.table("cybucks").select("username").neq("username", user["username"]).execute()
     return jsonify(success=True, users=[u["username"] for u in res.data])
-
 
 @limiter.limit("5/min")
 @app.route("/transfer", methods=["POST"])
@@ -187,10 +152,6 @@ def transfer():
 
     return jsonify(success=True, balance=sender["balance"] - amount)
 
-
-# ----------------------------------------------------
-# CHAT AUTH (SEPARATE SYSTEM)
-# ----------------------------------------------------
 @app.route("/chat_register", methods=["POST"])
 def chat_register():
     data = request.get_json()
@@ -210,7 +171,6 @@ def chat_register():
     session["chat_username"] = username
     return jsonify(success=True)
 
-
 @app.route("/chat_login", methods=["POST"])
 def chat_login():
     data = request.get_json()
@@ -228,17 +188,13 @@ def chat_login():
     session["chat_username"] = username
     return jsonify(success=True)
 
-
 @app.route("/chat_logout", methods=["POST"])
 def chat_logout():
     session.pop("chat_username", None)
     return jsonify(success=True)
 
-
-# ----------------------------------------------------
-# CHAT MESSAGES
-# ----------------------------------------------------
 @app.route("/messages", methods=["POST"])
+@limiter.limit("20/min")
 def send_message():
     user = get_chat_user()
     if not user:
@@ -246,6 +202,7 @@ def send_message():
 
     data = request.get_json()
     content = data.get("content", "").strip()
+
     if not content:
         return jsonify(success=False, error="Empty message"), 400
 
@@ -257,45 +214,29 @@ def send_message():
 
     return jsonify(success=True)
 
-
 @app.route("/messages", methods=["GET"])
+@limiter.limit(None)
 def get_messages():
-    try:
-        user = get_chat_user()
-        if not user:
-            return jsonify(success=False, error="Not logged in"), 401
+    user = get_chat_user()
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
 
-        res = (
-            supabase
-            .table("messages")
-            .select("*")
-            .order("id", desc=False)
-            .limit(200)  # show last 200 messages
-            .execute()
-        )
+    res = (
+        supabase
+        .table("messages")
+        .select("*")
+        .order("id", desc=False)
+        .limit(200)
+        .execute()
+    )
 
-        # Only public messages
-        public = [m for m in res.data if m["recipient"] is None]
+    public = [m for m in res.data if m["recipient"] is None]
+    return jsonify(success=True, messages=public)
 
-        return jsonify(success=True, messages=public)
-
-    except Exception as e:
-        logging.exception("Exception in /messages (GET)")
-        return jsonify(success=False, error=str(e)), 500
-
-
-
-# ----------------------------------------------------
-# HEALTH
-# ----------------------------------------------------
 @app.route("/health")
 def health():
     return "Backend secure, vro!"
 
-
-# ----------------------------------------------------
-# RUN
-# ----------------------------------------------------
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(debug=True, host="0.0.0.0", port=port)
