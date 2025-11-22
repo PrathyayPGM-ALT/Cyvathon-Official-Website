@@ -193,8 +193,8 @@ def chat_logout():
     session.pop("chat_username", None)
     return jsonify(success=True)
 
-@app.route("/messages", methods=["POST"])
 @limiter.exempt
+@app.route("/messages", methods=["POST"])
 def send_message():
     user = get_chat_user()
     if not user:
