@@ -3,115 +3,122 @@
 <head>
     <title>Cyvathon Chat</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #000;
-            color: white;
-            font-family: Arial, sans-serif;
+/* GLOBAL */
+body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    color: white;
+    font-family: Arial, sans-serif;
 
-            /* Make body take 100% height */
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* prevent page scroll */
+}
 
-        /* HEADER */
-        #header {
-            padding: 15px;
-            text-align: center;
-            font-size: 32px;
-            font-weight: bold;
-            background: #050505;
-            box-shadow: 0 0 15px rgba(0, 140, 255, 0.5);
-        }
+/* HEADER */
+#header {
+    padding: 15px;
+    text-align: center;
+    font-size: 32px;
+    font-weight: bold;
+    background: #050505;
+    box-shadow: 0 0 15px rgba(0, 140, 255, 0.4);
+    flex-shrink: 0;
+}
 
-        /* CHAT AREA – takes ALL free space */
-        #chat-section {
-            flex: 1; /* expand to full height */
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-        }
+/* LOGIN PAGE */
+#login-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+}
 
-        #chat-box {
-            flex: 1;
-            overflow-y: auto;
-            background: #111;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #333;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
-            font-size: 18px;
-        }
+#login-section input {
+    padding: 14px;
+    width: 300px;
+    font-size: 18px;
+    border-radius: 8px;
+    background: #222;
+    border: 1px solid #444;
+    color: white;
+}
 
-        #message-bar {
-            margin-top: 15px;
-            display: flex;
-            gap: 10px;
-        }
+/* auth buttons are the same size */
+.button-row {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
 
-        #msg {
-            flex: 1;
-            padding: 14px;
-            font-size: 18px;
-            border: 1px solid #444;
-            background: #222;
-            color: white;
-            border-radius: 8px;
-        }
+.button-row button {
+    width: 130px;     /* SAME WIDTH */
+    padding: 12px;
+    font-size: 18px;
+    border-radius: 10px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
 
-        button {
-            padding: 14px 20px;
-            font-size: 18px;
-            border-radius: 8px;
-            border: none;
-            background: #3b82f6;
-            color: white;
-            cursor: pointer;
-        }
-        .auth-btn {
-            width: 150px;
-            padding: 12px;
-            font-size: 18px;
-            border-radius: 10px;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        .button-row {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 15px;
-        }
-        
-        .button-row button {
-            width: 120px;  /* same size buttons */
-            padding: 10px;
-            font-size: 16px;
-        }
+/* CHAT SECTION */
+#chat-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
 
-        /* LOGIN PAGE */
-        #login-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-        }
+    overflow: hidden; /* ***PREVENT PAGE SCROLL*** */
+}
 
-        #login-section input {
-            padding: 14px;
-            width: 300px;
-            font-size: 18px;
-            border-radius: 8px;
-            background: #222;
-            border: 1px solid #444;
-            color: white;
-        }
+/* CHAT MESSAGES SCROLL ONLY */
+#chat-box {
+    flex: 1;
+    overflow-y: auto;  /* INTERNAL SCROLL ONLY */
+    background: #111;
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+    font-size: 18px;
+
+    max-height: 100%;  /* Always fits viewport */
+}
+
+/* MESSAGE INPUT AREA */
+#message-bar {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0; /* keep bar visible */
+}
+
+#msg {
+    flex: 1;
+    padding: 14px;
+    font-size: 18px;
+    border: 1px solid #444;
+    background: #222;
+    color: white;
+    border-radius: 8px;
+}
+
+/* SEND + LOGOUT BUTTON */
+button {
+    padding: 14px 20px;
+    font-size: 18px;
+    border-radius: 8px;
+    border: none;
+    background: #3b82f6;
+    color: white;
+    cursor: pointer;
+}
+
     </style>
 </head>
 <body>
