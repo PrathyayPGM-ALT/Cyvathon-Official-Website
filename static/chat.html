@@ -146,6 +146,8 @@
 
 
 <script>
+let last_id = 0;
+
 function el(id) {
     return document.getElementById(id);
 }
@@ -211,18 +213,21 @@ async function sendMessage() {
     });
 
     el("msg").value="";
-    loadMessages();
+    loadMessages();  
 }
 
+
 async function loadMessages() {
-    let res = await fetch("/messages", { credentials:"include" });
+    let res = await fetch(`/messages?since_id=${last_id}`, { credentials:"include" });
     let data = await res.json();
     if (!data.success) return;
 
     let box = el("chat-box");
-    box.innerHTML="";
 
     data.messages.forEach(m => {
+        // Update pointer
+        last_id = Math.max(last_id, m.id);
+
         let div = document.createElement("div");
         div.textContent = `${m.sender}: ${m.content}`;
         div.style.marginBottom = "8px";
@@ -232,7 +237,8 @@ async function loadMessages() {
     box.scrollTop = box.scrollHeight;
 }
 
-setInterval(loadMessages, 1500);
+
+setInterval(loadMessages, 1000);
 </script>
 
 </body>
