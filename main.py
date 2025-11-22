@@ -213,6 +213,7 @@ def send_message():
     }).execute()
 
     return jsonify(success=True)
+
 @limiter.exempt
 @app.route("/messages", methods=["GET"])
 def get_messages():
@@ -224,8 +225,7 @@ def get_messages():
 
     query = supabase.table("messages").select("*").order("id", desc=False)
 
-
-    if since_id:
+    if since_id is not None:
         query = query.gt("id", since_id)
 
     res = query.limit(50).execute()
@@ -233,7 +233,6 @@ def get_messages():
     public = [m for m in res.data if m["recipient"] is None]
 
     return jsonify(success=True, messages=public)
-
 
 @app.route("/health")
 def health():
