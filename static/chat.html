@@ -70,6 +70,17 @@
             color: white;
             cursor: pointer;
         }
+        .auth-btn {
+            width: 150px;
+            padding: 12px;
+            font-size: 18px;
+            border-radius: 10px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
 
         /* LOGIN PAGE */
         #login-section {
@@ -101,8 +112,8 @@
     <input id="login-username" placeholder="Username">
     <input id="login-password" placeholder="Password" type="password">
 
-    <button onclick="chatLogin()">Login</button>
-    <button onclick="chatRegister()">Register</button>
+    <button class="auth-btn" onclick="chatLogin()">Login</button>
+    <button class="auth-btn" onclick="chatRegister()">Register</button>
 
     <p id="login-status"></p>
 </div>
