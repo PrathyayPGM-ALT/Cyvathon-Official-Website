@@ -154,99 +154,125 @@ button {
 
 <script>
 let last_id = 0;
+let messageInterval = null; // Prevent duplicate intervals
 
 function el(id) {
     return document.getElementById(id);
 }
 
+// ------------------------- LOGIN -------------------------
 async function chatLogin() {
-    let user = el("login-username").value;
-    let pass = el("login-password").value;
+    let user = el("login-username").value.trim();
+    let pass = el("login-password").value.trim();
 
     let res = await fetch("/chat_login", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        credentials:"include",
-        body:JSON.stringify({username:user, password:pass})
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({ username: user, password: pass })
     });
 
     let data = await res.json();
+
     if (data.success) {
-        el("login-section").style.display="none";
-        el("chat-section").style.display="flex";
+        el("login-section").style.display = "none";
+        el("chat-section").style.display = "flex";
+
         loadMessages();
+
+        // Start interval ONLY once
+        if (messageInterval === null) {
+            messageInterval = setInterval(loadMessages, 1200);
+        }
     } else {
         el("login-status").textContent = data.error;
     }
 }
 
+// ------------------------- REGISTER -------------------------
 async function chatRegister() {
-    let user = el("login-username").value;
-    let pass = el("login-password").value;
+    let user = el("login-username").value.trim();
+    let pass = el("login-password").value.trim();
 
     let res = await fetch("/chat_register", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        credentials:"include",
-        body:JSON.stringify({username:user, password:pass})
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        credentials: "include",
+        body: JSON.stringify({ username: user, password: pass })
     });
 
     let data = await res.json();
+
     if (data.success) {
-        el("login-section").style.display="none";
-        el("chat-section").style.display="flex";
+        el("login-section").style.display = "none";
+        el("chat-section").style.display = "flex";
+
         loadMessages();
+
+        // Start interval ONLY once
+        if (messageInterval === null) {
+            messageInterval = setInterval(loadMessages, 1200);
+        }
     } else {
         el("login-status").textContent = data.error;
     }
 }
 
+// ------------------------- LOGOUT -------------------------
 async function chatLogout() {
-    await fetch("/chat_logout", { method:"POST", credentials:"include" });
+    await fetch("/chat_logout", {
+        method: "POST",
+        credentials: "include"
+    });
 
-    el("chat-section").style.display="none";
-    el("login-section").style.display="flex";
+    el("chat-section").style.display = "none";
+    el("login-section").style.display = "flex";
+
+    // STOP the message fetcher
+    if (messageInterval !== null) {
+        clearInterval(messageInterval);
+        messageInterval = null;
+    }
 }
 
+// ------------------------- SEND MESSAGE -------------------------
 async function sendMessage() {
     let text = el("msg").value.trim();
     if (!text) return;
 
     await fetch("/messages", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        credentials:"include",
-        body:JSON.stringify({content:text})
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ content: text })
     });
 
-    el("msg").value="";
-    loadMessages();  
+    el("msg").value = "";
+    loadMessages();
 }
 
-
+// ------------------------- LOAD MESSAGES -------------------------
 async function loadMessages() {
-    let res = await fetch(`/messages?since_id=${last_id}`, { credentials:"include" });
+    let res = await fetch("/messages", { credentials: "include" });
     let data = await res.json();
+
     if (!data.success) return;
 
     let box = el("chat-box");
 
-    data.messages.forEach(m => {
-        // Update pointer
-        last_id = Math.max(last_id, m.id);
+    box.innerHTML = "";
 
+    data.messages.forEach(msg => {
         let div = document.createElement("div");
-        div.textContent = `${m.sender}: ${m.content}`;
+        div.textContent = `${msg.sender}: ${msg.content}`;
         div.style.marginBottom = "8px";
         box.appendChild(div);
     });
 
     box.scrollTop = box.scrollHeight;
 }
-
-
-setInterval(loadMessages, 1000);
 </script>
+
 
 </body>
 </html>
