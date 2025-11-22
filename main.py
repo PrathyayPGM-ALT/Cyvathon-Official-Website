@@ -215,22 +215,21 @@ def send_message():
     return jsonify(success=True)
 
 @app.route("/messages", methods=["GET"])
-@limiter.limit(None)
 def get_messages():
     user = get_chat_user()
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
 
-    res = (
-        supabase
-        .table("messages")
-        .select("*")
-        .order("id", desc=False)
-        .limit(200)
-        .execute()
-    )
+    since_id = request.args.get("since_id", type=int)
+
+    query = supabase.table("messages").select("*").order("id", desc=False)
+    if since_id:
+        query = query.gt("id", since_id)
+
+    res = query.limit(50).execute()
 
     public = [m for m in res.data if m["recipient"] is None]
+
     return jsonify(success=True, messages=public)
 
 @app.route("/health")
