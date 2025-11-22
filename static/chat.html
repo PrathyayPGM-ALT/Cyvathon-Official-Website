@@ -80,7 +80,18 @@
             border: none;
             cursor: pointer;
         }
-
+        .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .button-row button {
+            width: 120px;  /* same size buttons */
+            padding: 10px;
+            font-size: 16px;
+        }
 
         /* LOGIN PAGE */
         #login-section {
@@ -112,8 +123,11 @@
     <input id="login-username" placeholder="Username">
     <input id="login-password" placeholder="Password" type="password">
 
-    <button class="auth-btn" onclick="chatLogin()">Login</button>
-    <button class="auth-btn" onclick="chatRegister()">Register</button>
+    <div class="button-row">
+        <button class="auth-btn" onclick="chatLogin()">Login</button>
+        <button class="auth-btn" onclick="chatRegister()">Register</button>
+    </div>
+
 
     <p id="login-status"></p>
 </div>
