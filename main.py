@@ -194,7 +194,7 @@ def chat_logout():
     return jsonify(success=True)
 
 @app.route("/messages", methods=["POST"])
-@limiter.limit("20/min")
+@limiter.exempt
 def send_message():
     user = get_chat_user()
     if not user:
@@ -213,7 +213,7 @@ def send_message():
     }).execute()
 
     return jsonify(success=True)
-
+@limiter.exempt
 @app.route("/messages", methods=["GET"])
 def get_messages():
     user = get_chat_user()
