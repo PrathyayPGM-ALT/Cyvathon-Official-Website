@@ -298,6 +298,16 @@ def dm_get():
             conv.append(m)
 
     return jsonify(success=True, messages=conv)
+@app.route("/chat_users", methods=["GET"])
+def chat_users():
+    user = get_chat_user()
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+
+    res = supabase.table("chat_users").select("username").execute()
+    users = [u["username"] for u in res.data if u["username"] != user["username"]]
+
+    return jsonify(success=True, users=users)
 
 
 @app.route("/health")
