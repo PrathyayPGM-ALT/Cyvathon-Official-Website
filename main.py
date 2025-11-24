@@ -114,14 +114,20 @@ def me():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     return jsonify(success=True, username=user["username"], balance=user["balance"])
-
 @app.route("/users")
 def users():
-    user = get_current_user()
+    user = get_chat_user()   # IMPORTANT: DM system uses chat_users table
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-    res = supabase.table("cybucks").select("username").neq("username", user["username"]).execute()
+
+    # Get all chat users except the current one
+    res = supabase.table("chat_users") \
+        .select("username") \
+        .neq("username", user["username"]) \
+        .execute()
+
     return jsonify(success=True, users=[u["username"] for u in res.data])
+
 
 @limiter.limit("5/min")
 @app.route("/transfer", methods=["POST"])
