@@ -206,186 +206,198 @@ button {
     </div>
 </div>
 
-
 <script>
-let messageInterval = null;
-let dmInterval = null;
-let currentDM = null;
+// -------------------------------
+// GLOBAL STATE
+// -------------------------------
+let activeDM = null;          // who you are chatting with right now
+let messageInterval = null;   // auto-refresh interval
+let viewingPublic = true;     // track whether you're in public chat
 
-function el(id) { return document.getElementById(id); }
+function el(id) {
+    return document.getElementById(id);
+}
 
-// ------------------------- LOGIN -------------------------
+// -------------------------------
+// AUTH
+// -------------------------------
 async function chatLogin() {
     let user = el("login-username").value.trim();
     let pass = el("login-password").value.trim();
 
     let res = await fetch("/chat_login", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        credentials:"include",
-        body:JSON.stringify({username:user, password:pass})
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username: user, password: pass })
     });
 
     let data = await res.json();
+
     if (data.success) {
         el("login-section").style.display = "none";
-        el("chat-container").style.display = "flex";
-        loadDMUsers();
-        openPublicChat();
+        el("chat-section").style.display = "flex";
+
+        startAutoRefresh();
+        loadPublicChat(); // default
     } else {
         el("login-status").textContent = data.error;
     }
 }
 
-// ------------------------- REGISTER -------------------------
 async function chatRegister() {
     let user = el("login-username").value.trim();
     let pass = el("login-password").value.trim();
 
     let res = await fetch("/chat_register", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        credentials:"include",
-        body:JSON.stringify({username:user, password:pass})
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username: user, password: pass })
     });
 
     let data = await res.json();
+
     if (data.success) {
         el("login-section").style.display = "none";
-        el("chat-container").style.display = "flex";
-        loadDMUsers();
-        openPublicChat();
+        el("chat-section").style.display = "flex";
+
+        startAutoRefresh();
+        loadPublicChat();
     } else {
         el("login-status").textContent = data.error;
     }
 }
 
-// ------------------------- LOGOUT -------------------------
 async function chatLogout() {
-    await fetch("/chat_logout", { method:"POST", credentials:"include" });
-    el("chat-container").style.display = "none";
+    await fetch("/chat_logout", {
+        method: "POST",
+        credentials: "include"
+    });
+
+    el("chat-section").style.display = "none";
     el("login-section").style.display = "flex";
 
-    clearInterval(messageInterval);
-    clearInterval(dmInterval);
+    stopAutoRefresh();
 }
 
-// ------------------------- PUBLIC CHAT -------------------------
-async function sendPublicMessage(text) {
-    await fetch("/messages", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        credentials:"include",
-        body:JSON.stringify({content:text})
-    });
+// -------------------------------
+// AUTO REFRESH
+// -------------------------------
+function startAutoRefresh() {
+    if (messageInterval) return;
+    messageInterval = setInterval(() => {
+        if (viewingPublic) loadPublicChat();
+        else if (activeDM) loadDM(activeDM);
+    }, 1000);
 }
 
-async function loadPublic() {
-    let res = await fetch("/messages", {credentials:"include"});
+function stopAutoRefresh() {
+    if (messageInterval) {
+        clearInterval(messageInterval);
+        messageInterval = null;
+    }
+}
+
+// -------------------------------
+// PUBLIC CHAT
+// -------------------------------
+async function loadPublicChat() {
+    viewingPublic = true;
+    activeDM = null;
+
+    let res = await fetch("/messages", { credentials: "include" });
     let data = await res.json();
+    if (!data.success) return;
+
     let box = el("chat-box");
     box.innerHTML = "";
-    data.messages.forEach(m => {
+
+    data.messages.forEach(msg => {
         let div = document.createElement("div");
-        div.textContent = `${m.sender}: ${m.content}`;
+        div.textContent = `${msg.sender}: ${msg.content}`;
         div.style.marginBottom = "8px";
         box.appendChild(div);
     });
+
     box.scrollTop = box.scrollHeight;
 }
 
-function openPublicChat() {
-    currentDM = null;
-    el("chat-box").style.display = "block";
-    el("dm-box").style.display = "none";
-    el("msg").style.display = "block";
-    el("dm-msg").style.display = "none";
-
-    sendMessage = sendPublic; // override
-
-    clearInterval(dmInterval);
-    messageInterval = setInterval(loadPublic, 1000);
-    loadPublic();
-}
-
-function sendPublic() {
+async function sendMessage() {
     let text = el("msg").value.trim();
     if (!text) return;
-    sendPublicMessage(text);
-    el("msg").value = "";
+
+    if (viewingPublic) {
+        await fetch("/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ content: text })
+        });
+        el("msg").value = "";
+        loadPublicChat();
+    } else if (activeDM) {
+        await sendDM(text);
+        el("msg").value = "";
+        loadDM(activeDM);
+    }
 }
 
-// ------------------------- DMs -------------------------
-async function loadDMUsers() {
-    let res = await fetch("/dm_users", {credentials:"include"});
-    let data = await res.json();
+// -------------------------------
+// DM SYSTEM
+// -------------------------------
+async function openDM(user) {
+    viewingPublic = false;
+    activeDM = user;
 
-    let container = el("dm-users");
-    container.innerHTML = "<p style='opacity:0.6;'>DMs:</p>";
+    el("chat-title").innerText = "DM with " + user;
 
-    data.users.forEach(u => {
-        let btn = document.createElement("button");
-        btn.textContent = u;
-        btn.onclick = () => openDM(u);
-        container.appendChild(btn);
+    loadDM(user);
+}
+
+async function sendDM(message) {
+    await fetch("/dm_send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+            recipient: activeDM,
+            content: message
+        })
     });
 }
 
-async function loadDM() {
-    if (!currentDM) return;
+async function loadDM(user) {
+    if (!user) return;
+    viewingPublic = false;
 
-    let res = await fetch(`/dm_get?user=${currentDM}`, {credentials:"include"});
+    let res = await fetch(`/dm_get?user=${user}`, { credentials: "include" });
     let data = await res.json();
 
-    let box = el("dm-box");
+    if (!data.success) return;
+
+    let box = el("chat-box");
     box.innerHTML = "";
 
-    data.messages.forEach(m => {
+    data.messages.forEach(msg => {
         let div = document.createElement("div");
         div.style.marginBottom = "8px";
 
-        if (m.sender === currentDM) {
-            div.style.color = "#3b82f6";
+        if (msg.sender === user) {
+            div.style.color = "#38bdf8"; // blue for them
+            div.textContent = `${msg.sender}: ${msg.content}`;
+        } else {
+            div.style.color = "#a1ff8f"; // green for you
+            div.textContent = `You: ${msg.content}`;
         }
 
-        div.textContent = `${m.sender}: ${m.content}`;
         box.appendChild(div);
     });
 
     box.scrollTop = box.scrollHeight;
 }
-
-function openDM(username) {
-    currentDM = username;
-
-    el("chat-box").style.display = "none";
-    el("dm-box").style.display = "block";
-    el("msg").style.display = "none";
-    el("dm-msg").style.display = "block";
-
-    sendMessage = sendDM;
-
-    clearInterval(messageInterval);
-    dmInterval = setInterval(loadDM, 1000);
-    loadDM();
-}
-
-async function sendDM() {
-    let text = el("dm-msg").value.trim();
-    if (!text) return;
-
-    await fetch("/dm_send", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        credentials:"include",
-        body:JSON.stringify({recipient: currentDM, content: text})
-    });
-
-    el("dm-msg").value="";
-    loadDM();
-}
-
 </script>
+
 
 </body>
 </html>
