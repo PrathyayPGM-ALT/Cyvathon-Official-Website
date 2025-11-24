@@ -211,6 +211,22 @@ function el(id) {
 // ========================================
 // LOGIN
 // ========================================
+async function loadDMUsers() {
+    let res = await fetch("/users", { credentials: "include" });
+    let data = await res.json();
+    if (!data.success) return;
+
+    let box = document.getElementById("dm-users");
+    box.innerHTML = `<p style="opacity:0.6;">DMs:</p>`;
+
+    data.users.forEach(user => {
+        let btn = document.createElement("button");
+        btn.textContent = user;
+        btn.onclick = () => openDM(user);
+        box.appendChild(btn);
+    });
+}
+
 async function chatLogin() {
     let user = el("login-username").value.trim();
     let pass = el("login-password").value.trim();
@@ -227,6 +243,7 @@ async function chatLogin() {
         el("login-section").style.display = "none";
         el("chat-container").style.display = "flex";
 
+        loadDMUsers();
         loadDMList();
         startAutoRefresh();
         openPublicChat();
