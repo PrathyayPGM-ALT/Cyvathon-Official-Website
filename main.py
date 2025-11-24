@@ -233,6 +233,57 @@ def get_messages():
     public = [m for m in res.data if m["recipient"] is None]
 
     return jsonify(success=True, messages=public)
+# ------------------------- DM SYSTEM -------------------------
+
+@app.route("/dm_users", methods=["GET"])
+def dm_users():
+    user = get_chat_user()
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+
+    res = supabase.table("chat_users").select("username").neq("username", user["username"]).execute()
+    return jsonify(success=True, users=[u["username"] for u in res.data])
+
+
+@app.route("/dm_send", methods=["POST"])
+def dm_send():
+    user = get_chat_user()
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+
+    data = request.get_json()
+    recipient = data.get("recipient")
+    content = data.get("content", "").strip()
+
+    if not recipient or not content:
+        return jsonify(success=False, error="Missing fields"), 400
+
+    supabase.table("messages").insert({
+        "sender": user["username"],
+        "recipient": recipient,
+        "content": content
+    }).execute()
+
+    return jsonify(success=True)
+
+
+@app.route("/dm_get", methods=["GET"])
+def dm_get():
+    user = get_chat_user()
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+
+    other = request.args.get("user")
+
+    res = supabase.table("messages").select("*").order("id").execute()
+
+    convo = [
+        m for m in res.data
+        if (m["sender"] == user["username"] and m["recipient"] == other) or
+           (m["sender"] == other and m["recipient"] == user["username"])
+    ]
+
+    return jsonify(success=True, messages=convo)
 
 @app.route("/health")
 def health():
