@@ -3,8 +3,9 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cyvathon Chat</title>
-    <style>
 
+<style>
+/* GLOBAL */
 body {
     margin: 0;
     padding: 0;
@@ -18,6 +19,7 @@ body {
     overflow: hidden;
 }
 
+/* HEADER */
 #header {
     padding: 15px;
     text-align: center;
@@ -27,6 +29,7 @@ body {
     box-shadow: 0 0 15px rgba(0, 140, 255, 0.4);
 }
 
+/* LOGIN PAGE */
 #login-section {
     flex: 1;
     display: flex;
@@ -63,7 +66,7 @@ body {
     cursor: pointer;
 }
 
-/* CHAT LAYOUT */
+/* MAIN CHAT LAYOUT */
 #chat-container {
     flex: 1;
     display: none;
@@ -71,7 +74,7 @@ body {
     overflow: hidden;
 }
 
-/* LEFT SIDEBAR */
+/* SIDEBAR */
 #sidebar {
     width: 220px;
     background: #0c0c0c;
@@ -97,7 +100,7 @@ body {
     background: #3b82f6;
 }
 
-/* CHAT SECTION */
+/* RIGHT SIDE CHAT */
 #chat-section {
     flex: 1;
     display: flex;
@@ -106,7 +109,15 @@ body {
     overflow: hidden;
 }
 
-#chat-box {
+#chat-title {
+    font-size: 24px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* MESSAGE BOX */
+.chat-box {
     flex: 1;
     overflow-y: auto;
     background: #111;
@@ -116,35 +127,24 @@ body {
     box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
 }
 
-/* DM CHAT BOX */
-#dm-box {
-    flex: 1;
-    overflow-y: auto;
-    background: #111;
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #333;
-    box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
-    display: none;
-}
-
+/* INPUT BAR */
 #message-bar {
     margin-top: 12px;
     display: flex;
     gap: 10px;
 }
 
-#msg, #dm-msg {
-    flex: 1;
+input {
     padding: 14px;
     font-size: 18px;
     background: #222;
     color: white;
     border-radius: 8px;
     border: 1px solid #444;
+    flex: 1;
 }
 
-button {
+button.send-btn {
     padding: 14px 20px;
     font-size: 18px;
     border-radius: 8px;
@@ -153,9 +153,9 @@ button {
     color: white;
     cursor: pointer;
 }
-
-    </style>
+</style>
 </head>
+
 <body>
 
 <div id="header">Cyvathon Chat</div>
@@ -173,97 +173,88 @@ button {
     <p id="login-status"></p>
 </div>
 
-
-<!-- CHAT MAIN CONTAINER -->
+<!-- MAIN CHAT -->
 <div id="chat-container">
-    
+
     <!-- LEFT SIDEBAR -->
     <div id="sidebar">
         <button onclick="openPublicChat()">🌐 Public Chat</button>
+
         <hr style="border:1px solid #222; width:100%;">
-        <div id="dm-users">
-            <p style="opacity:0.6;">DMs:</p>
-        </div>
+
+        <p style="opacity:0.6;">DMs:</p>
+        <div id="dm-users"></div>
+
         <button onclick="chatLogout()" style="margin-top:auto; background:#b91c1c;">Logout</button>
     </div>
 
-    <!-- RIGHT CHAT AREA -->
+    <!-- RIGHT CHAT -->
     <div id="chat-section">
+        <div id="chat-title">Public Chat</div>
 
-        <!-- Public Chat -->
-        <div id="chat-box"></div>
+        <div id="chat-box" class="chat-box"></div>
 
-        <!-- DM Chat -->
-        <div id="dm-box"></div>
-
-        <!-- Input -->
         <div id="message-bar">
             <input id="msg" placeholder="Type message...">
-            <input id="dm-msg" placeholder="Send DM..." style="display:none;">
-            <button onclick="sendMessage()">Send</button>
+            <button class="send-btn" onclick="sendMessage()">Send</button>
         </div>
-
     </div>
+
 </div>
 
 <script>
-// -------------------------------
 // GLOBAL STATE
-// -------------------------------
-let activeDM = null;          // who you are chatting with right now
-let messageInterval = null;   // auto-refresh interval
-let viewingPublic = true;     // track whether you're in public chat
+let viewingPublic = true;
+let activeDM = null;
+let interval = null;
 
-function el(id) {
-    return document.getElementById(id);
-}
+// UTIL
+function el(id) { return document.getElementById(id); }
 
-// -------------------------------
-// AUTH
-// -------------------------------
+// ------------------ AUTH ------------------
 async function chatLogin() {
-    let user = el("login-username").value.trim();
-    let pass = el("login-password").value.trim();
+    let u = el("login-username").value.trim();
+    let p = el("login-password").value.trim();
 
     let res = await fetch("/chat_login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ username: user, password: pass })
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        credentials:"include",
+        body:JSON.stringify({username:u, password:p})
     });
 
     let data = await res.json();
 
     if (data.success) {
         el("login-section").style.display = "none";
-        el("chat-section").style.display = "flex";
-
-        startAutoRefresh();
-        loadPublicChat(); // default
+        el("chat-container").style.display = "flex";
+        loadUsers();
+        openPublicChat();
+        startLoop();
     } else {
         el("login-status").textContent = data.error;
     }
 }
 
 async function chatRegister() {
-    let user = el("login-username").value.trim();
-    let pass = el("login-password").value.trim();
+    let u = el("login-username").value.trim();
+    let p = el("login-password").value.trim();
 
     let res = await fetch("/chat_register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ username: user, password: pass })
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        credentials:"include",
+        body:JSON.stringify({username:u, password:p})
     });
 
     let data = await res.json();
 
     if (data.success) {
         el("login-section").style.display = "none";
-        el("chat-section").style.display = "flex";
-
-        startAutoRefresh();
-        loadPublicChat();
+        el("chat-container").style.display = "flex";
+        loadUsers();
+        openPublicChat();
+        startLoop();
     } else {
         el("login-status").textContent = data.error;
     }
@@ -271,133 +262,134 @@ async function chatRegister() {
 
 async function chatLogout() {
     await fetch("/chat_logout", {
-        method: "POST",
-        credentials: "include"
+        method:"POST",
+        credentials:"include"
     });
 
-    el("chat-section").style.display = "none";
+    el("chat-container").style.display = "none";
     el("login-section").style.display = "flex";
 
-    stopAutoRefresh();
+    stopLoop();
 }
 
-// -------------------------------
-// AUTO REFRESH
-// -------------------------------
-function startAutoRefresh() {
-    if (messageInterval) return;
-    messageInterval = setInterval(() => {
+// ----------------- AUTO REFRESH -----------------
+function startLoop() {
+    if (interval) return;
+    interval = setInterval(() => {
         if (viewingPublic) loadPublicChat();
         else if (activeDM) loadDM(activeDM);
     }, 1000);
 }
 
-function stopAutoRefresh() {
-    if (messageInterval) {
-        clearInterval(messageInterval);
-        messageInterval = null;
-    }
+function stopLoop() {
+    clearInterval(interval);
+    interval = null;
 }
 
-// -------------------------------
-// PUBLIC CHAT
-// -------------------------------
-async function loadPublicChat() {
+// ------------------ USERS ------------------
+async function loadUsers() {
+    let res = await fetch("/chat_users", { credentials:"include" });
+    let data = await res.json();
+
+    let box = el("dm-users");
+    box.innerHTML = "";
+
+    data.users.forEach(u => {
+        let btn = document.createElement("button");
+        btn.textContent = u;
+        btn.onclick = () => openDM(u);
+        box.appendChild(btn);
+    });
+}
+
+// ------------------ PUBLIC CHAT ------------------
+async function openPublicChat() {
     viewingPublic = true;
     activeDM = null;
 
-    let res = await fetch("/messages", { credentials: "include" });
+    el("chat-title").textContent = "Public Chat";
+
+    loadPublicChat();
+}
+
+async function loadPublicChat() {
+    let res = await fetch("/messages", { credentials:"include" });
     let data = await res.json();
-    if (!data.success) return;
 
     let box = el("chat-box");
     box.innerHTML = "";
 
-    data.messages.forEach(msg => {
-        let div = document.createElement("div");
-        div.textContent = `${msg.sender}: ${msg.content}`;
-        div.style.marginBottom = "8px";
-        box.appendChild(div);
+    data.messages.forEach(m => {
+        let d = document.createElement("div");
+        d.textContent = `${m.sender}: ${m.content}`;
+        d.style.marginBottom = "8px";
+        box.appendChild(d);
     });
 
     box.scrollTop = box.scrollHeight;
 }
 
+// ------------------ SEND MESSAGE ------------------
 async function sendMessage() {
-    let text = el("msg").value.trim();
-    if (!text) return;
+    let txt = el("msg").value.trim();
+    if (!txt) return;
 
     if (viewingPublic) {
         await fetch("/messages", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ content: text })
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            credentials:"include",
+            body:JSON.stringify({content:txt})
         });
         el("msg").value = "";
         loadPublicChat();
     } else if (activeDM) {
-        await sendDM(text);
+        await fetch("/dm_send", {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            credentials:"include",
+            body:JSON.stringify({recipient:activeDM, content:txt})
+        });
         el("msg").value = "";
         loadDM(activeDM);
     }
 }
 
-// -------------------------------
-// DM SYSTEM
-// -------------------------------
+// ------------------ DM SYSTEM ------------------
 async function openDM(user) {
     viewingPublic = false;
     activeDM = user;
 
-    el("chat-title").innerText = "DM with " + user;
+    el("chat-title").textContent = "DM with " + user;
 
     loadDM(user);
 }
 
-async function sendDM(message) {
-    await fetch("/dm_send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-            recipient: activeDM,
-            content: message
-        })
-    });
-}
-
 async function loadDM(user) {
-    if (!user) return;
-    viewingPublic = false;
-
-    let res = await fetch(`/dm_get?user=${user}`, { credentials: "include" });
+    let res = await fetch(`/dm_get?user=${user}`, { credentials:"include" });
     let data = await res.json();
-
-    if (!data.success) return;
 
     let box = el("chat-box");
     box.innerHTML = "";
 
-    data.messages.forEach(msg => {
-        let div = document.createElement("div");
-        div.style.marginBottom = "8px";
+    data.messages.forEach(m => {
+        let d = document.createElement("div");
+        d.style.marginBottom = "8px";
 
-        if (msg.sender === user) {
-            div.style.color = "#38bdf8"; // blue for them
-            div.textContent = `${msg.sender}: ${msg.content}`;
+        if (m.sender === user) {
+            d.style.color = "#38bdf8";
+            d.textContent = `${m.sender}: ${m.content}`;
         } else {
-            div.style.color = "#a1ff8f"; // green for you
-            div.textContent = `You: ${msg.content}`;
+            d.style.color = "#a1ff8f";
+            d.textContent = `You: ${m.content}`;
         }
 
-        box.appendChild(div);
+        box.appendChild(d);
     });
 
     box.scrollTop = box.scrollHeight;
 }
 </script>
-
 
 </body>
 </html>
