@@ -233,7 +233,9 @@ def get_messages():
     public = [m for m in res.data if m["recipient"] is None]
 
     return jsonify(success=True, messages=public)
-# ------------------------- DM SYSTEM -------------------------
+# ----------------------------------------------------
+# DM SYSTEM
+# ----------------------------------------------------
 
 @app.route("/dm_users", methods=["GET"])
 def dm_users():
@@ -241,8 +243,10 @@ def dm_users():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
 
-    res = supabase.table("chat_users").select("username").neq("username", user["username"]).execute()
-    return jsonify(success=True, users=[u["username"] for u in res.data])
+    res = supabase.table("chat_users").select("username").execute()
+    all_users = [u["username"] for u in res.data if u["username"] != user["username"]]
+
+    return jsonify(success=True, users=all_users)
 
 
 @app.route("/dm_send", methods=["POST"])
@@ -252,11 +256,16 @@ def dm_send():
         return jsonify(success=False, error="Not logged in"), 401
 
     data = request.get_json()
-    recipient = data.get("recipient")
+    recipient = data.get("recipient", "").strip()
     content = data.get("content", "").strip()
 
     if not recipient or not content:
-        return jsonify(success=False, error="Missing fields"), 400
+        return jsonify(success=False, error="Missing data"), 400
+
+    # verify recipient exists
+    check = supabase.table("chat_users").select("id").eq("username", recipient).execute()
+    if not check.data:
+        return jsonify(success=False, error="Recipient not found"), 404
 
     supabase.table("messages").insert({
         "sender": user["username"],
@@ -274,16 +283,22 @@ def dm_get():
         return jsonify(success=False, error="Not logged in"), 401
 
     other = request.args.get("user")
+    if not other:
+        return jsonify(success=False, error="Missing target user"), 400
 
-    res = supabase.table("messages").select("*").order("id").execute()
+    # fetch all messages between both users
+    res = supabase.table("messages").select("*").order("id", desc=False).execute()
 
-    convo = [
-        m for m in res.data
-        if (m["sender"] == user["username"] and m["recipient"] == other) or
-           (m["sender"] == other and m["recipient"] == user["username"])
-    ]
+    conv = []
+    for m in res.data:
+        if (
+            (m["sender"] == user["username"] and m["recipient"] == other) or
+            (m["sender"] == other and m["recipient"] == user["username"])
+        ):
+            conv.append(m)
 
-    return jsonify(success=True, messages=convo)
+    return jsonify(success=True, messages=conv)
+
 
 @app.route("/health")
 def health():
