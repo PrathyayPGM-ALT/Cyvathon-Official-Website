@@ -4,156 +4,150 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cyvathon Chat</title>
 
-<style>
-/* GLOBAL */
-body {
-    margin: 0;
-    padding: 0;
-    background: #000;
-    color: white;
-    font-family: Arial, sans-serif;
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
 
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
+        #header {
+            padding: 15px;
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            background: #050505;
+            box-shadow: 0 0 15px rgba(0, 140, 255, 0.4);
+            flex-shrink: 0;
+        }
 
-/* HEADER */
-#header {
-    padding: 15px;
-    text-align: center;
-    font-size: 32px;
-    font-weight: bold;
-    background: #050505;
-    box-shadow: 0 0 15px rgba(0, 140, 255, 0.4);
-}
+        /* LOGIN PAGE */
+        #login-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+        }
 
-/* LOGIN PAGE */
-#login-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 12px;
-}
+        #login-section input {
+            padding: 14px;
+            width: 300px;
+            font-size: 18px;
+            border-radius: 8px;
+            background: #222;
+            border: 1px solid #444;
+            color: white;
+        }
 
-#login-section input {
-    padding: 14px;
-    width: 300px;
-    font-size: 18px;
-    border-radius: 8px;
-    background: #222;
-    border: 1px solid #444;
-    color: white;
-}
+        .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
 
-.button-row {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-}
+        .button-row button {
+            width: 130px;
+            padding: 12px;
+            font-size: 18px;
+            border-radius: 10px;
+            background: #3b82f6;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
 
-.button-row button {
-    width: 130px;
-    padding: 12px;
-    font-size: 18px;
-    border-radius: 10px;
-    background: #3b82f6;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
+        /* CHAT MAIN AREA */
+        #chat-container {
+            flex: 1;
+            display: none;
+            flex-direction: row;
+            overflow: hidden;
+        }
 
-/* MAIN CHAT LAYOUT */
-#chat-container {
-    flex: 1;
-    display: none;
-    flex-direction: row;
-    overflow: hidden;
-}
+        /* SIDEBAR */
+        #sidebar {
+            width: 230px;
+            background: #0a0a0a;
+            border-right: 1px solid #222;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            gap: 10px;
+            overflow-y: auto;
+        }
 
-/* SIDEBAR */
-#sidebar {
-    width: 220px;
-    background: #0c0c0c;
-    border-right: 1px solid #222;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    overflow-y: auto;
-}
+        #sidebar button {
+            width: 100%;
+            padding: 12px;
+            background: #333;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+        }
 
-#sidebar button {
-    width: 100%;
-    padding: 12px;
-    border-radius: 8px;
-    background: #333;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
+        #sidebar button:hover {
+            background: #3b82f6;
+        }
 
-#sidebar button:hover {
-    background: #3b82f6;
-}
+        /* CHAT SECTION */
+        #chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden;
+        }
 
-/* RIGHT SIDE CHAT */
-#chat-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    overflow: hidden;
-}
+        #chat-title {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
 
-#chat-title {
-    font-size: 24px;
-    margin-bottom: 10px;
-    font-weight: bold;
-    text-align: center;
-}
+        #chat-box {
+            flex: 1;
+            overflow-y: auto;
+            background: #111;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+        }
 
-/* MESSAGE BOX */
-.chat-box {
-    flex: 1;
-    overflow-y: auto;
-    background: #111;
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #333;
-    box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
-}
+        #message-bar {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+        }
 
-/* INPUT BAR */
-#message-bar {
-    margin-top: 12px;
-    display: flex;
-    gap: 10px;
-}
+        #msg {
+            flex: 1;
+            padding: 14px;
+            background: #222;
+            border-radius: 8px;
+            border: 1px solid #444;
+            color: white;
+            font-size: 18px;
+        }
 
-input {
-    padding: 14px;
-    font-size: 18px;
-    background: #222;
-    color: white;
-    border-radius: 8px;
-    border: 1px solid #444;
-    flex: 1;
-}
-
-button.send-btn {
-    padding: 14px 20px;
-    font-size: 18px;
-    border-radius: 8px;
-    background: #3b82f6;
-    border: none;
-    color: white;
-    cursor: pointer;
-}
-</style>
+        button {
+            padding: 14px 20px;
+            background: #3b82f6;
+            border-radius: 8px;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
 </head>
 
 <body>
@@ -173,221 +167,198 @@ button.send-btn {
     <p id="login-status"></p>
 </div>
 
-<!-- MAIN CHAT -->
+
+<!-- CHAT UI -->
 <div id="chat-container">
 
     <!-- LEFT SIDEBAR -->
     <div id="sidebar">
         <button onclick="openPublicChat()">🌐 Public Chat</button>
-
         <hr style="border:1px solid #222; width:100%;">
-
-        <p style="opacity:0.6;">DMs:</p>
+        <p style="opacity:0.5;">DMs:</p>
         <div id="dm-users"></div>
-
         <button onclick="chatLogout()" style="margin-top:auto; background:#b91c1c;">Logout</button>
     </div>
 
     <!-- RIGHT CHAT -->
     <div id="chat-section">
         <div id="chat-title">Public Chat</div>
-
-        <div id="chat-box" class="chat-box"></div>
+        <div id="chat-box"></div>
 
         <div id="message-bar">
             <input id="msg" placeholder="Type message...">
-            <button class="send-btn" onclick="sendMessage()">Send</button>
+            <button onclick="sendMessage()">Send</button>
         </div>
     </div>
 
 </div>
 
 <script>
-// GLOBAL STATE
-let viewingPublic = true;
 let activeDM = null;
-let interval = null;
+let viewingPublic = true;
+let refreshLoop = null;
 
-// UTIL
 function el(id) { return document.getElementById(id); }
 
-// ------------------ AUTH ------------------
+// LOGIN
 async function chatLogin() {
-    let u = el("login-username").value.trim();
-    let p = el("login-password").value.trim();
+    let user = el("login-username").value.trim();
+    let pass = el("login-password").value.trim();
 
     let res = await fetch("/chat_login", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
         credentials:"include",
-        body:JSON.stringify({username:u, password:p})
+        body:JSON.stringify({username:user, password:pass})
     });
 
     let data = await res.json();
+    if (!data.success) return el("login-status").textContent=data.error;
 
-    if (data.success) {
-        el("login-section").style.display = "none";
-        el("chat-container").style.display = "flex";
-        loadUsers();
-        openPublicChat();
-        startLoop();
-    } else {
-        el("login-status").textContent = data.error;
-    }
+    el("login-section").style.display="none";
+    el("chat-container").style.display="flex";
+
+    loadDMUsers();
+    openPublicChat();
+
+    startRefreshing();
 }
 
 async function chatRegister() {
-    let u = el("login-username").value.trim();
-    let p = el("login-password").value.trim();
+    let user = el("login-username").value.trim();
+    let pass = el("login-password").value.trim();
 
     let res = await fetch("/chat_register", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
         credentials:"include",
-        body:JSON.stringify({username:u, password:p})
+        body:JSON.stringify({username:user, password:pass})
     });
 
     let data = await res.json();
+    if (!data.success) return el("login-status").textContent=data.error;
 
-    if (data.success) {
-        el("login-section").style.display = "none";
-        el("chat-container").style.display = "flex";
-        loadUsers();
-        openPublicChat();
-        startLoop();
-    } else {
-        el("login-status").textContent = data.error;
-    }
+    el("login-section").style.display="none";
+    el("chat-container").style.display="flex";
+
+    loadDMUsers();
+    openPublicChat();
+    startRefreshing();
 }
 
 async function chatLogout() {
-    await fetch("/chat_logout", {
-        method:"POST",
-        credentials:"include"
-    });
-
-    el("chat-container").style.display = "none";
-    el("login-section").style.display = "flex";
-
-    stopLoop();
+    await fetch("/chat_logout",{method:"POST", credentials:"include"});
+    stopRefreshing();
+    location.reload();
 }
 
-// ----------------- AUTO REFRESH -----------------
-function startLoop() {
-    if (interval) return;
-    interval = setInterval(() => {
+function startRefreshing() {
+    if (refreshLoop) return;
+    refreshLoop = setInterval(()=>{
         if (viewingPublic) loadPublicChat();
-        else if (activeDM) loadDM(activeDM);
+        else loadDM(activeDM);
     }, 1000);
 }
 
-function stopLoop() {
-    clearInterval(interval);
-    interval = null;
+function stopRefreshing() {
+    clearInterval(refreshLoop);
+    refreshLoop=null;
 }
 
-// ------------------ USERS ------------------
-async function loadUsers() {
-    let res = await fetch("/chat_users", { credentials:"include" });
+// LOAD DM USER LIST
+async function loadDMUsers() {
+    let res = await fetch("/chat_users", {credentials:"include"});
     let data = await res.json();
+    if (!data.success) return;
 
     let box = el("dm-users");
     box.innerHTML = "";
 
-    data.users.forEach(u => {
-        let btn = document.createElement("button");
-        btn.textContent = u;
-        btn.onclick = () => openDM(u);
+    data.users.forEach(u=>{
+        let btn=document.createElement("button");
+        btn.textContent=u;
+        btn.onclick=()=>openDM(u);
         box.appendChild(btn);
     });
 }
 
-// ------------------ PUBLIC CHAT ------------------
-async function openPublicChat() {
-    viewingPublic = true;
-    activeDM = null;
-
-    el("chat-title").textContent = "Public Chat";
-
+// PUBLIC CHAT
+function openPublicChat() {
+    viewingPublic=true;
+    activeDM=null;
+    el("chat-title").textContent="Public Chat";
     loadPublicChat();
 }
 
 async function loadPublicChat() {
-    let res = await fetch("/messages", { credentials:"include" });
+    let res = await fetch("/messages",{credentials:"include"});
     let data = await res.json();
+    if (!data.success) return;
 
     let box = el("chat-box");
-    box.innerHTML = "";
+    box.innerHTML="";
 
-    data.messages.forEach(m => {
-        let d = document.createElement("div");
-        d.textContent = `${m.sender}: ${m.content}`;
-        d.style.marginBottom = "8px";
-        box.appendChild(d);
+    data.messages.forEach(m=>{
+        let div=document.createElement("div");
+        div.textContent=`${m.sender}: ${m.content}`;
+        div.style.marginBottom="8px";
+        box.appendChild(div);
     });
 
-    box.scrollTop = box.scrollHeight;
+    box.scrollTop=box.scrollHeight;
 }
 
-// ------------------ SEND MESSAGE ------------------
+// SEND MESSAGE
 async function sendMessage() {
-    let txt = el("msg").value.trim();
-    if (!txt) return;
+    let text = el("msg").value.trim();
+    if (!text) return;
 
     if (viewingPublic) {
-        await fetch("/messages", {
+        await fetch("/messages",{
             method:"POST",
             headers:{"Content-Type":"application/json"},
             credentials:"include",
-            body:JSON.stringify({content:txt})
+            body:JSON.stringify({content:text})
         });
-        el("msg").value = "";
+        el("msg").value="";
         loadPublicChat();
-    } else if (activeDM) {
-        await fetch("/dm_send", {
+    } else {
+        await fetch("/dm_send",{
             method:"POST",
             headers:{"Content-Type":"application/json"},
             credentials:"include",
-            body:JSON.stringify({recipient:activeDM, content:txt})
+            body:JSON.stringify({recipient:activeDM, content:text})
         });
-        el("msg").value = "";
+        el("msg").value="";
         loadDM(activeDM);
     }
 }
 
-// ------------------ DM SYSTEM ------------------
-async function openDM(user) {
-    viewingPublic = false;
-    activeDM = user;
-
-    el("chat-title").textContent = "DM with " + user;
-
+// DM CHAT
+function openDM(user) {
+    viewingPublic=false;
+    activeDM=user;
+    el("chat-title").textContent="DM with "+user;
     loadDM(user);
 }
 
 async function loadDM(user) {
-    let res = await fetch(`/dm_get?user=${user}`, { credentials:"include" });
+    let res = await fetch(`/dm_get?user=${user}`,{credentials:"include"});
     let data = await res.json();
+    if (!data.success) return;
 
     let box = el("chat-box");
-    box.innerHTML = "";
+    box.innerHTML="";
 
-    data.messages.forEach(m => {
-        let d = document.createElement("div");
-        d.style.marginBottom = "8px";
-
-        if (m.sender === user) {
-            d.style.color = "#38bdf8";
-            d.textContent = `${m.sender}: ${m.content}`;
-        } else {
-            d.style.color = "#a1ff8f";
-            d.textContent = `You: ${m.content}`;
-        }
-
-        box.appendChild(d);
+    data.messages.forEach(m=>{
+        let div=document.createElement("div");
+        div.style.marginBottom="8px";
+        div.style.color = m.sender===user ? "#60a5fa" : "#a1ff8f";
+        div.textContent = (m.sender===user ? `${user}: ` : "You: ") + m.content;
+        box.appendChild(div);
     });
 
-    box.scrollTop = box.scrollHeight;
+    box.scrollTop=box.scrollHeight;
 }
 </script>
 
