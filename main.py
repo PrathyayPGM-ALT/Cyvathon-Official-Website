@@ -285,7 +285,6 @@ def dm_send():
     }).execute()
 
     return jsonify(success=True)
-
 @app.route("/dm_get", methods=["GET"])
 def dm_get():
     user = get_chat_user()
@@ -296,17 +295,17 @@ def dm_get():
     if not other:
         return jsonify(success=False, error="Missing target user"), 400
 
-    res = supabase.table("messages").select("*").order("id", desc=False).execute()
+    res = supabase.table("messages").select("*") \
+        .or_(
+            f"(sender.eq.{user['username']},recipient.eq.{other})",
+            f"(sender.eq.{other},recipient.eq.{user['username']})"
+        ) \
+        .order("id", desc=False) \
+        .limit(200) \
+        .execute()
 
-    conv = []
-    for m in res.data:
-        if (
-            (m["sender"] == user["username"] and m["recipient"] == other) or
-            (m["sender"] == other and m["recipient"] == user["username"])
-        ):
-            conv.append(m)
+    return jsonify(success=True, messages=res.data)
 
-    return jsonify(success=True, messages=conv)
 
 @app.route("/chat_users", methods=["GET"])
 def chat_users():
