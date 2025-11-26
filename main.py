@@ -114,20 +114,25 @@ def me():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     return jsonify(success=True, username=user["username"], balance=user["balance"])
+
+# ----------------------------------------------------
+# FIXED USERS ROUTE (Banking recipients)
+# ----------------------------------------------------
 @app.route("/users")
 def users():
-    user = get_chat_user()   # IMPORTANT: DM system uses chat_users table
+    user = get_current_user()   # FIX: use bank login instead of chat login
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
 
-    # Get all chat users except the current one
-    res = supabase.table("chat_users") \
+    # Get all BANKING users except current user
+    res = supabase.table("cybucks") \
         .select("username") \
         .neq("username", user["username"]) \
         .execute()
 
     return jsonify(success=True, users=[u["username"] for u in res.data])
 
+# ----------------------------------------------------
 
 @limiter.limit("5/min")
 @app.route("/transfer", methods=["POST"])
@@ -239,6 +244,7 @@ def get_messages():
     public = [m for m in res.data if m["recipient"] is None]
 
     return jsonify(success=True, messages=public)
+
 # ----------------------------------------------------
 # DM SYSTEM
 # ----------------------------------------------------
@@ -268,7 +274,6 @@ def dm_send():
     if not recipient or not content:
         return jsonify(success=False, error="Missing data"), 400
 
-    # verify recipient exists
     check = supabase.table("chat_users").select("id").eq("username", recipient).execute()
     if not check.data:
         return jsonify(success=False, error="Recipient not found"), 404
@@ -281,7 +286,6 @@ def dm_send():
 
     return jsonify(success=True)
 
-
 @app.route("/dm_get", methods=["GET"])
 def dm_get():
     user = get_chat_user()
@@ -292,7 +296,6 @@ def dm_get():
     if not other:
         return jsonify(success=False, error="Missing target user"), 400
 
-    # fetch all messages between both users
     res = supabase.table("messages").select("*").order("id", desc=False).execute()
 
     conv = []
@@ -304,6 +307,7 @@ def dm_get():
             conv.append(m)
 
     return jsonify(success=True, messages=conv)
+
 @app.route("/chat_users", methods=["GET"])
 def chat_users():
     user = get_chat_user()
@@ -314,7 +318,6 @@ def chat_users():
     users = [u["username"] for u in res.data if u["username"] != user["username"]]
 
     return jsonify(success=True, users=users)
-
 
 @app.route("/health")
 def health():
