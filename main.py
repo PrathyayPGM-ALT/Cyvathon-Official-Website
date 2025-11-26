@@ -245,67 +245,6 @@ def get_messages():
 
     return jsonify(success=True, messages=public)
 
-# ----------------------------------------------------
-# DM SYSTEM
-# ----------------------------------------------------
-
-@app.route("/dm_users", methods=["GET"])
-def dm_users():
-    user = get_chat_user()
-    if not user:
-        return jsonify(success=False, error="Not logged in"), 401
-
-    res = supabase.table("chat_users").select("username").execute()
-    all_users = [u["username"] for u in res.data if u["username"] != user["username"]]
-
-    return jsonify(success=True, users=all_users)
-
-
-@app.route("/dm_send", methods=["POST"])
-def dm_send():
-    user = get_chat_user()
-    if not user:
-        return jsonify(success=False, error="Not logged in"), 401
-
-    data = request.get_json()
-    recipient = data.get("recipient", "").strip()
-    content = data.get("content", "").strip()
-
-    if not recipient or not content:
-        return jsonify(success=False, error="Missing data"), 400
-
-    check = supabase.table("chat_users").select("id").eq("username", recipient).execute()
-    if not check.data:
-        return jsonify(success=False, error="Recipient not found"), 404
-
-    supabase.table("messages").insert({
-        "sender": user["username"],
-        "recipient": recipient,
-        "content": content
-    }).execute()
-
-    return jsonify(success=True)
-@app.route("/dm_get", methods=["GET"])
-def dm_get():
-    user = get_chat_user()
-    if not user:
-        return jsonify(success=False, error="Not logged in"), 401
-
-    other = request.args.get("user")
-    if not other:
-        return jsonify(success=False, error="Missing target user"), 400
-
-    res = supabase.table("messages").select("*") \
-        .or_(
-            f"(sender.eq.{user['username']},recipient.eq.{other})",
-            f"(sender.eq.{other},recipient.eq.{user['username']})"
-        ) \
-        .order("id", desc=False) \
-        .limit(200) \
-        .execute()
-
-    return jsonify(success=True, messages=res.data)
-
 
 @app.route("/chat_users", methods=["GET"])
 def chat_users():
