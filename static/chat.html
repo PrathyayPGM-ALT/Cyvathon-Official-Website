@@ -320,6 +320,18 @@ async function sendMessage() {
     el("msg").value = "";
     loadPublicChat();
 }
+// Allow sending messages by pressing Enter
+document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("msg");
+
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();  
+            sendMessage();       
+        }
+    });
+});
+
 
 </script>
 
