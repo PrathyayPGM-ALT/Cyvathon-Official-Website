@@ -1,591 +1,601 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyvathon - Code. Conquer. Crush The Competition</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cyvathon - Code. Conquer. Cause Creativity.</title>
+
+    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- ===========================
+         GLOBAL STYLE (Aquilithia-style)
+    ============================ -->
     <style>
-/* ===========================
-   RESET + BASE
-=========================== */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Inter", "Segoe UI", Tahoma, sans-serif;
+        }
 
-body {
-    background: #0d1117; /* cleaner dark background */
-    color: #e6edf3;
-    line-height: 1.7;
-    overflow-x: hidden;
-}
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            overflow-x: hidden;
+            line-height: 1.7;
+        }
 
-/* ===========================
-   HEADER + NAVBAR
-=========================== */
-header {
-    background: rgba(13, 17, 23, 0.7);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    padding: 1rem 0;
-    position: sticky;
-    top: 0;
-    z-index: 200;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
-}
+        /* ------------------------------
+           HEADER / NAVBAR
+        ------------------------------ */
+        header {
+            background: rgba(13, 17, 23, 0.7);
+            backdrop-filter: blur(14px);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+        }
 
-nav {
-    max-width: 1250px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 1.5rem;
-}
+        nav {
+            max-width: 1250px;
+            margin: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1.5rem;
+        }
 
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
-}
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
 
-.logo-icon {
-    font-size: 2rem;
-    color: #58c4ff;
-}
+        .logo-icon {
+            font-size: 2rem;
+            color: #58c4ff;
+        }
 
-.logo h1 {
-    font-size: 1.75rem;
-    font-weight: 700;
-    background: linear-gradient(90deg, #58c4ff, #7ac9ff);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
+        .logo h1 {
+            font-size: 1.75rem;
+            background: linear-gradient(90deg, #58c4ff, #7ac9ff);
+            -webkit-background-clip: text;
+            color: transparent;
+            font-weight: 700;
+        }
 
-/* NAV LINKS */
-.nav-links {
-    display: flex;
-    gap: 2rem;
-}
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
 
-.nav-links a {
-    text-decoration: none;
-    font-weight: 500;
-    color: #c9d1d9;
-    transition: 0.25s ease;
-    position: relative;
-}
+        .nav-links a {
+            text-decoration: none;
+            color: #c9d1d9;
+            font-weight: 500;
+            transition: 0.25s;
+            position: relative;
+        }
 
-.nav-links a:hover {
-    color: #58c4ff;
-}
+        .nav-links a:hover {
+            color: #58c4ff;
+        }
 
-.nav-links a::after {
-    content: "";
-    position: absolute;
-    width: 0;
-    height: 2px;
-    left: 0;
-    bottom: -4px;
-    background: #58c4ff;
-    transition: width 0.25s;
-}
+        .nav-links a::after {
+            content: "";
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #58c4ff;
+            transition: width 0.25s;
+        }
 
-.nav-links a:hover::after {
-    width: 100%;
-}
+        .nav-links a:hover::after {
+            width: 100%;
+        }
 
-/* ===========================
-   HERO SECTION
-=========================== */
-.hero {
-    text-align: center;
-    padding: 7rem 1.5rem 6rem;
-    max-width: 900px;
-    margin: auto;
-    position: relative;
-}
+        /* ------------------------------
+           HERO SECTION
+        ------------------------------ */
+        .hero {
+            text-align: center;
+            padding: 7rem 1.5rem 6rem;
+            max-width: 900px;
+            margin: auto;
+            position: relative;
+        }
 
-.hero::before {
-    content: "";
-    position: absolute;
-    top: -40px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(88,196,255,0.18), transparent 70%);
-    z-index: -1;
-}
+        .hero::before {
+            content: "";
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(88,196,255,0.18), transparent 70%);
+            z-index: -1;
+        }
 
-.hero h2 {
-    font-size: 3rem;
-    font-weight: 700;
-    background: linear-gradient(90deg, #58c4ff, #8dd1ff);
-    -webkit-background-clip: text;
-    color: transparent;
-    margin-bottom: 1.2rem;
-    animation: fadeInUp 0.9s ease;
-}
+        .hero h2 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1.2rem;
+            background: linear-gradient(90deg, #58c4ff, #8dd1ff);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
 
-.hero p {
-    font-size: 1.25rem;
-    color: #9da7b3;
-    animation: fadeInUp 0.9s ease 0.15s backwards;
-}
+        .hero p {
+            font-size: 1.25rem;
+            color: #9da7b3;
+        }
 
-.cybucks {
-    display: inline-block;
-    padding: 0.65rem 1.4rem;
-    border-radius: 40px;
-    margin-top: 1.5rem;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #58c4ff;
-    border: 1px solid rgba(88,196,255,0.25);
-    background: rgba(88,196,255,0.06);
-    animation: fadeInUp 0.9s ease 0.3s backwards;
-}
+        /* Typing animation container */
+        .typing-container {
+            display: inline-block;
+            position: relative;
+        }
 
-/* ===========================
-   GENERIC SECTION WRAPPER
-=========================== */
-.section {
-    max-width: 1200px;
-    padding: 5rem 1.5rem;
-    margin: 0 auto;
-}
+        .typewriter-text {
+            background: linear-gradient(90deg, #58c4ff, #8dd1ff);
+            -webkit-background-clip: text;
+            color: transparent;
+            font-weight: 700;
+            animation: fadeIn 0.4s ease;
+        }
 
-.section-title {
-    text-align: center;
-    font-size: 2.2rem;
-    margin-bottom: 3rem;
-    font-weight: 600;
-    color: #d4e1ea;
-    position: relative;
-    display: inline-block;
-    left: 50%;
-    transform: translateX(-50%);
-}
+        .typing-text::after {
+            content: "";
+            display: inline-block;
+            width: 3px;
+            height: 1.1em;
+            background: #8dd1ff;
+            margin-left: 6px;
+            animation: caretBlink 0.9s infinite;
+            border-radius: 2px;
+        }
 
-.section-title::after {
-    content: "";
-    position: absolute;
-    width: 60%;
-    height: 3px;
-    left: 20%;
-    bottom: -10px;
-    background: linear-gradient(90deg, transparent, #58c4ff, transparent);
-}
+        @keyframes caretBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
 
-/* ===========================
-   FEATURES GRID
-=========================== */
-.features {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-    gap: 2rem;
-}
+        /* Cybucks badge */
+        .cybucks {
+            display: inline-block;
+            margin-top: 1.6rem;
+            padding: 0.65rem 1.4rem;
+            background: rgba(88,196,255,0.06);
+            border: 1px solid rgba(88,196,255,0.25);
+            color: #58c4ff;
+            font-weight: 600;
+            border-radius: 40px;
+        }
 
-.feature-card {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 14px;
-    padding: 2.2rem 1.7rem;
-    text-align: center;
-    transition: 0.25s ease;
-    backdrop-filter: blur(4px);
-}
+        /* ------------------------------
+           SECTIONS GENERIC
+        ------------------------------ */
+        .section {
+            max-width: 1200px;
+            margin: auto;
+            padding: 5rem 1.5rem;
+        }
 
-.feature-card:hover {
-    transform: translateY(-6px);
-    border-color: rgba(88,196,255,0.3);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.35);
-}
+        .section-title {
+            text-align: center;
+            font-size: 2.2rem;
+            margin-bottom: 3rem;
+            color: #d4e1ea;
+            position: relative;
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+        }
 
-.feature-icon {
-    font-size: 2.5rem;
-    color: #58c4ff;
-    margin-bottom: 1.2rem;
-}
+        .section-title::after {
+            content: "";
+            position: absolute;
+            width: 60%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #58c4ff, transparent);
+            bottom: -10px;
+            left: 20%;
+        }
 
-.feature-card h3 {
-    color: #d7e2ec;
-    font-size: 1.3rem;
-    margin-bottom: 0.7rem;
-}
+        /* ------------------------------
+           FEATURES GRID
+        ------------------------------ */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 2rem;
+        }
 
-.feature-card p {
-    color: #9aa6b2;
-}
+        .feature-card {
+            padding: 2.2rem 1.7rem;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+            text-align: center;
+            transition: 0.25s;
+        }
 
-/* ===========================
-   RULES
-=========================== */
-.rules {
-    background: rgba(255,255,255,0.03);
-    padding: 2.5rem;
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,0.05);
-    backdrop-filter: blur(4px);
-}
+        .feature-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(88,196,255,0.3);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+        }
 
-.rule {
-    border-left: 3px solid #58c4ff;
-    padding: 1rem 1rem 1rem 1.4rem;
-    margin-bottom: 1.4rem;
-    transition: 0.25s ease;
-}
+        .feature-icon {
+            font-size: 2.5rem;
+            color: #58c4ff;
+            margin-bottom: 1.2rem;
+        }
 
-.rule:hover {
-    transform: translateX(5px);
-}
+        .feature-card h3 {
+            color: #d7e2ec;
+            margin-bottom: 0.7rem;
+            font-size: 1.3rem;
+        }
 
-/* ===========================
-   TEAM MEMBERS
-=========================== */
-.team {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 2rem;
-}
+        .feature-card p {
+            color: #9aa6b2;
+        }
 
-.member {
-    text-align: center;
-    padding: 2rem 1rem;
-    border-radius: 14px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    transition: 0.25s ease;
-}
+        /* ------------------------------
+           RULES LIST
+        ------------------------------ */
+        .rules {
+            padding: 2.5rem;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
 
-.member:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.35);
-}
+        .rule {
+            padding: 1rem 1rem 1rem 1.4rem;
+            margin-bottom: 1.4rem;
+            border-left: 3px solid #58c4ff;
+            transition: 0.25s;
+        }
 
-.member-img {
-    width: 115px;
-    height: 115px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid rgba(88,196,255,0.6);
-    margin-bottom: 0.9rem;
-}
+        .rule:hover {
+            transform: translateX(5px);
+        }
 
-/* ===========================
-   ALLIES SECTION
-=========================== */
-.allies-section {
-    background: rgba(255,255,255,0.04);
-    border-radius: 14px;
-    padding: 2.5rem;
-    text-align: center;
-    border: 1px solid rgba(255,255,255,0.07);
-}
+        /* ------------------------------
+           TEAM SECTION
+        ------------------------------ */
+        .team {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
 
-.allies-title {
-    font-size: 1.8rem;
-    margin-bottom: 1rem;
-    color: #58c4ff;
-}
+        .member {
+            text-align: center;
+            padding: 2rem 1rem;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+            transition: 0.25s;
+        }
 
-.allies-text {
-    color: #9aa6b2;
-    margin-bottom: 0.7rem;
-}
+        .member:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+        }
 
-/* ===========================
-   FOOTER
-=========================== */
-footer {
-    margin-top: 4rem;
-    padding: 2.5rem 1rem;
-    text-align: center;
-    background: rgba(13,17,23,0.8);
-    border-top: 1px solid rgba(255,255,255,0.07);
-}
+        .member-img {
+            width: 115px;
+            height: 115px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(88,196,255,0.6);
+            margin-bottom: 0.9rem;
+        }
 
-.footer-links {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-    margin-top: 1.4rem;
-}
+        /* ------------------------------
+           ALLIES SECTION
+        ------------------------------ */
+        .allies-section {
+            padding: 2.5rem;
+            text-align: center;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+        }
 
-.footer-links a {
-    color: #9aa6b2;
-    transition: 0.25s;
-}
+        .allies-title {
+            font-size: 1.8rem;
+            color: #58c4ff;
+            margin-bottom: 1rem;
+        }
 
-.footer-links a:hover {
-    color: #58c4ff;
-}
+        .allies-text {
+            color: #9aa6b2;
+            margin-bottom: 0.7rem;
+        }
 
-/* ===========================
-   FLOATING CHAT WIDGET
-=========================== */
-.chatbase-widget {
-    position: fixed;
-    bottom: 22px;
-    right: 22px;
-    width: 58px;
-    height: 58px;
-    background: linear-gradient(135deg, #58c4ff, #8dd1ff);
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.3);
-    transition: transform 0.25s;
-}
+        /* ------------------------------
+           FOOTER
+        ------------------------------ */
+        footer {
+            background: rgba(13,17,23,0.8);
+            text-align: center;
+            padding: 2.5rem 1rem;
+            margin-top: 5rem;
+            border-top: 1px solid rgba(255,255,255,0.07);
+        }
 
-.chatbase-widget:hover {
-    transform: scale(1.07);
-}
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.4rem;
+        }
 
-.chat-icon {
-    color: #0d1117;
-    font-size: 1.6rem;
-}
+        .footer-links a {
+            color: #9aa6b2;
+            text-decoration: none;
+            transition: 0.25s;
+        }
 
-/* CHAT WINDOW */
-.chat-window {
-    position: fixed;
-    bottom: 90px;
-    right: 22px;
-    width: 420px;
-    height: 600px;
-    background: white;
-    border-radius: 14px;
-    display: none;
-    overflow: hidden;
-    box-shadow: 0 8px 35px rgba(0,0,0,0.35);
-    animation: slideInUp 0.35s;
-}
+        .footer-links a:hover {
+            color: #58c4ff;
+        }
 
-.chat-header {
-    background: linear-gradient(135deg, #58c4ff, #8dd1ff);
-    padding: 0.9rem;
-    text-align: center;
-    font-weight: 600;
-    color: #0d1117;
-}
+        /* ------------------------------
+           CHAT WIDGET
+        ------------------------------ */
+        .chatbase-widget {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #58c4ff, #8dd1ff);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.3);
+            transition: transform 0.25s;
+        }
 
-.chat-iframe {
-    width: 100%;
-    height: calc(100% - 50px);
-    border: none;
-}
+        .chatbase-widget:hover {
+            transform: scale(1.07);
+        }
 
-/* ===========================
-   ANIMATIONS
-=========================== */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(16px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+        .chat-window {
+            position: fixed;
+            bottom: 90px;
+            right: 22px;
+            width: 420px;
+            height: 600px;
+            background: #ffffff;
+            border-radius: 14px;
+            display: none;
+            overflow: hidden;
+            box-shadow: 0 8px 35px rgba(0,0,0,0.35);
+        }
 
-@keyframes slideInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+        .chat-header {
+            background: linear-gradient(135deg, #58c4ff, #8dd1ff);
+            padding: 0.9rem;
+            color: #0d1117;
+            font-weight: 600;
+            text-align: center;
+        }
 
-/* ===========================
-   RESPONSIVE
-=========================== */
-@media (max-width: 768px) {
-    .hero h2 { font-size: 2.2rem; }
-    .hero p { font-size: 1.1rem; }
-    .chat-window { width: 300px; height: 420px; }
-}
+        .chat-iframe {
+            width: 100%;
+            height: calc(100% - 50px);
+            border: none;
+        }
 
-@media (max-width: 480px) {
-    nav { flex-direction: column; gap: 1rem; }
-    .nav-links { flex-wrap: wrap; justify-content: center; gap: 1.2rem; }
-    .chat-window { width: 260px; height: 380px; right: 10px; }
-}
+        /* ------------------------------
+           ANIMATIONS
+        ------------------------------ */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
+        /* ------------------------------
+           RESPONSIVE
+        ------------------------------ */
+        @media (max-width: 768px) {
+            .hero h2 { font-size: 2.3rem; }
+            .hero p { font-size: 1.1rem; }
+            .chat-window { width: 300px; height: 440px; }
+        }
+
+        @media (max-width: 480px) {
+            nav { flex-direction: column; gap: 1rem; }
+            .nav-links { flex-wrap: wrap; justify-content: center; gap: 1.3rem; }
+            .chat-window { width: 260px; height: 380px; right: 10px; }
+        }
     </style>
 </head>
+
 <body>
+
+    <!-- ===========================
+         NAVIGATION
+    ============================ -->
     <header>
         <nav>
             <div class="logo">
                 <i class="fas fa-code logo-icon"></i>
                 <h1>CYVATHON</h1>
             </div>
-            <div class="nav-links">
 
+            <div class="nav-links">
                 <a href="https://docs.google.com/forms/d/19x4K8DLgznW63x0Zymy9wVwa5edBY41qgy0c3bGELKE/edit?pli=1">Alliance Requests</a>
                 <a href="https://www.youtube.com/@Cyvathon">Our Channel</a>
-                <a href = "https://cyvathon-official-website.onrender.com/bank">Cyvathon Banking System</a>
-                <a href = "https://cyvathon-official-website.onrender.com/chat">Cyvathon Messaging System</a>
-                
+                <a href="https://cyvathon-official-website.onrender.com/bank">Cyvathon Banking</a>
+                <a href="https://cyvathon-official-website.onrender.com/chat">Cyvathon Messaging</a>
             </div>
         </nav>
     </header>
-    
+
+    <!-- ===========================
+         HERO
+    ============================ -->
     <section class="hero">
-        <h2>Code. Conquer. Cause Creativity.</h2>
-        <p>We're Cyvathon - a micronation focused on coding excellence and building a thriving community.</p>
+        <h2 class="typing-container">
+            Welcome to <span class="typing-text"></span>
+        </h2>
+        <p>We're Cyvathon — a micronation focused on coding excellence and building a thriving community.</p>
+
         <div class="cybucks">
             <i class="fas fa-coins"></i> 1 Cybuck = 5 Pufferbuck
         </div>
     </section>
-    
+
+    <!-- ===========================
+         WHAT WE DO
+    ============================ -->
     <section class="section" id="about">
         <h2 class="section-title">What We Do</h2>
+
         <div class="features">
             <div class="feature-card">
                 <i class="fas fa-laptop-code feature-icon"></i>
-                <h3>Python, C, And Web Development</h3>
-                <p>We build high-performance applications and systems in Python and C, and create stunning websites and web applications using modern technologies.</p>
+                <h3>Python, C & Web Development</h3>
+                <p>We build high-performance applications and stunning web systems using modern development tools.</p>
             </div>
+
             <div class="feature-card">
                 <i class="fas fa-terminal feature-icon"></i>
                 <h3>Cybersecurity & Ethical Hacking</h3>
-                <p>We explore cybersecurity concepts and ethical hacking techniques for educational purposes and system protection.</p>
+                <p>We explore cybersecurity concepts and ethical hacking for understanding and system protection.</p>
             </div>
+
             <div class="feature-card">
                 <i class="fas fa-earth-americas feature-icon"></i>
                 <h3>Inclusive Community</h3>
-                <p>We welcome and support people from all backgrounds, fostering an environment of equality and collaboration.</p>
+                <p>We welcome everyone equally and collaborate with respect and creativity.</p>
             </div>
         </div>
     </section>
-    
+
+    <!-- ===========================
+         RULES
+    ============================ -->
     <section class="section" id="rules">
         <h2 class="section-title">Our Rules</h2>
+
         <div class="rules">
-            <div class="rule">
-                <h3>Rule 1</h3>
-                <p>Respect all nations and communities, including our allies.</p>
-            </div>
-            <div class="rule">
-                <h3>Rule 2</h3>
-                <p>Support the Cyvathon community and its members.</p>
-            </div>
-            <div class="rule">
-                <h3>Rule 3</h3>
-                <p>Only accept Cybucks and Pufferbucks in our economy.</p>
-            </div>
-            <div class="rule">
-                <h3>Rule 4</h3>
-                <p>Be respectful to all nations/communities and their members.</p>
-            </div>
-            <div class="rule">
-                <h3>Rule 5</h3>
-                <p>Follow the laws and regulations of Cyvathon.</p>
-            </div>
-            <div class="rule">
-                <h3>Rule 6</h3>
-                <p>No inappropriate language or behavior.</p>
-            </div>
-            <div class="rule">
-                <h3>Rule 7</h3>
-                <p>According to our zoning laws, attacks are not permitted.</p>
-            </div>
-            <div class="rule">
-                <h3>Rule 8</h3>
-                <p>Though we allow anyone into our community, we recommend you practice chairism - as it is the best.</p>
-            </div>
-            <div class="rule">
-                <h3>Rule 9</h3>
-                <p>If you don't follow the rule stated above, you might have to pay extra tax.</p>
-            </div>
-            <div class="rule">
-                <h3>Rule 10</h3>
-                <p>No theft, murder or illegal activities.</p>
-            </div>
+            <div class="rule"><h3>Rule 1</h3><p>Respect all nations and communities.</p></div>
+            <div class="rule"><h3>Rule 2</h3><p>Support the Cyvathon community and its members.</p></div>
+            <div class="rule"><h3>Rule 3</h3><p>Only accept Cybucks and Pufferbucks in our economy.</p></div>
+            <div class="rule"><h3>Rule 4</h3><p>Be respectful to all communities and their members.</p></div>
+            <div class="rule"><h3>Rule 5</h3><p>Follow all Cyvathon laws and regulations.</p></div>
+            <div class="rule"><h3>Rule 6</h3><p>No inappropriate language or behavior.</p></div>
+            <div class="rule"><h3>Rule 7</h3><p>No attacks permitted according to zoning laws.</p></div>
+            <div class="rule"><h3>Rule 8</h3><p>We encourage Chairism as a cultural practice.</p></div>
+            <div class="rule"><h3>Rule 9</h3><p>Non-chairists may be taxed additionally.</p></div>
+            <div class="rule"><h3>Rule 10</h3><p>No theft, murder, or illegal activities.</p></div>
         </div>
     </section>
-    
+
+    <!-- ===========================
+         TEAM
+    ============================ -->
     <section class="section" id="team">
         <h2 class="section-title">Our Team</h2>
+
         <div class="team">
+            <div class="member">
+                <img src="https://wallpapercave.com/wp/wp6245385.jpg" class="member-img" />
+                <h3>Chundi</h3>
+                <p>Head Of IT</p>
+            </div>
 
             <div class="member">
-                <img src="https://images.unsplash.com/photo-1486286701208-1d58e9338013?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Zm9vdGJhbGx8ZW58MHx8MHx8fDA%3D" alt="Vivaan" class="member-img">
+                <img src="https://images.unsplash.com/photo-1486286701208-1d58e9338013" class="member-img" />
                 <h3>Vivaan</h3>
                 <p>Head of Army</p>
             </div>
+
             <div class="member">
-                <img src="https://i.pinimg.com/1200x/1f/67/93/1f67931cdaa6ae7772dd6aed9b49360e.jpg" alt="Veer" class="member-img">
+                <img src="https://i.pinimg.com/1200x/1f/67/93/1f67931cdaa6ae7772dd6aed9b49360e.jpg" class="member-img" />
                 <h3>Veer</h3>
-                <p>CEO, CoFounder</p>
+                <p>CEO, Co-Founder</p>
             </div>
+
             <div class="member">
-                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTc-Ova3BLiK3RGtvYN8SJx7ksayWzEKLXD8Q&s" alt="Prathyay" class="member-img">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTc-Ova3BLiK3RGtvYN8SJx7ksayWzEKLXD8Q&s" class="member-img" />
                 <h3>Prathyay</h3>
-                <p>CoFounder, Spokesperson, BOD, Head Of Hacking</p>
+                <p>Co-Founder, Spokesperson, Head Of Hacking</p>
             </div>
 
-
             <div class="member">
-                <img src="https://woz-u.com/wp-content/uploads/2022/06/Evolution-of-Coding-scaled.jpg" alt="Sidhart" class="member-img">
+                <img src="https://woz-u.com/wp-content/uploads/2022/06/Evolution-of-Coding-scaled.jpg" class="member-img" />
                 <h3>Sidhart Banglani</h3>
                 <p>Head of Coding Department</p>
             </div>
-
-            
-
         </div>
     </section>
-    
+
+    <!-- ===========================
+         CYBUCKS ECONOMY
+    ============================ -->
     <section class="section" id="cybucks">
         <h2 class="section-title">Cybucks Economy</h2>
+
         <div class="features">
             <div class="feature-card">
                 <i class="fas fa-money-bill-wave feature-icon"></i>
                 <h3>Digital Currency</h3>
-                <p>Cybucks (CB) are our entirely web-based currency, powering the Cyvathon economy with secure transactions.</p>
+                <p>Cybucks (CB) power our economy with web-based secure transactions.</p>
             </div>
+
             <div class="feature-card">
                 <i class="fas fa-exchange-alt feature-icon"></i>
                 <h3>Exchange Rate</h3>
-                <p>1 Cybuck = 5 Pufferbuck, ensuring stable economic relationships with our allies.</p>
+                <p>1 Cybuck = 5 Pufferbuck — stable and reliable.</p>
             </div>
+
             <div class="feature-card">
                 <i class="fas fa-money-bill-trend-up feature-icon"></i>
                 <h3>Economic Growth</h3>
-                <p>GDP: 300,000 CB with official payday once every week to support our community members.</p>
+                <p>GDP: 300,000 CB with weekly payday for our members.</p>
             </div>
         </div>
     </section>
-    
+
+    <!-- ===========================
+         RELIGION / ALLIES
+    ============================ -->
     <section class="section" id="allies">
         <h2 class="section-title">Our Valued Religion</h2>
+
         <div class="allies-section">
-            
             <h3 class="allies-title">Chairism</h3>
-            <p class="allies-text">We're proud to maintain strong relationships with the prophets of the chair.</p>
-            <p class="allies-text">Our love for the chair goes on as we stay loyal.</p>
-            <p class="allies-text">Together, we will say ALL HAIL THE CHAIR.</p>
+            <p class="allies-text">We honor the prophets of the Chair.</p>
+            <p class="allies-text">Our loyalty remains unshaken.</p>
+            <p class="allies-text">ALL HAIL THE CHAIR.</p>
         </div>
     </section>
-    
+
+    <!-- ===========================
+         FOOTER
+    ============================ -->
     <footer>
         <p>© 2025 Cyvathon | All Rights Reserved</p>
         <p>Official AI of the Cyvathon Micronation</p>
+
         <div class="footer-links">
             <a href="#about">About</a>
             <a href="#rules">Rules</a>
@@ -594,81 +604,92 @@ footer {
             <a href="#allies">Religion</a>
         </div>
     </footer>
-    
+
+    <!-- ===========================
+         CHAT WIDGET
+    ============================ -->
     <div class="chatbase-widget" id="chatbase-toggle">
-        <i class="fas fa-robot chat-icon"></i>
+        <i class="fas fa-robot" style="color:#0d1117;font-size:1.6rem;"></i>
     </div>
-    
+
     <div class="chat-window" id="chat-window">
         <div class="chat-header">Cyvathon AI Assistant</div>
         <iframe class="chat-iframe" src="https://www.chatbase.co/chatbot-iframe/ycmJf5eRJPQVimvT1zY0M"></iframe>
     </div>
 
+    <!-- ===========================
+         SCRIPTS
+    ============================ -->
     <script>
-        // Chatbot toggle functionality
-        document.getElementById('chatbase-toggle').addEventListener('click', function() {
-            const chatWindow = document.getElementById('chat-window');
-            if (chatWindow.style.display === 'block') {
-                chatWindow.style.display = 'none';
-            } else {
-                chatWindow.style.display = 'block';
+        // Toggle chatbot
+        document.getElementById("chatbase-toggle").addEventListener("click", () => {
+            const chat = document.getElementById("chat-window");
+            chat.style.display = chat.style.display === "block" ? "none" : "block";
+        });
+
+        /* -------------------------------------
+           SMOOTH TYPEWRITER ANIMATION
+        ------------------------------------- */
+        class SmoothTypewriter {
+            constructor(el, words, speed = 120, pause = 1800) {
+                this.el = el;
+                this.words = words;
+                this.speed = speed;
+                this.pause = pause;
+                this.txt = "";
+                this.index = 0;
+                this.isDeleting = false;
+                this.type();
             }
-        });
-        
-        // Add interactive features to cards
-        document.querySelectorAll('.feature-card, .member').forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                this.style.boxShadow = '0 10px 30px rgba(100, 255, 218, 0.2)';
-            });
-            
-            card.addEventListener('mouseleave', function() {
-                this.style.boxShadow = 'none';
-            });
-        });
-        
-        // Smooth scrolling for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                
-                const targetId = this.getAttribute('href');
-                if (targetId === '#') return;
-                
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    window.scrollTo({
-                        top: targetElement.offsetTop - 80,
-                        behavior: 'smooth'
-                    });
-                    
-                    // Close chat window if open
-                    document.getElementById('chat-window').style.display = 'none';
+
+            type() {
+                const current = this.words[this.index % this.words.length];
+                this.txt = this.isDeleting
+                    ? current.substring(0, this.txt.length - 1)
+                    : current.substring(0, this.txt.length + 1);
+
+                this.el.innerHTML = `<span class="typewriter-text">${this.txt}</span>`;
+
+                let speed = this.isDeleting ? this.speed / 1.7 : this.speed;
+
+                if (!this.isDeleting && this.txt === current) {
+                    speed = this.pause;
+                    this.isDeleting = true;
                 }
-            });
-        });
-        
-        // Add animation on scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-        
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
+
+                if (this.isDeleting && this.txt === "") {
+                    this.isDeleting = false;
+                    this.index++;
+                    speed = this.speed * 1.5;
                 }
+
+                setTimeout(() => this.type(), speed);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const element = document.querySelector(".typing-text");
+            if (element) {
+                new SmoothTypewriter(
+                    element,
+                    ["Cyvathon", "Future Coders", "Digital Realm", "Creative Society"],
+                    110,
+                    1500
+                );
+            }
+
+            // Smooth scroll
+            document.querySelectorAll('a[href^="#"]').forEach(a => {
+                a.addEventListener("click", e => {
+                    e.preventDefault();
+                    const target = document.querySelector(a.getAttribute("href"));
+                    if (target) {
+                        target.scrollIntoView({ behavior: "smooth" });
+                    }
+                });
             });
-        }, observerOptions);
-        
-        // Observe elements for animation
-        document.querySelectorAll('.feature-card, .member, .rule').forEach(el => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(20px)';
-            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            observer.observe(el);
         });
     </script>
+
 </body>
 </html>
