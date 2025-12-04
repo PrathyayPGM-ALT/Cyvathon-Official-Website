@@ -4,8 +4,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cyvathon Chat</title>
 
-    <style>
-/* Global vibes */
+<style>
+/* Global styling – the dark mode goth cousin */
 body {
   margin: 0;
   padding: 0;
@@ -19,7 +19,7 @@ body {
   letter-spacing: 0.3px;
 }
 
-/* The big title bar where your ego sits */
+/* Header where the logo flexes its muscles */
 #header {
   padding: 18px;
   text-align: center;
@@ -32,9 +32,18 @@ body {
     0 0 40px rgba(0, 140, 255, 0.15);
   flex-shrink: 0;
   letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
-/* Login zone where users pretend to remember their password */
+#header img {
+  height: 34px;
+  filter: drop-shadow(0 0 6px rgba(0,140,255,0.6));
+}
+
+/* Login zone – where everyone pretends they know their password */
 #login-section {
   flex: 1;
   display: flex;
@@ -60,7 +69,7 @@ body {
   box-shadow: 0 0 10px rgba(59,130,246,0.5);
 }
 
-/* Two buttons sitting together like best friends */
+/* Two button buddies */
 .button-row {
   display: flex;
   justify-content: center;
@@ -84,7 +93,7 @@ body {
   box-shadow: 0 4px 12px rgba(59,130,246,0.4);
 }
 
-/* Main chat box where all the chaos happens */
+/* Chat container (the chaos begins here) */
 #chat-container {
   flex: 1;
   display: none;
@@ -92,34 +101,7 @@ body {
   overflow: hidden;
 }
 
-/* Sidebar – aka the place nobody clicks but looks cool */
-#sidebar {
-  width: 240px;
-  background: #0b0b0b;
-  border-right: 1px solid #222;
-  display: flex;
-  flex-direction: column;
-  padding: 15px;
-  gap: 10px;
-  overflow-y: auto;
-}
-
-#sidebar button {
-  width: 100%;
-  padding: 12px;
-  background: #1e1e1e;
-  border-radius: 8px;
-  border: none;
-  color: white;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-#sidebar button:hover {
-  background: #3b82f6;
-}
-
-/* Chat area – where wisdom and nonsense are typed equally */
+/* Right side – public chat */
 #chat-section {
   flex: 1;
   display: flex;
@@ -134,17 +116,60 @@ body {
   margin-bottom: 12px;
 }
 
+/* The glowing message cave */
 #chat-box {
   flex: 1;
   overflow-y: auto;
   background: #111;
   padding: 16px;
   border-radius: 12px;
-  border: 1px solid #2b2b2b;
-  box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+
+  border: 1px solid rgba(0,140,255,0.35);
+  box-shadow:
+      inset 0 0 15px rgba(0,0,0,0.6),
+      0 0 20px rgba(0,140,255,0.25),
+      0 0 40px rgba(0,140,255,0.15);
 }
 
-/* Message bar – where thoughts turn into pixels */
+/* Message row wrapper */
+.message-line {
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Sender label (small and shy) */
+.sender-label {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+
+/* Left bubble – messages from other humans */
+.bubble-left {
+  background: #1f1f1f;
+  padding: 10px 14px;
+  border-radius: 14px;
+  max-width: 65%;
+  box-shadow: 0 0 8px rgba(0,0,0,0.4);
+  border: 1px solid #333;
+  color: #e5e5e5;
+}
+
+/* Right bubble – your mighty words */
+.bubble-right {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  padding: 10px 14px;
+  border-radius: 14px;
+  max-width: 65%;
+  margin-left: auto;
+  color: white;
+  box-shadow: 0 0 12px rgba(59,130,246,0.4);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Message bar – where procrastination becomes text */
 #message-bar {
   margin-top: 12px;
   display: flex;
@@ -160,14 +185,12 @@ body {
   color: white;
   font-size: 18px;
   transition: 0.2s;
+  resize: none;        /* no manual resizing because we are fancy */
+  overflow-y: hidden;  /* auto-expand magic */
+  min-height: 48px;
+  max-height: 200px;
 }
 
-#msg:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 10px rgba(59,130,246,0.4);
-}
-
-/* Universal button – the hero of this story */
 button {
   padding: 14px 20px;
   background: linear-gradient(135deg, #3b82f6, #2563eb);
@@ -182,13 +205,15 @@ button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(59,130,246,0.4);
 }
-
-    </style>
+</style>
 </head>
 
 <body>
 
-<div id="header">Cyvathon Chat</div>
+<div id="header">
+    <img src="cyvathon_logo.png">
+    Cyvathon Chat
+</div>
 
 <!-- LOGIN -->
 <div id="login-section">
@@ -203,35 +228,26 @@ button:hover {
     <p id="login-status"></p>
 </div>
 
-
 <!-- CHAT UI -->
 <div id="chat-container">
-    <!-- RIGHT CHAT -->
     <div id="chat-section">
         <div id="chat-title">Public Chat</div>
         <div id="chat-box"></div>
 
         <div id="message-bar">
-            <input id="msg" placeholder="Type message...">
+            <textarea id="msg" placeholder="Type message..."></textarea>
             <button onclick="sendMessage()">Send</button>
         </div>
     </div>
-
 </div>
 
 <script>
-// ========================================
-// GLOBAL
-// ========================================
+// Utility function because typing document.getElementById is pain
+const el = (id) => document.getElementById(id);
+
 let messageInterval = null;
 
-function el(id) {
-    return document.getElementById(id);
-}
-
-// ========================================
-// LOGIN
-// ========================================
+//================ LOGIN =================
 async function chatLogin() {
     let user = el("login-username").value.trim();
     let pass = el("login-password").value.trim();
@@ -244,7 +260,6 @@ async function chatLogin() {
     });
 
     let data = await res.json();
-
     if (!data.success) {
         el("login-status").textContent = data.error;
         return;
@@ -269,7 +284,6 @@ async function chatRegister() {
     });
 
     let data = await res.json();
-
     if (!data.success) {
         el("login-status").textContent = data.error;
         return;
@@ -282,36 +296,17 @@ async function chatRegister() {
     openPublicChat();
 }
 
-async function chatLogout() {
-    await fetch("/chat_logout", {
-        method: "POST",
-        credentials: "include"
-    });
-
-    stopAutoRefresh();
-
-    el("login-section").style.display = "flex";
-    el("chat-container").style.display = "none";
-}
-
-// ========================================
-// AUTO REFRESH
-// ========================================
+//=============== AUTO REFRESH =================
 function startAutoRefresh() {
-    if (messageInterval) return;
-    messageInterval = setInterval(loadPublicChat, 1000);
+    if (!messageInterval) messageInterval = setInterval(loadPublicChat, 1000);
 }
 
 function stopAutoRefresh() {
-    if (messageInterval) {
-        clearInterval(messageInterval);
-        messageInterval = null;
-    }
+    clearInterval(messageInterval);
+    messageInterval = null;
 }
 
-// ========================================
-// PUBLIC CHAT ONLY
-// ========================================
+//=============== PUBLIC CHAT =================
 function openPublicChat() {
     el("chat-title").textContent = "Public Chat";
     el("chat-box").innerHTML = "<p style='opacity:0.5;'>Loading...</p>";
@@ -329,19 +324,32 @@ async function loadPublicChat() {
     box.innerHTML = "";
 
     data.messages.forEach(msg => {
-        let div = document.createElement("div");
-        div.className = "message-line";
-        div.textContent = `${msg.sender}: ${msg.content}`;
-        buffer.appendChild(div);
+        let wrap = document.createElement("div");
+        wrap.className = "message-line";
+
+        let bubble = document.createElement("div");
+
+        if (msg.isSelf) {
+            bubble.className = "bubble-right";
+        } else {
+            bubble.className = "bubble-left";
+
+            let label = document.createElement("div");
+            label.className = "sender-label";
+            label.textContent = msg.sender;
+            wrap.appendChild(label);
+        }
+
+        bubble.textContent = msg.content;
+        wrap.appendChild(bubble);
+        buffer.appendChild(wrap);
     });
 
     box.appendChild(buffer);
     box.scrollTop = box.scrollHeight;
 }
 
-// ========================================
-// SEND PUBLIC MESSAGE
-// ========================================
+//=============== SEND =================
 async function sendMessage() {
     let text = el("msg").value.trim();
     if (!text) return;
@@ -354,24 +362,28 @@ async function sendMessage() {
     });
 
     el("msg").value = "";
+    el("msg").style.height = "48px"; // reset height
     loadPublicChat();
 }
-// Allow sending messages by pressing Enter
+
+//=============== ENTER KEY TO SEND + AUTO-EXPAND =================
 document.addEventListener("DOMContentLoaded", () => {
-    const input = document.getElementById("msg");
+    const input = el("msg");
 
     input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();  
-            sendMessage();       
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
         }
     });
+
+    // Auto expand textarea (the magic trick)
+    input.addEventListener("input", () => {
+        input.style.height = "48px";
+        input.style.height = input.scrollHeight + "px";
+    });
 });
-
-
 </script>
-
-
 
 </body>
 </html>
