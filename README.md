@@ -4,7 +4,7 @@
 > **Code. Conquer. Cause Creativity.**
 
 Cyvathon is a playful micronation built around coding, creativity, and community.  
-This repository contains the code for the **Cyvathon Official Website** and the **Cybucks Banking System**, the virtual economy inside Cyvathon.
+This repository contains the code for the **Cyvathon Official Website**, th **Cyvatho Chat** and the **Cybucks Banking System**, the virtual economy inside Cyvathon.
 
 ---
 
@@ -14,7 +14,9 @@ This repository contains the code for the **Cyvathon Official Website** and the 
   https://cyvathon.onrender.com  
 
 - **Cybucks Banking System (from this repo):**  
-  https://cyvathon-official-website.onrender.com  
+  https://cyvathon-official-website.onrender.com/bank
+- **Cyvathon Chat (from this repo):**  
+  https://cyvathon-official-website.onrender.com/chat  
 
 ---
 
@@ -59,8 +61,9 @@ A fun in-world currency manager built for:
 ```
 Cyvathon-Official-Website/
 ├── static         
-  ├── index.html          # Main website page
-  ├── bank.html           # Banking system UI
+  ├── chat.html         # chat website page
+  ├── bank.html         # Banking system UI
+├──index.html           # main website    
 ├── main.py             # Python backend
 ├── cyvathon.db         # SQLite database (auto-created if missing)
 ├── requirements.txt    # Python dependencies
@@ -149,7 +152,7 @@ Cyvathon is a creative universe built around:
 - World-building  
 - Imagination  
 
-This repo powers the official website + Cybucks economy.
+This repo powers the official website + Cyvathon Chat + Cybucks economy.
 
 Welcome to Cyvathon, citizen 👾  
 
