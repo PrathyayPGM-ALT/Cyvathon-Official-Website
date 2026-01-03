@@ -8,7 +8,9 @@ from time import time
 from datetime import timedelta
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-import google.generativeai as genai
+from google import genai
+import os
+
 
 
 recent_registrations = {}
