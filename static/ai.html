@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cyvathon AI</title>
+  <style>
+    body {
+      background: #0b0b0b;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 40px;
+    }
+    textarea {
+      width: 80%;
+      max-width: 600px;
+      height: 120px;
+      padding: 12px;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 24px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #response {
+      margin-top: 30px;
+      white-space: pre-wrap;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🤖 Cyvathon AI</h1>
+<p>Your AI mentor for Cyvathon & cybersecurity</p>
+
+<textarea id="prompt" placeholder="Ask the AI..."></textarea><br>
+<button onclick="askAI()">Ask</button>
+
+<div id="response"></div>
+
+<script>
+async function askAI() {
+  const message = document.getElementById("prompt").value;
+  const responseDiv = document.getElementById("response");
+
+  responseDiv.innerText = "Thinking...";
+
+  const res = await fetch("/ai_ask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message })
+  });
+
+  const data = await res.json();
+  responseDiv.innerText = data.reply || data.error;
+}
+</script>
+
+</body>
+</html>
