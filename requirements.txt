@@ -2,6 +2,6 @@ flask
 flask-cors
 flask-limiter
 supabase
-google-generativeai
+google-genai
 werkzeug
 gunicorn
