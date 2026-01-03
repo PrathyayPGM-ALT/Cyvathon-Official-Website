@@ -3,3 +3,4 @@ flask-cors
 supabase
 gunicorn
 flask_limiter
+google-generativeai
