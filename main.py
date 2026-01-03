@@ -274,12 +274,11 @@ def ai_ask():
     if not message:
         return jsonify(error="Empty prompt"), 400
 
-    response = genai_client.models.generate_content(
-        model="gemini-3-pro-preview",
-        contents=message
-    )
+    model = genai.GenerativeModel("gemini-pro")
+    response = model.generate_content(message)
 
     return jsonify(reply=response.text)
+
 
 @app.route("/health")
 def health():
