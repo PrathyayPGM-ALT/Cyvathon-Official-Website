@@ -105,6 +105,7 @@ button:active {
 <textarea id="prompt" placeholder="Ask the AI..."></textarea><br>
 <button onclick="askAI()">Ask</button>
 
+<div id="thinking" style="display:none; margin-top: 10px;">🤔 Thinking...</div>
 <div id="response"></div>
 
 <script>
@@ -112,27 +113,33 @@ async function askAI() {
   const input = document.getElementById("prompt");
   const output = document.getElementById("response");
   const thinking = document.getElementById("thinking");
+  const button = document.querySelector("button");
 
+  const userMessage = input.value.trim();
+  if (!userMessage) return;
+
+  button.disabled = true;
   thinking.style.display = "block";
   output.innerText = "";
 
-  const res = await fetch("/ai_ask", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      message: input.value
-    })
-  });
+  try {
+    const res = await fetch("/ai_ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: userMessage })
+    });
 
-  const data = await res.json();
-
-  thinking.style.display = "none";
-  output.innerText = data.reply || "No response";
+    const data = await res.json();
+    output.innerText = data.reply || "No response";
+  } catch (err) {
+    console.error(err);
+    output.innerText = "Error contacting AI.";
+  } finally {
+    thinking.style.display = "none";
+    button.disabled = false;
+  }
 }
 </script>
-
 
 </body>
 </html>
