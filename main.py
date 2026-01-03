@@ -8,6 +8,8 @@ from time import time
 from datetime import timedelta
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from google import genai
+
 
 recent_registrations = {}
 REGISTRATION_LIMIT_WINDOW = 15
@@ -26,6 +28,10 @@ logging.basicConfig(level=logging.INFO)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+genai_client = genai.Client(api_key=GEMINI_API_KEY)
+
 
 limiter = Limiter(
     key_func=get_remote_address,
@@ -256,6 +262,24 @@ def chat_users():
     users = [u["username"] for u in res.data if u["username"] != user["username"]]
 
     return jsonify(success=True, users=users)
+@app.route("/ai")
+def ai_page():
+    return app.send_static_file("ai.html")
+@limiter.limit("10/min")
+@app.route("/ai_ask", methods=["POST"])
+def ai_ask():
+    data = request.get_json()
+    message = data.get("message", "").strip()
+
+    if not message:
+        return jsonify(error="Empty prompt"), 400
+
+    response = genai_client.models.generate_content(
+        model="gemini-3-pro-preview",
+        contents=message
+    )
+
+    return jsonify(reply=response.text)
 
 @app.route("/health")
 def health():
