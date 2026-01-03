@@ -46,21 +46,30 @@
 
 <script>
 async function askAI() {
-  const message = document.getElementById("prompt").value;
-  const responseDiv = document.getElementById("response");
+  const input = document.getElementById("prompt");
+  const output = document.getElementById("response");
+  const thinking = document.getElementById("thinking");
 
-  responseDiv.innerText = "Thinking...";
+  thinking.style.display = "block";
+  output.innerText = "";
 
   const res = await fetch("/ai_ask", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message })
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: input.value
+    })
   });
 
   const data = await res.json();
-  responseDiv.innerText = data.reply || data.error;
+
+  thinking.style.display = "none";
+  output.innerText = data.reply || "No response";
 }
 </script>
+
 
 </body>
 </html>
