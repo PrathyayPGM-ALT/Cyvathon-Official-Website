@@ -270,17 +270,23 @@ def ai_page():
 @limiter.limit("10/min")
 @app.route("/ai_ask", methods=["POST"])
 def ai_ask():
-    data = request.get_json()
-    message = data.get("message", "").strip()
+    try:
+        data = request.get_json(force=True)
+        message = data.get("message", "").strip()
 
-    if not message:
-        return jsonify(error="Empty prompt"), 400
+        if not message:
+            return jsonify(reply="Empty prompt"), 200
 
-    model = genai.GenerativeModel("gemini-pro")
-    response = model.generate_content(message)
+        model = genai.GenerativeModel("gemini-pro")
+        response = model.generate_content(message)
 
-    return jsonify(reply=response.text)
+        return jsonify(reply=response.text)
 
+    except Exception as e:
+        print("AI ERROR:", e)  # THIS will appear in Render logs
+        return jsonify(
+            reply="Cyvathon AI backend error. Check server logs."
+        ), 200
 
 @app.route("/health")
 def health():
