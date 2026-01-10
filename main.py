@@ -271,22 +271,29 @@ def ai_page():
 @app.route("/ai_ask", methods=["POST"])
 def ai_ask():
     try:
+    
         data = request.get_json(force=True)
+
         message = data.get("message", "").strip()
-
         if not message:
-            return jsonify(reply="Empty prompt"), 200
+            return jsonify(reply="Please enter a message."), 200
 
-        model = genai.GenerativeModel("gemini-pro")
-        response = model.generate_content(message)
+        response = genai_client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=message
+        )
 
-        return jsonify(reply=response.text)
+        reply = response.text if response.text else "No response generated."
+
+        return jsonify(reply=reply), 200
 
     except Exception as e:
-        print("AI ERROR:", e)  # THIS will appear in Render logs
+
+        print("❌ Cyvathon AI ERROR:", e)
+
         return jsonify(
             reply="Cyvathon AI backend error. Check server logs."
-        ), 200
+        ), 500
 
 @app.route("/health")
 def health():
