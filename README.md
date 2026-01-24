@@ -11,7 +11,7 @@ This repository contains the code for the **Cyvathon Official Website**, th **Cy
 ## 🌍 Live Websites
 
 - **Main Cyvathon Website:**  
-  https://cyvathon.onrender.com  
+  https://cyvathon.onrender.com/ 
 
 - **Cybucks Banking System (from this repo):**  
   https://cyvathon-official-website.onrender.com/bank
