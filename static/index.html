@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyvathon — Code. Conquer. Cause Creativity.</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .hero{ text-align:center; padding:5.5rem 1.5rem 3rem; max-width:900px; margin:auto; position:relative; }
+    .hero::before{ content:""; position:absolute; top:-40px; left:50%; transform:translateX(-50%);
+      width:600px; height:600px; background:radial-gradient(circle,rgba(88,196,255,.18),transparent 70%); z-index:-1; }
+    .hero h2{ font-size:3rem; font-weight:700; margin-bottom:1rem;
+      background:linear-gradient(90deg,var(--accent),var(--accent2));
+      -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .hero p{ font-size:1.2rem; color:var(--muted); }
+    .typing-text{ background:linear-gradient(90deg,var(--accent),var(--accent2));
+      -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:700; }
+    .typing-text::after{ content:""; display:inline-block; width:6px; height:1.1em; background:var(--accent2);
+      margin-left:6px; animation:blink .9s infinite; border-radius:2px; }
+    @keyframes blink{ 0%,100%{opacity:1} 50%{opacity:0} }
+    .auth-card{ max-width:420px; margin:2rem auto; }
+    .chairism{ text-align:center; }
+    .chairism .pill{ font-size:1rem; margin-bottom:1rem; }
+    .stat-strip{ display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin-top:1.5rem; }
+    .stat{ padding:.6rem 1.2rem; border-radius:30px; background:var(--panel); border:1px solid var(--panel-border); }
+    .stat b{ color:var(--accent); }
+    .hub-card{ text-align:center; text-decoration:none; color:inherit; display:block; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <!-- ============ LOGGED-OUT VIEW ============ -->
+  <div id="guestView" style="display:none;">
+    <section class="hero">
+      <h2>Welcome to <span class="typing-text"></span></h2>
+      <p>Cyvathon — a cyber micronation built on code, currency and creativity.</p>
+      <div style="margin-top:1.8rem;">
+        <a href="/login"><button style="width:auto;padding:.85rem 2.4rem;font-size:1.05rem;">
+          <i class="fas fa-right-to-bracket"></i> &nbsp;Login / Sign Up</button></a>
+      </div>
+      <p class="small" style="margin-top:.8rem;">New citizens get <b>100 of each currency</b>.</p>
+      <div class="stat-strip" id="statStrip"></div>
+    </section>
+
+    <!-- WHAT WE DO -->
+    <section class="wrap" id="about">
+      <h2 class="section-title">What We Do</h2>
+      <p class="section-sub">We are coders, builders and digital citizens.</p>
+      <div class="grid">
+        <div class="card"><i class="fas fa-laptop-code icon"></i><h3>Python, C & Web Dev</h3>
+          <p>We build high-performance apps and stunning web systems with modern tools.</p></div>
+        <div class="card"><i class="fas fa-terminal icon"></i><h3>Cybersecurity & Ethical Hacking</h3>
+          <p>We explore security concepts and ethical hacking to understand and protect systems.</p></div>
+        <div class="card"><i class="fas fa-coins icon"></i><h3>A Real Digital Economy</h3>
+          <p>Three currencies, companies, loans, taxes and a national treasury — all live.</p></div>
+      </div>
+    </section>
+
+    <!-- HOW WE DO IT -->
+    <section class="wrap" id="how">
+      <h2 class="section-title">How We Do It</h2>
+      <p class="section-sub">Structure, technology and a thriving community.</p>
+      <div class="grid">
+        <div class="card"><i class="fas fa-people-group icon"></i><h3>Citizenship</h3>
+          <p>Anyone can become a citizen, found a company, take a loan and vote for leaders.</p></div>
+        <div class="card"><i class="fas fa-landmark icon"></i><h3>Government</h3>
+          <p>A President leads a cabinet; the Prime Minister is chosen by national vote.</p></div>
+        <div class="card"><i class="fas fa-shield-halved icon"></i><h3>Secure Systems</h3>
+          <p>Hashed passwords, session security and rate limiting keep the realm safe.</p></div>
+      </div>
+    </section>
+
+    <!-- CHAIRISM -->
+    <section class="wrap" id="chairism">
+      <h2 class="section-title">Chairism</h2>
+      <div class="panel chairism">
+        <span class="pill"><i class="fas fa-chair"></i> Our Valued Religion</span>
+        <p class="muted">We honor the prophets of the Chair.</p>
+        <p class="muted">Our loyalty remains unshaken.</p>
+        <p style="color:var(--accent);font-weight:700;font-size:1.2rem;margin-top:.5rem;">ALL HAIL THE CHAIR.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ LOGGED-IN DASHBOARD HUB ============ -->
+  <div id="hubView" style="display:none;">
+    <section class="hero" style="padding-bottom:1rem;">
+      <h2 style="font-size:2.2rem;">Citizen Dashboard</h2>
+      <p>Welcome back, <b id="hubName" style="color:var(--accent)"></b> <span class="tag" id="hubDesig"></span></p>
+      <div class="balances" id="hubBalances"></div>
+    </section>
+    <section class="wrap" style="padding-top:1rem;">
+      <div class="grid" id="hubGrid"></div>
+    </section>
+    <section class="wrap" id="hubNewsWrap" style="padding-top:0; display:none;">
+      <h2 class="section-title" style="font-size:1.4rem;"><i class="fas fa-newspaper"></i> National News</h2>
+      <div id="hubNews"></div>
+    </section>
+  </div>
+
+  <footer>
+    <p>© 2025 Cyvathon | Code. Conquer. Cause Creativity.</p>
+    <p class="small">Official cyber micronation · GDP 500,000 CB</p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const HUB = [
+      ["/bank","fa-building-columns","Bank","Send money & convert currencies"],
+      ["/citizens","fa-users","Citizens","Directory & direct messages"],
+      ["/chat","fa-comments","Chat","Talk with fellow citizens"],
+      ["/company","fa-briefcase","Companies","Found, browse & work at companies"],
+      ["/marketplace","fa-store","Marketplace","Buy, sell & donate goods"],
+      ["/exchange","fa-chart-line","Stock Exchange","Trade company shares"],
+      ["/loans","fa-hand-holding-dollar","Loans","Borrow up to 5000 CB"],
+      ["/legislature","fa-scale-balanced","Legislature","Table & vote on bills"],
+      ["/gazette","fa-stamp","Official Gazette","The register of laws & decrees"],
+      ["/court","fa-gavel","Courts","File & rule on legal cases"],
+      ["/voting","fa-check-to-slot","Elections","Elect the Prime Minister"],
+      ["/government","fa-landmark","Government","See the cabinet"],
+      ["/profile","fa-id-card","ID Card","Your designation & record"],
+      ["/treasury","fa-vault","Treasury","View the national vault"],
+      ["/rules","fa-scroll","Rules","The laws of Cyvathon"],
+    ];
+
+    function showGuest(){
+      document.getElementById("guestView").style.display = "block";
+      document.getElementById("hubView").style.display = "none";
+      typeLoop();
+      loadStats();
+    }
+    function showHub(user, admin){
+      document.getElementById("guestView").style.display = "none";
+      document.getElementById("hubView").style.display = "block";
+      document.getElementById("hubName").textContent = user.username;
+      document.getElementById("hubDesig").textContent = user.designation;
+      document.getElementById("hubBalances").innerHTML = `
+        <div class="bal"><div class="v">${fmt(user.balance)}</div><div class="l">Cybucks</div></div>
+        <div class="bal"><div class="v">${fmt(user.pufb)}</div><div class="l">Pufferbucks</div></div>
+        <div class="bal"><div class="v">${fmt(user.aquilines)}</div><div class="l">Aquilines</div></div>`;
+      document.getElementById("hubGrid").innerHTML = HUB.map(([h,i,t,d]) =>
+        `<a class="card hub-card" href="${h}"><i class="fas ${i} icon"></i><h3>${t}</h3><p>${d}</p></a>`).join("");
+      loadHubNews();
+    }
+
+    async function loadHubNews(){
+      try{
+        const d = await api("/news/list");
+        if(!d.news || !d.news.length) return;
+        const esc = (s)=>(s||"").replace(/</g,"&lt;");
+        document.getElementById("hubNews").innerHTML = d.news.slice(0,3).map(n=>`
+          <div class="panel" style="margin-bottom:1rem;text-align:left;border-left:4px solid var(--accent);">
+            <h3 style="margin-bottom:.2rem;">${esc(n.title)}</h3>
+            <p class="small" style="color:var(--muted)">By ${esc(n.author)} · ${new Date(n.created_at).toLocaleDateString()}</p>
+            <p style="white-space:pre-wrap;color:#cdd6e0;margin-top:.4rem;">${esc(n.body)}</p>
+          </div>`).join("") + `<p style="text-align:center;"><a class="link" href="/news">All news →</a></p>`;
+        document.getElementById("hubNewsWrap").style.display = "block";
+      }catch{}
+    }
+
+    async function loadStats(){
+      try{
+        const e = await api("/economy");
+        document.getElementById("statStrip").innerHTML = `
+          <div class="stat">GDP <b>${fmt(e.gdp)} CB</b></div>
+          <div class="stat">Citizens <b>${e.citizens}</b></div>
+          <div class="stat">Companies <b>${e.companies}</b></div>
+          <div class="stat">1 CB = <b>5 PUFB = 50 AQ</b></div>`;
+      }catch{}
+    }
+
+    // typewriter
+    function typeLoop(){
+      const el = document.querySelector(".typing-text");
+      if(!el || el.dataset.on) return; el.dataset.on = "1";
+      const words=["Cyvathon","Future Coders","A Digital Realm","Our Nation"];
+      let wi=0, ci=0, del=false;
+      (function tick(){
+        const w=words[wi%words.length];
+        el.textContent = del ? w.slice(0,ci--) : w.slice(0,ci++);
+        let sp = del?60:110;
+        if(!del && ci===w.length+1){ sp=1400; del=true; ci=w.length; }
+        else if(del && ci<0){ del=false; ci=0; wi++; sp=300; }
+        setTimeout(tick,sp);
+      })();
+    }
+
+    (async function init(){
+      let me = null;
+      try{ me = await api("/me"); }catch{}
+      renderNav("/", me ? me.user : null);
+      if(me) showHub(me.user, me.admin); else showGuest();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+flask
+flask-cors
+flask-limiter
+supabase
+google-genai
+werkzeug
+gunicorn

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon National Treasury</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .tpanel{ background:rgba(255,255,255,0.025); border:1px solid var(--panel-border);
+      border-radius:16px; padding:1.6rem 1.8rem; margin-bottom:1.6rem; }
+    .tpanel h3{ font-size:1.3rem; margin-bottom:.2rem; }
+    .tpanel .desc{ color:var(--muted); font-size:.9rem; margin-bottom:1rem; }
+    .cur-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+    .cur{ background:rgba(255,255,255,0.03); border:1px solid var(--panel-border);
+      border-left:4px solid var(--accent); border-radius:10px; padding:1rem 1.2rem; }
+    .cur.pufb{ border-left-color:var(--gold); }
+    .cur.cybucks{ border-left-color:var(--accent); }
+    .cur.aquilines{ border-left-color:var(--green); }
+    .cur .l{ font-size:.72rem; letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
+    .cur .v{ font-size:1.9rem; font-weight:800; margin-top:.2rem; }
+    .cur .sub{ font-size:.75rem; color:var(--muted); margin-top:.3rem; }
+    .pos{ color:var(--green); } .neg{ color:var(--red); }
+    .summary{ display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.6rem; }
+    .scard{ flex:1; min-width:170px; padding:1.1rem 1.3rem; border-radius:14px;
+      background:linear-gradient(135deg,rgba(88,196,255,.08),var(--panel)); border:1px solid var(--panel-border); }
+    .scard .l{ color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:1px; }
+    .scard .v{ font-size:1.7rem; font-weight:800; color:var(--accent); }
+    table{ width:100%; border-collapse:collapse; margin-top:.4rem; }
+    th,td{ text-align:left; padding:.6rem .5rem; border-bottom:1px solid rgba(255,255,255,.06); font-size:.9rem; }
+    th{ color:var(--muted); font-weight:600; text-transform:uppercase; font-size:.72rem; letter-spacing:1px; }
+    .kind{ font-size:.7rem; padding:.15rem .55rem; border-radius:20px; background:rgba(88,196,255,.12); color:var(--accent); }
+    .deny{ text-align:center; padding:4rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <h2 class="section-title"><i class="fas fa-vault"></i> National Treasury</h2>
+    <p class="section-sub">The central vault of the Republic — VAT, fees, repayments and seizures flow here.</p>
+
+    <div id="content" style="display:none;">
+      <!-- Summary -->
+      <div class="summary" id="summary"></div>
+
+      <!-- Reserves -->
+      <div class="tpanel">
+        <h3>Treasury Reserves</h3>
+        <div class="desc">Hard currency currently held by the state.</div>
+        <div class="cur-grid" id="reserves"></div>
+      </div>
+
+      <!-- Money supply -->
+      <div class="tpanel">
+        <h3>Money Supply</h3>
+        <div class="desc" id="supplyDesc"></div>
+        <div class="cur-grid" id="supply"></div>
+      </div>
+
+      <!-- VAT -->
+      <div class="tpanel">
+        <h3><span id="yearVat"></span> VAT Collected</h3>
+        <div class="desc">10% monthly value-added tax gathered from every citizen this year.</div>
+        <div class="cur-grid" id="vat"></div>
+      </div>
+
+      <!-- Salary -->
+      <div class="tpanel">
+        <h3><span id="yearSal"></span> Salary Paid Out</h3>
+        <div class="desc">Weekly salaries disbursed from the Treasury this year.</div>
+        <div class="cur-grid" id="salary"></div>
+      </div>
+
+      <!-- Flows -->
+      <div class="tpanel">
+        <h3>Recent Treasury Flows</h3>
+        <div class="desc">The live ledger of every movement in and out of the vault.</div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Timestamp</th><th>Direction</th><th>Type</th><th>Counterparty</th><th>Currency</th><th>Amount</th></tr></thead>
+            <tbody id="flows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent transactions (bank + marketplace) -->
+      <div class="tpanel">
+        <h3>Recent Transactions</h3>
+        <div class="desc">Bank transfers, currency conversions and marketplace purchases across the nation.</div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Timestamp</th><th>Type</th><th>From</th><th>To</th><th>Amount</th></tr></thead>
+            <tbody id="txns"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="deny" class="deny" style="display:none;">
+      <i class="fas fa-lock" style="font-size:2.5rem;color:var(--red);"></i>
+      <h3 style="margin-top:1rem;">Restricted</h3>
+      <p class="muted">Only the President may inspect the National Treasury.</p>
+      <a class="link" href="/">← Back to dashboard</a>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const ORDER = ["cybucks","pufb","aquilines"];
+    const LABEL = { cybucks:"Cybucks", pufb:"Pufferbucks", aquilines:"Aquilines" };
+    const CBVAL = { cybucks:1, pufb:0.2, aquilines:0.02 };
+
+    function curCards(host, data, opts={}){
+      document.getElementById(host).innerHTML = ORDER.map(k=>{
+        const v = data[k] || 0;
+        const sign = opts.sign ? (opts.sign==='+'?'+':'-') : '';
+        const cls = opts.sign==='+' ? 'pos' : opts.sign==='-' ? 'neg' : '';
+        return `<div class="cur ${k}">
+          <div class="l">${LABEL[k]}${opts.suffix||''}</div>
+          <div class="v ${cls}">${sign}${fmt(v)}</div>
+          ${opts.sub? `<div class="sub">${opts.sub(k)}</div>`:''}
+        </div>`;
+      }).join("");
+    }
+
+    (async function(){
+      const user = await requireAuth(); if(!user) return;
+      renderNav("/treasury", user);
+      let d;
+      try{ d = await api("/treasury_data"); }
+      catch(e){ document.getElementById("deny").style.display="block"; return; }
+
+      document.getElementById("content").style.display="block";
+      document.getElementById("yearVat").textContent = d.year;
+      document.getElementById("yearSal").textContent = d.year;
+
+      // summary
+      const cbEquiv = ORDER.reduce((s,k)=> s + (d.reserves[k]||0)*CBVAL[k], 0);
+      document.getElementById("summary").innerHTML = `
+        <div class="scard"><div class="l">National GDP</div><div class="v">${fmt(d.gdp)} CB</div></div>
+        <div class="scard"><div class="l">Reserves (CB-equiv)</div><div class="v">${fmt(cbEquiv)}</div></div>
+        <div class="scard"><div class="l">Currency Holders</div><div class="v">${d.holders}</div></div>
+        <div class="scard"><div class="l">Fiscal Year</div><div class="v">${d.year}</div></div>`;
+
+      curCards("reserves", d.reserves);
+      document.getElementById("supplyDesc").textContent =
+        `${d.holders} citizens hold currency outside the Treasury.`;
+      curCards("supply", d.supply, { suffix:" — Total Supply",
+        sub:(k)=>`Citizens: ${fmt(d.held[k])} · Treasury: ${fmt(d.reserves[k])}` });
+      curCards("vat", d.vat, { sign:'+' });
+      curCards("salary", d.salary, { sign:'-' });
+
+      // flows
+      const body = document.getElementById("flows");
+      if(!d.flows.length){ body.innerHTML = `<tr><td colspan="6" class="muted">No flows yet.</td></tr>`; }
+      else body.innerHTML = d.flows.map(f=>`
+        <tr>
+          <td>${new Date(f.created_at).toLocaleString()}</td>
+          <td class="${f.direction==='IN'?'pos':'neg'}">${f.direction}</td>
+          <td><span class="kind">${f.kind}</span></td>
+          <td>${f.counterparty||'—'}</td>
+          <td>${LABEL[f.currency]||f.currency}</td>
+          <td class="${f.direction==='IN'?'pos':'neg'}">${f.direction==='IN'?'+':'-'}${fmt(f.amount)}</td>
+        </tr>`).join("");
+
+      // recent transactions (bank + marketplace)
+      const tx = document.getElementById("txns");
+      const txns = d.transactions || [];
+      if(!txns.length){ tx.innerHTML = `<tr><td colspan="5" class="muted">No transactions yet.</td></tr>`; }
+      else tx.innerHTML = txns.map(t=>`
+        <tr>
+          <td>${new Date(t.created_at).toLocaleString()}</td>
+          <td><span class="kind">${t.kind}</span>${t.detail?` <span class="muted" style="font-size:.78rem">${t.detail}</span>`:''}</td>
+          <td>${t.from_party||'—'}</td>
+          <td>${t.to_party||'—'}</td>
+          <td>${t.amount>0?fmt(t.amount)+' '+(LABEL[t.currency]||t.currency):'—'}</td>
+        </tr>`).join("");
+    })();
+  </script>
+</body>
+</html>

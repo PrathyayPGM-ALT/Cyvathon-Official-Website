@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Official Gazette · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .entry{ padding:1.3rem 1.5rem; margin-bottom:1.1rem; background:var(--panel);
+      border:1px solid var(--panel-border); border-radius:14px; border-left:4px solid var(--accent); }
+    .entry.decree{ border-left-color:var(--gold); }
+    .entry .ref{ font-size:.78rem; letter-spacing:1px; text-transform:uppercase; color:var(--accent); }
+    .entry.decree .ref{ color:var(--gold); }
+    .entry h3{ margin:.25rem 0; }
+    .entry .meta{ font-size:.78rem; color:var(--muted); margin-bottom:.5rem; }
+    .entry .body{ white-space:pre-wrap; color:#cdd6e0; }
+    .seal{ text-align:center; color:var(--accent); font-size:2rem; margin-bottom:.4rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:820px;">
+    <div class="seal"><i class="fas fa-stamp"></i></div>
+    <h2 class="section-title" style="margin-bottom:.2rem;">The Official Gazette</h2>
+    <p class="section-sub">The authoritative register of the Republic — every Act of the Legislature and Decree of the President, numbered and dated.</p>
+
+    <!-- President: issue a decree -->
+    <div class="panel" id="decreeBox" style="display:none; margin-bottom:2rem;">
+      <h3><i class="fas fa-crown"></i> Issue a Presidential Decree</h3>
+      <p class="small">A binding executive order, entered into the Gazette under the next Decree number.</p>
+      <input id="dTitle" placeholder="Title of the decree">
+      <textarea id="dBody" rows="4" placeholder="Text of the decree…"></textarea>
+      <button onclick="issue()">Issue Decree</button>
+      <p id="dMsg" class="small" style="text-align:center;"></p>
+    </div>
+
+    <div id="entries"></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    async function load(){
+      const d=await api("/gazette/list");
+      document.getElementById("decreeBox").style.display = d.is_president ? "block" : "none";
+      const host=document.getElementById("entries");
+      if(!d.entries.length){ host.innerHTML=`<p class="muted">The Gazette is empty. No laws have yet been enacted.</p>`; return; }
+      host.innerHTML=d.entries.map(e=>`
+        <div class="entry ${e.kind}">
+          <div class="ref">${esc(e.ref)} · ${e.kind==='act'?'Act of the Legislature':'Presidential Decree'}</div>
+          <h3>${esc(e.title)}</h3>
+          <div class="meta">Issued by ${esc(e.issued_by)} · ${new Date(e.created_at).toLocaleDateString()}</div>
+          ${e.body?`<div class="body">${esc(e.body)}</div>`:''}
+        </div>`).join("");
+    }
+    async function issue(){
+      const title=document.getElementById("dTitle").value.trim();
+      const body=document.getElementById("dBody").value.trim();
+      const m=document.getElementById("dMsg");
+      if(!title){ m.style.color="var(--red)"; m.textContent="A decree needs a title."; return; }
+      try{ const r=await api("/gazette/decree",{method:"POST",body:JSON.stringify({title,body})});
+        m.style.color="var(--green)"; m.textContent="Issued as "+r.ref+".";
+        document.getElementById("dTitle").value=""; document.getElementById("dBody").value=""; load();
+      }catch(e){ m.style.color="var(--red)"; m.textContent=e.message; }
+    }
+    (async function(){
+      renderNav("/gazette", await currentUser());
+      load();
+    })();
+  </script>
+</body>
+</html>

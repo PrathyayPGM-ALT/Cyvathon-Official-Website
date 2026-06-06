@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    body{ display:flex; flex-direction:column; min-height:100vh; }
+    .login-wrap{ flex:1; display:flex; align-items:center; justify-content:center; padding:2rem 1rem; }
+    .login-card{ width:100%; max-width:420px; }
+    .login-card .logo{ justify-content:center; margin-bottom:.4rem; }
+    .login-card h2{ text-align:center; }
+    .tabs{ display:flex; gap:.5rem; margin:1.2rem 0 .4rem; }
+    .tabs button{ background:transparent; border:1px solid var(--panel-border); color:var(--muted); }
+    .tabs button.active{ background:rgba(88,196,255,.12); border-color:var(--accent); color:var(--accent); }
+    .back{ text-align:center; margin-top:1rem; }
+  </style>
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="panel login-card">
+      <div class="logo"><i class="fas fa-code logo-icon"></i><h1>CYVATHON</h1></div>
+      <h2 id="title">Welcome Back</h2>
+      <p class="small" style="text-align:center;">Sign up to unlock the Bank, Chat, Companies, Loans &amp; Voting. New citizens get <b>100 of each currency</b>.</p>
+
+      <div class="tabs">
+        <button id="tabLogin" class="active" onclick="setMode('login')">Login</button>
+        <button id="tabSignup" onclick="setMode('signup')">Sign Up</button>
+      </div>
+
+      <input id="username" placeholder="Username" autocomplete="username">
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+      <button id="submitBtn" onclick="submit()">Login</button>
+
+      <p id="msg" class="small" style="text-align:center;color:var(--red);"></p>
+      <p class="back"><a class="link" href="/"><i class="fas fa-arrow-left"></i> Back to home</a></p>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let mode = "login";
+    const $ = (id)=>document.getElementById(id);
+
+    function setMode(m){
+      mode = m;
+      $("tabLogin").classList.toggle("active", m==="login");
+      $("tabSignup").classList.toggle("active", m==="signup");
+      $("title").textContent = m==="login" ? "Welcome Back" : "Become a Citizen";
+      $("submitBtn").textContent = m==="login" ? "Login" : "Sign Up";
+      $("msg").textContent = "";
+    }
+
+    async function submit(){
+      const username = $("username").value.trim();
+      const password = $("password").value.trim();
+      if(!username || !password){ $("msg").textContent = "Fill username and password"; return; }
+      const path = mode==="login" ? "/login" : "/register";
+      try{
+        await api(path, {method:"POST", body:JSON.stringify({username,password})});
+        window.location.href = "/";          // go to dashboard hub
+      }catch(e){ $("msg").textContent = e.message; }
+    }
+
+    document.addEventListener("keydown", e=>{ if(e.key==="Enter") submit(); });
+
+    (async function(){
+      // already logged in? skip straight to the dashboard
+      if(await currentUser()) window.location.href = "/";
+    })();
+  </script>
+</body>
+</html>

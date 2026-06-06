@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon Loans</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .loan{ display:flex; justify-content:space-between; align-items:center; padding:1rem;
+      border-radius:12px; background:var(--panel); border:1px solid var(--panel-border); margin-bottom:.8rem; }
+    .st-active{ color:var(--gold); } .st-repaid{ color:var(--green); } .st-default{ color:var(--red); }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:640px;">
+    <h2 class="section-title"><i class="fas fa-hand-holding-dollar"></i> Cyvathon Loans</h2>
+    <p class="section-sub">Borrow up to <b>5000 CB</b>. Repay within <b>30 days</b> — or all your assets are seized and it goes on your record.</p>
+
+    <div class="panel" style="margin-bottom:1.4rem;">
+      <h3>Take a Loan</h3>
+      <p class="small">Your balance: <b id="bal"></b> CB</p>
+      <input id="amount" type="number" min="1" max="5000" placeholder="Amount (max 5000 CB)">
+      <button onclick="takeLoan()">Borrow</button>
+    </div>
+
+    <div class="panel" style="margin-bottom:1.4rem;">
+      <h3>Repay Active Loan</h3>
+      <button class="ghost" onclick="repay()">Repay Now</button>
+    </div>
+
+    <h3 style="margin-bottom:.8rem;">Loan History</h3>
+    <div id="list"></div>
+    <p id="msg" class="small" style="text-align:center;"></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const msg = (t,err=true)=>{ const m=document.getElementById("msg");
+      m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
+
+    async function load(){
+      const d = await api("/loans/list");
+      document.getElementById("bal").textContent = fmt(d.balance);
+      const list = document.getElementById("list");
+      if(!d.loans.length){ list.innerHTML = `<p class="muted">No loans yet.</p>`; return; }
+      list.innerHTML = d.loans.map(l=>{
+        const status = l.defaulted ? `<span class="st-default">DEFAULTED</span>`
+          : l.repaid ? `<span class="st-repaid">Repaid</span>`
+          : `<span class="st-active">Active — due ${new Date(l.due_at).toLocaleDateString()}</span>`;
+        return `<div class="loan"><div><b>${fmt(l.amount)} CB</b><br>
+          <span class="small">Taken ${new Date(l.taken_at).toLocaleDateString()}</span></div>
+          <div>${status}</div></div>`;
+      }).join("");
+    }
+
+    async function takeLoan(){
+      const amount = parseFloat(document.getElementById("amount").value);
+      if(!amount||amount<=0) return msg("Enter an amount");
+      try{
+        await api("/loans",{method:"POST",body:JSON.stringify({amount})});
+        msg(`Loan of ${amount} CB granted. Repay within 30 days!`,false);
+        document.getElementById("amount").value=""; load();
+      }catch(e){ msg(e.message); }
+    }
+
+    async function repay(){
+      try{
+        await api("/loans/repay",{method:"POST",body:"{}"});
+        msg("Loan repaid — you are in good standing.",false); load();
+      }catch(e){ msg(e.message); }
+    }
+
+    (async function(){
+      const user = await requireAuth(); if(!user) return;
+      renderNav("/loans", user);
+      load();
+    })();
+  </script>
+</body>
+</html>

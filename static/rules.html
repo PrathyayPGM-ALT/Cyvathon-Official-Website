@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon Rules</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .rule{ padding:1rem 1.2rem; margin-bottom:1rem; border-left:3px solid var(--accent);
+      background:var(--panel); border-radius:0 10px 10px 0; transition:.2s; }
+    .rule:hover{ transform:translateX(5px); }
+    .rule h3{ color:var(--accent); margin-bottom:.2rem; font-size:1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:760px;">
+    <h2 class="section-title"><i class="fas fa-scroll"></i> Laws of Cyvathon</h2>
+    <p class="section-sub">Every citizen agrees to uphold these laws.</p>
+
+    <div class="panel" style="text-align:center;max-width:560px;margin:0 auto 2rem;">
+      <h3><i class="fas fa-book-bookmark"></i> The Official Lawbook</h3>
+      <p class="small">The full Constitution &amp; Lawbook of the Republic — ten formal articles.</p>
+      <a class="link" href="/static/cyvathon-lawbook.pdf" target="_blank" rel="noopener"
+         style="display:inline-block;margin-top:.6rem;">
+        <button style="width:auto;padding:.7rem 1.6rem;">
+          <i class="fas fa-file-pdf"></i> &nbsp;Read the Lawbook (PDF)</button>
+      </a>
+    </div>
+
+    <h3 style="text-align:center;color:var(--muted);margin-bottom:1.2rem;">Quick Reference</h3>
+    <div id="rules"></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const RULES = [
+      "Respect all nations and communities.",
+      "Support the Cyvathon community and its members.",
+      "Only Cybucks, Pufferbucks and Aquilines are legal tender.",
+      "A 10% VAT is collected monthly and flows to the National Treasury.",
+      "New citizens receive 100 of each currency upon joining.",
+      "Founding a company costs 1000 CB; founders earn a weekly salary.",
+      "Loans up to 5000 CB must be repaid within 30 days or all assets are seized.",
+      "Follow all Cyvathon laws and regulations.",
+      "No inappropriate language or behavior.",
+      "No attacks permitted according to zoning laws.",
+      "We encourage Chairism as a cultural practice.",
+      "No theft, murder, or illegal activities.",
+    ];
+    (async function(){
+      renderNav("/rules", await currentUser());
+      document.getElementById("rules").innerHTML = RULES.map((r,i)=>
+        `<div class="rule"><h3>Rule ${i+1}</h3><p>${r}</p></div>`).join("");
+    })();
+  </script>
+</body>
+</html>

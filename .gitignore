@@ -1,0 +1,13 @@
+# Keep the database schema private — do not publish
+schema.sql
+
+# Python
+__pycache__/
+*.pyc
+
+# Secrets / env
+.env
+.env.*
+
+# IDE
+.idea/

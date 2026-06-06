@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon Bank</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:640px;">
+    <h2 class="section-title"><i class="fas fa-building-columns"></i> Cyvathon Bank</h2>
+    <p class="section-sub">1 Cybuck = 5 Pufferbucks = 50 Aquilines</p>
+
+    <div class="balances" id="balances"></div>
+
+    <!-- SEND -->
+    <div class="panel" style="margin-bottom:1.4rem;">
+      <h3>Send Money</h3>
+      <select id="recipient"><option value="">Select recipient</option></select>
+      <select id="sendCurrency">
+        <option value="cybucks">Cybucks</option>
+        <option value="pufb">Pufferbucks</option>
+        <option value="aquilines">Aquilines</option>
+      </select>
+      <input id="sendAmount" type="number" min="0" step="0.01" placeholder="Amount to send">
+      <button onclick="send()">Send</button>
+    </div>
+
+    <!-- CONVERT -->
+    <div class="panel" style="margin-bottom:1.4rem;">
+      <h3>Currency Converter</h3>
+      <div class="row">
+        <select id="fromC">
+          <option value="cybucks">Cybucks</option>
+          <option value="pufb">Pufferbucks</option>
+          <option value="aquilines">Aquilines</option>
+        </select>
+        <select id="toC">
+          <option value="pufb">Pufferbucks</option>
+          <option value="cybucks">Cybucks</option>
+          <option value="aquilines">Aquilines</option>
+        </select>
+      </div>
+      <input id="convAmount" type="number" min="0" step="0.01" placeholder="Amount to convert"
+             oninput="preview()">
+      <p class="small" id="convPreview"></p>
+      <button onclick="convert()">Convert</button>
+    </div>
+
+    <!-- SAVINGS -->
+    <div class="panel" style="margin-bottom:1.4rem;">
+      <h3><i class="fas fa-piggy-bank"></i> Savings Account</h3>
+      <p class="small">Earns <b>5% interest every month</b>. Balance: <b id="savBal">0</b> CB</p>
+      <input id="savAmount" type="number" min="0" step="0.01" placeholder="Amount">
+      <div class="row">
+        <button onclick="deposit()">Deposit</button>
+        <button class="ghost" onclick="withdraw()">Withdraw</button>
+      </div>
+    </div>
+
+    <!-- BONDS -->
+    <div class="panel" style="margin-bottom:1.4rem;">
+      <h3><i class="fas fa-file-invoice-dollar"></i> Government Bonds</h3>
+      <p class="small">Lend to the Treasury and get <b>+10%</b> back after <b>30 days</b>.</p>
+      <input id="bondAmount" type="number" min="0" step="0.01" placeholder="Amount to invest">
+      <button onclick="buyBond()">Buy Bond</button>
+      <div id="bondList" style="margin-top:1rem;"></div>
+    </div>
+
+    <!-- TREASURY (visible to all citizens) -->
+    <div class="panel" id="treasuryBox" style="margin-bottom:1.4rem;">
+      <h3><i class="fas fa-vault"></i> National Treasury</h3>
+      <p class="small">VAT, company fees, loan repayments and seized assets flow here.</p>
+      <a href="/treasury"><button class="ghost"><i class="fas fa-chart-line"></i> Open Treasury Dashboard</button></a>
+    </div>
+
+    <p id="msg" class="small" style="text-align:center;"></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const RATE = { cybucks:1, pufb:0.2, aquilines:0.02 };
+    const NAME = { cybucks:"Cybucks", pufb:"Pufferbucks", aquilines:"Aquilines" };
+    let me;
+
+    function paint(u){
+      me = u;
+      document.getElementById("balances").innerHTML = `
+        <div class="bal"><div class="v">${fmt(u.balance)}</div><div class="l">Cybucks</div></div>
+        <div class="bal"><div class="v">${fmt(u.pufb)}</div><div class="l">Pufferbucks</div></div>
+        <div class="bal"><div class="v">${fmt(u.aquilines)}</div><div class="l">Aquilines</div></div>`;
+    }
+    const msg = (t,err=true)=>{ const m=document.getElementById("msg");
+      m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
+
+    async function loadUsers(){
+      try{
+        const d = await api("/users");
+        const sel = document.getElementById("recipient");
+        sel.innerHTML = '<option value="">Select recipient</option>';
+        d.users.forEach(u=>{ const o=document.createElement("option"); o.value=o.textContent=u; sel.appendChild(o); });
+      }catch{}
+    }
+
+    async function send(){
+      const to = document.getElementById("recipient").value;
+      const currency = document.getElementById("sendCurrency").value;
+      const amount = parseFloat(document.getElementById("sendAmount").value);
+      if(!to) return msg("Select a recipient");
+      if(!amount||amount<=0) return msg("Enter a positive amount");
+      try{
+        const d = await api("/transfer",{method:"POST",body:JSON.stringify({to_username:to,currency,amount})});
+        paint(d.user); document.getElementById("sendAmount").value="";
+        msg(`Sent ${amount} ${NAME[currency]} to ${to}`,false);
+      }catch(e){ msg(e.message); }
+    }
+
+    function preview(){
+      const f=document.getElementById("fromC").value, t=document.getElementById("toC").value;
+      const a=parseFloat(document.getElementById("convAmount").value)||0;
+      if(f===t){ document.getElementById("convPreview").textContent="Pick two different currencies."; return; }
+      const out = Math.round(a*RATE[f]/RATE[t]*100)/100;
+      document.getElementById("convPreview").textContent = `${a} ${NAME[f]} → ${out} ${NAME[t]}`;
+    }
+
+    async function convert(){
+      const from=document.getElementById("fromC").value, to=document.getElementById("toC").value;
+      const amount=parseFloat(document.getElementById("convAmount").value);
+      if(from===to) return msg("Pick two different currencies");
+      if(!amount||amount<=0) return msg("Enter a positive amount");
+      try{
+        const d = await api("/convert",{method:"POST",body:JSON.stringify({from,to,amount})});
+        paint(d.user); document.getElementById("convAmount").value=""; preview();
+        msg(`Converted to ${d.converted} ${NAME[to]}`,false);
+      }catch(e){ msg(e.message); }
+    }
+
+    // ---- Savings ----
+    async function loadSavings(){
+      try{ const d = await api("/savings");
+        document.getElementById("savBal").textContent = fmt(d.savings);
+      }catch{}
+    }
+    async function deposit(){
+      const amount = parseFloat(document.getElementById("savAmount").value);
+      if(!amount||amount<=0) return msg("Enter a positive amount");
+      try{ await api("/savings/deposit",{method:"POST",body:JSON.stringify({amount})});
+        document.getElementById("savAmount").value=""; await refresh(); msg("Deposited to savings.",false);
+      }catch(e){ msg(e.message); }
+    }
+    async function withdraw(){
+      const amount = parseFloat(document.getElementById("savAmount").value);
+      if(!amount||amount<=0) return msg("Enter a positive amount");
+      try{ await api("/savings/withdraw",{method:"POST",body:JSON.stringify({amount})});
+        document.getElementById("savAmount").value=""; await refresh(); msg("Withdrawn to balance.",false);
+      }catch(e){ msg(e.message); }
+    }
+
+    // ---- Bonds ----
+    async function loadBonds(){
+      try{
+        const d = await api("/bonds");
+        const list = document.getElementById("bondList");
+        if(!d.bonds.length){ list.innerHTML = `<p class="small muted">No bonds held.</p>`; return; }
+        list.innerHTML = d.bonds.map(b=>{
+          const status = b.redeemed ? '<span style="color:var(--muted)">Redeemed</span>'
+            : b.matured ? `<button style="width:auto;margin:0;padding:.35rem .9rem;font-size:.8rem" onclick="redeemBond(${b.id})">Redeem ${fmt(b.payout)} CB</button>`
+            : `<span style="color:var(--gold)">Matures ${new Date(b.matures_at).toLocaleDateString()}</span>`;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .2rem;border-bottom:1px solid rgba(255,255,255,.06);font-size:.88rem;">
+            <span>${fmt(b.principal)} CB bond</span>${status}</div>`;
+        }).join("");
+      }catch{}
+    }
+    async function buyBond(){
+      const amount = parseFloat(document.getElementById("bondAmount").value);
+      if(!amount||amount<=0) return msg("Enter a positive amount");
+      try{ await api("/bonds/buy",{method:"POST",body:JSON.stringify({amount})});
+        document.getElementById("bondAmount").value=""; await refresh(); msg("Bond purchased.",false);
+      }catch(e){ msg(e.message); }
+    }
+    async function redeemBond(id){
+      try{ const r = await api("/bonds/redeem",{method:"POST",body:JSON.stringify({bond_id:id})});
+        await refresh(); msg(`Bond redeemed for ${fmt(r.payout)} CB.`,false);
+      }catch(e){ msg(e.message); }
+    }
+
+    async function refresh(){
+      try{ const d = await api("/me"); paint(d.user); }catch{}
+      loadSavings(); loadBonds();
+    }
+
+    (async function(){
+      const user = await requireAuth(); if(!user) return;
+      renderNav("/bank", user);
+      paint(user);
+      loadUsers();
+      loadSavings();
+      loadBonds();
+    })();
+  </script>
+</body>
+</html>

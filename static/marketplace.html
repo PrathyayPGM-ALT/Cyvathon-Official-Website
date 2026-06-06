@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon Marketplace</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .market-grid{ display:grid; gap:1.4rem; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+    .item{ background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; overflow:hidden; transition:.25s; }
+    .item:hover{ transform:translateY(-5px); border-color:rgba(88,196,255,.35); box-shadow:0 8px 25px rgba(0,0,0,.35); }
+    .item img{ width:100%; height:160px; object-fit:cover; background:#0f141b; display:block; }
+    .item .noimg{ height:160px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:2.5rem; background:#0f141b; }
+    .item .body{ padding:1rem 1.1rem; }
+    .item h3{ margin-bottom:.3rem; }
+    .item .price{ color:var(--accent); font-weight:700; font-size:1.1rem; }
+    .item .donate{ color:var(--green); font-weight:700; }
+    .item .seller{ font-size:.78rem; color:var(--muted); margin:.3rem 0; }
+    .item .desc{ color:var(--muted); font-size:.86rem; min-height:2.4em; }
+    .item button{ margin-top:.6rem; }
+    .form-grid{ display:grid; gap:.6rem; grid-template-columns:1fr 1fr; }
+    .form-grid .full{ grid-column:1/-1; }
+    @media(max-width:600px){ .form-grid{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <h2 class="section-title"><i class="fas fa-store"></i> Marketplace</h2>
+    <p class="section-sub">Buy &amp; sell goods for Cybucks, Pufferbucks or Aquilines — or give them away as donations. Sell as yourself or on behalf of your company.</p>
+
+    <!-- LIST AN ITEM -->
+    <div class="panel" style="max-width:760px;margin:0 auto 2.5rem;">
+      <h3><i class="fas fa-plus"></i> List an Item</h3>
+      <div class="form-grid">
+        <input class="full" id="mTitle" placeholder="Item title">
+        <input class="full" id="mImage" placeholder="Image URL (https://...)">
+        <textarea class="full" id="mDesc" rows="2" placeholder="Description"></textarea>
+        <select id="mKind" onchange="togglePrice()">
+          <option value="sale">For Sale</option>
+          <option value="donation">Donation (free)</option>
+        </select>
+        <select id="mSeller"><option value="">Sell as: Myself</option></select>
+        <input id="mPrice" type="number" min="0" step="0.01" placeholder="Price">
+        <select id="mCurrency">
+          <option value="cybucks">Cybucks</option>
+          <option value="pufb">Pufferbucks</option>
+          <option value="aquilines">Aquilines</option>
+        </select>
+      </div>
+      <button onclick="listItem()">List Item</button>
+      <p id="msg" class="small" style="text-align:center;"></p>
+    </div>
+
+    <div class="market-grid" id="grid"></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME = null;
+    const NAME = (n)=> (n||"").replace(/</g,"&lt;");
+    const CUR = { cybucks:"CB", pufb:"PUFB", aquilines:"AQ" };
+    const msg = (t,err=true)=>{ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
+
+    function togglePrice(){
+      const donation = document.getElementById("mKind").value === "donation";
+      document.getElementById("mPrice").style.display = donation ? "none" : "";
+      document.getElementById("mCurrency").style.display = donation ? "none" : "";
+    }
+
+    async function load(){
+      const d = await api("/market");
+      // seller dropdown (companies I founded)
+      const sel = document.getElementById("mSeller");
+      sel.innerHTML = '<option value="">Sell as: Myself</option>' +
+        (d.my_companies||[]).map(c=>`<option value="${c.id}">Sell as: ${NAME(c.name)}</option>`).join("");
+
+      const grid = document.getElementById("grid");
+      if(!d.items.length){ grid.innerHTML = `<p class="muted">Nothing listed yet — be the first to sell something!</p>`; return; }
+      grid.innerHTML = d.items.map(it=>{
+        const img = it.image_url
+          ? `<img src="${it.image_url}" onerror="this.outerHTML='<div class=&quot;noimg&quot;><i class=&quot;fas fa-box&quot;></i></div>'">`
+          : `<div class="noimg"><i class="fas fa-box"></i></div>`;
+        const priceHtml = it.kind === "donation"
+          ? `<span class="donate"><i class="fas fa-gift"></i> Free Donation</span>`
+          : `<span class="price">${fmt(it.price)} ${CUR[it.currency]}</span>`;
+        const mine = it.seller === d.me;
+        const btn = mine
+          ? `<button class="danger" onclick="removeItem(${it.id})">Remove</button>`
+          : `<button onclick="buyItem(${it.id})">${it.kind==="donation"?"Claim":"Buy"}</button>`;
+        return `<div class="item">${img}<div class="body">
+          <h3>${NAME(it.title)}</h3>
+          ${priceHtml}
+          <div class="seller"><i class="fas fa-user-tag"></i> ${NAME(it.seller_label)}</div>
+          <div class="desc">${NAME(it.description)||"<span class='muted'>No description.</span>"}</div>
+          ${btn}
+        </div></div>`;
+      }).join("");
+    }
+
+    async function listItem(){
+      const body = {
+        title: document.getElementById("mTitle").value.trim(),
+        description: document.getElementById("mDesc").value.trim(),
+        image_url: document.getElementById("mImage").value.trim(),
+        kind: document.getElementById("mKind").value,
+        price: document.getElementById("mPrice").value,
+        currency: document.getElementById("mCurrency").value,
+        company_id: document.getElementById("mSeller").value || null,
+      };
+      if(!body.title) return msg("Give your item a title");
+      try{
+        await api("/market",{method:"POST",body:JSON.stringify(body)});
+        msg("Listed!",false);
+        document.getElementById("mTitle").value=""; document.getElementById("mDesc").value="";
+        document.getElementById("mImage").value=""; document.getElementById("mPrice").value="";
+        load();
+      }catch(e){ msg(e.message); }
+    }
+
+    async function buyItem(id){
+      try{ await api("/market/buy",{method:"POST",body:JSON.stringify({item_id:id})});
+        msg("Done! Check your ID Card record.",false); load();
+      }catch(e){ msg(e.message); }
+    }
+    async function removeItem(id){
+      try{ await api("/market/delete",{method:"POST",body:JSON.stringify({item_id:id})}); load(); }
+      catch(e){ msg(e.message); }
+    }
+
+    (async function(){
+      ME = await requireAuth(); if(!ME) return;
+      renderNav("/marketplace", ME);
+      togglePrice();
+      load();
+    })();
+  </script>
+</body>
+</html>

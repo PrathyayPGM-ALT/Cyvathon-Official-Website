@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The National Legislature · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .bill{ display:block; text-decoration:none; color:inherit; padding:1.1rem 1.3rem; margin-bottom:.9rem;
+      background:var(--panel); border:1px solid var(--panel-border); border-radius:12px; transition:.2s; }
+    .bill:hover{ border-color:rgba(88,196,255,.35); }
+    .st{ font-size:.7rem; padding:.18rem .6rem; border-radius:20px; text-transform:uppercase; letter-spacing:.5px; }
+    .st-voting{ background:rgba(255,206,86,.15); color:var(--gold); }
+    .st-enacted{ background:rgba(0,214,160,.15); color:var(--green); }
+    .st-rejected,.st-withdrawn{ background:rgba(255,93,108,.15); color:var(--red); }
+    .tally{ display:flex; height:8px; border-radius:6px; overflow:hidden; margin:.6rem 0; background:rgba(255,255,255,.07); }
+    .tally .a{ background:var(--green); } .tally .n{ background:var(--red); }
+    .voterow{ display:flex; gap:.8rem; } .voterow button{ flex:1; }
+    .deb{ padding:.6rem .9rem; background:var(--panel); border:1px solid var(--panel-border);
+      border-radius:10px; margin-bottom:.5rem; }
+    .deb .a{ font-size:.78rem; color:var(--accent); }
+    .ft{ white-space:pre-wrap; color:#cdd6e0; background:#0f141b; border:1px solid var(--panel-border);
+      border-radius:10px; padding:1rem; margin:.8rem 0; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+  <div class="wrap" style="max-width:820px;"><div id="view"></div></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, PRES=false;
+    const qs=new URLSearchParams(location.search);
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const stBadge=(s)=>`<span class="st st-${s}">${s==='enacted'?'Enacted':s}</span>`;
+
+    /* ---- LIST ---- */
+    async function showList(){
+      const d=await api("/legislature/list");
+      ME=d.me; PRES=d.is_president;
+      let html=`
+        <h2 class="section-title"><i class="fas fa-scale-balanced"></i> The National Legislature</h2>
+        <p class="section-sub">Any citizen may table a bill. The nation debates and votes; the President grants assent, and the bill becomes law in the Official Gazette.</p>
+
+        <div class="panel" style="margin-bottom:2rem;">
+          <h3><i class="fas fa-feather"></i> Table a Bill</h3>
+          <input id="bTitle" placeholder="Short title of the bill">
+          <input id="bSummary" placeholder="One-line summary">
+          <textarea id="bText" rows="4" placeholder="Full text of the proposed law…"></textarea>
+          <button onclick="tableBill()">Table Bill</button>
+          <p id="tableMsg" class="small" style="text-align:center;"></p>
+        </div>
+
+        <h3 style="margin-bottom:1rem;">Bills before the House</h3>`;
+      if(!d.bills.length) html+=`<p class="muted">No bills have been tabled yet.</p>`;
+      else html+=d.bills.map(b=>{
+        const tot=b.aye+b.nay, ap=tot?Math.round(b.aye/tot*100):50;
+        return `<a class="bill" href="/legislature?bill=${b.id}">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;">
+            <b>${b.number?`Act No. ${b.number} — `:''}${esc(b.title)}</b>${stBadge(b.status)}
+          </div>
+          <p class="small" style="color:var(--muted)">Sponsored by ${esc(b.sponsor)} · ${new Date(b.created_at).toLocaleDateString()}</p>
+          ${b.summary?`<p class="small">${esc(b.summary)}</p>`:''}
+          <div class="tally"><div class="a" style="width:${ap}%"></div><div class="n" style="width:${100-ap}%"></div></div>
+          <p class="small" style="color:var(--muted)">${b.aye} Aye · ${b.nay} Nay</p>
+        </a>`;
+      }).join("");
+      document.getElementById("view").innerHTML=html;
+    }
+
+    async function tableBill(){
+      const title=document.getElementById("bTitle").value.trim();
+      const summary=document.getElementById("bSummary").value.trim();
+      const full_text=document.getElementById("bText").value.trim();
+      const m=document.getElementById("tableMsg");
+      if(!title){ m.style.color="var(--red)"; m.textContent="A bill needs a title."; return; }
+      try{ const r=await api("/legislature/table",{method:"POST",body:JSON.stringify({title,summary,full_text})});
+        location.href="/legislature?bill="+r.bill.id;
+      }catch(e){ m.style.color="var(--red)"; m.textContent=e.message; }
+    }
+
+    /* ---- DETAIL ---- */
+    async function showBill(bid){
+      const d=await api("/legislature/bill/"+bid);
+      ME=d.me; PRES=d.is_president;
+      const b=d.bill, tot=b.aye+b.nay, ap=tot?Math.round(b.aye/tot*100):50;
+      let html=`
+        <p><a class="link" href="/legislature"><i class="fas fa-arrow-left"></i> All bills</a></p>
+        <h2 style="margin:.4rem 0;">${b.number?`Act No. ${b.number} — `:''}${esc(b.title)} ${stBadge(b.status)}</h2>
+        <p class="small" style="color:var(--muted)">Sponsored by <a class="link" href="/profile?user=${encodeURIComponent(b.sponsor)}">${esc(b.sponsor)}</a> · ${new Date(b.created_at).toLocaleString()}</p>
+        ${b.summary?`<p style="margin-top:.6rem;">${esc(b.summary)}</p>`:''}
+        ${b.full_text?`<div class="ft">${esc(b.full_text)}</div>`:''}
+
+        <div class="panel" style="margin:1.2rem 0;">
+          <h3>Division of the House</h3>
+          <div class="tally"><div class="a" style="width:${ap}%"></div><div class="n" style="width:${100-ap}%"></div></div>
+          <p class="small">${b.aye} Aye · ${b.nay} Nay${b.my_vote?` · you voted <b>${b.my_vote==='aye'?'Aye':'Nay'}</b>`:''}</p>
+          ${b.status==='voting'?`<div class="voterow">
+            <button onclick="castVote(${bid},'aye')">Vote Aye</button>
+            <button class="danger" onclick="castVote(${bid},'nay')">Vote Nay</button></div>`:''}
+        </div>`;
+
+      if(PRES && b.status==='voting'){
+        html+=`<div class="panel" style="margin:1.2rem 0;">
+          <h3><i class="fas fa-crown"></i> Royal Assent (President)</h3>
+          <p class="small">Grant assent to enact this bill into law (requires more Ayes than Nays), or reject it.</p>
+          <div class="voterow"><button onclick="assent(${bid},true)">Grant Assent &amp; Enact</button>
+            <button class="danger" onclick="assent(${bid},false)">Reject</button></div>
+          <p id="assentMsg" class="small" style="text-align:center;"></p></div>`;
+      }
+      if(d.is_sponsor && b.status==='voting'){
+        html+=`<p><button class="ghost" style="width:auto;padding:.5rem 1.2rem;" onclick="withdraw(${bid})">Withdraw Bill</button></p>`;
+      }
+
+      html+=`<div class="panel" style="margin:1.2rem 0;"><h3><i class="fas fa-comments"></i> Debate</h3>
+        <div id="debate">${(d.debate||[]).map(c=>`<div class="deb"><div class="a">${esc(c.author)}</div>${esc(c.comment)}</div>`).join("")||'<p class="muted">No remarks yet.</p>'}</div>
+        <input id="debInput" placeholder="Add your remarks to the record…">
+        <button onclick="addDebate(${bid})">Submit Remark</button></div>
+        <p id="bMsg" class="small" style="text-align:center;"></p>`;
+      document.getElementById("view").innerHTML=html;
+    }
+
+    const bmsg=(t,err=true)=>{const m=document.getElementById("bMsg");if(m){m.textContent=t;m.style.color=err?"var(--red)":"var(--green)";}};
+    async function castVote(bid,v){ try{ await api("/legislature/vote",{method:"POST",body:JSON.stringify({bill_id:bid,vote:v})}); showBill(bid);}catch(e){bmsg(e.message);} }
+    async function assent(bid,enact){ try{ await api("/legislature/assent",{method:"POST",body:JSON.stringify({bill_id:bid,enact})}); showBill(bid);}catch(e){ const m=document.getElementById("assentMsg"); if(m){m.style.color="var(--red)";m.textContent=e.message;} } }
+    async function withdraw(bid){ try{ await api("/legislature/withdraw",{method:"POST",body:JSON.stringify({bill_id:bid})}); showBill(bid);}catch(e){bmsg(e.message);} }
+    async function addDebate(bid){ const i=document.getElementById("debInput"); const comment=i.value.trim(); if(!comment)return;
+      try{ await api("/legislature/debate",{method:"POST",body:JSON.stringify({bill_id:bid,comment})}); i.value=""; showBill(bid);}catch(e){bmsg(e.message);} }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      renderNav("/legislature", user);
+      const bill=qs.get("bill");
+      if(bill) showBill(bill); else showList();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Courts of Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .case{ display:block; text-decoration:none; color:inherit; padding:1.1rem 1.3rem; margin-bottom:1rem;
+      background:var(--panel); border:1px solid var(--panel-border); border-radius:12px; transition:.2s; }
+    a.case:hover{ border-color:rgba(88,196,255,.35); }
+    .st{ font-size:.7rem; padding:.18rem .6rem; border-radius:20px; text-transform:uppercase; letter-spacing:.5px; }
+    .st-open{ background:rgba(255,206,86,.15); color:var(--gold); }
+    .st-guilty{ background:rgba(255,93,108,.15); color:var(--red); }
+    .st-dismissed{ background:rgba(0,214,160,.15); color:var(--green); }
+    .parties{ margin:.3rem 0; } .desc{ color:var(--muted); }
+    .rule{ display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-top:.7rem; }
+    .rule input{ width:auto; margin:0; padding:.45rem .7rem; } .rule button{ width:auto; margin:0; padding:.45rem 1rem; font-size:.85rem; }
+    .deb{ padding:.6rem .9rem; background:var(--panel); border:1px solid var(--panel-border); border-radius:10px; margin-bottom:.5rem; }
+    .deb .a{ font-size:.78rem; color:var(--accent); }
+    .judgebar{ text-align:center; margin-bottom:1.4rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+  <div class="wrap" style="max-width:780px;"><div id="view"></div></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let JUDGE=false, ME=null;
+    const qs=new URLSearchParams(location.search);
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const ul=(n)=>`<a class="link" href="/profile?user=${encodeURIComponent(n)}">${esc(n)}</a>`;
+
+    /* ---- LIST ---- */
+    async function showList(){
+      const d=await api("/court/list");
+      JUDGE=d.is_judge; ME=d.me;
+      let html=`
+        <h2 class="section-title"><i class="fas fa-gavel"></i> The Courts of Cyvathon</h2>
+        <p class="section-sub">Citizens bring cases; the court debates them on the record; the elected Judge rules.</p>
+        <p class="judgebar">Presiding Judge: <b style="color:var(--accent)">${esc(d.judge)}</b>${d.judge==='Vacant'?' <span class="small muted">(the President presides until a Judge is elected)</span>':''}</p>
+
+        <div class="panel" style="margin-bottom:2rem;">
+          <h3><i class="fas fa-file-signature"></i> File a Case</h3>
+          <input id="def" placeholder="Defendant's username">
+          <input id="title" placeholder="Title of the case (e.g. Breach of contract)">
+          <textarea id="desc" rows="3" placeholder="State your case…"></textarea>
+          <input id="claim" type="number" min="0" step="0.01" placeholder="Damages sought (CB, optional)">
+          <button onclick="fileCase()">File Case</button>
+          <p id="fileMsg" class="small" style="text-align:center;"></p>
+        </div>
+
+        <h3 style="margin-bottom:1rem;">The Docket</h3>`;
+      if(!d.cases.length) html+=`<p class="muted">No cases on the docket.</p>`;
+      else html+=d.cases.map(c=>`
+        <a class="case" href="/court?case=${c.id}">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;">
+            <b>${esc(c.title)}</b><span class="st st-${c.status}">${c.status}</span></div>
+          <p class="parties small">${ul(c.plaintiff)} <span class="muted">v.</span> ${ul(c.defendant)}
+            ${c.claim>0?`· damages sought: ${fmt(c.claim)} CB`:''}</p>
+          <p class="small" style="color:var(--accent)">Open case &amp; debate →</p>
+        </a>`).join("");
+      document.getElementById("view").innerHTML=html;
+    }
+
+    async function fileCase(){
+      const defendant=document.getElementById("def").value.trim();
+      const title=document.getElementById("title").value.trim();
+      const description=document.getElementById("desc").value.trim();
+      const claim=document.getElementById("claim").value;
+      const m=document.getElementById("fileMsg");
+      if(!defendant||!title){ m.style.color="var(--red)"; m.textContent="Enter a defendant and a title"; return; }
+      try{ await api("/court/file",{method:"POST",body:JSON.stringify({defendant,title,description,claim})});
+        showList();
+      }catch(e){ m.style.color="var(--red)"; m.textContent=e.message; }
+    }
+
+    /* ---- DETAIL + DEBATE ---- */
+    async function showCase(cid){
+      const d=await api("/court/case/"+cid);
+      JUDGE=d.is_judge; ME=d.me;
+      const c=d.case;
+      let html=`
+        <p><a class="link" href="/court"><i class="fas fa-arrow-left"></i> The docket</a></p>
+        <h2 style="margin:.4rem 0;">${esc(c.title)} <span class="st st-${c.status}">${c.status}</span></h2>
+        <p class="parties">${ul(c.plaintiff)} <span class="muted">v.</span> ${ul(c.defendant)}
+          ${c.claim>0?`· damages sought: <b>${fmt(c.claim)} CB</b>`:''}</p>
+        ${c.description?`<p class="desc" style="margin-top:.5rem;">${esc(c.description)}</p>`:''}`;
+
+      if(c.status!=='open'){
+        html+=`<div class="panel" style="margin:1.2rem 0;">
+          <h3>Verdict</h3>
+          <p><b style="color:${c.status==='guilty'?'var(--red)':'var(--green)'}">${c.status==='guilty'?'GUILTY':'DISMISSED'}</b>
+          ${c.fine>0?` · fined ${fmt(c.fine)} CB`:''}</p>
+          ${c.verdict?`<p class="small">${esc(c.verdict)}</p>`:''}
+          <p class="small muted">Ruled by ${esc(c.judge||'—')}</p></div>`;
+      }
+
+      if(JUDGE && c.status==='open'){
+        html+=`<div class="panel" style="margin:1.2rem 0;">
+          <h3><i class="fas fa-gavel"></i> Deliver a Verdict (Judge)</h3>
+          <div class="rule">
+            <input id="fine" type="number" min="0" placeholder="Fine CB" value="${c.claim||0}">
+            <input id="note" placeholder="Reasons for judgment" style="flex:1;min-width:160px;">
+            <button onclick="rule(${cid},'guilty')">Guilty</button>
+            <button class="ghost" onclick="rule(${cid},'dismissed')">Dismiss</button>
+          </div><p id="ruleMsg" class="small"></p></div>`;
+      }
+
+      // Debate section underneath
+      html+=`<div class="panel" style="margin:1.2rem 0;">
+        <h3><i class="fas fa-comments"></i> Debate &amp; Arguments</h3>
+        <div id="debate">${(d.debate||[]).map(x=>`<div class="deb"><div class="a">${esc(x.author)}</div>${esc(x.comment)}</div>`).join("")||'<p class="muted">No arguments yet — be the first to make the case.</p>'}</div>
+        <input id="debInput" placeholder="Add your argument to the record…">
+        <button onclick="addDebate(${cid})">Submit Argument</button>
+        <p id="cMsg" class="small" style="text-align:center;"></p></div>`;
+      document.getElementById("view").innerHTML=html;
+    }
+
+    const cmsg=(t,err=true)=>{const m=document.getElementById("cMsg");if(m){m.textContent=t;m.style.color=err?"var(--red)":"var(--green)";}};
+    async function rule(id,verdict){
+      const fine=document.getElementById("fine")?.value||0;
+      const note=document.getElementById("note")?.value||"";
+      try{ await api("/court/rule",{method:"POST",body:JSON.stringify({case_id:id,verdict,fine,note})}); showCase(id);}
+      catch(e){ const m=document.getElementById("ruleMsg"); if(m){m.style.color="var(--red)";m.textContent=e.message;} }
+    }
+    async function addDebate(id){
+      const i=document.getElementById("debInput"); const comment=i.value.trim(); if(!comment) return;
+      try{ await api("/court/debate",{method:"POST",body:JSON.stringify({case_id:id,comment})}); i.value=""; showCase(id);}
+      catch(e){ cmsg(e.message); }
+    }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      renderNav("/court", user);
+      const cs=qs.get("case");
+      if(cs) showCase(cs); else showList();
+    })();
+  </script>
+</body>
+</html>

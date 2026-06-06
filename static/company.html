@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon Companies</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .cat-ico{ color:var(--accent); margin-right:.4rem; }
+    .founder{ color:var(--muted); font-size:.85rem; }
+    .emp{ display:flex; justify-content:space-between; align-items:center; gap:.6rem; flex-wrap:wrap;
+      padding:.7rem .9rem; background:var(--panel); border:1px solid var(--panel-border);
+      border-radius:10px; margin-bottom:.6rem; }
+    .emp .who{ font-weight:600; } .emp .meta{ font-size:.8rem; color:var(--muted); }
+    .emp .actions{ display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
+    .emp .actions input{ width:110px; margin:0; padding:.45rem .6rem; }
+    .emp .actions button{ width:auto; margin:0; padding:.45rem .9rem; font-size:.82rem; }
+    .good{ display:flex; gap:.8rem; align-items:center; padding:.6rem; background:var(--panel);
+      border:1px solid var(--panel-border); border-radius:10px; margin-bottom:.5rem; }
+    .good img{ width:54px; height:54px; object-fit:cover; border-radius:8px; }
+    .cstats{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); margin:1.2rem 0; }
+    .cstat{ background:var(--panel); border:1px solid var(--panel-border); border-radius:12px; padding:.9rem 1rem; }
+    .cstat .l{ font-size:.68rem; letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
+    .cstat .v{ font-size:1.35rem; font-weight:800; margin-top:.2rem; }
+    svg.chart{ width:100%; height:200px; display:block; }
+    .cofrow{ display:flex; gap:.5rem; margin-top:.6rem; }
+    .cofrow input{ margin:0; } .cofrow button{ width:auto; margin:0; padding:.6rem 1.1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+  <div class="wrap"><div id="view"></div></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME = null;
+    const qs = new URLSearchParams(location.search);
+    const NAME = (n)=> (n||"").replace(/</g,"&lt;");
+    const CAT_ICON = { Finance:"fa-chart-line", Selling:"fa-cart-shopping",
+      Service:"fa-handshake", Technology:"fa-microchip", Other:"fa-cube" };
+    const CUR = { cybucks:"CB", pufb:"PUFB", aquilines:"AQ" };
+
+    /* ---------------- LIST VIEW ---------------- */
+    async function showList(){
+      const d = await api("/companies");
+      const sel = `<select id="cCat">${d.categories.map(c=>`<option value="${c}">${c}</option>`).join("")}</select>`;
+      let html = `
+        <h2 class="section-title"><i class="fas fa-briefcase"></i> Companies of Cyvathon</h2>
+        <p class="section-sub">Build the economy. Found a company for <b>1000 CB</b>, hire employees, sell goods and go public.</p>
+
+        <div class="panel" style="max-width:560px;margin:0 auto 2.5rem;">
+          <h3><i class="fas fa-rocket"></i> Be a Founder</h3>
+          <p class="small" id="founderHint"></p>
+          <input id="cName" placeholder="Company name">
+          ${sel}
+          <textarea id="cDesc" rows="2" placeholder="What does your company do?"></textarea>
+          <button onclick="found()">Found Company (1000 CB)</button>
+          <p id="msg" class="small" style="text-align:center;"></p>
+        </div>
+
+        <h2 class="section-title" style="font-size:1.4rem;">Existing Companies</h2>
+        <div class="grid">`;
+      if(!d.companies.length){ html += `<p class="muted">No companies yet — be the first founder!</p>`; }
+      else html += d.companies.map(c=>`
+        <a class="card" style="text-decoration:none;color:inherit;display:block;" href="/company?id=${c.id}">
+          <span class="tag"><i class="fas ${CAT_ICON[c.category]||'fa-cube'} cat-ico"></i>${c.category}</span>
+          <h3 style="margin-top:.6rem;">${NAME(c.name)}</h3>
+          <p>${NAME(c.description)||"No description."}</p>
+          <p class="founder"><i class="fas fa-user-tie"></i> Founder: ${NAME(c.founder)} ${c.is_public?'· <span style="color:var(--accent)">Public</span>':''}</p>
+          <p class="small" style="color:var(--accent)">Look inside &amp; apply →</p>
+        </a>`).join("");
+      html += `</div>`;
+      document.getElementById("view").innerHTML = html;
+      const u = await currentUser();
+      document.getElementById("founderHint").textContent =
+        `Your balance: ${fmt(u.balance)} CB. Founding costs 1000 CB, paid to the Treasury.`;
+    }
+
+    async function found(){
+      const name=document.getElementById("cName").value.trim();
+      const category=document.getElementById("cCat").value;
+      const description=document.getElementById("cDesc").value.trim();
+      const m=document.getElementById("msg");
+      if(!name){ m.style.color="var(--red)"; m.textContent="Enter a company name"; return; }
+      try{
+        const r = await api("/companies",{method:"POST",body:JSON.stringify({name,category,description})});
+        location.href = "/company?id=" + r.company.id;
+      }catch(e){ m.style.color="var(--red)"; m.textContent=e.message; }
+    }
+
+    function priceChart(history, c){
+      let prices = (history||[]).map(h=>h.p);
+      let note;
+      if(prices.length === 0){
+        const base = c.ipo_price || c.last_price || 0;
+        prices = [base, c.last_price || base];
+        note = "Awaiting first trade — baseline at the IPO price.";
+      } else { prices = [c.ipo_price || prices[0], ...prices]; note = `${history.length} trade(s).`; }
+      if(prices.length === 1) prices = [prices[0], prices[0]];
+      const min=Math.min(...prices), max=Math.max(...prices);
+      const W=600,H=180,L=46,R=10,T=12,B=22, span=(max-min)||(max||1);
+      const x=i=>L+(i/(prices.length-1))*(W-L-R), y=p=>T+(1-((p-min)/span))*(H-T-B);
+      const line=prices.map((p,i)=>`${x(i).toFixed(1)},${y(p).toFixed(1)}`).join(" ");
+      const area=`${L},${H-B} ${line} ${(W-R)},${H-B}`;
+      const up=prices[prices.length-1]>=prices[0], col=up?"var(--green)":"var(--red)";
+      let grid="";
+      for(let i=0;i<=4;i++){ const gy=T+(i/4)*(H-T-B), val=max-(i/4)*span;
+        grid+=`<line x1="${L}" y1="${gy.toFixed(1)}" x2="${W-R}" y2="${gy.toFixed(1)}" stroke="rgba(255,255,255,.06)"/>
+          <text x="${L-6}" y="${(gy+3).toFixed(1)}" text-anchor="end" font-size="10" fill="#8a94a3">${fmt(val)}</text>`; }
+      const lx=x(prices.length-1), ly=y(prices[prices.length-1]);
+      return `<svg class="chart" viewBox="0 0 ${W} ${H}"><defs><linearGradient id="cg" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="${col}" stop-opacity="0.32"/><stop offset="100%" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+        ${grid}<polygon points="${area}" fill="url(#cg)"/>
+        <polyline points="${line}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round"/>
+        <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="4" fill="${col}"/></svg>
+        <p class="small" style="color:var(--muted)">Range ${fmt(min)}–${fmt(max)} CB · ${note} Now <b style="color:${col}">${fmt(prices[prices.length-1])} CB</b>.</p>`;
+    }
+
+    async function addCofounder(cid){
+      const name=document.getElementById("cofName").value.trim();
+      const m=document.getElementById("cofMsg");
+      if(!name){ m.style.color="var(--red)"; m.textContent="Enter a username"; return; }
+      try{ await api("/company/cofounder",{method:"POST",body:JSON.stringify({company_id:cid,username:name})});
+        showDetail(cid); }catch(e){ m.style.color="var(--red)"; m.textContent=e.message; }
+    }
+
+    /* ---------------- DETAIL VIEW ---------------- */
+    async function showDetail(cid){
+      const d = await api("/company_info/"+cid);
+      const c = d.company;
+      const foundersHtml = [userLink(c.founder), ...(c.cofounders||[]).map(userLink)].join(", ");
+      let html = `
+        <p><a class="link" href="/company"><i class="fas fa-arrow-left"></i> All companies</a></p>
+        <h2 style="margin-top:.4rem;">${NAME(c.name)}</h2>
+        <span class="tag"><i class="fas ${CAT_ICON[c.category]||'fa-cube'}"></i> ${c.category}</span>
+        ${c.is_public?'<span class="tag" style="background:rgba(0,214,160,.12);color:var(--green)">Publicly Traded</span>':''}
+        <p class="muted" style="margin-top:.6rem;">${NAME(c.description)||"No description."}</p>
+        <p class="founder"><i class="fas fa-user-tie"></i> Founder &amp; co-founders: ${foundersHtml}</p>
+
+        <div class="cstats">
+          ${c.is_public?`<div class="cstat"><div class="l">Market Price</div><div class="v" style="color:var(--accent)">${fmt(c.last_price)} CB</div></div>
+          <div class="cstat"><div class="l">Market Cap</div><div class="v">${fmt(c.market_cap)}</div></div>`:''}
+          <div class="cstat"><div class="l">Net Worth</div><div class="v">${fmt(c.net_worth)} CB</div></div>
+          <div class="cstat"><div class="l">Capital</div><div class="v">${fmt(c.balance)} CB</div></div>
+          ${c.is_public?`<div class="cstat"><div class="l">Shares</div><div class="v">${fmt(c.shares)}</div></div>`:''}
+        </div>
+
+        ${c.is_public?`<div class="panel" style="margin:1.2rem 0;"><h3>Price History &amp; Market Value</h3>${priceChart(c.history, c)}
+          <p style="margin-top:.6rem;"><a class="link" href="/exchange?company=${cid}">Trade this stock on the Exchange →</a></p></div>`:''}`;
+
+      // Founder: add a co-founder
+      if(d.is_founder){
+        html += `<div class="panel" style="margin:1.2rem 0;">
+          <h3><i class="fas fa-user-plus"></i> Add a Co-Founder</h3>
+          <p class="small">Co-founders share full control — hiring, paying, selling goods, IPO &amp; dividends.</p>
+          <div class="cofrow"><input id="cofName" placeholder="Citizen username">
+            <button onclick="addCofounder(${cid})">Add</button></div>
+          <p id="cofMsg" class="small"></p></div>`;
+      }
+
+      // Your status / apply
+      if(!d.is_founder){
+        const my = d.my_employment;
+        if(my && my.status==="employed"){
+          html += `<div class="panel" style="margin:1.2rem 0;"><h3>Your Job</h3>
+            <p>You work here as <b>${NAME(my.role)}</b> earning <b>${fmt(my.salary)} CB/month</b>.</p>
+            <p class="small">Last paid: ${my.last_paid?new Date(my.last_paid).toLocaleDateString():"—"}. If the founder skips a month, it goes on their record.</p></div>`;
+        } else if(my && my.status==="pending"){
+          html += `<div class="panel" style="margin:1.2rem 0;"><p>⏳ Your application is pending the founder's decision.</p></div>`;
+        } else {
+          html += `<div class="panel" style="margin:1.2rem 0;text-align:center;">
+            <h3>Work Here</h3><p class="small">Apply for a job — the founder sets your salary on hire.</p>
+            <button style="width:auto;padding:.6rem 1.6rem;" onclick="applyJob(${cid})">Apply for a Job</button>
+            ${my && my.status==="rejected" ? '<p class="small muted">Your last application was rejected — you can re-apply.</p>':''}
+            ${my && my.status==="fired" ? '<p class="small muted">You were previously let go — you can re-apply.</p>':''}
+            <p id="applyMsg" class="small"></p></div>`;
+        }
+      }
+
+      // Employees
+      html += `<div class="panel" style="margin:1.2rem 0;"><h3><i class="fas fa-users"></i> Employees (${d.employees.length})</h3>`;
+      if(!d.employees.length) html += `<p class="muted">No employees yet.</p>`;
+      else html += d.employees.map(e=>`
+        <div class="emp">
+          <div><span class="who">${userLink(e.username)}</span> <span class="tag">${NAME(e.role)}</span>
+            <div class="meta">${fmt(e.salary)} CB/month · last paid ${e.last_paid?new Date(e.last_paid).toLocaleDateString():"never"}</div></div>
+          ${d.is_founder?`<div class="actions">
+            <button onclick="payEmp(${e.id})">Pay Salary</button>
+            <button class="danger" onclick="fireEmp(${e.id})">Fire</button></div>`:''}
+        </div>`).join("");
+      html += `</div>`;
+
+      // Founder: pending applications
+      if(d.is_founder){
+        html += `<div class="panel" style="margin:1.2rem 0;"><h3><i class="fas fa-inbox"></i> Job Applications (${d.applications.length})</h3>`;
+        if(!d.applications.length) html += `<p class="muted">No pending applications.</p>`;
+        else html += d.applications.map(a=>`
+          <div class="emp">
+            <div class="who">${userLink(a.username)}<div class="meta">applied ${new Date(a.applied_at).toLocaleDateString()}</div></div>
+            <div class="actions">
+              <input id="role${a.id}" placeholder="Role" value="Employee">
+              <input id="sal${a.id}" type="number" min="0" placeholder="Salary CB/mo">
+              <button onclick="decide(${a.id},true)">Hire</button>
+              <button class="danger" onclick="decide(${a.id},false)">Reject</button>
+            </div>
+          </div>`).join("");
+        html += `</div>`;
+      }
+
+      // Company goods
+      if(d.goods.length){
+        html += `<div class="panel" style="margin:1.2rem 0;"><h3><i class="fas fa-store"></i> Goods for Sale</h3>
+          ${d.goods.map(g=>`<div class="good">
+            ${g.image_url?`<img src="${g.image_url}" onerror="this.style.display='none'">`:''}
+            <div><b>${NAME(g.title)}</b><div class="meta small">${g.kind==='donation'?'Free':fmt(g.price)+' '+CUR[g.currency]}</div></div>
+          </div>`).join("")}
+          <a class="link" href="/marketplace">Go to the Marketplace →</a></div>`;
+      }
+
+      html += `<p id="detailMsg" class="small" style="text-align:center;"></p>`;
+      document.getElementById("view").innerHTML = html;
+    }
+
+    const dmsg = (t,err=true)=>{ const m=document.getElementById("detailMsg"); if(m){m.textContent=t;m.style.color=err?"var(--red)":"var(--green)";} };
+
+    async function applyJob(cid){
+      try{ await api("/jobs/apply",{method:"POST",body:JSON.stringify({company_id:cid})});
+        showDetail(cid); }catch(e){ document.getElementById("applyMsg").textContent=e.message; }
+    }
+    async function decide(id, accept){
+      const salary = document.getElementById("sal"+id)?.value;
+      const role = document.getElementById("role"+id)?.value;
+      try{ await api("/jobs/decide",{method:"POST",body:JSON.stringify({id,accept,salary,role})});
+        showDetail(qs.get("id")); }catch(e){ dmsg(e.message); }
+    }
+    async function payEmp(id){
+      try{ await api("/jobs/pay",{method:"POST",body:JSON.stringify({id})});
+        dmsg("Salary paid.",false); showDetail(qs.get("id")); }catch(e){ dmsg(e.message); }
+    }
+    async function fireEmp(id){
+      try{ await api("/jobs/fire",{method:"POST",body:JSON.stringify({id})});
+        showDetail(qs.get("id")); }catch(e){ dmsg(e.message); }
+    }
+
+    (async function(){
+      ME = await requireAuth(); if(!ME) return;
+      renderNav("/company", ME);
+      const id = qs.get("id");
+      if(id) showDetail(id); else showList();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon National News</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .article{ padding:1.4rem 1.6rem; margin-bottom:1.2rem; background:var(--panel);
+      border:1px solid var(--panel-border); border-radius:14px; border-left:4px solid var(--accent); }
+    .article h3{ font-size:1.3rem; margin-bottom:.3rem; }
+    .article .meta{ font-size:.78rem; color:var(--muted); margin-bottom:.6rem; }
+    .article .body{ color:#cdd6e0; white-space:pre-wrap; }
+    .article .del{ float:right; width:auto; margin:0; padding:.3rem .8rem; font-size:.75rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:760px;">
+    <h2 class="section-title"><i class="fas fa-newspaper"></i> National News</h2>
+    <p class="section-sub">Official announcements from the Office of the President.</p>
+
+    <!-- President: post -->
+    <div class="panel" id="postBox" style="display:none; margin-bottom:2rem;">
+      <h3><i class="fas fa-bullhorn"></i> Post an Announcement</h3>
+      <input id="nTitle" placeholder="Headline">
+      <textarea id="nBody" rows="4" placeholder="Write the announcement…"></textarea>
+      <button onclick="post()">Publish</button>
+      <p id="postMsg" class="small" style="text-align:center;"></p>
+    </div>
+
+    <div id="feed"></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let isPres = false;
+    const NAME = (n)=> (n||"").replace(/</g,"&lt;");
+    const msg = (t,err=true)=>{ const m=document.getElementById("postMsg"); m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
+
+    async function load(){
+      const d = await api("/news/list");
+      isPres = d.is_president;
+      document.getElementById("postBox").style.display = isPres ? "block" : "none";
+      const feed = document.getElementById("feed");
+      if(!d.news.length){ feed.innerHTML = `<p class="muted">No news yet.</p>`; return; }
+      feed.innerHTML = d.news.map(n=>`
+        <div class="article">
+          ${isPres?`<button class="danger del" onclick="del(${n.id})">Delete</button>`:""}
+          <h3>${NAME(n.title)}</h3>
+          <div class="meta">By ${NAME(n.author)} · ${new Date(n.created_at).toLocaleString()}</div>
+          <div class="body">${NAME(n.body)}</div>
+        </div>`).join("");
+    }
+
+    async function post(){
+      const title=document.getElementById("nTitle").value.trim();
+      const body=document.getElementById("nBody").value.trim();
+      if(!title) return msg("Add a headline");
+      try{
+        await api("/news",{method:"POST",body:JSON.stringify({title,body})});
+        msg("Published!",false);
+        document.getElementById("nTitle").value=""; document.getElementById("nBody").value="";
+        load();
+      }catch(e){ msg(e.message); }
+    }
+    async function del(id){
+      try{ await api("/news/delete",{method:"POST",body:JSON.stringify({id})}); load(); }catch(e){ msg(e.message); }
+    }
+
+    (async function(){
+      renderNav("/news", await currentUser());
+      load();
+    })();
+  </script>
+</body>
+</html>

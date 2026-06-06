@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon Stock Exchange</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ text-align:left; padding:.7rem .6rem; border-bottom:1px solid rgba(255,255,255,.06); font-size:.92rem; }
+    th{ color:var(--muted); text-transform:uppercase; font-size:.72rem; letter-spacing:1px; }
+    .sector{ color:var(--accent); font-size:.72rem; letter-spacing:1px; }
+    .pos{ color:var(--green); } .neg{ color:var(--red); } .dim{ color:var(--muted); }
+    .trade-btn{ width:auto; margin:0; padding:.45rem 1.1rem; font-size:.85rem; }
+    .stats{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); margin:1.2rem 0; }
+    .stat{ background:var(--panel); border:1px solid var(--panel-border); border-radius:12px; padding:.9rem 1rem; }
+    .stat .l{ font-size:.68rem; letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
+    .stat .v{ font-size:1.35rem; font-weight:800; margin-top:.2rem; }
+    .cols{ display:grid; gap:1.4rem; grid-template-columns:1fr 1fr; }
+    @media(max-width:760px){ .cols{ grid-template-columns:1fr; } }
+    .book-row{ display:flex; justify-content:space-between; padding:.35rem .2rem; border-bottom:1px solid rgba(255,255,255,.05); }
+    .myorder{ display:flex; justify-content:space-between; align-items:center; gap:.6rem;
+      padding:.5rem .7rem; background:var(--panel); border:1px solid var(--panel-border);
+      border-radius:8px; margin-bottom:.5rem; font-size:.88rem; }
+    .myorder button{ width:auto; margin:0; padding:.3rem .8rem; font-size:.78rem; }
+    .ipo-row{ display:flex; gap:.6rem; align-items:flex-end; flex-wrap:wrap; padding:1rem;
+      background:var(--panel); border:1px solid var(--panel-border); border-radius:12px; margin-bottom:.8rem; }
+    .ipo-row .f{ flex:1; min-width:120px; } .ipo-row input{ margin-top:.3rem; }
+    .ipo-row button{ width:auto; margin:0; }
+    svg.chart{ width:100%; height:210px; display:block; }
+    .muted-row td{ color:var(--muted); }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+  <div class="wrap"><div id="view"></div></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME = null;
+    const qs = new URLSearchParams(location.search);
+    const NAME = (n)=> (n||"").replace(/</g,"&lt;");
+
+    /* ---------------- LISTINGS VIEW ---------------- */
+    async function showListings(){
+      const [data, port, mine] = await Promise.all([
+        api("/exchange/listings"),
+        api("/exchange/portfolio").catch(()=>({holdings:[],total_value:0,cash:0})),
+        api("/companies").catch(()=>({companies:[]})),
+      ]);
+
+      const net = (port.cash||0) + (port.total_value||0);
+      const myPrivate = (mine.companies||[]).filter(c => c.founder===ME.username && !c.is_public);
+
+      let html = `
+        <h2 class="section-title"><i class="fas fa-chart-line"></i> Stock Exchange</h2>
+        <p class="section-sub">Trade shares of public companies on a live order book. Your price is set by supply &amp; demand — not the company's book value (NAV).</p>
+
+        <div class="stats">
+          <div class="stat"><div class="l">Your Cash</div><div class="v">${fmt(port.cash)} CB</div></div>
+          <div class="stat"><div class="l">Portfolio Value</div><div class="v">${fmt(port.total_value)} CB</div></div>
+          <div class="stat"><div class="l">Net Worth</div><div class="v" style="color:var(--accent)">${fmt(net)} CB</div></div>
+          <div class="stat"><div class="l">Holdings</div><div class="v">${port.holdings.length}</div></div>
+        </div>`;
+
+      if(port.holdings.length){
+        html += `<div class="panel" style="margin-bottom:1.6rem;"><h3>Your Portfolio</h3>
+          <table><thead><tr><th>Company</th><th>Shares</th><th>Price</th><th>Value</th></tr></thead><tbody>
+          ${port.holdings.map(h=>`<tr>
+            <td><a class="link" href="/exchange?company=${h.company_id}">${NAME(h.name)}</a></td>
+            <td>${fmt(h.shares)}</td><td>${fmt(h.price)} CB</td><td>${fmt(h.value)} CB</td></tr>`).join("")}
+          </tbody></table></div>`;
+      }
+
+      if(myPrivate.length){
+        html += `<div class="panel" style="margin-bottom:1.6rem;">
+          <h3><i class="fas fa-rocket"></i> List Your Company (IPO)</h3>
+          <p class="small">Take one of your private companies public. You receive 100% of the shares to sell.</p>
+          ${myPrivate.map(c=>`
+            <div class="ipo-row">
+              <div class="f"><b>${NAME(c.name)}</b><br><span class="sector">${c.category}</span></div>
+              <div class="f"><label class="small">Shares</label><input type="number" min="1" id="ipoSh${c.id}" placeholder="1000"></div>
+              <div class="f"><label class="small">IPO Price (CB)</label><input type="number" min="0" step="0.01" id="ipoPr${c.id}" placeholder="1.00"></div>
+              <button onclick="doIPO(${c.id})">List</button>
+            </div>`).join("")}
+          <p id="ipoMsg" class="small" style="text-align:center;"></p>
+        </div>`;
+      }
+
+      html += `<div class="panel"><table>
+        <thead><tr><th>Company</th><th>Sector</th><th>Price</th><th>Market Cap</th><th>NAV</th><th>Best Bid</th><th>Best Ask</th><th></th></tr></thead>
+        <tbody>`;
+      if(!data.listings.length){
+        html += `<tr class="muted-row"><td colspan="8">No listed companies yet. Found a company, then list it above!</td></tr>`;
+      } else {
+        html += data.listings.map(c=>`<tr>
+          <td><b>${NAME(c.name)}</b>${c.description?`<br><span class="dim" style="font-size:.8rem">${NAME(c.description)}</span>`:""}</td>
+          <td class="sector">${c.category.toUpperCase()}</td>
+          <td><b>${fmt(c.last_price)}</b> CB</td>
+          <td>${fmt(c.market_cap)}</td>
+          <td class="dim">${fmt(c.nav)}</td>
+          <td class="pos">${c.best_bid!=null?fmt(c.best_bid):"—"}</td>
+          <td class="neg">${c.best_ask!=null?fmt(c.best_ask):"—"}</td>
+          <td><a href="/exchange?company=${c.id}"><button class="trade-btn">Trade →</button></a></td>
+        </tr>`).join("");
+      }
+      html += `</tbody></table></div>`;
+      document.getElementById("view").innerHTML = html;
+    }
+
+    async function doIPO(id){
+      const shares = document.getElementById("ipoSh"+id).value;
+      const price  = document.getElementById("ipoPr"+id).value;
+      const m = document.getElementById("ipoMsg");
+      try{
+        await api("/exchange/ipo",{method:"POST",body:JSON.stringify({company_id:id,shares,price})});
+        m.style.color="var(--green)"; m.textContent="Listed! Reloading…";
+        setTimeout(()=>location.href="/exchange?company="+id, 600);
+      }catch(e){ m.style.color="var(--red)"; m.textContent=e.message; }
+    }
+
+    /* ---------------- COMPANY DETAIL VIEW ---------------- */
+    function priceChart(history, c){
+      // Seed the line with the IPO / current price so a graph always shows.
+      let prices = history.map(h=>h.p);
+      let note;
+      if(prices.length === 0){
+        const base = c.ipo_price || c.last_price || 0;
+        prices = [base, c.last_price || base];
+        note = `Awaiting first trade — baseline at the IPO price.`;
+      } else {
+        prices = [c.ipo_price || prices[0], ...prices];
+        note = `${history.length} trade(s).`;
+      }
+      if(prices.length === 1) prices = [prices[0], prices[0]];
+
+      const min = Math.min(...prices), max = Math.max(...prices);
+      const W=600, H=180, L=46, R=10, T=12, B=22;       // margins for labels
+      const span=(max-min)||(max||1);
+      const x = i => L + (i/(prices.length-1))*(W-L-R);
+      const y = p => T + (1-((p-min)/span))*(H-T-B);
+      const linePts = prices.map((p,i)=>`${x(i).toFixed(1)},${y(p).toFixed(1)}`).join(" ");
+      const areaPts = `${L},${H-B} ${linePts} ${(W-R)},${H-B}`;
+      const up = prices[prices.length-1] >= prices[0];
+      const col = up ? "var(--green)" : "var(--red)";
+
+      // horizontal gridlines + y labels
+      const rows = 4, grid = [];
+      for(let i=0;i<=rows;i++){
+        const gy = T + (i/rows)*(H-T-B);
+        const val = max - (i/rows)*span;
+        grid.push(`<line x1="${L}" y1="${gy.toFixed(1)}" x2="${W-R}" y2="${gy.toFixed(1)}" stroke="rgba(255,255,255,.06)"/>
+          <text x="${L-6}" y="${(gy+3).toFixed(1)}" text-anchor="end" font-size="10" fill="#8a94a3">${fmt(val)}</text>`);
+      }
+      const lastX = x(prices.length-1), lastY = y(prices[prices.length-1]);
+
+      return `<svg class="chart" viewBox="0 0 ${W} ${H}">
+        <defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="${col}" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="${col}" stop-opacity="0"/>
+        </linearGradient></defs>
+        ${grid.join("")}
+        <polygon points="${areaPts}" fill="url(#g)"/>
+        <polyline points="${linePts}" fill="none" stroke="${col}" stroke-width="2.5"
+          stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="4" fill="${col}"/>
+      </svg>
+      <p class="small dim">Range ${fmt(min)}–${fmt(max)} CB · ${note} Now <b style="color:${col}">${fmt(prices[prices.length-1])} CB</b> · Market cap ${fmt(c.market_cap)} CB.</p>`;
+    }
+
+    async function showCompany(cid){
+      const d = await api("/exchange/company/"+cid);
+      const c = d.company;
+      const chg = d.history.length>1 ? (d.history[d.history.length-1].p - d.history[0].p) : 0;
+      const chgCls = chg>=0?"pos":"neg";
+
+      let html = `
+        <p><a class="link" href="/exchange"><i class="fas fa-arrow-left"></i> All listings</a></p>
+        <h2 style="margin-top:.4rem;">${NAME(c.name)}</h2>
+        <p class="sector">${c.category.toUpperCase()}</p>
+        ${c.description?`<p class="dim">${NAME(c.description)}</p>`:""}`;
+
+      if(!c.is_public){
+        html += `<div class="panel" style="margin-top:1.5rem;text-align:center;">
+          <p class="dim">This company isn't listed on the exchange yet.</p>
+          ${d.is_founder?`<p class="small">Go to <a class="link" href="/exchange">the exchange home</a> to list it.</p>`:""}
+        </div>`;
+        document.getElementById("view").innerHTML = html;
+        return;
+      }
+
+      html += `
+        <div class="stats">
+          <div class="stat"><div class="l">Last Price</div><div class="v ${chgCls}">${fmt(c.last_price)}</div></div>
+          <div class="stat"><div class="l">Change</div><div class="v ${chgCls}">${chg>=0?"+":""}${fmt(chg)}</div></div>
+          <div class="stat"><div class="l">Market Cap</div><div class="v">${fmt(c.market_cap)}</div></div>
+          <div class="stat"><div class="l">NAV (book)</div><div class="v dim">${fmt(c.nav)}</div></div>
+          <div class="stat"><div class="l">Best Bid</div><div class="v pos">${d.best_bid!=null?fmt(d.best_bid):"—"}</div></div>
+          <div class="stat"><div class="l">Best Ask</div><div class="v neg">${d.best_ask!=null?fmt(d.best_ask):"—"}</div></div>
+          <div class="stat"><div class="l">You Own</div><div class="v">${fmt(d.my_shares)}</div></div>
+          <div class="stat"><div class="l">Your CB</div><div class="v">${fmt(d.my_cash)}</div></div>
+        </div>
+
+        <div class="panel" style="margin-bottom:1.4rem;"><h3>Price History &amp; Market Value</h3>${priceChart(d.history, c)}</div>
+
+        <div class="cols">
+          <div class="panel">
+            <h3>Order Book</h3>
+            <p class="small neg" style="margin-top:.6rem;">Asks (sell)</p>
+            ${d.asks.length ? d.asks.map(([p,q])=>`<div class="book-row"><span class="neg">${fmt(p)} CB</span><span>${fmt(q)}</span></div>`).join("") : `<p class="dim small">No sell orders</p>`}
+            <p class="small pos" style="margin-top:1rem;">Bids (buy)</p>
+            ${d.bids.length ? d.bids.map(([p,q])=>`<div class="book-row"><span class="pos">${fmt(p)} CB</span><span>${fmt(q)}</span></div>`).join("") : `<p class="dim small">No buy orders</p>`}
+          </div>
+
+          <div class="panel">
+            <h3>Place an Order</h3>
+            <p class="small">Buy escrows CB (price × qty); sell locks your shares — until matched or cancelled. A buy that crosses the best ask fills instantly.</p>
+            <select id="side">
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+            </select>
+            <input id="price" type="number" min="0" step="0.01" placeholder="Limit price (CB per share)">
+            <input id="qty" type="number" min="1" placeholder="Quantity (shares)">
+            <button onclick="submitOrder(${cid})">Submit Order</button>
+            <p id="orderMsg" class="small" style="text-align:center;"></p>
+          </div>
+        </div>`;
+
+      if(d.my_orders.length){
+        html += `<div class="panel" style="margin-top:1.4rem;"><h3>Your Open Orders</h3>
+          ${d.my_orders.map(o=>`<div class="myorder">
+            <span class="${o.side==='buy'?'pos':'neg'}">${o.side.toUpperCase()} ${fmt(o.quantity-o.filled)} @ ${fmt(o.price)} CB</span>
+            <button class="danger" onclick="cancelOrder(${o.id})">Cancel</button>
+          </div>`).join("")}</div>`;
+      }
+
+      if(d.is_founder){
+        html += `<div class="panel" style="margin-top:1.4rem;">
+          <h3><i class="fas fa-hand-holding-dollar"></i> Pay a Dividend (Founder)</h3>
+          <p class="small">Distribute CB from company capital (${fmt(c.balance)} CB) to all shareholders.</p>
+          <input id="divPer" type="number" min="0" step="0.01" placeholder="CB per share">
+          <button onclick="payDividend(${cid})">Pay Dividend</button>
+          <p id="divMsg" class="small" style="text-align:center;"></p>
+        </div>`;
+      }
+
+      if((d.recent_trades||[]).length){
+        html += `<div class="panel" style="margin-top:1.4rem;"><h3>Recent Trades</h3>
+          <table><thead><tr><th>Time</th><th>Price</th><th>Shares</th><th>Buyer</th><th>Seller</th></tr></thead><tbody>
+          ${d.recent_trades.map(t=>`<tr>
+            <td class="dim">${new Date(t.created_at).toLocaleTimeString()}</td>
+            <td>${fmt(t.price)} CB</td><td>${fmt(t.quantity)}</td>
+            <td>${NAME(t.buyer)}</td><td>${NAME(t.seller)}</td></tr>`).join("")}
+          </tbody></table></div>`;
+      }
+
+      document.getElementById("view").innerHTML = html;
+    }
+
+    async function submitOrder(cid){
+      const side = document.getElementById("side").value;
+      const price = document.getElementById("price").value;
+      const quantity = document.getElementById("qty").value;
+      const m = document.getElementById("orderMsg");
+      try{
+        const r = await api("/exchange/order",{method:"POST",body:JSON.stringify({company_id:cid,side,price,quantity})});
+        m.style.color="var(--green)";
+        m.textContent = r.filled>0 ? `Order placed — ${fmt(r.filled)}/${fmt(r.quantity)} filled instantly.` : "Order placed on the book.";
+        setTimeout(()=>showCompany(cid), 700);
+      }catch(e){ m.style.color="var(--red)"; m.textContent=e.message; }
+    }
+    async function cancelOrder(oid){
+      try{ await api("/exchange/cancel",{method:"POST",body:JSON.stringify({order_id:oid})});
+        showCompany(qs.get("company")); }catch(e){ alert(e.message); }
+    }
+    async function payDividend(cid){
+      const per_share = document.getElementById("divPer").value;
+      const m = document.getElementById("divMsg");
+      try{ const r = await api("/exchange/dividend",{method:"POST",body:JSON.stringify({company_id:cid,per_share})});
+        m.style.color="var(--green)"; m.textContent=`Paid ${fmt(r.total)} CB to shareholders.`;
+        setTimeout(()=>showCompany(cid), 800);
+      }catch(e){ m.style.color="var(--red)"; m.textContent=e.message; }
+    }
+
+    (async function(){
+      ME = await requireAuth(); if(!ME) return;
+      renderNav("/exchange", ME);
+      const cid = qs.get("company");
+      if(cid) showCompany(cid); else showListings();
+    })();
+  </script>
+</body>
+</html>

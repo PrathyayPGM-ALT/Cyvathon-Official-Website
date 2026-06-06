@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon ID Card</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .id-card{ max-width:560px; margin:0 auto 2rem; border-radius:18px; overflow:hidden;
+      border:1px solid rgba(88,196,255,.35); box-shadow:0 12px 40px rgba(0,0,0,.5); }
+    .id-top{ background:linear-gradient(135deg,#102a43,#0d1117); padding:1.4rem 1.8rem;
+      display:flex; align-items:center; gap:1.2rem; border-bottom:1px solid rgba(88,196,255,.3); }
+    .id-avatar{ width:74px; height:74px; border-radius:50%; display:flex; align-items:center;
+      justify-content:center; font-size:2rem; color:#06223a; flex-shrink:0;
+      background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .id-top h2{ margin:0; } .id-top .pill{ margin-top:.4rem; }
+    .id-body{ background:#0f141b; padding:1.6rem 1.8rem; }
+    .id-row{ display:flex; justify-content:space-between; padding:.5rem 0;
+      border-bottom:1px solid rgba(255,255,255,.05); }
+    .id-row .l{ color:var(--muted); }
+    .id-watermark{ text-align:right; color:rgba(88,196,255,.3); font-size:.75rem; letter-spacing:2px; margin-top:.6rem; }
+    .rec{ padding:.7rem 1rem; border-left:3px solid var(--accent); margin-bottom:.6rem;
+      background:var(--panel); border-radius:0 8px 8px 0; }
+    .rec.bad{ border-color:var(--red); }
+    .rec .d{ font-size:.75rem; color:var(--muted); }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+  <div class="wrap" style="max-width:640px;"><div id="view"></div></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const qs = new URLSearchParams(location.search);
+    const esc = (s)=>(s||"").replace(/</g,"&lt;");
+
+    function recordsHtml(records){
+      if(!records || !records.length) return `<p class="muted">Clean record. Nothing on file.</p>`;
+      return records.map(r=>{
+        const bad = /default|seiz|tax|fired|reject/i.test(r.entry);
+        return `<div class="rec ${bad?'bad':''}">${esc(r.entry)}
+          <div class="d">${new Date(r.created_at).toLocaleString()}</div></div>`;
+      }).join("");
+    }
+
+    /* ---- Own full ID card ---- */
+    async function showOwn(){
+      const d = await api("/profile_data");
+      const p = d.profile;
+      document.getElementById("view").innerHTML = `
+        <h2 class="section-title"><i class="fas fa-id-card"></i> Citizen ID Card</h2>
+        <div class="id-card">
+          <div class="id-top">
+            <div class="id-avatar">${esc(p.username[0].toUpperCase())}</div>
+            <div><h2>${esc(p.username)}</h2><span class="pill">${esc(p.designation)}</span></div>
+          </div>
+          <div class="id-body">
+            <div class="id-row"><span class="l">Cybucks</span><b>${fmt(p.balance)}</b></div>
+            <div class="id-row"><span class="l">Pufferbucks</span><b>${fmt(p.pufb)}</b></div>
+            <div class="id-row"><span class="l">Aquilines</span><b>${fmt(p.aquilines)}</b></div>
+            <div class="id-row"><span class="l">Weekly Salary</span><b>${fmt(d.salary)} CB</b></div>
+            <div class="id-row"><span class="l">Company</span><b>${d.company?esc(d.company.name):"None"}</b></div>
+            <div class="id-row"><span class="l">Citizen Since</span><b>${d.member_since?new Date(d.member_since).toLocaleDateString():"—"}</b></div>
+            <div class="id-watermark">★ REPUBLIC OF CYVATHON ★</div>
+          </div>
+        </div>
+        <h3 style="margin-bottom:.8rem;"><i class="fas fa-file-lines"></i> Official Record</h3>
+        <div>${recordsHtml(d.records)}</div>`;
+    }
+
+    /* ---- Another citizen's public profile ---- */
+    async function showPublic(username){
+      let d;
+      try{ d = await api("/u/"+encodeURIComponent(username)); }
+      catch(e){ document.getElementById("view").innerHTML = `<p class="muted">${e.message}</p><p><a class="link" href="/chat">← Back</a></p>`; return; }
+      if(d.profile.is_self){ return showOwn(); }
+      const p = d.profile;
+      const companies = (p.companies||[]).map(c=>`<a class="link" href="/company?id=${c.id}">${esc(c.name)}</a>`).join(", ") || "None";
+      const jobs = (p.jobs||[]).map(j=>`${esc(j.role)} @ <a class="link" href="/company?id=${j.company_id}">${esc(j.company)}</a>`).join(", ") || "None";
+      document.getElementById("view").innerHTML = `
+        <p><a class="link" href="javascript:history.back()"><i class="fas fa-arrow-left"></i> Back</a></p>
+        <h2 class="section-title"><i class="fas fa-id-card"></i> Citizen Profile</h2>
+        <div class="id-card">
+          <div class="id-top">
+            <div class="id-avatar">${esc(p.username[0].toUpperCase())}</div>
+            <div><h2>${esc(p.username)}</h2><span class="pill">${esc(p.designation)}</span></div>
+          </div>
+          <div class="id-body">
+            <div class="id-row"><span class="l">Net Worth</span><b style="color:var(--accent)">${fmt(p.net_worth)} CB</b></div>
+            <div class="id-row"><span class="l">Companies Founded</span><b>${companies}</b></div>
+            <div class="id-row"><span class="l">Employment</span><b>${jobs}</b></div>
+            <div class="id-row"><span class="l">Citizen Since</span><b>${p.member_since?new Date(p.member_since).toLocaleDateString():"—"}</b></div>
+            <div class="id-watermark">★ REPUBLIC OF CYVATHON ★</div>
+          </div>
+        </div>
+        <h3 style="margin-bottom:.8rem;"><i class="fas fa-file-lines"></i> Public Record</h3>
+        <div>${recordsHtml(p.records)}</div>`;
+    }
+
+    (async function(){
+      const me = await requireAuth(); if(!me) return;
+      renderNav("/profile", me);
+      const who = qs.get("user");
+      if(who && who !== me.username) showPublic(who); else showOwn();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon Government</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .gov-card{ text-align:center; }
+    .gov-card .seat{ font-size:2.4rem; color:var(--accent); margin-bottom:.6rem; }
+    .gov-card .pos{ color:var(--muted); text-transform:uppercase; letter-spacing:1px; font-size:.8rem; }
+    .gov-card .holder{ font-size:1.4rem; font-weight:700; color:var(--text); margin-top:.3rem; }
+    .president{ grid-column:1/-1; background:linear-gradient(135deg,rgba(88,196,255,.1),var(--panel)); }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <h2 class="section-title"><i class="fas fa-landmark"></i> Government of Cyvathon</h2>
+    <p class="section-sub">A ceremonial republic. The President leads; the people elect the Prime Minister.</p>
+    <div class="grid" id="cabinet"></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const ICON = {
+      "President":"fa-crown", "Prime Minister":"fa-user-tie",
+      "Security Minister":"fa-shield-halved", "Head of Coding":"fa-code",
+      "Head of Hacking":"fa-user-secret", "CEO / Co-Founder":"fa-briefcase"
+    };
+
+    (async function(){
+      renderNav("/government", await currentUser());
+      const d = await api("/gov");
+      document.getElementById("cabinet").innerHTML = d.government.map(g=>`
+        <div class="card gov-card ${g.position==='President'?'president':''}">
+          <div class="seat"><i class="fas ${ICON[g.position]||'fa-user'}"></i></div>
+          <div class="pos">${g.position}</div>
+          <div class="holder">${g.holder}</div>
+        </div>`).join("");
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon Notifications</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .notif{ display:flex; gap:.9rem; align-items:flex-start; padding:1rem 1.2rem; margin-bottom:.7rem;
+      background:var(--panel); border:1px solid var(--panel-border); border-radius:12px; text-decoration:none; color:inherit; transition:.2s; }
+    .notif:hover{ border-color:rgba(88,196,255,.35); }
+    .notif.unread{ border-left:4px solid var(--accent); }
+    .notif .ico{ color:var(--accent); font-size:1.2rem; margin-top:.15rem; }
+    .notif .msg{ flex:1; }
+    .notif .time{ font-size:.75rem; color:var(--muted); margin-top:.2rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:680px;">
+    <h2 class="section-title"><i class="fas fa-bell"></i> Notifications</h2>
+    <p class="section-sub">Everything that's happened to you in Cyvathon.</p>
+    <div id="list"></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const NAME = (n)=> (n||"").replace(/</g,"&lt;");
+    (async function(){
+      const user = await requireAuth(); if(!user) return;
+      renderNav("/notifications", user);
+
+      const d = await api("/notifications/list");
+      const list = document.getElementById("list");
+      if(!d.notifications.length){ list.innerHTML = `<p class="muted">No notifications yet.</p>`; }
+      else list.innerHTML = d.notifications.map(n=>`
+        <a class="notif ${n.read?'':'unread'}" href="${n.link||'#'}">
+          <i class="fas fa-circle-info ico"></i>
+          <div class="msg">${NAME(n.message)}<div class="time">${new Date(n.created_at).toLocaleString()}</div></div>
+        </a>`).join("");
+
+      // mark all read, then refresh the bell badge
+      try{ await api("/notifications/read",{method:"POST",body:"{}"}); refreshNotifBadge(); }catch{}
+    })();
+  </script>
+</body>
+</html>

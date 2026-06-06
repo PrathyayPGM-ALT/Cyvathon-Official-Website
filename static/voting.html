@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon Voting</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .opt{ display:flex; align-items:center; justify-content:space-between; gap:1rem;
+      padding:.7rem 1rem; border-radius:10px; background:var(--panel);
+      border:1px solid var(--panel-border); margin-bottom:.6rem; }
+    .bar{ height:8px; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+    .bar-wrap{ flex:1; background:rgba(255,255,255,.06); border-radius:6px; margin:0 1rem; }
+    .closed{ opacity:.6; }
+    .opt button{ width:auto; margin:0; padding:.4rem 1rem; font-size:.85rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:720px;">
+    <h2 class="section-title"><i class="fas fa-check-to-slot"></i> National Voting</h2>
+    <p class="section-sub">Cyvathon elects its Prime Minister and other roles by the people's vote.</p>
+
+    <!-- PRESIDENT: create a poll -->
+    <div class="panel" id="adminBox" style="display:none; margin-bottom:2rem;">
+      <h3><i class="fas fa-crown"></i> Create a Vote (President only)</h3>
+      <input id="pTitle" placeholder="Vote title (e.g. Prime Minister Election 2025)">
+      <input id="pPosition" placeholder="Position being elected" value="Prime Minister">
+      <textarea id="pOptions" rows="3" placeholder="Candidates — one per line"></textarea>
+      <button onclick="createPoll()">Open Vote</button>
+      <p id="adminMsg" class="small" style="text-align:center;"></p>
+    </div>
+
+    <div id="polls"></div>
+    <p id="msg" class="small" style="text-align:center;"></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let isPresident = false;
+    const msg = (t,err=true)=>{ const m=document.getElementById("msg");
+      m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
+
+    async function load(){
+      const d = await api("/polls");
+      isPresident = d.is_president;
+      document.getElementById("adminBox").style.display = isPresident ? "block" : "none";
+
+      const host = document.getElementById("polls");
+      if(!d.polls.length){ host.innerHTML = `<p class="muted">No active votes. ${isPresident?"Open one above.":"Check back soon."}</p>`; return; }
+
+      host.innerHTML = d.polls.map(p=>{
+        const opts = (p.options||[]).map(o=>{
+          const count = p.tally[o]||0;
+          const pct = p.total ? Math.round(count/p.total*100) : 0;
+          const voted = p.my_vote === o;
+          const canVote = p.open && !p.my_vote;
+          return `<div class="opt">
+            <span>${o} ${voted?'<i class="fas fa-circle-check" style="color:var(--green)"></i>':''}</span>
+            <div class="bar-wrap"><div class="bar" style="width:${pct}%"></div></div>
+            <span class="muted" style="min-width:70px;text-align:right;">${count} (${pct}%)</span>
+            ${canVote?`<button onclick="vote(${p.id},'${o.replace(/'/g,"\\'")}')">Vote</button>`:''}
+          </div>`;
+        }).join("");
+        return `<div class="panel ${p.open?'':'closed'}" style="margin-bottom:1.4rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h3>${p.title}</h3>
+            <span class="tag">${p.open?'OPEN':'CLOSED'}</span>
+          </div>
+          <p class="small">Electing: <b>${p.position}</b> · ${p.total} vote(s)</p>
+          ${opts}
+          ${isPresident && p.open ? `<button class="danger" style="margin-top:.6rem" onclick="closePoll(${p.id})">Close & Declare Winner</button>`:''}
+        </div>`;
+      }).join("");
+    }
+
+    async function createPoll(){
+      const title=document.getElementById("pTitle").value.trim();
+      const position=document.getElementById("pPosition").value.trim()||"Prime Minister";
+      const options=document.getElementById("pOptions").value.split("\n").map(s=>s.trim()).filter(Boolean);
+      const am = document.getElementById("adminMsg");
+      if(!title||options.length<2){ am.textContent="Need a title and at least 2 candidates."; am.style.color="var(--red)"; return; }
+      try{
+        await api("/polls",{method:"POST",body:JSON.stringify({title,position,options})});
+        am.textContent="Vote opened!"; am.style.color="var(--green)";
+        document.getElementById("pTitle").value=""; document.getElementById("pOptions").value="";
+        load();
+      }catch(e){ am.textContent=e.message; am.style.color="var(--red)"; }
+    }
+
+    async function vote(poll_id, choice){
+      try{ await api("/polls/vote",{method:"POST",body:JSON.stringify({poll_id,choice})});
+        msg("Vote cast! ✅",false); load(); }
+      catch(e){ msg(e.message); }
+    }
+    async function closePoll(poll_id){
+      try{ await api("/polls/close",{method:"POST",body:JSON.stringify({poll_id})});
+        msg("Vote closed — winner installed into the government.",false); load(); }
+      catch(e){ msg(e.message); }
+    }
+
+    (async function(){
+      const user = await requireAuth(); if(!user) return;
+      renderNav("/voting", user);
+      load();
+    })();
+  </script>
+</body>
+</html>
