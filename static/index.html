@@ -140,7 +140,10 @@
         <div class="bal"><div class="v">${fmt(user.balance)}</div><div class="l">Cybucks</div></div>
         <div class="bal"><div class="v">${fmt(user.pufb)}</div><div class="l">Pufferbucks</div></div>
         <div class="bal"><div class="v">${fmt(user.aquilines)}</div><div class="l">Aquilines</div></div>`;
-      document.getElementById("hubGrid").innerHTML = HUB.map(([h,i,t,d]) =>
+      const cards = admin
+        ? [...HUB, ["/admin","fa-sliders","Admin Panel","Set national economic policy"]]
+        : HUB;
+      document.getElementById("hubGrid").innerHTML = cards.map(([h,i,t,d]) =>
         `<a class="card hub-card" href="${h}"><i class="fas ${i} icon"></i><h3>${t}</h3><p>${d}</p></a>`).join("");
       loadHubNews();
     }

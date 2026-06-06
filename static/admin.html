@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .grid2{ display:grid; gap:1.2rem; grid-template-columns:1fr 1fr; }
+    @media(max-width:600px){ .grid2{ grid-template-columns:1fr; } }
+    .field label{ font-size:.8rem; color:var(--muted); display:block; }
+    .field .hint{ font-size:.72rem; color:var(--muted); }
+    .deny{ text-align:center; padding:4rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:760px;">
+    <h2 class="section-title"><i class="fas fa-sliders"></i> Presidential Admin Panel</h2>
+    <p class="section-sub">Set national economic policy. Changes apply live across the whole nation.</p>
+
+    <div id="panel" style="display:none;">
+      <div class="panel">
+        <h3><i class="fas fa-coins"></i> Taxation & Wages</h3>
+        <div class="grid2">
+          <div class="field"><label>VAT rate (e.g. 0.10 = 10%)</label><input id="vat_rate" type="number" step="0.01"><div class="hint">Charged on all 3 currencies each tax period.</div></div>
+          <div class="field"><label>Tax period (days)</label><input id="tax_period_days" type="number"><div class="hint">How often VAT is collected.</div></div>
+          <div class="field"><label>Salary period (days)</label><input id="salary_period_days" type="number"><div class="hint">How often wages are paid.</div></div>
+          <div class="field"><label>New citizen grant (each currency)</label><input id="starting_grant" type="number"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:1.4rem;">
+        <h3><i class="fas fa-hand-holding-dollar"></i> Banking & Debt</h3>
+        <div class="grid2">
+          <div class="field"><label>Savings interest (monthly, 0.05 = 5%)</label><input id="savings_rate" type="number" step="0.01"></div>
+          <div class="field"><label>Bond return (0.10 = 10%)</label><input id="bond_rate" type="number" step="0.01"></div>
+          <div class="field"><label>Bond maturity (days)</label><input id="bond_days" type="number"></div>
+          <div class="field"><label>Max loan (CB)</label><input id="loan_max" type="number"></div>
+          <div class="field"><label>Loan term (days)</label><input id="loan_days" type="number"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:1.4rem;">
+        <h3><i class="fas fa-briefcase"></i> Enterprise & GDP</h3>
+        <div class="grid2">
+          <div class="field"><label>Company founding fee (CB)</label><input id="company_fee" type="number"></div>
+          <div class="field"><label>National GDP figure (CB)</label><input id="gdp" type="number"></div>
+        </div>
+      </div>
+
+      <button style="margin-top:1.4rem;" onclick="save()"><i class="fas fa-floppy-disk"></i> Save Policy</button>
+      <p id="msg" class="small" style="text-align:center;"></p>
+    </div>
+
+    <div id="deny" class="deny" style="display:none;">
+      <i class="fas fa-lock" style="font-size:2.5rem;color:var(--red);"></i>
+      <h3 style="margin-top:1rem;">Restricted</h3>
+      <p class="muted">Only the President may access the admin panel.</p>
+      <a class="link" href="/">← Back to dashboard</a>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const FIELDS = ["vat_rate","tax_period_days","salary_period_days","savings_rate",
+      "bond_rate","bond_days","company_fee","loan_max","loan_days","starting_grant","gdp"];
+    const msg=(t,err=true)=>{const m=document.getElementById("msg");m.textContent=t;m.style.color=err?"var(--red)":"var(--green)";};
+
+    function fill(cfg){
+      FIELDS.forEach(f=>{ const el=document.getElementById(f); if(el && cfg[f]!=null) el.value=cfg[f]; });
+    }
+
+    async function save(){
+      const body={};
+      FIELDS.forEach(f=>{ const v=document.getElementById(f).value; if(v!=="") body[f]=v; });
+      try{ const r=await api("/admin/config",{method:"POST",body:JSON.stringify(body)});
+        fill(r.config); msg("Policy saved — applied nation-wide.",false);
+      }catch(e){ msg(e.message); }
+    }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      renderNav("/admin", user);
+      try{
+        const r=await api("/admin/config");
+        document.getElementById("panel").style.display="block";
+        fill(r.config);
+      }catch(e){
+        document.getElementById("deny").style.display="block";
+      }
+    })();
+  </script>
+</body>
+</html>

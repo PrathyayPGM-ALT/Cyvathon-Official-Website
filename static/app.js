@@ -38,7 +38,7 @@ function renderNav(active, user) {
     { label: "Home", href: "/" },
     { label: "Money",      items: [["/bank","Bank"], ["/exchange","Stock Exchange"], ["/loans","Loans"]] },
     { label: "Business",   items: [["/company","Companies"], ["/marketplace","Marketplace"]] },
-    { label: "Government",  items: [["/government","Cabinet"], ["/legislature","Legislature"], ["/gazette","Gazette"], ["/court","Courts"], ["/voting","Elections"], ["/treasury","Treasury"]] },
+    { label: "Government",  items: [["/government","Cabinet"], ["/legislature","Legislature"], ["/gazette","Gazette"], ["/court","Courts"], ["/voting","Elections"], ["/treasury","Treasury"], ["/admin","Admin Panel"]] },
     { label: "Community",   items: [["/citizens","Citizens"], ["/chat","Chat"], ["/news","News"], ["/rules","Rules"]] },
     { label: "ID Card", href: "/profile" },
   ];

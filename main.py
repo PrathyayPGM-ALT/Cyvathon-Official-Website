@@ -44,6 +44,17 @@ SALARY_PERIOD_DAYS = 7
 SAVINGS_RATE     = 0.05         # 5% monthly interest on savings
 BOND_RATE        = 0.10         # 10% return on government bonds
 BOND_DAYS        = 30           # bond maturity period
+GDP              = 500000       # national GDP figure
+
+# These economic levers are stored in the `config` table and can be changed
+# live by the President from the admin panel. Maps config column -> global.
+_CONFIG_KEYS = {
+    "vat_rate": "VAT_RATE", "tax_period_days": "TAX_PERIOD_DAYS",
+    "salary_period_days": "SALARY_PERIOD_DAYS", "savings_rate": "SAVINGS_RATE",
+    "bond_rate": "BOND_RATE", "bond_days": "BOND_DAYS", "company_fee": "COMPANY_FEE",
+    "loan_max": "LOAN_MAX", "loan_days": "LOAN_DAYS", "starting_grant": "STARTING_GRANT",
+    "gdp": "GDP",
+}
 
 COMPANY_CATEGORIES = ["Finance", "Selling", "Service", "Technology", "Other"]
 
@@ -120,6 +131,27 @@ def handle_any_error(e):
 # ============================================================
 #  HELPERS
 # ============================================================
+def refresh_config():
+    """Load President-tunable economic levers from the DB into module globals.
+       Safe no-op if the config table doesn't exist yet."""
+    try:
+        r = supabase.table("config").select("*").eq("id", 1).execute().data
+        if not r:
+            supabase.table("config").insert({"id": 1}).execute()
+            return
+        row, g = r[0], globals()
+        for col, name in _CONFIG_KEYS.items():
+            v = row.get(col)
+            if v is not None:
+                # day/grant fields are whole numbers
+                g[name] = int(v) if name.endswith(("_DAYS", "GRANT")) or name in ("LOAN_MAX",) else v
+    except Exception as e:
+        logging.warning("config load skipped (using defaults): %s", e)
+
+
+refresh_config()   # load policy at startup
+
+
 def _now():
     return datetime.now(timezone.utc)
 
@@ -446,6 +478,10 @@ def legislature_page():
 def gazette_page():
     return app.send_static_file("gazette.html")
 
+@app.route("/admin")
+def admin_page():
+    return app.send_static_file("admin.html")
+
 
 # ============================================================
 #  AUTH  (single account gates bank + chat + everything)
@@ -695,7 +731,7 @@ def treasury_data():
         salary=totals("salary"),
         flows=flows,
         transactions=transactions,
-        gdp=t.get("gdp", 500000),
+        gdp=GDP,
     )
 
 
@@ -2177,6 +2213,54 @@ def gov():
 
 
 # ============================================================
+#  ADMIN PANEL  (President-only economic policy)
+# ============================================================
+CONFIG_FIELDS = ["vat_rate", "tax_period_days", "salary_period_days", "savings_rate",
+                 "bond_rate", "bond_days", "company_fee", "loan_max", "loan_days",
+                 "starting_grant", "gdp"]
+
+
+@app.route("/admin/config", methods=["GET"])
+def admin_config_get():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    refresh_config()
+    r = supabase.table("config").select("*").eq("id", 1).execute().data
+    return jsonify(success=True, config=(r[0] if r else {}))
+
+
+@limiter.limit("20/min")
+@app.route("/admin/config", methods=["POST"])
+def admin_config_set():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+
+    d = request.get_json() or {}
+    upd = {}
+    for f in CONFIG_FIELDS:
+        if f in d and d[f] not in (None, ""):
+            try:
+                upd[f] = float(d[f])
+            except (TypeError, ValueError):
+                pass
+    if not upd:
+        return jsonify(success=False, error="No valid values supplied"), 400
+
+    # ensure the row exists, then update + reload globals live
+    refresh_config()
+    supabase.table("config").update(upd).eq("id", 1).execute()
+    refresh_config()
+    r = supabase.table("config").select("*").eq("id", 1).execute().data
+    return jsonify(success=True, config=(r[0] if r else {}))
+
+
+# ============================================================
 #  ECONOMY STATS  (public)
 # ============================================================
 @app.route("/economy")
@@ -2186,7 +2270,7 @@ def economy():
     companies = supabase.table("companies").select("id", count="exact").execute()
     return jsonify(
         success=True,
-        gdp=t.get("gdp", 500000),
+        gdp=GDP,
         treasury=t["balance"],
         citizens=citizens.count or 0,
         companies=companies.count or 0,
