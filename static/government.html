@@ -8,10 +8,16 @@
   <link rel="stylesheet" href="/static/theme.css">
   <style>
     .gov-card{ text-align:center; }
-    .gov-card .seat{ font-size:2.4rem; color:var(--accent); margin-bottom:.6rem; }
-    .gov-card .pos{ color:var(--muted); text-transform:uppercase; letter-spacing:1px; font-size:.8rem; }
-    .gov-card .holder{ font-size:1.4rem; font-weight:700; color:var(--text); margin-top:.3rem; }
-    .president{ grid-column:1/-1; background:linear-gradient(135deg,rgba(88,196,255,.1),var(--panel)); }
+    .gov-card .seat{ font-size:2.3rem; color:var(--accent); margin-bottom:.6rem;
+      filter:drop-shadow(0 0 12px rgba(88,196,255,.35)); }
+    .gov-card .pos{ color:var(--muted); text-transform:uppercase; letter-spacing:1px; font-size:.78rem; }
+    .gov-card .holder{ font-size:1.35rem; font-weight:700; color:var(--text); margin-top:.3rem; }
+    .gov-card .holder a{ color:var(--text); }
+    .gov-card .holder a:hover{ color:var(--accent); }
+    .president{ grid-column:1/-1; background:linear-gradient(135deg,rgba(88,196,255,.12),rgba(255,255,255,.02)); }
+    .min-card .seat{ font-size:1.9rem; }
+    .min-card .mandate{ color:var(--muted); font-size:.85rem; margin-top:.5rem; }
+    .min-card .budget{ font-size:.78rem; color:var(--accent); margin-top:.4rem; }
   </style>
 </head>
 <body>
@@ -19,27 +25,54 @@
 
   <div class="wrap">
     <h2 class="section-title"><i class="fas fa-landmark"></i> Government of Cyvathon</h2>
-    <p class="section-sub">A ceremonial republic. The President leads; the people elect the Prime Minister.</p>
+    <p class="section-sub">A ceremonial republic. The President leads the state; the people elect the Prime Minister and the Judge.</p>
+
+    <h3 class="section-title" style="font-size:1.4rem;margin-bottom:1.2rem;">Offices of State</h3>
     <div class="grid" id="cabinet"></div>
+
+    <h3 class="section-title" style="font-size:1.4rem;margin:3rem 0 1.2rem;">The Ministries</h3>
+    <p class="section-sub" style="margin-bottom:1.6rem;">The executive departments and the Ministers who lead them.</p>
+    <div class="grid" id="ministries"></div>
   </div>
 
   <script src="/static/app.js"></script>
   <script>
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const ICON = {
-      "President":"fa-crown", "Prime Minister":"fa-user-tie",
+      "President":"fa-crown", "Prime Minister":"fa-user-tie", "Judge":"fa-gavel",
       "Security Minister":"fa-shield-halved", "Head of Coding":"fa-code",
       "Head of Hacking":"fa-user-secret", "CEO / Co-Founder":"fa-briefcase"
     };
+    const holder=(n)=> (!n || n==='Vacant')
+      ? '<span class="muted">Vacant</span>'
+      : `<a href="/profile?user=${encodeURIComponent(n)}">${esc(n)}</a>`;
 
     (async function(){
       renderNav("/government", await currentUser());
-      const d = await api("/gov");
-      document.getElementById("cabinet").innerHTML = d.government.map(g=>`
-        <div class="card gov-card ${g.position==='President'?'president':''}">
-          <div class="seat"><i class="fas ${ICON[g.position]||'fa-user'}"></i></div>
-          <div class="pos">${g.position}</div>
-          <div class="holder">${g.holder}</div>
+
+      const g = await api("/gov");
+      document.getElementById("cabinet").innerHTML = g.government.map(o=>`
+        <div class="card gov-card ${o.position==='President'?'president':''}">
+          <div class="seat"><i class="fas ${ICON[o.position]||'fa-user'}"></i></div>
+          <div class="pos">${esc(o.position)}</div>
+          <div class="holder">${holder(o.holder)}</div>
         </div>`).join("");
+
+      try{
+        const m = await api("/ministries/list");
+        const host = document.getElementById("ministries");
+        if(!m.ministries.length){ host.innerHTML = `<p class="muted">No ministries established.</p>`; return; }
+        host.innerHTML = m.ministries.map(x=>`
+          <div class="card gov-card min-card">
+            <div class="seat"><i class="fas ${esc(x.icon)||'fa-landmark'}"></i></div>
+            <div class="pos">${esc(x.name)}</div>
+            <div class="holder">${holder(x.minister)}</div>
+            ${x.mandate?`<div class="mandate">${esc(x.mandate)}</div>`:''}
+            <div class="budget"><i class="fas fa-coins"></i> Budget: ${fmt(x.budget)} CB</div>
+          </div>`).join("");
+      }catch{
+        document.getElementById("ministries").innerHTML = `<p class="muted">Ministries unavailable.</p>`;
+      }
     })();
   </script>
 </body>
