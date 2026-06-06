@@ -63,6 +63,7 @@ SALARY_TABLE = {
     "President":         1000,
     "Prime Minister":    800,
     "Judge":             700,
+    "Minister":          650,
     "Security Minister": 600,
     "Head of Coding":    600,
     "Head of Hacking":   600,
@@ -481,6 +482,10 @@ def gazette_page():
 @app.route("/admin")
 def admin_page():
     return app.send_static_file("admin.html")
+
+@app.route("/ministries")
+def ministries_page():
+    return app.send_static_file("ministries.html")
 
 
 # ============================================================
@@ -2201,6 +2206,171 @@ def gazette_decree():
         "issued_by": user["username"]
     }).execute()
     return jsonify(success=True, ref=ref)
+
+
+# ============================================================
+#  MINISTRIES  (cabinet departments, budgets & spending)
+# ============================================================
+@app.route("/ministries/list")
+def ministries_list():
+    user = get_current_user(run_economics=False)
+    rows = supabase.table("ministries").select("*").order("rank").execute().data or []
+    me = user["username"] if user else None
+    for m in rows:
+        m["is_minister"] = bool(me and m.get("minister") == me)
+    return jsonify(success=True, ministries=rows,
+                   is_president=is_treasury_admin(user) if user else False, me=me)
+
+
+@limiter.limit("15/min")
+@app.route("/ministries/create", methods=["POST"])
+def ministries_create():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json()
+    name = (d.get("name") or "").strip()
+    mandate = (d.get("mandate") or "").strip()
+    icon = (d.get("icon") or "fa-landmark").strip()
+    if not name:
+        return jsonify(success=False, error="Name the ministry"), 400
+    if supabase.table("ministries").select("id").eq("name", name).execute().data:
+        return jsonify(success=False, error="A ministry with that name exists"), 400
+    supabase.table("ministries").insert({"name": name, "mandate": mandate, "icon": icon}).execute()
+    return jsonify(success=True)
+
+
+def _set_designation_safe(username, desig):
+    if username in TREASURY_ADMINS:
+        return
+    supabase.table("cybucks").update({"designation": desig}).eq("username", username).execute()
+
+
+@limiter.limit("20/min")
+@app.route("/ministries/appoint", methods=["POST"])
+def ministries_appoint():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json()
+    mid = d.get("ministry_id")
+    username = (d.get("username") or "").strip()
+    if not supabase.table("cybucks").select("id").eq("username", username).execute().data:
+        return jsonify(success=False, error="No such citizen"), 404
+    m = supabase.table("ministries").select("*").eq("id", mid).execute().data
+    if not m:
+        return jsonify(success=False, error="Ministry not found"), 404
+    prev = m[0].get("minister")
+    supabase.table("ministries").update({"minister": username}).eq("id", mid).execute()
+    if prev and prev != "Vacant" and prev != username:
+        _set_designation_safe(prev, "Citizen")
+    _set_designation_safe(username, "Minister")
+    add_record(username, f"Appointed Minister, heading the {m[0]['name']}.")
+    notify(username, f"You have been appointed Minister of the {m[0]['name']}.", "/ministries")
+    return jsonify(success=True)
+
+
+@limiter.limit("20/min")
+@app.route("/ministries/dismiss", methods=["POST"])
+def ministries_dismiss():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    mid = request.get_json().get("ministry_id")
+    m = supabase.table("ministries").select("*").eq("id", mid).execute().data
+    if not m:
+        return jsonify(success=False, error="Ministry not found"), 404
+    prev = m[0].get("minister")
+    supabase.table("ministries").update({"minister": "Vacant"}).eq("id", mid).execute()
+    if prev and prev != "Vacant":
+        _set_designation_safe(prev, "Citizen")
+        notify(prev, f"You have been dismissed as Minister of the {m[0]['name']}.", "/ministries")
+    return jsonify(success=True)
+
+
+@limiter.limit("20/min")
+@app.route("/ministries/fund", methods=["POST"])
+def ministries_fund():
+    """The President allocates Treasury funds to a ministry's budget."""
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json()
+    mid = d.get("ministry_id")
+    amount = float(d.get("amount") or 0)
+    if amount <= 0:
+        return jsonify(success=False, error="Enter a positive amount"), 400
+    m = supabase.table("ministries").select("*").eq("id", mid).execute().data
+    if not m:
+        return jsonify(success=False, error="Ministry not found"), 404
+    t = get_treasury()
+    if (t["balance"] or 0) < amount:
+        return jsonify(success=False, error="The Treasury lacks the funds"), 400
+    treasury_add(cybucks=-amount, counterparty=m[0]["name"], kind="budget")
+    supabase.table("ministries").update({"budget": round((m[0].get("budget") or 0) + amount, 2)}) \
+        .eq("id", mid).execute()
+    return jsonify(success=True)
+
+
+@limiter.limit("20/min")
+@app.route("/ministries/mandate", methods=["POST"])
+def ministries_mandate():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json()
+    supabase.table("ministries").update({"mandate": (d.get("mandate") or "").strip()}) \
+        .eq("id", d.get("ministry_id")).execute()
+    return jsonify(success=True)
+
+
+@limiter.limit("30/min")
+@app.route("/ministries/spend", methods=["POST"])
+def ministries_spend():
+    """A minister (or the President) spends the ministry budget to pay a citizen."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json()
+    mid = d.get("ministry_id")
+    to = (d.get("to") or "").strip()
+    reason = (d.get("reason") or "").strip()
+    amount = float(d.get("amount") or 0)
+
+    m = supabase.table("ministries").select("*").eq("id", mid).execute().data
+    if not m:
+        return jsonify(success=False, error="Ministry not found"), 404
+    m = m[0]
+    if not (is_treasury_admin(user) or m.get("minister") == user["username"]):
+        return jsonify(success=False, error="Only this ministry's minister may spend its budget"), 403
+    if amount <= 0:
+        return jsonify(success=False, error="Enter a positive amount"), 400
+    if (m.get("budget") or 0) < amount:
+        return jsonify(success=False, error="The ministry budget is insufficient"), 400
+    if not supabase.table("cybucks").select("id").eq("username", to).execute().data:
+        return jsonify(success=False, error="No such recipient"), 404
+
+    supabase.table("ministries").update({"budget": round((m.get("budget") or 0) - amount, 2)}) \
+        .eq("id", mid).execute()
+    _add_cash(to, amount)
+    log_txn("ministry", m["name"], to, amount, "cybucks", reason or "Ministry disbursement")
+    add_record(to, f"Received {amount} CB from the {m['name']}{(' — ' + reason) if reason else ''}.")
+    notify(to, f"The {m['name']} paid you {amount} CB{(' — ' + reason) if reason else ''}.", "/bank")
+    return jsonify(success=True)
+
+
+@limiter.limit("15/min")
+@app.route("/ministries/delete", methods=["POST"])
+def ministries_delete():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    mid = request.get_json().get("ministry_id")
+    m = supabase.table("ministries").select("*").eq("id", mid).execute().data
+    if m and (m[0].get("budget") or 0) > 0:
+        treasury_add(cybucks=m[0]["budget"], counterparty=m[0]["name"], kind="budget_return")
+    supabase.table("ministries").delete().eq("id", mid).execute()
+    return jsonify(success=True)
 
 
 # ============================================================

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ministries · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .min{ background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; padding:1.4rem 1.5rem; margin-bottom:1.2rem; }
+    .min .head{ display:flex; align-items:center; gap:1rem; }
+    .min .ic{ width:52px; height:52px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+      font-size:1.5rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); flex-shrink:0; }
+    .min h3{ margin:0; } .min .mandate{ color:var(--muted); margin:.6rem 0; }
+    .min .stat{ display:flex; gap:1.5rem; flex-wrap:wrap; font-size:.9rem; }
+    .min .stat b{ color:var(--accent); }
+    .ctrl{ margin-top:1rem; padding-top:1rem; border-top:1px solid var(--panel-border); }
+    .ctrl .row3{ display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-bottom:.5rem; }
+    .ctrl input{ margin:0; width:auto; flex:1; min-width:120px; padding:.5rem .7rem; }
+    .ctrl button{ margin:0; width:auto; padding:.5rem 1rem; font-size:.85rem; }
+    .tag-min{ font-size:.72rem; padding:.18rem .6rem; border-radius:20px; background:rgba(88,196,255,.12); color:var(--accent); }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:820px;">
+    <h2 class="section-title"><i class="fas fa-landmark-dome"></i> The Cabinet — Ministries</h2>
+    <p class="section-sub">The executive departments of the Republic. Each is led by a Minister appointed by the President and funded from the Treasury.</p>
+
+    <div class="panel" id="createBox" style="display:none; margin-bottom:2rem;">
+      <h3><i class="fas fa-plus"></i> Establish a Ministry</h3>
+      <div class="ctrl"><div class="row3">
+        <input id="cName" placeholder="Ministry name" style="flex:2">
+        <input id="cIcon" placeholder="icon (e.g. fa-shield-halved)">
+      </div>
+      <textarea id="cMandate" rows="2" placeholder="Mandate / responsibilities"></textarea>
+      <button onclick="create()">Establish</button></div>
+    </div>
+
+    <div id="list"></div>
+    <p id="msg" class="small" style="text-align:center;"></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let PRES=false, ME=null;
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const ul=(n)=> n==='Vacant' ? '<span class="muted">Vacant</span>' : `<a class="link" href="/profile?user=${encodeURIComponent(n)}">${esc(n)}</a>`;
+    const msg=(t,err=true)=>{const m=document.getElementById("msg");m.textContent=t;m.style.color=err?"var(--red)":"var(--green)";};
+
+    async function load(){
+      const d=await api("/ministries/list");
+      PRES=d.is_president; ME=d.me;
+      document.getElementById("createBox").style.display = PRES ? "block" : "none";
+      const host=document.getElementById("list");
+      if(!d.ministries.length){ host.innerHTML=`<p class="muted">No ministries established.</p>`; return; }
+      host.innerHTML=d.ministries.map(m=>{
+        let ctrl="";
+        if(PRES){
+          ctrl=`<div class="ctrl">
+            <div class="row3"><input id="ap${m.id}" placeholder="Appoint citizen…"><button onclick="appoint(${m.id})">Appoint</button>
+              ${m.minister!=='Vacant'?`<button class="danger" onclick="dismiss(${m.id})">Dismiss</button>`:''}</div>
+            <div class="row3"><input id="fn${m.id}" type="number" min="0" placeholder="Allocate budget CB"><button onclick="fund(${m.id})">Fund from Treasury</button></div>
+            <div class="row3"><input id="md${m.id}" placeholder="Edit mandate…" value="${esc(m.mandate)}" style="flex:3"><button class="ghost" onclick="mandate(${m.id})">Save</button>
+              <button class="danger" onclick="del(${m.id})">Abolish</button></div>
+          </div>`;
+        }
+        if(m.is_minister || PRES){
+          ctrl+=`<div class="ctrl"><p class="small" style="margin-bottom:.3rem;color:var(--accent)">Disburse from budget</p>
+            <div class="row3"><input id="sp_to${m.id}" placeholder="Pay citizen…"><input id="sp_amt${m.id}" type="number" min="0" placeholder="CB">
+              <input id="sp_rs${m.id}" placeholder="Reason" style="flex:2"><button onclick="spend(${m.id})">Pay</button></div></div>`;
+        }
+        return `<div class="min">
+          <div class="head"><div class="ic"><i class="fas ${esc(m.icon)||'fa-landmark'}"></i></div>
+            <div><h3>${esc(m.name)}</h3>
+              <div class="small">Minister: ${ul(m.minister)} ${m.is_minister?'<span class="tag-min">you</span>':''}</div></div></div>
+          <p class="mandate">${esc(m.mandate)||'<span class="muted">No mandate set.</span>'}</p>
+          <div class="stat"><span>Budget: <b>${fmt(m.budget)} CB</b></span></div>
+          ${ctrl}
+        </div>`;
+      }).join("");
+    }
+
+    async function act(path, body, okmsg){
+      try{ await api(path,{method:"POST",body:JSON.stringify(body)}); if(okmsg) msg(okmsg,false); load(); }
+      catch(e){ msg(e.message); }
+    }
+    const val=(id)=>(document.getElementById(id)?.value||"").trim();
+    function create(){ act("/ministries/create",{name:val("cName"),icon:val("cIcon"),mandate:val("cMandate")},"Ministry established."); }
+    function appoint(id){ act("/ministries/appoint",{ministry_id:id,username:val("ap"+id)},"Minister appointed."); }
+    function dismiss(id){ act("/ministries/dismiss",{ministry_id:id}); }
+    function fund(id){ act("/ministries/fund",{ministry_id:id,amount:val("fn"+id)},"Budget allocated."); }
+    function mandate(id){ act("/ministries/mandate",{ministry_id:id,mandate:val("md"+id)},"Mandate updated."); }
+    function del(id){ act("/ministries/delete",{ministry_id:id}); }
+    function spend(id){ act("/ministries/spend",{ministry_id:id,to:val("sp_to"+id),amount:val("sp_amt"+id),reason:val("sp_rs"+id)},"Disbursed."); }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      renderNav("/ministries", user);
+      load();
+    })();
+  </script>
+</body>
+</html>
