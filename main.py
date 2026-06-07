@@ -108,10 +108,11 @@ else:
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
-    # Generous global ceiling (per IP) — an interactive page fires several
-    # reads per view, so the old 400/day was far too low. Sensitive write
-    # routes keep their own tight per-route limits below.
-    default_limits=["12000 per hour"]
+    # Per-IP throttle. The per-MINUTE cap is the real anti-hammer defense:
+    # ~3 req/sec is plenty for a human browsing + live chat polling, but
+    # stops a script flooding the server. Hourly is a secondary backstop.
+    # Sensitive write routes keep their own tighter per-route limits below.
+    default_limits=["180 per minute", "4000 per hour"]
 )
 
 
@@ -2454,7 +2455,7 @@ def economy():
 # ============================================================
 #  CHAT  (now gated behind the single national account)
 # ============================================================
-@limiter.exempt
+@limiter.limit("60 per minute")
 @app.route("/messages", methods=["POST"])
 def send_message():
     user = get_current_user(run_economics=False)
@@ -2482,7 +2483,7 @@ def citizens_directory():
     return jsonify(success=True, citizens=rows, me=user["username"])
 
 
-@limiter.exempt
+@limiter.limit("90 per minute")
 @app.route("/dm/<username>", methods=["GET"])
 def dm_thread(username):
     user = get_current_user(run_economics=False)
@@ -2497,7 +2498,7 @@ def dm_thread(username):
     return jsonify(success=True, messages=msgs, me=me)
 
 
-@limiter.exempt
+@limiter.limit("60 per minute")
 @app.route("/dm", methods=["POST"])
 def dm_send():
     user = get_current_user(run_economics=False)
@@ -2520,7 +2521,7 @@ def dm_send():
     return jsonify(success=True)
 
 
-@limiter.exempt
+@limiter.limit("90 per minute")
 @app.route("/messages", methods=["GET"])
 def get_messages():
     user = get_current_user(run_economics=False)
