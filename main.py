@@ -108,7 +108,10 @@ else:
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
-    default_limits=["400 per day", "100 per hour"]
+    # Generous global ceiling (per IP) — an interactive page fires several
+    # reads per view, so the old 400/day was far too low. Sensitive write
+    # routes keep their own tight per-route limits below.
+    default_limits=["12000 per hour"]
 )
 
 
