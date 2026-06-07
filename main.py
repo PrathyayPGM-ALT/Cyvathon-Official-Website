@@ -15,7 +15,7 @@ from google import genai
 #  CONFIG
 # ============================================================
 recent_registrations = {}
-REGISTRATION_LIMIT_WINDOW = 15
+REGISTRATION_LIMIT_WINDOW = 90   # min seconds between registrations from one IP
 
 # --- Economy constants -------------------------------------
 PUFB_PER_CYBUCK      = 5        # 5 Pufferbucks  = 1 Cybuck
@@ -646,6 +646,21 @@ def public_profile(username):
 # ============================================================
 #  BANKING  +  CURRENCY CONVERTER
 # ============================================================
+def _outstanding_loan(username):
+    """Total unpaid loan principal — these Cybucks are LOCKED (can't be moved out)."""
+    try:
+        loans = supabase.table("loans").select("amount").eq("username", username) \
+            .eq("repaid", False).eq("defaulted", False).execute().data or []
+        return sum((l["amount"] or 0) for l in loans)
+    except Exception:
+        return 0
+
+
+def _available_cb(username, balance):
+    """Cybucks the citizen may freely move/spend = balance minus locked loan funds."""
+    return (balance or 0) - _outstanding_loan(username)
+
+
 @limiter.limit("20/min")
 @app.route("/transfer", methods=["POST"])
 def transfer():
@@ -667,6 +682,9 @@ def transfer():
     sender = supabase.table("cybucks").select("*").eq("username", user["username"]).execute().data[0]
     if (sender.get(col) or 0) < amount:
         return jsonify(success=False, error="Insufficient funds"), 400
+    # Borrowed Cybucks are locked — you cannot transfer away an unpaid loan.
+    if currency == "cybucks" and amount > _available_cb(user["username"], sender.get("balance")):
+        return jsonify(success=False, error="Those Cybucks are from an unpaid loan and cannot be transferred. Repay your loan first."), 400
 
     receiver_res = supabase.table("cybucks").select("*").eq("username", to_username).execute()
     if not receiver_res.data:
@@ -1053,6 +1071,8 @@ def exchange_order():
         cost = round(price * qty, 2)
         if (fresh["balance"] or 0) < cost:
             return jsonify(success=False, error="Not enough CB to escrow this buy order"), 400
+        if cost > _available_cb(user["username"], fresh.get("balance")):
+            return jsonify(success=False, error="Borrowed Cybucks cannot be used to trade. Repay your loan first."), 400
         _add_cash(user["username"], -cost)
     else:
         if _holding_shares(user["username"], cid) < qty:
@@ -1532,6 +1552,8 @@ def savings_deposit():
         return jsonify(success=False, error="Enter a positive amount"), 400
     if (user.get("balance") or 0) < amount:
         return jsonify(success=False, error="Not enough CB"), 400
+    if amount > _available_cb(user["username"], user.get("balance")):
+        return jsonify(success=False, error="Borrowed Cybucks cannot be moved to savings. Repay your loan first."), 400
     upd = {"balance": round((user.get("balance") or 0) - amount, 2),
            "savings": round((user.get("savings") or 0) + amount, 2)}
     if not user.get("savings_updated"):
@@ -1588,6 +1610,8 @@ def bonds_buy():
         return jsonify(success=False, error="Enter a positive amount"), 400
     if (user.get("balance") or 0) < amount:
         return jsonify(success=False, error="Not enough CB"), 400
+    if amount > _available_cb(user["username"], user.get("balance")):
+        return jsonify(success=False, error="Borrowed Cybucks cannot be invested. Repay your loan first."), 400
 
     matures = _now() + timedelta(days=BOND_DAYS)
     supabase.table("cybucks").update({"balance": round((user.get("balance") or 0) - amount, 2)}) \
