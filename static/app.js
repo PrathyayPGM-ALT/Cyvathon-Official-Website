@@ -38,7 +38,7 @@ function renderNav(active, user) {
     { label: "Home", href: "/" },
     { label: "Money",      items: [["/bank","Bank"], ["/exchange","Stock Exchange"], ["/loans","Loans"]] },
     { label: "Business",   items: [["/company","Companies"], ["/marketplace","Marketplace"]] },
-    { label: "Government",  items: [["/government","Cabinet"], ["/ministries","Ministries"], ["/legislature","Legislature"], ["/gazette","Gazette"], ["/court","Courts"], ["/voting","Elections"], ["/treasury","Treasury"], ["/admin","Admin Panel"]] },
+    { label: "Government",  items: [["/government","Cabinet"], ["/ministries","Ministries"], ["/legislature","Legislature"], ["/gazette","Gazette"], ["/court","Courts"], ["/fir","Report a Crime"], ["/voting","Elections"], ["/treasury","Treasury"], ["/admin","Admin Panel"]] },
     { label: "Community",   items: [["/citizens","Citizens"], ["/chat","Chat"], ["/news","News"], ["/rules","Rules"]] },
     { label: "ID Card", href: "/profile" },
   ];
@@ -72,7 +72,21 @@ function renderNav(active, user) {
     </nav></header>`;
   const host = document.getElementById("nav");
   if (host) host.outerHTML = html;
-  if (user) refreshNotifBadge();
+  if (user) { refreshNotifBadge(); revealAthena(); }
+}
+
+/* Reveal the classified Athena link only to agency members. */
+async function revealAthena() {
+  try {
+    const me = await api("/me");
+    if (!me.cia || document.getElementById("athenaNav")) return;
+    const links = document.querySelector(".nav-links");
+    if (!links) return;
+    const a = document.createElement("a");
+    a.id = "athenaNav"; a.href = "/athena"; a.title = "Athena (classified)";
+    a.style.color = "var(--gold)"; a.innerHTML = "🦉 Athena";
+    links.insertBefore(a, document.getElementById("navUser") || null);
+  } catch {}
 }
 
 async function refreshNotifBadge() {

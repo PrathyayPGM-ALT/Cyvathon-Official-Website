@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATHENA · Classified</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    :root{ --amber:#ffce56; }
+    .crest{ text-align:center; margin-bottom:.4rem; }
+    .crest .owl{ font-size:3rem; }
+    .classified{ display:inline-block; border:2px solid var(--red); color:var(--red);
+      font-weight:800; letter-spacing:3px; padding:.2rem 1rem; border-radius:6px;
+      transform:rotate(-3deg); font-size:.8rem; margin-bottom:1rem; }
+    .agcy{ text-align:center; }
+    .agcy h2{ letter-spacing:4px; background:linear-gradient(90deg,var(--amber),#fff0c0);
+      -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .agent{ display:flex; justify-content:space-between; align-items:center; gap:.6rem; flex-wrap:wrap;
+      padding:.6rem .9rem; background:var(--panel); border:1px solid var(--panel-border);
+      border-radius:10px; margin-bottom:.5rem; }
+    .rank{ font-size:.7rem; padding:.18rem .6rem; border-radius:20px; background:rgba(255,206,86,.15); color:var(--amber); }
+    .case{ padding:1.1rem 1.3rem; margin-bottom:1.1rem; background:var(--panel);
+      border:1px solid var(--panel-border); border-radius:14px; border-left:3px solid var(--amber); }
+    .st{ font-size:.7rem; padding:.18rem .6rem; border-radius:20px; text-transform:uppercase; letter-spacing:.5px; }
+    .st-filed{ background:rgba(148,162,180,.18); color:var(--muted); }
+    .st-investigating{ background:rgba(255,206,86,.15); color:var(--amber); }
+    .st-escalated{ background:rgba(88,196,255,.15); color:var(--accent); }
+    .st-closed{ background:rgba(0,214,160,.15); color:var(--green); }
+    .ev{ padding:.4rem .7rem; border-left:3px solid var(--accent); border-radius:0 7px 7px 0;
+      background:var(--bg-soft); margin-bottom:.4rem; font-size:.84rem; }
+    .note{ border-left-color:var(--red); }
+    .ev .a{ font-size:.7rem; color:var(--muted); }
+    .ops{ display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.7rem; }
+    .ops input{ width:auto; flex:1; min-width:120px; margin:0; padding:.45rem .7rem; }
+    .ops button{ width:auto; margin:0; padding:.45rem .9rem; font-size:.82rem; }
+    .deny{ text-align:center; padding:5rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+  <div class="wrap" style="max-width:820px;"><div id="view"></div></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, DIR=false;
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const ul=(n)=> !n ? '<span class="muted">unknown</span>' : `<a class="link" href="/profile?user=${encodeURIComponent(n)}">${esc(n)}</a>`;
+
+    async function load(){
+      let d;
+      try{ d = await api("/athena/data"); }
+      catch(e){
+        document.getElementById("view").innerHTML = `<div class="deny">
+          <div class="owl" style="font-size:3rem;">🦉</div>
+          <h2 style="letter-spacing:3px;">CLASSIFIED</h2>
+          <p class="muted">${esc(e.message)}</p>
+          <a class="link" href="/">← Return to civilian life</a></div>`;
+        return;
+      }
+      ME=d.me; DIR=d.is_director;
+
+      let html=`<div class="agcy">
+        <div class="crest"><span class="owl" style="font-size:3rem;">🦉</span></div>
+        <span class="classified">TOP SECRET · CLEARANCE: ${esc(d.my_rank)}</span>
+        <h2 class="section-title">ATHENA</h2>
+        <p class="section-sub">Cyvathon Intelligence Agency · "We see what others cannot."</p>
+      </div>`;
+
+      // Roster
+      html+=`<div class="panel" style="margin-bottom:1.6rem;"><h3><i class="fas fa-user-secret"></i> Agents (${d.roster.length})</h3>`;
+      html+=d.roster.map(a=>`<div class="agent">
+        <div>${ul(a.username)} <span class="rank">${esc(a.rank)}</span></div>
+        ${DIR?`<button class="danger" onclick="dismiss('${encodeURIComponent(a.username)}')">Dismiss</button>`:''}
+      </div>`).join("");
+      if(DIR){
+        html+=`<div class="ops" style="margin-top:.8rem;">
+          <input id="recU" placeholder="Recruit citizen…">
+          <select id="recR" style="width:auto;flex:0 0 130px;margin:0;padding:.45rem">${d.ranks.map(r=>`<option>${r}</option>`).join("")}</select>
+          <button onclick="recruit()">Recruit</button></div>
+          <p id="recMsg" class="small"></p>`;
+      }
+      html+=`</div>`;
+
+      // Case files
+      html+=`<h3 style="margin-bottom:1rem;"><i class="fas fa-folder-open"></i> Case Files (${d.firs.length})</h3>`;
+      if(!d.firs.length) html+=`<p class="muted">No reports filed.</p>`;
+      else html+=d.firs.map(f=>{
+        const ev=(f.log||[]).filter(x=>x.kind==='evidence');
+        const notes=(f.log||[]).filter(x=>x.kind==='note');
+        return `<div class="case">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;">
+            <b>#${f.id} · ${esc(f.title)}</b><span class="st st-${f.status}">${f.status}</span></div>
+          <p class="small">Complainant: ${ul(f.complainant)} · Accused: ${ul(f.accused)} ${f.assigned_to?`· Agent: ${ul(f.assigned_to)}`:''}</p>
+          ${f.description?`<p class="muted" style="font-size:.88rem;">${esc(f.description)}</p>`:''}
+          <p class="small" style="margin-top:.5rem;color:var(--accent)">Evidence (${ev.length})</p>
+          ${ev.map(e=>`<div class="ev">${esc(e.entry)}<div class="a">— ${esc(e.author)}</div></div>`).join("")||'<p class="small muted">None on file.</p>'}
+          ${notes.length?`<p class="small" style="margin-top:.4rem;color:var(--red)">Classified Notes (${notes.length})</p>`+notes.map(n=>`<div class="ev note">${esc(n.entry)}<div class="a">— ${esc(n.author)}</div></div>`).join(""):''}
+          ${f.status!=='escalated'?`<div class="ops">
+            ${f.status!=='investigating'?`<button onclick="op(${f.id},'assign')">Take Case</button>`:''}
+            <input id="nt${f.id}" placeholder="Add classified note…"><button class="ghost" onclick="addNote(${f.id})">Note</button>
+            <button onclick="op(${f.id},'status','closed')">Close</button>
+            <button class="danger" onclick="escalate(${f.id})">Escalate to Court</button>
+          </div>`:`<p class="small" style="margin-top:.5rem;"><a class="link" href="/court?case=${f.court_case_id}">In the Courts →</a></p>`}
+        </div>`;
+      }).join("");
+
+      document.getElementById("view").innerHTML=html;
+    }
+
+    async function recruit(){
+      const username=document.getElementById("recU").value.trim();
+      const rank=document.getElementById("recR").value;
+      const m=document.getElementById("recMsg");
+      try{ await api("/athena/recruit",{method:"POST",body:JSON.stringify({username,rank})});
+        m.style.color="var(--green)"; m.textContent="Recruited."; load();
+      }catch(e){ m.style.color="var(--red)"; m.textContent=e.message; }
+    }
+    async function dismiss(u){ try{ await api("/athena/dismiss",{method:"POST",body:JSON.stringify({username:decodeURIComponent(u)})}); load(); }catch(e){ alert(e.message); } }
+    async function op(id,action,status){ try{ await api("/athena/case",{method:"POST",body:JSON.stringify({fir_id:id,action,status})}); load(); }catch(e){ alert(e.message); } }
+    async function addNote(id){ const i=document.getElementById("nt"+id); const note=i.value.trim(); if(!note) return;
+      try{ await api("/athena/case",{method:"POST",body:JSON.stringify({fir_id:id,action:'note',note})}); i.value=""; load(); }catch(e){ alert(e.message); } }
+    async function escalate(id){ try{ await api("/athena/escalate",{method:"POST",body:JSON.stringify({fir_id:id})}); load(); }catch(e){ alert(e.message); } }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      renderNav("/athena", user);
+      load();
+    })();
+  </script>
+</body>
+</html>

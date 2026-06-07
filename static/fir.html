@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File a Report · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .fir{ padding:1.2rem 1.4rem; margin-bottom:1.1rem; background:var(--panel);
+      border:1px solid var(--panel-border); border-radius:14px; }
+    .st{ font-size:.7rem; padding:.18rem .6rem; border-radius:20px; text-transform:uppercase; letter-spacing:.5px; }
+    .st-filed{ background:rgba(148,162,180,.18); color:var(--muted); }
+    .st-investigating{ background:rgba(255,206,86,.15); color:var(--gold); }
+    .st-escalated{ background:rgba(88,196,255,.15); color:var(--accent); }
+    .st-closed{ background:rgba(0,214,160,.15); color:var(--green); }
+    .ev{ padding:.5rem .8rem; background:var(--bg-soft); border-left:3px solid var(--accent);
+      border-radius:0 8px 8px 0; margin-bottom:.45rem; font-size:.88rem; }
+    .ev .a{ font-size:.72rem; color:var(--muted); }
+    .ev-bar{ display:flex; gap:.5rem; margin-top:.5rem; } .ev-bar input{ flex:1; margin:0; } .ev-bar button{ width:auto; margin:0; padding:.5rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:760px;">
+    <h2 class="section-title"><i class="fas fa-file-shield"></i> File a Report (FIR)</h2>
+    <p class="section-sub">Report a crime to the authorities. Submit evidence to your report — Athena, the intelligence agency, may investigate and take it to the Courts.</p>
+
+    <div class="panel" style="margin-bottom:2rem;">
+      <h3><i class="fas fa-pen"></i> New Report</h3>
+      <input id="accused" placeholder="Accused citizen (optional)">
+      <input id="title" placeholder="What happened? (title)">
+      <textarea id="desc" rows="3" placeholder="Describe the incident…"></textarea>
+      <button onclick="file()">File Report</button>
+      <p id="fileMsg" class="small" style="text-align:center;"></p>
+    </div>
+
+    <h3 style="margin-bottom:1rem;">My Reports &amp; Cases Against Me</h3>
+    <div id="list"></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null;
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const ul=(n)=> !n ? '<span class="muted">unknown</span>' : `<a class="link" href="/profile?user=${encodeURIComponent(n)}">${esc(n)}</a>`;
+    const fmsg=(t,err=true)=>{const m=document.getElementById("fileMsg");m.textContent=t;m.style.color=err?"var(--red)":"var(--green)";};
+
+    async function load(){
+      const d=await api("/fir/list"); ME=d.me;
+      const host=document.getElementById("list");
+      if(!d.firs.length){ host.innerHTML=`<p class="muted">No reports on file.</p>`; return; }
+      host.innerHTML=d.firs.map(f=>{
+        const ev=(f.log||[]).filter(x=>x.kind==='evidence');
+        return `<div class="fir">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;">
+            <b>${esc(f.title)}</b><span class="st st-${f.status}">${f.status}</span></div>
+          <p class="small">Complainant: ${ul(f.complainant)} · Accused: ${ul(f.accused)}</p>
+          ${f.description?`<p class="muted" style="font-size:.9rem;">${esc(f.description)}</p>`:''}
+          <p class="small" style="margin-top:.6rem;color:var(--accent)"><i class="fas fa-paperclip"></i> Evidence (${ev.length})</p>
+          ${ev.map(e=>`<div class="ev">${esc(e.entry)}<div class="a">— ${esc(e.author)} · ${new Date(e.created_at).toLocaleString()}</div></div>`).join("")||'<p class="small muted">No evidence yet.</p>'}
+          ${f.status!=='escalated'&&f.status!=='closed'?`<div class="ev-bar"><input id="ev${f.id}" placeholder="Add evidence (text or link)…"><button onclick="addEv(${f.id})">Submit</button></div>`:''}
+          ${f.court_case_id?`<p class="small" style="margin-top:.5rem;"><a class="link" href="/court?case=${f.court_case_id}">View the court case →</a></p>`:''}
+        </div>`;
+      }).join("");
+    }
+
+    async function file(){
+      const accused=document.getElementById("accused").value.trim();
+      const title=document.getElementById("title").value.trim();
+      const description=document.getElementById("desc").value.trim();
+      if(!title) return fmsg("Add a title");
+      try{ await api("/fir/file",{method:"POST",body:JSON.stringify({accused,title,description})});
+        fmsg("Report filed.",false);
+        document.getElementById("accused").value=""; document.getElementById("title").value=""; document.getElementById("desc").value=""; load();
+      }catch(e){ fmsg(e.message); }
+    }
+    async function addEv(id){
+      const i=document.getElementById("ev"+id); const content=i.value.trim(); if(!content) return;
+      try{ await api("/fir/evidence",{method:"POST",body:JSON.stringify({fir_id:id,content})}); i.value=""; load(); }
+      catch(e){ alert(e.message); }
+    }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      renderNav("/fir", user);
+      load();
+    })();
+  </script>
+</body>
+</html>

@@ -191,6 +191,27 @@ def is_court_judge(user):
     return bool(g and g[0].get("holder") == user["username"])
 
 
+def cia_rank(user):
+    """Return the user's Athena rank, or None if not an agent."""
+    if not user:
+        return None
+    try:
+        r = supabase.table("cia_agents").select("rank").eq("username", user["username"]).execute().data
+        if r:
+            return r[0]["rank"]
+    except Exception:
+        return "Director" if is_treasury_admin(user) else None
+    return "Director" if is_treasury_admin(user) else None
+
+
+def is_cia(user):
+    return cia_rank(user) is not None
+
+
+def is_cia_director(user):
+    return is_treasury_admin(user) or cia_rank(user) == "Director"
+
+
 def get_treasury():
     res = supabase.table("treasury").select("*").eq("id", 1).execute()
     if res.data:
@@ -491,6 +512,14 @@ def admin_page():
 def ministries_page():
     return app.send_static_file("ministries.html")
 
+@app.route("/fir")
+def fir_page():
+    return app.send_static_file("fir.html")
+
+@app.route("/athena")
+def athena_page():
+    return app.send_static_file("athena.html")
+
 
 # ============================================================
 #  AUTH  (single account gates bank + chat + everything)
@@ -535,7 +564,7 @@ def register():
         "username": username, "balance": STARTING_GRANT, "pufb": STARTING_GRANT,
         "aquilines": STARTING_GRANT, "designation": designation, "company_id": None
     }
-    return jsonify(success=True, user=public_user(new_user), admin=is_treasury_admin(new_user))
+    return jsonify(success=True, user=public_user(new_user), admin=is_treasury_admin(new_user), cia=is_cia(new_user))
 
 
 @limiter.limit("10/min")
@@ -556,7 +585,7 @@ def login():
     session.permanent = True
     session["username"] = username
     user = apply_economics(user)
-    return jsonify(success=True, user=public_user(user), admin=is_treasury_admin(user))
+    return jsonify(success=True, user=public_user(user), admin=is_treasury_admin(user), cia=is_cia(user))
 
 
 @app.route("/logout", methods=["POST"])
@@ -570,7 +599,7 @@ def me():
     user = get_current_user()
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-    return jsonify(success=True, user=public_user(user), admin=is_treasury_admin(user))
+    return jsonify(success=True, user=public_user(user), admin=is_treasury_admin(user), cia=is_cia(user))
 
 
 @app.route("/users")
@@ -2375,6 +2404,202 @@ def ministries_delete():
         treasury_add(cybucks=m[0]["budget"], counterparty=m[0]["name"], kind="budget_return")
     supabase.table("ministries").delete().eq("id", mid).execute()
     return jsonify(success=True)
+
+
+# ============================================================
+#  FIRs  +  ATHENA  (Cyvathon Intelligence Agency)
+# ============================================================
+CIA_RANKS = ["Director", "Spy", "Detective", "Agent"]
+
+
+def _fir_log(fir_id, agent_view):
+    log = supabase.table("fir_log").select("*").eq("fir_id", fir_id) \
+        .order("created_at").execute().data or []
+    if not agent_view:
+        log = [x for x in log if not x.get("secret")]
+    return log
+
+
+# ----- Public: file FIRs & submit evidence -----
+@app.route("/fir/list")
+def fir_list():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    a = supabase.table("firs").select("*").eq("complainant", me).execute().data or []
+    b = supabase.table("firs").select("*").eq("accused", me).execute().data or []
+    seen, mine = set(), []
+    for f in sorted(a + b, key=lambda x: x["id"], reverse=True):
+        if f["id"] not in seen:
+            seen.add(f["id"]); mine.append({**f, "log": _fir_log(f["id"], agent_view=False)})
+    return jsonify(success=True, firs=mine, me=me)
+
+
+@limiter.limit("10/min")
+@app.route("/fir/file", methods=["POST"])
+def fir_file():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json()
+    accused = (d.get("accused") or "").strip()
+    title = (d.get("title") or "").strip()
+    description = (d.get("description") or "").strip()
+    if not title:
+        return jsonify(success=False, error="Give the report a title"), 400
+    if accused and not supabase.table("cybucks").select("id").eq("username", accused).execute().data:
+        return jsonify(success=False, error="No such citizen as the accused"), 404
+    fir = supabase.table("firs").insert({
+        "complainant": user["username"], "accused": accused or None,
+        "title": title, "description": description
+    }).execute().data[0]
+    if accused:
+        notify(accused, f"⚠️ An FIR naming you was filed: '{title}'.", "/fir")
+    return jsonify(success=True, fir=fir)
+
+
+@limiter.limit("20/min")
+@app.route("/fir/evidence", methods=["POST"])
+def fir_evidence():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json()
+    fid = d.get("fir_id")
+    content = (d.get("content") or "").strip()
+    if not content:
+        return jsonify(success=False, error="Describe the evidence or paste a link"), 400
+    f = supabase.table("firs").select("*").eq("id", fid).execute().data
+    if not f:
+        return jsonify(success=False, error="FIR not found"), 404
+    f = f[0]
+    allowed = user["username"] in (f["complainant"], f.get("accused")) or is_cia(user)
+    if not allowed:
+        return jsonify(success=False, error="You are not party to this report"), 403
+    supabase.table("fir_log").insert({
+        "fir_id": fid, "author": user["username"], "entry": content,
+        "kind": "evidence", "secret": False
+    }).execute()
+    return jsonify(success=True)
+
+
+# ----- Classified: Athena agency operations -----
+@app.route("/athena/data")
+def athena_data():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_cia(user):
+        return jsonify(success=False, error="CLASSIFIED — clearance denied"), 403
+    roster = supabase.table("cia_agents").select("*").order("created_at").execute().data or []
+    firs = supabase.table("firs").select("*").order("created_at", desc=True).limit(100).execute().data or []
+    firs = [{**f, "log": _fir_log(f["id"], agent_view=True)} for f in firs]
+    return jsonify(success=True, roster=roster, firs=firs,
+                   is_director=is_cia_director(user), my_rank=cia_rank(user),
+                   me=user["username"], ranks=CIA_RANKS)
+
+
+@limiter.limit("15/min")
+@app.route("/athena/recruit", methods=["POST"])
+def athena_recruit():
+    user = get_current_user(run_economics=False)
+    if not user or not is_cia_director(user):
+        return jsonify(success=False, error="Director clearance required"), 403
+    d = request.get_json()
+    username = (d.get("username") or "").strip()
+    rank = d.get("rank") if d.get("rank") in CIA_RANKS else "Agent"
+    if not supabase.table("cybucks").select("id").eq("username", username).execute().data:
+        return jsonify(success=False, error="No such citizen"), 404
+    existing = supabase.table("cia_agents").select("id").eq("username", username).execute().data
+    if existing:
+        supabase.table("cia_agents").update({"rank": rank}).eq("username", username).execute()
+    else:
+        supabase.table("cia_agents").insert({
+            "username": username, "rank": rank, "added_by": user["username"]
+        }).execute()
+        notify(username, "🦉 You have been recruited into Athena, the Cyvathon Intelligence Agency.", "/athena")
+    return jsonify(success=True)
+
+
+@limiter.limit("15/min")
+@app.route("/athena/dismiss", methods=["POST"])
+def athena_dismiss():
+    user = get_current_user(run_economics=False)
+    if not user or not is_cia_director(user):
+        return jsonify(success=False, error="Director clearance required"), 403
+    username = (request.get_json().get("username") or "").strip()
+    if username in TREASURY_ADMINS:
+        return jsonify(success=False, error="The Director cannot be removed"), 400
+    supabase.table("cia_agents").delete().eq("username", username).execute()
+    return jsonify(success=True)
+
+
+@limiter.limit("30/min")
+@app.route("/athena/case", methods=["POST"])
+def athena_case():
+    """Agents act on an FIR: assign, change status, or add a secret note."""
+    user = get_current_user(run_economics=False)
+    if not user or not is_cia(user):
+        return jsonify(success=False, error="Clearance denied"), 403
+    d = request.get_json()
+    fid = d.get("fir_id")
+    action = d.get("action")
+    f = supabase.table("firs").select("*").eq("id", fid).execute().data
+    if not f:
+        return jsonify(success=False, error="FIR not found"), 404
+
+    if action == "assign":
+        supabase.table("firs").update({"assigned_to": user["username"], "status": "investigating"}) \
+            .eq("id", fid).execute()
+    elif action == "status":
+        st = d.get("status")
+        if st in ("filed", "investigating", "closed"):
+            supabase.table("firs").update({"status": st}).eq("id", fid).execute()
+    elif action == "note":
+        note = (d.get("note") or "").strip()
+        if note:
+            supabase.table("fir_log").insert({
+                "fir_id": fid, "author": user["username"], "entry": note,
+                "kind": "note", "secret": True
+            }).execute()
+    else:
+        return jsonify(success=False, error="Unknown action"), 400
+    return jsonify(success=True)
+
+
+@limiter.limit("15/min")
+@app.route("/athena/escalate", methods=["POST"])
+def athena_escalate():
+    """Take an FIR to the Courts. Evidence must already be on file."""
+    user = get_current_user(run_economics=False)
+    if not user or not is_cia(user):
+        return jsonify(success=False, error="Clearance denied"), 403
+    fid = request.get_json().get("fir_id")
+    f = supabase.table("firs").select("*").eq("id", fid).execute().data
+    if not f:
+        return jsonify(success=False, error="FIR not found"), 404
+    f = f[0]
+    if f.get("court_case_id"):
+        return jsonify(success=False, error="Already before the Courts"), 400
+    if not f.get("accused"):
+        return jsonify(success=False, error="No accused named — cannot prosecute"), 400
+    evidence = [x for x in _fir_log(fid, agent_view=False) if x["kind"] == "evidence"]
+    if not evidence:
+        return jsonify(success=False, error="Evidence must be submitted before escalation"), 400
+
+    ev_text = "\n".join(f"• {e['entry']} (filed by {e['author']})" for e in evidence)
+    case = supabase.table("court_cases").insert({
+        "plaintiff": f["complainant"], "defendant": f["accused"],
+        "title": "FIR: " + f["title"],
+        "description": (f.get("description") or "") + "\n\nEVIDENCE ON RECORD:\n" + ev_text,
+        "claim": 0
+    }).execute().data[0]
+    supabase.table("firs").update({"status": "escalated", "court_case_id": case["id"]}) \
+        .eq("id", fid).execute()
+    notify(f["accused"], f"⚖️ FIR '{f['title']}' has been escalated to the Courts against you.", "/court")
+    notify(f["complainant"], f"Your report '{f['title']}' was taken to court by Athena.", "/court")
+    return jsonify(success=True, case_id=case["id"])
 
 
 # ============================================================

@@ -121,6 +121,7 @@
       ["/voting","fa-check-to-slot","Elections","Elect the Prime Minister"],
       ["/government","fa-landmark","Government","See the cabinet"],
       ["/ministries","fa-landmark-dome","Ministries","Departments, ministers & budgets"],
+      ["/fir","fa-file-shield","Report a Crime","File an FIR & submit evidence"],
       ["/profile","fa-id-card","ID Card","Your designation & record"],
       ["/treasury","fa-vault","Treasury","View the national vault"],
       ["/rules","fa-scroll","Rules","The laws of Cyvathon"],
@@ -132,7 +133,7 @@
       typeLoop();
       loadStats();
     }
-    function showHub(user, admin){
+    function showHub(user, admin, cia){
       document.getElementById("guestView").style.display = "none";
       document.getElementById("hubView").style.display = "block";
       document.getElementById("hubName").textContent = user.username;
@@ -141,9 +142,9 @@
         <div class="bal"><div class="v">${fmt(user.balance)}</div><div class="l">Cybucks</div></div>
         <div class="bal"><div class="v">${fmt(user.pufb)}</div><div class="l">Pufferbucks</div></div>
         <div class="bal"><div class="v">${fmt(user.aquilines)}</div><div class="l">Aquilines</div></div>`;
-      const cards = admin
-        ? [...HUB, ["/admin","fa-sliders","Admin Panel","Set national economic policy"]]
-        : HUB;
+      let cards = [...HUB];
+      if (cia) cards.push(["/athena","fa-eye","🦉 Athena","Cyvathon Intelligence Agency"]);
+      if (admin) cards.push(["/admin","fa-sliders","Admin Panel","Set national economic policy"]);
       document.getElementById("hubGrid").innerHTML = cards.map(([h,i,t,d]) =>
         `<a class="card hub-card" href="${h}"><i class="fas ${i} icon"></i><h3>${t}</h3><p>${d}</p></a>`).join("");
       loadHubNews();
@@ -195,7 +196,7 @@
       let me = null;
       try{ me = await api("/me"); }catch{}
       renderNav("/", me ? me.user : null);
-      if(me) showHub(me.user, me.admin); else showGuest();
+      if(me) showHub(me.user, me.admin, me.cia); else showGuest();
     })();
   </script>
 </body>
