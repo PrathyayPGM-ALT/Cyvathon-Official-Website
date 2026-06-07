@@ -1274,6 +1274,8 @@ def market_buy():
         buyer = supabase.table("cybucks").select("*").eq("username", user["username"]).execute().data[0]
         if (buyer.get(col) or 0) < item["price"]:
             return jsonify(success=False, error="Not enough " + item["currency"]), 400
+        if item["currency"] == "cybucks" and item["price"] > _available_cb(user["username"], buyer.get("balance")):
+            return jsonify(success=False, error="Borrowed Cybucks cannot be spent here. Repay your loan first."), 400
         # pay
         supabase.table("cybucks").update({col: round((buyer.get(col) or 0) - item["price"], 2)}) \
             .eq("username", user["username"]).execute()
