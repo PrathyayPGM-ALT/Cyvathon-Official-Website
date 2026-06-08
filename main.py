@@ -4,6 +4,8 @@ from supabase import create_client
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import logging
+import random
+import secrets
 from time import time
 from datetime import timedelta, datetime, timezone
 from flask_limiter import Limiter
@@ -550,6 +552,20 @@ def athena_page():
 # ============================================================
 #  AUTH  (single account gates bank + chat + everything)
 # ============================================================
+_captchas = {}   # token -> (answer:int, expires:float)
+
+@app.route("/captcha")
+def captcha():
+    a, b = random.randint(1, 9), random.randint(1, 9)
+    token = secrets.token_hex(8)
+    now = time()
+    _captchas[token] = (a + b, now + 600)
+    for t in list(_captchas):            # drop expired
+        if _captchas[t][1] < now:
+            _captchas.pop(t, None)
+    return jsonify(success=True, token=token, question=f"What is {a} + {b}?")
+
+
 @limiter.limit("5/min")
 @app.route("/register", methods=["POST"])
 def register():
@@ -557,11 +573,18 @@ def register():
     now = time()
     if now - recent_registrations.get(ip, 0) < REGISTRATION_LIMIT_WINDOW:
         return jsonify(success=False, error="Too many accounts"), 429
-    recent_registrations[ip] = now
 
     data = request.get_json()
     username = data.get("username", "").strip()
     password = data.get("password", "").strip()
+
+    # Human-check (anti-bot CAPTCHA)
+    entry = _captchas.pop(data.get("captcha_token", ""), None)
+    if (not entry or entry[1] < now
+            or str(data.get("captcha_answer", "")).strip() != str(entry[0])):
+        return jsonify(success=False, error="Incorrect human-check answer — try again"), 400
+
+    recent_registrations[ip] = now
 
     if not username or not password:
         return jsonify(success=False, error="Missing credentials"), 400

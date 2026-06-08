@@ -32,6 +32,10 @@
 
       <input id="username" placeholder="Username" autocomplete="username">
       <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+      <div id="captchaBox" style="display:none;">
+        <label class="small" id="captchaQ" style="color:var(--muted);"></label>
+        <input id="captchaA" placeholder="Human check — your answer" autocomplete="off">
+      </div>
       <button id="submitBtn" onclick="submit()">Login</button>
 
       <p id="msg" class="small" style="text-align:center;color:var(--red);"></p>
@@ -41,8 +45,13 @@
 
   <script src="/static/app.js"></script>
   <script>
-    let mode = "login";
+    let mode = "login", captchaToken = "";
     const $ = (id)=>document.getElementById(id);
+
+    async function loadCaptcha(){
+      try{ const d = await api("/captcha"); captchaToken = d.token; $("captchaQ").textContent = d.question; }
+      catch{ $("captchaQ").textContent = "Human check unavailable — try reloading."; }
+    }
 
     function setMode(m){
       mode = m;
@@ -50,7 +59,9 @@
       $("tabSignup").classList.toggle("active", m==="signup");
       $("title").textContent = m==="login" ? "Welcome Back" : "Become a Citizen";
       $("submitBtn").textContent = m==="login" ? "Login" : "Sign Up";
+      $("captchaBox").style.display = m==="signup" ? "block" : "none";
       $("msg").textContent = "";
+      if(m==="signup") loadCaptcha();
     }
 
     async function submit(){
@@ -58,10 +69,15 @@
       const password = $("password").value.trim();
       if(!username || !password){ $("msg").textContent = "Fill username and password"; return; }
       const path = mode==="login" ? "/login" : "/register";
+      const body = {username, password};
+      if(mode==="signup"){ body.captcha_token = captchaToken; body.captcha_answer = $("captchaA").value.trim(); }
       try{
-        await api(path, {method:"POST", body:JSON.stringify({username,password})});
+        await api(path, {method:"POST", body:JSON.stringify(body)});
         window.location.href = "/";          // go to dashboard hub
-      }catch(e){ $("msg").textContent = e.message; }
+      }catch(e){
+        $("msg").textContent = e.message;
+        if(mode==="signup"){ loadCaptcha(); $("captchaA").value=""; }  // refresh challenge
+      }
     }
 
     document.addEventListener("keydown", e=>{ if(e.key==="Enter") submit(); });
