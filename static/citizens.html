@@ -104,7 +104,7 @@
         const d = await api("/dm/"+encodeURIComponent(current));
         const box = document.getElementById("dmBox"); if(!box) return;
         box.innerHTML = d.messages.length ? d.messages.map(m=>`
-          <div class="line ${m.sender===ME?'me':''}"><div class="bub">${esc(m.content)}</div></div>`).join("")
+          <div class="line ${m.sender===ME?'me':''}"><div class="bub">${renderRich(m.content)}</div></div>`).join("")
           : `<p class="empty">No messages yet — say hi!</p>`;
         box.scrollTop = box.scrollHeight;
       }catch{}

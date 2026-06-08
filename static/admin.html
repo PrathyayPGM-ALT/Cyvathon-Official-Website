@@ -53,6 +53,17 @@
 
       <button style="margin-top:1.4rem;" onclick="save()"><i class="fas fa-floppy-disk"></i> Save Policy</button>
       <p id="msg" class="small" style="text-align:center;"></p>
+
+      <div class="panel" style="margin-top:1.6rem;">
+        <h3><i class="fas fa-ban"></i> Security — Block IPs</h3>
+        <p class="small">Block an IP address from the entire site (use this to stop bots/abusers).</p>
+        <div class="row"><input id="blockIp" placeholder="IP address"><input id="blockReason" placeholder="Reason (optional)"></div>
+        <button class="danger" onclick="block()">Block IP</button>
+        <div id="blocked" style="margin-top:1rem;"></div>
+        <h3 style="margin-top:1.6rem;"><i class="fas fa-user-clock"></i> Recent Signups &amp; their IPs</h3>
+        <div id="signups" style="max-height:300px;overflow-y:auto;"></div>
+        <p id="secMsg" class="small" style="text-align:center;"></p>
+      </div>
     </div>
 
     <div id="deny" class="deny" style="display:none;">
@@ -81,6 +92,34 @@
       }catch(e){ msg(e.message); }
     }
 
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const secMsg=(t,err=true)=>{const m=document.getElementById("secMsg");m.textContent=t;m.style.color=err?"var(--red)":"var(--green)";};
+
+    async function loadSecurity(){
+      try{
+        const d=await api("/admin/security");
+        document.getElementById("blocked").innerHTML = d.blocked.length
+          ? d.blocked.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .2rem;border-bottom:1px solid rgba(255,255,255,.06);">
+              <span><b>${esc(b.ip)}</b> <span class="small muted">${esc(b.reason)||''}</span></span>
+              <button class="ghost" style="width:auto;margin:0;padding:.3rem .8rem;font-size:.8rem;" onclick="unblock('${esc(b.ip)}')">Unblock</button></div>`).join("")
+          : `<p class="small muted">No blocked IPs.</p>`;
+        document.getElementById("signups").innerHTML = d.signups.map(s=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem .2rem;border-bottom:1px solid rgba(255,255,255,.06);font-size:.88rem;">
+            <span>${esc(s.username)} <span class="small muted">${esc(s.reg_ip)||'—'}</span></span>
+            ${s.reg_ip?`<button class="danger" style="width:auto;margin:0;padding:.3rem .8rem;font-size:.78rem;" onclick="quickBlock('${esc(s.reg_ip)}','${esc(s.username)}')">Block IP</button>`:''}
+          </div>`).join("");
+      }catch{}
+    }
+    async function block(){
+      const ip=document.getElementById("blockIp").value.trim(); const reason=document.getElementById("blockReason").value.trim();
+      if(!ip) return secMsg("Enter an IP");
+      try{ await api("/admin/block",{method:"POST",body:JSON.stringify({ip,reason})}); secMsg("Blocked.",false);
+        document.getElementById("blockIp").value=""; document.getElementById("blockReason").value=""; loadSecurity(); }
+      catch(e){ secMsg(e.message); }
+    }
+    async function quickBlock(ip,who){ try{ await api("/admin/block",{method:"POST",body:JSON.stringify({ip,reason:"signup: "+who})}); loadSecurity(); }catch(e){ secMsg(e.message); } }
+    async function unblock(ip){ try{ await api("/admin/unblock",{method:"POST",body:JSON.stringify({ip})}); loadSecurity(); }catch(e){ secMsg(e.message); } }
+
     (async function(){
       const user=await requireAuth(); if(!user) return;
       renderNav("/admin", user);
@@ -88,6 +127,7 @@
         const r=await api("/admin/config");
         document.getElementById("panel").style.display="block";
         fill(r.config);
+        loadSecurity();
       }catch(e){
         document.getElementById("deny").style.display="block";
       }

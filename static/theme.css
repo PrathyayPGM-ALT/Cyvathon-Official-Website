@@ -132,6 +132,7 @@ button.ghost:hover{ background:rgba(88,196,255,.1); }
 .bal .v{ font-size:1.65rem; font-weight:800; color:var(--accent); letter-spacing:-.5px; }
 .bal .l{ font-size:.74rem; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px; margin-top:.2rem; }
 
+.chat-img{ max-width:220px; max-height:220px; border-radius:8px; margin:.2rem 0; display:block; }
 .small{ font-size:13px; color:var(--muted); margin-top:8px; }
 .muted{ color:var(--muted); }
 a.link{ color:var(--accent); text-decoration:none; font-weight:500; }

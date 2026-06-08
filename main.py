@@ -134,6 +134,31 @@ def handle_any_error(e):
 
 
 # ============================================================
+#  IP BLOCKING  (admin can ban abusive IPs)
+# ============================================================
+def client_ip():
+    fwd = request.headers.get("X-Forwarded-For", "")
+    return (fwd.split(",")[0].strip() if fwd else request.remote_addr) or "unknown"
+
+
+BLOCKED_IPS = set()
+
+def load_blocked_ips():
+    global BLOCKED_IPS
+    try:
+        rows = supabase.table("blocked_ips").select("ip").execute().data or []
+        BLOCKED_IPS = {r["ip"] for r in rows}
+    except Exception as e:
+        logging.warning("blocked-IP load skipped: %s", e)
+
+
+@app.before_request
+def _enforce_ip_block():
+    if BLOCKED_IPS and client_ip() in BLOCKED_IPS:
+        return jsonify(success=False, error="Your IP address has been blocked from Cyvathon."), 403
+
+
+# ============================================================
 #  HELPERS
 # ============================================================
 def refresh_config():
@@ -154,7 +179,8 @@ def refresh_config():
         logging.warning("config load skipped (using defaults): %s", e)
 
 
-refresh_config()   # load policy at startup
+refresh_config()    # load policy at startup
+load_blocked_ips()  # load IP blocklist at startup
 
 
 def _now():
@@ -527,11 +553,11 @@ def athena_page():
 @limiter.limit("5/min")
 @app.route("/register", methods=["POST"])
 def register():
-    client_ip = request.remote_addr
+    ip = client_ip()
     now = time()
-    if now - recent_registrations.get(client_ip, 0) < REGISTRATION_LIMIT_WINDOW:
+    if now - recent_registrations.get(ip, 0) < REGISTRATION_LIMIT_WINDOW:
         return jsonify(success=False, error="Too many accounts"), 429
-    recent_registrations[client_ip] = now
+    recent_registrations[ip] = now
 
     data = request.get_json()
     username = data.get("username", "").strip()
@@ -555,6 +581,7 @@ def register():
         "designation": designation,
         "last_tax":    _now().isoformat(),
         "last_salary": _now().isoformat(),
+        "reg_ip":      ip,
     }).execute()
     add_record(username, "Granted citizenship of Cyvathon with 100 CB / 100 PUFB / 100 AQ.")
     session.permanent = True
@@ -2686,6 +2713,51 @@ def admin_config_set():
 
 
 # ============================================================
+#  ADMIN — SECURITY (IP blocking)
+# ============================================================
+@app.route("/admin/security")
+def admin_security():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    blocked = supabase.table("blocked_ips").select("*").order("created_at", desc=True).execute().data or []
+    signups = supabase.table("cybucks").select("username,reg_ip,created_at") \
+        .order("created_at", desc=True).limit(40).execute().data or []
+    return jsonify(success=True, blocked=blocked, signups=signups)
+
+
+@limiter.limit("30/min")
+@app.route("/admin/block", methods=["POST"])
+def admin_block():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json()
+    ip = (d.get("ip") or "").strip()
+    reason = (d.get("reason") or "").strip()
+    if not ip:
+        return jsonify(success=False, error="Enter an IP"), 400
+    try:
+        supabase.table("blocked_ips").upsert({"ip": ip, "reason": reason}).execute()
+    except Exception:
+        supabase.table("blocked_ips").insert({"ip": ip, "reason": reason}).execute()
+    load_blocked_ips()
+    return jsonify(success=True)
+
+
+@limiter.limit("30/min")
+@app.route("/admin/unblock", methods=["POST"])
+def admin_unblock():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    ip = (request.get_json().get("ip") or "").strip()
+    supabase.table("blocked_ips").delete().eq("ip", ip).execute()
+    load_blocked_ips()
+    return jsonify(success=True)
+
+
+# ============================================================
 #  ECONOMY STATS  (public)
 # ============================================================
 @app.route("/economy")
@@ -2784,8 +2856,123 @@ def get_messages():
     if since_id is not None:
         query = query.gt("id", since_id)
     res = query.limit(50).execute()
-    public = [m for m in res.data if m["recipient"] is None]
+    public = [m for m in res.data if m["recipient"] is None and not m.get("group_id")]
     return jsonify(success=True, messages=public)
+
+
+# ----- Group chats -----
+def _group_member(group_id, username):
+    r = supabase.table("chat_group_members").select("id").eq("group_id", group_id) \
+        .eq("username", username).execute().data
+    return bool(r)
+
+
+@app.route("/groups")
+def groups_list():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    mine = supabase.table("chat_group_members").select("group_id") \
+        .eq("username", user["username"]).execute().data or []
+    ids = [m["group_id"] for m in mine]
+    groups = []
+    for gid in ids:
+        g = supabase.table("chat_groups").select("*").eq("id", gid).execute().data
+        if g:
+            members = supabase.table("chat_group_members").select("username") \
+                .eq("group_id", gid).execute().data or []
+            groups.append({**g[0], "members": [m["username"] for m in members]})
+    groups.sort(key=lambda x: x["id"])
+    return jsonify(success=True, groups=groups, me=user["username"])
+
+
+@limiter.limit("10/min")
+@app.route("/groups", methods=["POST"])
+def groups_create():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json()
+    name = (d.get("name") or "").strip()
+    members = [m.strip() for m in (d.get("members") or []) if m and m.strip()]
+    if not name:
+        return jsonify(success=False, error="Name the group"), 400
+    g = supabase.table("chat_groups").insert({"name": name, "owner": user["username"]}).execute().data[0]
+    roster = set(members) | {user["username"]}
+    for m in roster:
+        if supabase.table("cybucks").select("id").eq("username", m).execute().data:
+            try:
+                supabase.table("chat_group_members").insert({"group_id": g["id"], "username": m}).execute()
+            except Exception:
+                pass
+            if m != user["username"]:
+                notify(m, f"You were added to the group '{name}'.", "/chat")
+    return jsonify(success=True, group=g)
+
+
+@limiter.limit("20/min")
+@app.route("/groups/add", methods=["POST"])
+def groups_add():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json()
+    gid, username = d.get("group_id"), (d.get("username") or "").strip()
+    g = supabase.table("chat_groups").select("*").eq("id", gid).execute().data
+    if not g:
+        return jsonify(success=False, error="Group not found"), 404
+    if not _group_member(gid, user["username"]):
+        return jsonify(success=False, error="You're not in this group"), 403
+    if not supabase.table("cybucks").select("id").eq("username", username).execute().data:
+        return jsonify(success=False, error="No such citizen"), 404
+    try:
+        supabase.table("chat_group_members").insert({"group_id": gid, "username": username}).execute()
+        notify(username, f"You were added to the group '{g[0]['name']}'.", "/chat")
+    except Exception:
+        pass
+    return jsonify(success=True)
+
+
+@limiter.limit("20/min")
+@app.route("/groups/leave", methods=["POST"])
+def groups_leave():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    gid = request.get_json().get("group_id")
+    supabase.table("chat_group_members").delete().eq("group_id", gid) \
+        .eq("username", user["username"]).execute()
+    return jsonify(success=True)
+
+
+@limiter.limit("90 per minute")
+@app.route("/groups/<int:gid>/messages", methods=["GET"])
+def group_messages(gid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not _group_member(gid, user["username"]):
+        return jsonify(success=False, error="You're not in this group"), 403
+    res = supabase.table("messages").select("*").eq("group_id", gid) \
+        .order("id").limit(80).execute().data or []
+    return jsonify(success=True, messages=res, me=user["username"])
+
+
+@limiter.limit("60 per minute")
+@app.route("/groups/<int:gid>/messages", methods=["POST"])
+def group_send(gid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not _group_member(gid, user["username"]):
+        return jsonify(success=False, error="You're not in this group"), 403
+    content = (request.get_json().get("content") or "").strip()
+    if not content:
+        return jsonify(success=False, error="Empty message"), 400
+    supabase.table("messages").insert({
+        "sender": user["username"], "recipient": None, "group_id": gid, "content": content
+    }).execute()
+    return jsonify(success=True)
 
 
 # ============================================================
