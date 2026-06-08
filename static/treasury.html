@@ -109,7 +109,7 @@
   <script>
     const ORDER = ["cybucks","pufb","aquilines"];
     const LABEL = { cybucks:"Cybucks", pufb:"Pufferbucks", aquilines:"Aquilines" };
-    const CBVAL = { cybucks:1, pufb:0.2, aquilines:0.02 };
+    const CBVAL = { cybucks:1, pufb:1, aquilines:0.1 };
 
     function curCards(host, data, opts={}){
       document.getElementById(host).innerHTML = ORDER.map(k=>{

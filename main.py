@@ -20,7 +20,7 @@ recent_registrations = {}
 REGISTRATION_LIMIT_WINDOW = 90   # min seconds between registrations from one IP
 
 # --- Economy constants -------------------------------------
-PUFB_PER_CYBUCK      = 5        # 5 Pufferbucks  = 1 Cybuck
+PUFB_PER_CYBUCK      = 1        # Treaty peg: 1 Pufferbuck = 1 Cybuck
 AQUILINES_PER_PUFB   = 10       # 10 Aquilines   = 1 Pufferbuck
 # Value of one unit expressed in Cybucks:
 CYBUCK_VALUE = {
@@ -769,7 +769,7 @@ def transfer():
 @app.route("/convert", methods=["POST"])
 def convert():
     """Convert between cybucks / pufb / aquilines.
-       1 Cybuck = 5 Pufferbucks = 50 Aquilines."""
+       1 Cybuck = 1 Pufferbuck = 10 Aquilines."""
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
