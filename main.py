@@ -408,6 +408,8 @@ def get_current_user(run_economics=True):
     if not result.data:
         return None
     user = result.data[0]
+    if user.get("banned"):        # banned accounts are logged out everywhere
+        return None
     if run_economics:
         user = apply_economics(user)
     return user
@@ -629,6 +631,8 @@ def login():
         return jsonify(success=False, error="User not found"), 404
 
     user = res.data[0]
+    if user.get("banned"):
+        return jsonify(success=False, error="This account has been banned from Cyvathon."), 403
     if not check_password_hash(user["password"], password):
         return jsonify(success=False, error="Incorrect password"), 401
 
@@ -2744,9 +2748,51 @@ def admin_security():
     if not user or not is_treasury_admin(user):
         return jsonify(success=False, error="President only"), 403
     blocked = supabase.table("blocked_ips").select("*").order("created_at", desc=True).execute().data or []
-    signups = supabase.table("cybucks").select("username,reg_ip,created_at") \
+    signups = supabase.table("cybucks").select("username,reg_ip,created_at,banned") \
         .order("created_at", desc=True).limit(40).execute().data or []
-    return jsonify(success=True, blocked=blocked, signups=signups)
+    banned = supabase.table("cybucks").select("username,reg_ip").eq("banned", True).execute().data or []
+    return jsonify(success=True, blocked=blocked, signups=signups, banned=banned)
+
+
+@limiter.limit("30/min")
+@app.route("/admin/block_user", methods=["POST"])
+def admin_block_user():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json()
+    target = (d.get("username") or "").strip()
+    reason = (d.get("reason") or "").strip() or ("Banned citizen: " + target)
+    if target in TREASURY_ADMINS:
+        return jsonify(success=False, error="You cannot ban the President"), 400
+    row = supabase.table("cybucks").select("reg_ip").eq("username", target).execute().data
+    if not row:
+        return jsonify(success=False, error="No such citizen"), 404
+
+    supabase.table("cybucks").update({"banned": True}).eq("username", target).execute()
+    ip = row[0].get("reg_ip")
+    if ip:
+        try:
+            supabase.table("blocked_ips").upsert({"ip": ip, "reason": reason}).execute()
+        except Exception:
+            supabase.table("blocked_ips").insert({"ip": ip, "reason": reason}).execute()
+        load_blocked_ips()
+    return jsonify(success=True, ip_blocked=bool(ip), ip=ip)
+
+
+@limiter.limit("30/min")
+@app.route("/admin/unban", methods=["POST"])
+def admin_unban():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    target = (request.get_json().get("username") or "").strip()
+    row = supabase.table("cybucks").select("reg_ip").eq("username", target).execute().data
+    supabase.table("cybucks").update({"banned": False}).eq("username", target).execute()
+    if row and row[0].get("reg_ip"):
+        supabase.table("blocked_ips").delete().eq("ip", row[0]["reg_ip"]).execute()
+        load_blocked_ips()
+    return jsonify(success=True)
 
 
 @limiter.limit("30/min")
