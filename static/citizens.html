@@ -53,7 +53,7 @@
 
   <script src="/static/app.js"></script>
   <script>
-    let ME=null, ALL=[], current=null, poll=null;
+    let ME=null, ALL=[], current=null, poll=null, lastDmId=0;
     const qs = new URLSearchParams(location.search);
     const esc = (s)=>(s||"").replace(/</g,"&lt;");
 
@@ -78,7 +78,7 @@
     async function openDM(encName){
       const name = decodeURIComponent(encName);
       if(name === ME){ location.href = "/profile"; return; }
-      current = name;
+      current = name; lastDmId = 0;
       renderDir();
       document.getElementById("dmEmpty").style.display="none";
       const view = document.getElementById("dmView");
@@ -101,12 +101,21 @@
     async function loadThread(){
       if(!current) return;
       try{
-        const d = await api("/dm/"+encodeURIComponent(current));
+        const d = await api("/dm/"+encodeURIComponent(current)+(lastDmId?`?since_id=${lastDmId}`:""));
         const box = document.getElementById("dmBox"); if(!box) return;
-        box.innerHTML = d.messages.length ? d.messages.map(m=>`
-          <div class="line ${m.sender===ME?'me':''}"><div class="bub">${renderRich(m.content)}</div></div>`).join("")
-          : `<p class="empty">No messages yet — say hi!</p>`;
-        box.scrollTop = box.scrollHeight;
+        if(!lastDmId && !d.messages.length){ box.innerHTML=`<p class="empty">No messages yet — say hi!</p>`; return; }
+        const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+        let added=false;
+        d.messages.forEach(m=>{
+          if(m.id<=lastDmId) return;
+          lastDmId=Math.max(lastDmId,m.id);
+          if(box.querySelector(".empty")) box.innerHTML="";
+          const div=document.createElement("div");
+          div.className="line"+(m.sender===ME?" me":"");
+          div.innerHTML=`<div class="bub">${renderRich(m.content)}</div>`;
+          box.appendChild(div); added=true;
+        });
+        if(added && nearBottom) box.scrollTop=box.scrollHeight;
       }catch{}
     }
 

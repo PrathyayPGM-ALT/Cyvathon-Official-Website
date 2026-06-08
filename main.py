@@ -2891,10 +2891,13 @@ def dm_thread(username):
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     me = user["username"]
-    sent = supabase.table("messages").select("*").eq("sender", me) \
-        .eq("recipient", username).order("id").limit(200).execute().data or []
-    recv = supabase.table("messages").select("*").eq("sender", username) \
-        .eq("recipient", me).order("id").limit(200).execute().data or []
+    since_id = request.args.get("since_id", type=int)
+    sq = supabase.table("messages").select("*").eq("sender", me).eq("recipient", username)
+    rq = supabase.table("messages").select("*").eq("sender", username).eq("recipient", me)
+    if since_id is not None:
+        sq = sq.gt("id", since_id); rq = rq.gt("id", since_id)
+    sent = sq.order("id").limit(200).execute().data or []
+    recv = rq.order("id").limit(200).execute().data or []
     msgs = sorted(sent + recv, key=lambda m: m["id"])
     return jsonify(success=True, messages=msgs, me=me)
 
@@ -3031,8 +3034,11 @@ def group_messages(gid):
         return jsonify(success=False, error="Not logged in"), 401
     if not _group_member(gid, user["username"]):
         return jsonify(success=False, error="You're not in this group"), 403
-    res = supabase.table("messages").select("*").eq("group_id", gid) \
-        .order("id").limit(80).execute().data or []
+    since_id = request.args.get("since_id", type=int)
+    q = supabase.table("messages").select("*").eq("group_id", gid).order("id")
+    if since_id is not None:
+        q = q.gt("id", since_id)
+    res = q.limit(80).execute().data or []
     return jsonify(success=True, messages=res, me=user["username"])
 
 

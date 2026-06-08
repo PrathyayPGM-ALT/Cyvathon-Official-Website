@@ -71,7 +71,7 @@
 
   <script src="/static/app.js"></script>
   <script>
-    let ME=null, channel={type:"public"}, groups=[], poll=null;
+    let ME=null, channel={type:"public"}, groups=[], poll=null, lastId=0;
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const EMOJIS = "😀 😂 😍 😎 😭 😡 👍 👎 🙏 🔥 🎉 💀 🤖 👑 ⚖️ 💰 🦉 🚀 ❤️ ✅ ❌ 🤔 😱 🫡 🐐".split(" ");
 
@@ -99,25 +99,37 @@
       renderChannels(); restartPoll();
     }
 
-    async function loadMessages(){
+    function chUrl(since){
+      const base = channel.type==="public" ? "/messages" : `/groups/${channel.id}/messages`;
+      return base + (since ? `?since_id=${since}` : "");
+    }
+    // Incremental: only fetch & APPEND new messages, so existing GIFs/images
+    // are never re-rendered (the old code rebuilt everything every poll).
+    async function loadMessages(full){
+      const box=document.getElementById("box");
+      if(full){ box.innerHTML=""; lastId=0; }
       try{
-        const url = channel.type==="public" ? "/messages" : `/groups/${channel.id}/messages`;
-        const d = await api(url);
-        const box=document.getElementById("box");
-        box.innerHTML=(d.messages||[]).map(m=>`
-          <div class="ln ${m.sender===ME?'me':''}">
-            <div class="sender">${userLink(m.sender)}</div>
-            <div class="bub">${renderRich(m.content)}</div></div>`).join("");
-        box.scrollTop=box.scrollHeight;
+        const d = await api(chUrl(lastId));
+        const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+        let added=false;
+        (d.messages||[]).forEach(m=>{
+          if(m.id<=lastId) return;
+          lastId=Math.max(lastId,m.id);
+          const div=document.createElement("div");
+          div.className="ln"+(m.sender===ME?" me":"");
+          div.innerHTML=`<div class="sender">${userLink(m.sender)}</div><div class="bub">${renderRich(m.content)}</div>`;
+          box.appendChild(div); added=true;
+        });
+        if(added && (full || nearBottom)) box.scrollTop=box.scrollHeight;
       }catch(e){ if(/not in this group|logged in/i.test(e.message)) openPublic(); }
     }
-    function restartPoll(){ loadMessages(); if(poll) clearInterval(poll); poll=setInterval(loadMessages,1800); }
+    function restartPoll(){ loadMessages(true); if(poll) clearInterval(poll); poll=setInterval(()=>loadMessages(false),2500); }
 
     async function send(){
       const i=document.getElementById("msg"); const content=i.value.trim(); if(!content) return;
       i.value="";
       const url = channel.type==="public" ? "/messages" : `/groups/${channel.id}/messages`;
-      try{ await api(url,{method:"POST",body:JSON.stringify({content})}); loadMessages(); }
+      try{ await api(url,{method:"POST",body:JSON.stringify({content})}); loadMessages(false); }
       catch(e){ alert(e.message); }
     }
 
