@@ -193,8 +193,7 @@
     }
 
     (async function init(){
-      let me = null;
-      try{ me = await api("/me"); }catch{}
+      const me = await fetchMe();
       renderNav("/", me ? me.user : null);
       if(me) showHub(me.user, me.admin, me.cia); else showGuest();
     })();

@@ -295,10 +295,19 @@ def log_txn(kind, from_party, to_party, amount, currency, detail=""):
         logging.warning("txn log failed: %s", ex)
 
 
+_econ_seen = {}          # username -> last full-run timestamp
+ECON_MIN_INTERVAL = 60   # seconds; tax/salary are daily/weekly so this is harmless
+
 def apply_economics(user):
     """Run economics, but never let a failure (e.g. a missing table/column
-    before schema.sql has been applied) break login or page loads."""
+    before schema.sql has been applied) break login or page loads.
+    Throttled so rapid page-loads don't re-hit the DB every time."""
     try:
+        username = (user or {}).get("username")
+        if username:
+            if time() - _econ_seen.get(username, 0) < ECON_MIN_INTERVAL:
+                return user            # ran very recently — skip the heavy checks
+            _econ_seen[username] = time()
         return _run_economics(user)
     except Exception as e:
         logging.exception("economics skipped for %s: %s",
