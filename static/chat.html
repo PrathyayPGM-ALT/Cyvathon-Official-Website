@@ -7,95 +7,138 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
   <style>
-    .chat-layout{ display:grid; grid-template-columns:250px 1fr; gap:1.2rem; align-items:start;
-      max-width:1000px; margin:1.5rem auto; padding:0 1rem; }
-    @media(max-width:760px){ .chat-layout{ grid-template-columns:1fr; } }
-    .channels .ch{ display:flex; align-items:center; gap:.6rem; padding:.6rem .7rem; border-radius:10px;
-      cursor:pointer; transition:.15s; }
-    .channels .ch:hover{ background:rgba(88,196,255,.08); }
-    .channels .ch.active{ background:rgba(88,196,255,.14); border:1px solid rgba(88,196,255,.35); }
-    .channels h4{ color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:1px; margin:1rem 0 .4rem; }
-    #box{ height:52vh; overflow-y:auto; padding:.6rem; background:#0c111b; border-radius:12px;
-      border:1px solid var(--panel-border); }
-    .ln{ margin:.5rem 0; } .ln.me{ text-align:right; }
-    .sender{ font-size:.72rem; color:var(--accent); margin-bottom:2px; }
-    .bub{ display:inline-block; max-width:78%; text-align:left; padding:.5rem .8rem; border-radius:13px;
-      background:#1b222c; border:1px solid #2a3340; word-wrap:break-word; }
-    .ln.me .bub{ background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#06223a; border:none; }
-    .chat-img{ max-width:200px; max-height:200px; border-radius:8px; margin:.2rem 0; }
-    .toolbar{ display:flex; gap:.3rem; margin-top:.6rem; flex-wrap:wrap; align-items:center; }
-    .toolbar button{ width:auto; margin:0; padding:.4rem .7rem; font-size:.85rem;
-      background:var(--panel); color:var(--text); border:1px solid var(--panel-border); box-shadow:none; }
-    .toolbar button:hover{ border-color:var(--accent); color:var(--accent); }
-    .composer{ display:flex; gap:.5rem; margin-top:.5rem; }
-    .composer input{ flex:1; margin:0; } .composer .send{ width:auto; margin:0; padding:.7rem 1.3rem; }
-    .emoji-pop{ display:none; flex-wrap:wrap; gap:.2rem; max-width:280px; padding:.5rem; margin-top:.4rem;
-      background:#0e1320; border:1px solid var(--panel-border); border-radius:10px; }
+    .chat-wrap{ display:grid; grid-template-columns:260px 1fr; gap:1rem; max-width:1060px;
+      margin:1.2rem auto; padding:0 1rem; height:calc(100vh - 120px); }
+    @media(max-width:760px){ .chat-wrap{ grid-template-columns:1fr; height:auto; } }
+
+    /* sidebar */
+    .side{ display:flex; flex-direction:column; padding:1rem; overflow:hidden; }
+    .side h4{ color:var(--muted); font-size:.7rem; text-transform:uppercase; letter-spacing:1.2px; margin:.9rem .2rem .4rem; }
+    .chlist{ overflow-y:auto; flex:1; }
+    .ch{ display:flex; align-items:center; gap:.6rem; padding:.5rem .6rem; border-radius:10px;
+      cursor:pointer; transition:.15s; margin-bottom:.15rem; }
+    .ch:hover{ background:rgba(88,196,255,.08); }
+    .ch.active{ background:rgba(88,196,255,.14); }
+    .ch .ci{ width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center;
+      justify-content:center; font-size:.9rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .ch .cn{ font-weight:600; font-size:.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* main panel */
+    .main{ display:flex; flex-direction:column; padding:0; overflow:hidden; }
+    .chead{ display:flex; align-items:center; gap:.7rem; padding:1rem 1.2rem; border-bottom:1px solid var(--panel-border); }
+    .chead .hi{ width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); font-size:1.1rem; }
+    .chead h3{ margin:0; font-size:1.1rem; } .chead .sub{ font-size:.78rem; color:var(--muted); }
+    .chead .spacer{ flex:1; }
+
+    .feed{ flex:1; overflow-y:auto; padding:1.1rem 1.2rem; display:flex; flex-direction:column; gap:.85rem; }
+    .empty{ margin:auto; text-align:center; color:var(--muted); }
+    .empty i{ font-size:2.4rem; color:var(--accent); opacity:.6; }
+
+    .grp{ display:flex; gap:.65rem; align-items:flex-start; max-width:82%; }
+    .grp.me{ flex-direction:row-reverse; align-self:flex-end; }
+    .grp .av{ width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center;
+      justify-content:center; font-weight:700; font-size:.85rem; color:#06223a;
+      background:linear-gradient(135deg,#3a5772,#26384a); }
+    .grp.me .av{ background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .grp .body{ display:flex; flex-direction:column; gap:.2rem; min-width:0; }
+    .grp.me .body{ align-items:flex-end; }
+    .meta{ font-size:.72rem; color:var(--muted); padding:0 .3rem; }
+    .meta a{ color:var(--accent); font-weight:600; }
+    .meta .t{ margin-left:.35rem; opacity:.7; }
+    .bubble{ background:#1b232e; border:1px solid #2a3340; padding:.5rem .8rem; border-radius:14px;
+      word-wrap:break-word; overflow-wrap:anywhere; max-width:100%; line-height:1.45; }
+    .grp.me .bubble{ background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#06223a; border:none; }
+    .chat-img{ max-width:240px; max-height:240px; border-radius:10px; }
+
+    /* composer */
+    .composer-wrap{ padding:.7rem 1rem 1rem; border-top:1px solid var(--panel-border); }
+    .tools{ display:flex; gap:.25rem; margin-bottom:.5rem; }
+    .tools button{ width:34px; height:34px; padding:0; margin:0; border-radius:8px; font-size:.9rem;
+      background:var(--panel); color:var(--muted); border:1px solid var(--panel-border); box-shadow:none; }
+    .tools button:hover{ border-color:var(--accent); color:var(--accent); transform:none; }
+    .composer{ display:flex; gap:.5rem; align-items:center; }
+    .composer input{ flex:1; margin:0; border-radius:24px; padding:.7rem 1.1rem; }
+    .composer .send{ width:46px; height:46px; flex-shrink:0; border-radius:50%; margin:0; padding:0; }
+    .emoji-pop{ display:none; flex-wrap:wrap; gap:.15rem; max-width:300px; padding:.5rem; margin-bottom:.5rem;
+      background:#0e1320; border:1px solid var(--panel-border); border-radius:12px; }
     .emoji-pop.open{ display:flex; }
-    .emoji-pop span{ cursor:pointer; font-size:1.3rem; padding:.1rem .25rem; border-radius:6px; }
+    .emoji-pop span{ cursor:pointer; font-size:1.35rem; padding:.15rem .3rem; border-radius:7px; }
     .emoji-pop span:hover{ background:rgba(88,196,255,.15); }
   </style>
 </head>
 <body>
   <div id="nav"></div>
 
-  <div class="chat-layout">
-    <div class="panel channels">
+  <div class="chat-wrap">
+    <div class="panel side">
+      <button class="ghost" style="margin:0 0 .4rem;" onclick="newGroup()"><i class="fas fa-plus"></i> New Group</button>
       <h4>Channels</h4>
-      <div id="chList"></div>
-      <button class="ghost" style="margin-top:1rem;" onclick="newGroup()"><i class="fas fa-plus"></i> New Group</button>
+      <div class="chlist" id="chList"></div>
     </div>
 
-    <div class="panel">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
-        <h3 id="chTitle"><i class="fa-solid fa-landmark"></i> Public Square</h3>
+    <div class="panel main">
+      <div class="chead">
+        <div class="hi" id="chIcon"><i class="fa-solid fa-landmark"></i></div>
+        <div><h3 id="chTitle">Public Square</h3><div class="sub" id="chSub">Everyone in Cyvathon</div></div>
+        <div class="spacer"></div>
         <span id="chAction"></span>
       </div>
-      <div id="box"></div>
 
-      <div class="toolbar">
-        <button title="Bold" onclick="wrap('**','**')"><b>B</b></button>
-        <button title="Italic" onclick="wrap('*','*')"><i>I</i></button>
-        <button title="Underline" onclick="wrap('__','__')"><u>U</u></button>
-        <button title="Emoji" onclick="toggleEmoji()">😀</button>
-        <button title="GIF / Image" onclick="addGif()"><i class="fas fa-image"></i> GIF</button>
-      </div>
-      <div class="emoji-pop" id="emojiPop"></div>
+      <div class="feed" id="feed"></div>
 
-      <div class="composer">
-        <input id="msg" placeholder="Message…  (**bold** *italic* __underline__)">
-        <button class="send" onclick="send()"><i class="fa-solid fa-paper-plane"></i></button>
+      <div class="composer-wrap">
+        <div class="emoji-pop" id="emojiPop"></div>
+        <div class="tools">
+          <button title="Bold" onclick="wrap('**','**')"><b>B</b></button>
+          <button title="Italic" onclick="wrap('*','*')"><i>I</i></button>
+          <button title="Underline" onclick="wrap('__','__')"><u>U</u></button>
+          <button title="Emoji" onclick="toggleEmoji()">😀</button>
+          <button title="GIF / Image" onclick="addGif()"><i class="fas fa-image"></i></button>
+        </div>
+        <div class="composer">
+          <input id="msg" placeholder="Write a message…" autocomplete="off">
+          <button class="send" onclick="send()" title="Send"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
       </div>
     </div>
   </div>
 
   <script src="/static/app.js"></script>
   <script>
-    let ME=null, channel={type:"public"}, groups=[], poll=null, lastId=0;
+    let ME=null, channel={type:"public"}, groups=[], poll=null, lastId=0, _lastSender=null, _lastBody=null;
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
-    const EMOJIS = "😀 😂 😍 😎 😭 😡 👍 👎 🙏 🔥 🎉 💀 🤖 👑 ⚖️ 💰 🦉 🚀 ❤️ ✅ ❌ 🤔 😱 🫡 🐐".split(" ");
+    const tm=(iso)=>{ try{ return new Date(iso).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}); }catch{ return ""; } };
+    const EMOJIS = "😀 😂 😍 😎 😭 😡 👍 👎 🙏 🔥 🎉 💀 🤖 👑 ⚖️ 💰 🦉 🚀 ❤️ ✅ ❌ 🤔 😱 🫡 🐐 🎂 🍕 ⚽ 🎮 💡".split(" ");
 
     function renderChannels(){
       const el=document.getElementById("chList");
       let html=`<div class="ch ${channel.type==='public'?'active':''}" onclick="openPublic()">
-        <i class="fa-solid fa-landmark"></i> Public Square</div><h4>Groups</h4>`;
+        <div class="ci"><i class="fa-solid fa-landmark"></i></div><span class="cn">Public Square</span></div>
+        <h4>Your Groups</h4>`;
       html += groups.length ? groups.map(g=>`
         <div class="ch ${channel.type==='group'&&channel.id===g.id?'active':''}" onclick="openGroup(${g.id})">
-          <i class="fa-solid fa-user-group"></i> ${esc(g.name)}</div>`).join("")
-        : `<p class="small muted">No groups yet.</p>`;
+          <div class="ci">${esc(g.name[0].toUpperCase())}</div><span class="cn">${esc(g.name)}</span></div>`).join("")
+        : `<p class="small muted" style="padding:.2rem .4rem;">No groups yet — create one above.</p>`;
       el.innerHTML=html;
     }
-
     async function loadGroups(){ try{ const d=await api("/groups"); groups=d.groups; renderChannels(); }catch{} }
 
-    function openPublic(){ channel={type:"public"}; document.getElementById("chTitle").innerHTML='<i class="fa-solid fa-landmark"></i> Public Square';
-      document.getElementById("chAction").innerHTML=""; renderChannels(); restartPoll(); }
+    function openPublic(){
+      channel={type:"public"};
+      document.getElementById("chIcon").innerHTML='<i class="fa-solid fa-landmark"></i>';
+      document.getElementById("chTitle").textContent="Public Square";
+      document.getElementById("chSub").textContent="Everyone in Cyvathon";
+      document.getElementById("chAction").innerHTML="";
+      renderChannels(); restartPoll();
+    }
     function openGroup(id){
       const g=groups.find(x=>x.id===id); if(!g) return;
       channel={type:"group",id};
-      document.getElementById("chTitle").innerHTML=`<i class="fa-solid fa-user-group"></i> ${esc(g.name)}`;
-      document.getElementById("chAction").innerHTML=`<span class="small">${g.members.length} members</span>
-        <button class="ghost" style="width:auto;margin:0;padding:.3rem .8rem;font-size:.8rem;" onclick="addMember(${id})">Add</button>`;
+      document.getElementById("chIcon").textContent=g.name[0].toUpperCase();
+      document.getElementById("chTitle").textContent=g.name;
+      document.getElementById("chSub").textContent=`${g.members.length} member${g.members.length===1?"":"s"}`;
+      document.getElementById("chAction").innerHTML=`<button class="ghost" style="width:auto;margin:0;padding:.4rem .9rem;font-size:.82rem;" onclick="addMember(${id})"><i class="fas fa-user-plus"></i> Add</button>`;
       renderChannels(); restartPoll();
     }
 
@@ -103,23 +146,34 @@
       const base = channel.type==="public" ? "/messages" : `/groups/${channel.id}/messages`;
       return base + (since ? `?since_id=${since}` : "");
     }
-    // Incremental: only fetch & APPEND new messages, so existing GIFs/images
-    // are never re-rendered (the old code rebuilt everything every poll).
+
+    function appendMessage(m){
+      const box=document.getElementById("feed");
+      const ph=box.querySelector(".empty"); if(ph) ph.remove();   // clear placeholder
+      const mine = m.sender===ME;
+      if(m.sender!==_lastSender || !_lastBody){       // start a new grouped block
+        const grp=document.createElement("div");
+        grp.className="grp"+(mine?" me":"");
+        grp.innerHTML=`<div class="av">${esc((m.sender||"?")[0].toUpperCase())}</div>
+          <div class="body"><div class="meta">${mine?"You":userLink(m.sender)}<span class="t">${tm(m.created_at)}</span></div></div>`;
+        box.appendChild(grp);
+        _lastBody=grp.querySelector(".body"); _lastSender=m.sender;
+      }
+      const b=document.createElement("div");
+      b.className="bubble"; b.innerHTML=renderRich(m.content);
+      _lastBody.appendChild(b);
+    }
+
+    // Incremental: only fetch & append NEW messages so GIFs never reload.
     async function loadMessages(full){
-      const box=document.getElementById("box");
-      if(full){ box.innerHTML=""; lastId=0; }
+      const box=document.getElementById("feed");
+      if(full){ box.innerHTML=""; lastId=0; _lastSender=null; _lastBody=null; }
       try{
         const d = await api(chUrl(lastId));
-        const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+        const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 140;
         let added=false;
-        (d.messages||[]).forEach(m=>{
-          if(m.id<=lastId) return;
-          lastId=Math.max(lastId,m.id);
-          const div=document.createElement("div");
-          div.className="ln"+(m.sender===ME?" me":"");
-          div.innerHTML=`<div class="sender">${userLink(m.sender)}</div><div class="bub">${renderRich(m.content)}</div>`;
-          box.appendChild(div); added=true;
-        });
+        (d.messages||[]).forEach(m=>{ if(m.id<=lastId) return; lastId=Math.max(lastId,m.id); appendMessage(m); added=true; });
+        if(full && !added) box.innerHTML=`<div class="empty"><i class="fa-regular fa-comments"></i><p style="margin-top:.6rem;">No messages yet — say hi! 👋</p></div>`;
         if(added && (full || nearBottom)) box.scrollTop=box.scrollHeight;
       }catch(e){ if(/not in this group|logged in/i.test(e.message)) openPublic(); }
     }
@@ -127,7 +181,7 @@
 
     async function send(){
       const i=document.getElementById("msg"); const content=i.value.trim(); if(!content) return;
-      i.value="";
+      i.value=""; document.getElementById("emojiPop").classList.remove("open");
       const url = channel.type==="public" ? "/messages" : `/groups/${channel.id}/messages`;
       try{ await api(url,{method:"POST",body:JSON.stringify({content})}); loadMessages(false); }
       catch(e){ alert(e.message); }
@@ -144,7 +198,7 @@
       p.classList.toggle("open");
     }
     function ins(x){ const i=document.getElementById("msg"); i.value+=x; i.focus(); }
-    function addGif(){ const u=prompt("Paste a GIF or image URL (.gif / .png / .jpg):"); if(u) { document.getElementById("msg").value += " " + u.trim() + " "; } }
+    function addGif(){ const u=prompt("Paste a GIF or image URL (.gif / .png / .jpg):"); if(u){ document.getElementById("msg").value += " " + u.trim() + " "; document.getElementById("msg").focus(); } }
 
     async function newGroup(){
       const name=prompt("Group name:"); if(!name) return;
