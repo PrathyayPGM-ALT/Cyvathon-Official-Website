@@ -327,6 +327,18 @@ def get_treasury():
     return supabase.table("treasury").select("*").eq("id", 1).execute().data[0]
 
 
+# Short-TTL response cache: shields the database from request floods.
+_resp_cache = {}
+def cached_json(key, ttl, builder):
+    now = time()
+    hit = _resp_cache.get(key)
+    if hit and hit[0] > now:
+        return hit[1]
+    data = builder()
+    _resp_cache[key] = (now + ttl, data)
+    return data
+
+
 _gdp_cache = {"v": None, "t": 0}
 
 def compute_gdp():
@@ -2812,8 +2824,10 @@ def athena_escalate():
 # ============================================================
 @app.route("/gov")
 def gov():
-    res = supabase.table("government").select("*").order("rank").execute()
-    return jsonify(success=True, government=res.data or [])
+    def build():
+        res = supabase.table("government").select("*").order("rank").execute()
+        return {"success": True, "government": res.data or []}
+    return jsonify(cached_json("gov", 60, build))
 
 
 # ============================================================
@@ -2957,17 +2971,16 @@ def admin_unblock():
 # ============================================================
 @app.route("/economy")
 def economy():
-    t = get_treasury()
-    citizens = supabase.table("cybucks").select("id", count="exact").execute()
-    companies = supabase.table("companies").select("id", count="exact").execute()
-    return jsonify(
-        success=True,
-        gdp=compute_gdp(),
-        treasury=t["balance"],
-        citizens=citizens.count or 0,
-        companies=companies.count or 0,
-        rates={"pufb_per_cybuck": PUFB_PER_CYBUCK, "aquilines_per_pufb": AQUILINES_PER_PUFB}
-    )
+    def build():
+        t = get_treasury()
+        citizens = supabase.table("cybucks").select("id", count="exact").execute()
+        companies = supabase.table("companies").select("id", count="exact").execute()
+        return {
+            "success": True, "gdp": compute_gdp(), "treasury": t["balance"],
+            "citizens": citizens.count or 0, "companies": companies.count or 0,
+            "rates": {"pufb_per_cybuck": PUFB_PER_CYBUCK, "aquilines_per_pufb": AQUILINES_PER_PUFB},
+        }
+    return jsonify(cached_json("economy", 45, build))
 
 
 # ============================================================
