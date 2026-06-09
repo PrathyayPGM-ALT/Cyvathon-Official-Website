@@ -875,15 +875,14 @@ def transfer():
     if currency == "cybucks" and amount > _available_cb(user["username"], sender.get("balance")):
         return jsonify(success=False, error="Those Cybucks are from an unpaid loan and cannot be transferred. Repay your loan first."), 400
 
-    receiver_res = supabase.table("cybucks").select("*").eq("username", to_username).execute()
+    receiver_res = supabase.table("cybucks").select("id").eq("username", to_username).execute()
     if not receiver_res.data:
         return jsonify(success=False, error="User not found"), 404
-    receiver = receiver_res.data[0]
 
-    supabase.table("cybucks").update({col: round((sender.get(col) or 0) - amount, 2)}) \
-        .eq("username", user["username"]).execute()
-    supabase.table("cybucks").update({col: round((receiver.get(col) or 0) + amount, 2)}) \
-        .eq("username", to_username).execute()
+    # Atomic deduct (compare-and-swap) — blocks race-condition double-spend.
+    if not cas_adjust(user["username"], col, -amount):
+        return jsonify(success=False, error="Insufficient funds or a conflicting transfer — try again."), 400
+    cas_adjust(to_username, col, amount, allow_negative=True)
 
     log_txn("transfer", user["username"], to_username, amount, currency, "Bank transfer")
     notify(to_username, f"{user['username']} sent you {amount} {currency}.", "/bank")
@@ -915,13 +914,15 @@ def convert():
     scol, dcol = CURRENCY_COLUMN[src], CURRENCY_COLUMN[dst]
     if (user.get(scol) or 0) < amount:
         return jsonify(success=False, error="Insufficient funds"), 400
+    # Can't convert away borrowed Cybucks (would bypass the loan-lock).
+    if src == "cybucks" and amount > _available_cb(user["username"], user.get("balance")):
+        return jsonify(success=False, error="Borrowed Cybucks can't be converted. Repay your loan first."), 400
 
-    # Convert through cybuck value
     converted = round(amount * CYBUCK_VALUE[src] / CYBUCK_VALUE[dst], 2)
-    supabase.table("cybucks").update({
-        scol: round((user.get(scol) or 0) - amount, 2),
-        dcol: round((user.get(dcol) or 0) + converted, 2),
-    }).eq("username", user["username"]).execute()
+    # Atomic: deduct source first (CAS), then credit destination — no race double-mint.
+    if not cas_adjust(user["username"], scol, -amount):
+        return jsonify(success=False, error="Insufficient funds or a conflicting request — try again."), 400
+    cas_adjust(user["username"], dcol, converted, allow_negative=True)
 
     log_txn("convert", user["username"], user["username"], amount, src,
             f"Converted to {converted} {dst}")
@@ -1010,11 +1011,10 @@ def create_company():
     if exists.data:
         return jsonify(success=False, error="A company with that name already exists"), 400
 
-    # Charge the founding fee -> Treasury
-    supabase.table("cybucks").update({
-        "balance": round((user.get("balance") or 0) - COMPANY_FEE, 2),
-        "designation": "Founder"
-    }).eq("username", user["username"]).execute()
+    # Charge the founding fee -> Treasury (atomic deduct)
+    if not cas_adjust(user["username"], "balance", -COMPANY_FEE):
+        return jsonify(success=False, error="Insufficient funds or a conflicting request — try again."), 400
+    supabase.table("cybucks").update({"designation": "Founder"}).eq("username", user["username"]).execute()
     treasury_add(cybucks=COMPANY_FEE, counterparty=user["username"], kind="company_fee")
 
     company = supabase.table("companies").insert({
@@ -1050,10 +1050,28 @@ def _add_shares(username, company_id, delta):
         }).execute()
 
 
+def cas_adjust(username, col, delta, allow_negative=False):
+    """Atomically change a citizen's currency column by `delta` using
+    compare-and-swap, so concurrent requests can't double-spend (the update
+    only applies if the value is still what we read). Returns True on success."""
+    for _ in range(6):
+        row = supabase.table("cybucks").select(col).eq("username", username).execute().data
+        if not row:
+            return False
+        old = row[0].get(col) or 0
+        new = round(old + delta, 2)
+        if new < -1e-9 and not allow_negative:
+            return False                       # would overdraw — refuse
+        res = supabase.table("cybucks").update({col: new}) \
+            .eq("username", username).eq(col, old).execute()
+        if res.data:                           # update stuck (value was unchanged)
+            return True
+        # else another request changed it first — retry with fresh value
+    return False
+
+
 def _add_cash(username, delta):
-    r = supabase.table("cybucks").select("balance").eq("username", username).execute().data[0]
-    supabase.table("cybucks").update({"balance": round((r["balance"] or 0) + delta, 2)}) \
-        .eq("username", username).execute()
+    cas_adjust(username, "balance", delta, allow_negative=True)
 
 
 def _best_bid(company_id):
@@ -1262,7 +1280,8 @@ def exchange_order():
             return jsonify(success=False, error="Not enough CB to escrow this buy order"), 400
         if cost > _available_cb(user["username"], fresh.get("balance")):
             return jsonify(success=False, error="Borrowed Cybucks cannot be used to trade. Repay your loan first."), 400
-        _add_cash(user["username"], -cost)
+        if not cas_adjust(user["username"], "balance", -cost):
+            return jsonify(success=False, error="Insufficient funds or a conflicting order — try again."), 400
     else:
         if _holding_shares(user["username"], cid) < qty:
             return jsonify(success=False, error="You don't own that many shares"), 400
@@ -1465,9 +1484,9 @@ def market_buy():
             return jsonify(success=False, error="Not enough " + item["currency"]), 400
         if item["currency"] == "cybucks" and item["price"] > _available_cb(user["username"], buyer.get("balance")):
             return jsonify(success=False, error="Borrowed Cybucks cannot be spent here. Repay your loan first."), 400
-        # pay
-        supabase.table("cybucks").update({col: round((buyer.get(col) or 0) - item["price"], 2)}) \
-            .eq("username", user["username"]).execute()
+        # pay (atomic — prevents buying the same item twice via a race)
+        if not cas_adjust(user["username"], col, -item["price"]):
+            return jsonify(success=False, error="Insufficient funds or a conflicting purchase — try again."), 400
         if item.get("company_id"):
             _add_company_currency(item["company_id"], item["currency"], item["price"])
         else:
@@ -1487,11 +1506,7 @@ def market_buy():
 
 
 def _add_cash_currency(username, currency, delta):
-    col = CURRENCY_COLUMN[currency]
-    r = supabase.table("cybucks").select(col).eq("username", username).execute().data
-    if r:
-        supabase.table("cybucks").update({col: round((r[0].get(col) or 0) + delta, 2)}) \
-            .eq("username", username).execute()
+    cas_adjust(username, CURRENCY_COLUMN[currency], delta, allow_negative=True)
 
 
 @limiter.limit("20/min")
@@ -1745,11 +1760,12 @@ def savings_deposit():
         return jsonify(success=False, error="Not enough CB"), 400
     if amount > _available_cb(user["username"], user.get("balance")):
         return jsonify(success=False, error="Borrowed Cybucks cannot be moved to savings. Repay your loan first."), 400
-    upd = {"balance": round((user.get("balance") or 0) - amount, 2),
-           "savings": round((user.get("savings") or 0) + amount, 2)}
+    if not cas_adjust(user["username"], "balance", -amount):
+        return jsonify(success=False, error="Insufficient funds or a conflicting request — try again."), 400
+    cas_adjust(user["username"], "savings", amount, allow_negative=True)
     if not user.get("savings_updated"):
-        upd["savings_updated"] = _now().isoformat()
-    supabase.table("cybucks").update(upd).eq("username", user["username"]).execute()
+        supabase.table("cybucks").update({"savings_updated": _now().isoformat()}) \
+            .eq("username", user["username"]).execute()
     return jsonify(success=True)
 
 
@@ -1764,10 +1780,9 @@ def savings_withdraw():
         return jsonify(success=False, error="Enter a positive amount"), 400
     if (user.get("savings") or 0) < amount:
         return jsonify(success=False, error="Not enough in savings"), 400
-    supabase.table("cybucks").update({
-        "balance": round((user.get("balance") or 0) + amount, 2),
-        "savings": round((user.get("savings") or 0) - amount, 2)
-    }).eq("username", user["username"]).execute()
+    if not cas_adjust(user["username"], "savings", -amount):
+        return jsonify(success=False, error="Not enough in savings or a conflicting request — try again."), 400
+    cas_adjust(user["username"], "balance", amount, allow_negative=True)
     return jsonify(success=True)
 
 
@@ -1804,9 +1819,9 @@ def bonds_buy():
     if amount > _available_cb(user["username"], user.get("balance")):
         return jsonify(success=False, error="Borrowed Cybucks cannot be invested. Repay your loan first."), 400
 
+    if not cas_adjust(user["username"], "balance", -amount):
+        return jsonify(success=False, error="Insufficient funds or a conflicting request — try again."), 400
     matures = _now() + timedelta(days=BOND_DAYS)
-    supabase.table("cybucks").update({"balance": round((user.get("balance") or 0) - amount, 2)}) \
-        .eq("username", user["username"]).execute()
     treasury_add(cybucks=amount, counterparty=user["username"], kind="bond_sale")
     bond = supabase.table("bonds").insert({
         "username": user["username"], "principal": amount,
@@ -2029,8 +2044,8 @@ def repay_loan():
     if (user.get("balance") or 0) < loan["amount"]:
         return jsonify(success=False, error="Not enough CB to repay"), 400
 
-    supabase.table("cybucks").update({"balance": round((user.get("balance") or 0) - loan["amount"], 2)}) \
-        .eq("username", user["username"]).execute()
+    if not cas_adjust(user["username"], "balance", -loan["amount"]):
+        return jsonify(success=False, error="Insufficient funds or a conflicting request — try again."), 400
     supabase.table("loans").update({"repaid": True}).eq("id", loan["id"]).execute()
     treasury_add(cybucks=loan["amount"], counterparty=user["username"], kind="loan_repay")
     add_record(user["username"], f"Repaid a {loan['amount']} CB loan. Good standing.")
