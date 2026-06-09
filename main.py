@@ -6,9 +6,11 @@ import os
 import logging
 import math
 import random
+import re
 import secrets
 from time import time
 from datetime import timedelta, datetime, timezone
+from urllib.parse import unquote
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from google import genai
@@ -94,6 +96,7 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=6)
+app.config["MAX_CONTENT_LENGTH"] = 256 * 1024   # reject request bodies > 256 KB
 
 CORS(app, supports_credentials=True)
 logging.basicConfig(level=logging.INFO)
@@ -138,10 +141,9 @@ def handle_any_error(e):
         if request.path == "/" or request.path.endswith((".html", ".css", ".js", ".pdf", ".ico")):
             return e
         return jsonify(success=False, error=e.description or e.name), e.code
+    # Log full details server-side, but never leak internals (SQL, stack) to clients.
     logging.exception("Unhandled server error on %s", request.path)
-    return jsonify(success=False,
-                   error="Server error: " + str(e) +
-                         " — did you run schema.sql in Supabase?"), 500
+    return jsonify(success=False, error="Something went wrong. Please try again."), 500
 
 
 # ============================================================
@@ -163,10 +165,74 @@ def load_blocked_ips():
         logging.warning("blocked-IP load skipped: %s", e)
 
 
+# ----- WAF (web application firewall) -----
+_WAF_PATTERNS = re.compile(
+    r"(\.\./|\.\.\\|/etc/passwd|/etc/shadow|<script|onerror=|onload=|javascript:"
+    r"|union\s+select|information_schema|or\s+1=1|sleep\(|benchmark\(|xp_cmdshell"
+    r"|base64_decode|/wp-(admin|login|content)|/\.env|/\.git|/phpmyadmin|/vendor/"
+    r"|\.php|\.asp|\.aspx|\.jsp|/cgi-bin/|%00|\x00)", re.I)
+_BAD_AGENTS = re.compile(
+    r"(sqlmap|nikto|nmap|masscan|nessus|acunetix|dirbuster|gobuster|wpscan|havij"
+    r"|netsparker|zgrab|fuzz|hydra|metasploit)", re.I)
+
+_strikes = {}      # ip -> (count, window_start)
+_temp_block = {}   # ip -> unblock_timestamp
+STRIKE_LIMIT = 8
+STRIKE_WINDOW = 300
+TEMP_BLOCK_SECS = 3600
+
+
+def _strike(ip):
+    """Record a suspicious action; auto-temp-ban an IP that racks up too many."""
+    now = time()
+    cnt, start = _strikes.get(ip, (0, now))
+    if now - start > STRIKE_WINDOW:
+        cnt, start = 0, now
+    cnt += 1
+    _strikes[ip] = (cnt, start)
+    if cnt >= STRIKE_LIMIT:
+        _temp_block[ip] = now + TEMP_BLOCK_SECS
+        _strikes.pop(ip, None)
+        logging.warning("FIREWALL auto-banned %s for 1h (%d strikes)", ip, cnt)
+
+
 @app.before_request
-def _enforce_ip_block():
-    if BLOCKED_IPS and client_ip() in BLOCKED_IPS:
+def _firewall():
+    ip = client_ip()
+    now = time()
+    # 1. Permanent admin blocklist
+    if BLOCKED_IPS and ip in BLOCKED_IPS:
         return jsonify(success=False, error="Your IP address has been blocked from Cyvathon."), 403
+    # 2. Temporary auto-ban
+    ub = _temp_block.get(ip)
+    if ub and now < ub:
+        return jsonify(success=False, error="Temporarily blocked — too many suspicious requests."), 429
+    if ub:
+        _temp_block.pop(ip, None)
+    # 3. WAF: scan path + query (URL-decoded) + user-agent for attack signatures
+    target = unquote(request.path + "?" + request.query_string.decode("utf-8", "ignore"))
+    ua = request.headers.get("User-Agent", "")
+    if _WAF_PATTERNS.search(target) or _BAD_AGENTS.search(ua):
+        _strike(ip)
+        logging.warning("FIREWALL blocked %s from %s (UA=%s)", target[:160], ip, ua[:100])
+        return jsonify(success=False, error="Request blocked by the Cyvathon firewall."), 403
+
+
+@app.after_request
+def _security_headers(resp):
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    resp.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    resp.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
+        "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'")
+    return resp
 
 
 # ============================================================
@@ -638,6 +704,8 @@ def register():
 
     if not username or not password:
         return jsonify(success=False, error="Missing credentials"), 400
+    if len(username) > 32 or len(password) > 200:
+        return jsonify(success=False, error="Username (max 32) or password too long"), 400
 
     exists = supabase.table("cybucks").select("id").eq("username", username).execute()
     if exists.data:
@@ -682,6 +750,7 @@ def login():
     if user.get("banned"):
         return jsonify(success=False, error="This account has been banned from Cyvathon."), 403
     if not check_password_hash(user["password"], password):
+        _strike(client_ip())          # brute-force protection: too many → auto-ban
         return jsonify(success=False, error="Incorrect password"), 401
 
     session.permanent = True
@@ -2910,6 +2979,8 @@ def send_message():
     content = request.get_json().get("content", "").strip()
     if not content:
         return jsonify(success=False, error="Empty message"), 400
+    if len(content) > 2000:
+        return jsonify(success=False, error="Message too long (max 2000 characters)"), 400
 
     supabase.table("messages").insert({
         "sender": user["username"], "recipient": None, "content": content
@@ -2957,6 +3028,8 @@ def dm_send():
     content = (d.get("content") or "").strip()
     if not content:
         return jsonify(success=False, error="Empty message"), 400
+    if len(content) > 2000:
+        return jsonify(success=False, error="Message too long (max 2000 characters)"), 400
     if to == user["username"]:
         return jsonify(success=False, error="You can't message yourself"), 400
     if not supabase.table("cybucks").select("id").eq("username", to).execute().data:
@@ -3097,6 +3170,8 @@ def group_send(gid):
     content = (request.get_json().get("content") or "").strip()
     if not content:
         return jsonify(success=False, error="Empty message"), 400
+    if len(content) > 2000:
+        return jsonify(success=False, error="Message too long (max 2000 characters)"), 400
     supabase.table("messages").insert({
         "sender": user["username"], "recipient": None, "group_id": gid, "content": content
     }).execute()

@@ -79,7 +79,7 @@
       const companies = (p.companies||[]).map(c=>`<a class="link" href="/company?id=${c.id}">${esc(c.name)}</a>`).join(", ") || "None";
       const jobs = (p.jobs||[]).map(j=>`${esc(j.role)} @ <a class="link" href="/company?id=${j.company_id}">${esc(j.company)}</a>`).join(", ") || "None";
       document.getElementById("view").innerHTML = `
-        <p><a class="link" href="javascript:history.back()"><i class="fas fa-arrow-left"></i> Back</a></p>
+        <p><a class="link" href="#" onclick="history.back();return false;"><i class="fas fa-arrow-left"></i> Back</a></p>
         <h2 class="section-title"><i class="fas fa-id-card"></i> Citizen Profile</h2>
         <div class="id-card">
           <div class="id-top">
