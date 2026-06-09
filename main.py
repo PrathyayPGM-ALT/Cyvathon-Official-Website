@@ -4,6 +4,7 @@ from supabase import create_client
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import logging
+import math
 import random
 import secrets
 from time import time
@@ -79,7 +80,14 @@ TREASURY_ADMINS = {"Prathyay", "Cyvathon"}
 
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "change-this-secret-vro")
+# Session signing key. A known/default key lets anyone forge a session cookie and
+# impersonate the President — so fall back to a random key (and warn) if unset.
+_secret = os.getenv("SECRET_KEY")
+if not _secret or _secret == "change-this-secret-vro":
+    _secret = secrets.token_hex(32)
+    logging.warning("SECRET_KEY not set — using a random key (everyone is logged out on each "
+                    "restart). Set a stable SECRET_KEY in Render env for persistent, secure sessions.")
+app.config["SECRET_KEY"] = _secret
 app.config["SESSION_COOKIE_NAME"] = "cyvathon_session"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = True
@@ -738,8 +746,10 @@ def transfer():
 
     if currency not in CURRENCY_COLUMN:
         return jsonify(success=False, error="Unknown currency"), 400
-    if amount <= 0:
+    if not math.isfinite(amount) or amount <= 0:
         return jsonify(success=False, error="Invalid amount"), 400
+    if to_username == user["username"]:
+        return jsonify(success=False, error="You can't transfer to yourself"), 400
 
     col = CURRENCY_COLUMN[currency]
     sender = supabase.table("cybucks").select("*").eq("username", user["username"]).execute().data[0]
@@ -783,7 +793,7 @@ def convert():
         return jsonify(success=False, error="Unknown currency"), 400
     if src == dst:
         return jsonify(success=False, error="Pick two different currencies"), 400
-    if amount <= 0:
+    if not math.isfinite(amount) or amount <= 0:
         return jsonify(success=False, error="Invalid amount"), 400
 
     scol, dcol = CURRENCY_COLUMN[src], CURRENCY_COLUMN[dst]
@@ -1090,7 +1100,7 @@ def exchange_ipo():
         return jsonify(success=False, error="Only a founder can take a company public"), 403
     if c.get("is_public"):
         return jsonify(success=False, error="Company is already public"), 400
-    if shares <= 0 or price <= 0:
+    if shares <= 0 or not math.isfinite(price) or price <= 0:
         return jsonify(success=False, error="Enter a share count and IPO price"), 400
 
     supabase.table("companies").update({
@@ -1121,7 +1131,7 @@ def exchange_order():
 
     if side not in ("buy", "sell"):
         return jsonify(success=False, error="Pick buy or sell"), 400
-    if qty <= 0 or price <= 0:
+    if qty <= 0 or not math.isfinite(price) or price <= 0:
         return jsonify(success=False, error="Enter a positive price and quantity"), 400
 
     c_res = supabase.table("companies").select("is_public").eq("id", cid).execute().data
@@ -1221,7 +1231,7 @@ def exchange_dividend():
     c = c_res[0]
     if user["username"] not in company_founders(c):
         return jsonify(success=False, error="Only a founder can pay a dividend"), 403
-    if per_share <= 0:
+    if not math.isfinite(per_share) or per_share <= 0:
         return jsonify(success=False, error="Enter a positive amount per share"), 400
 
     holders = supabase.table("holdings").select("*").eq("company_id", cid).execute().data or []
@@ -1298,7 +1308,7 @@ def market_create():
         return jsonify(success=False, error="Unknown currency"), 400
     if kind not in ("sale", "donation"):
         kind = "sale"
-    if kind == "sale" and price <= 0:
+    if kind == "sale" and (not math.isfinite(price) or price <= 0):
         return jsonify(success=False, error="Set a price (or list it as a donation)"), 400
     if kind == "donation":
         price = 0
@@ -1613,7 +1623,7 @@ def savings_deposit():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     amount = float(request.get_json().get("amount") or 0)
-    if amount <= 0:
+    if not math.isfinite(amount) or amount <= 0:
         return jsonify(success=False, error="Enter a positive amount"), 400
     if (user.get("balance") or 0) < amount:
         return jsonify(success=False, error="Not enough CB"), 400
@@ -1634,7 +1644,7 @@ def savings_withdraw():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     amount = float(request.get_json().get("amount") or 0)
-    if amount <= 0:
+    if not math.isfinite(amount) or amount <= 0:
         return jsonify(success=False, error="Enter a positive amount"), 400
     if (user.get("savings") or 0) < amount:
         return jsonify(success=False, error="Not enough in savings"), 400
@@ -1671,7 +1681,7 @@ def bonds_buy():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     amount = float(request.get_json().get("amount") or 0)
-    if amount <= 0:
+    if not math.isfinite(amount) or amount <= 0:
         return jsonify(success=False, error="Enter a positive amount"), 400
     if (user.get("balance") or 0) < amount:
         return jsonify(success=False, error="Not enough CB"), 400
@@ -1814,6 +1824,8 @@ def court_rule():
     note = (d.get("note") or "").strip()
     try:
         fine = float(d.get("fine") or 0)
+        if not math.isfinite(fine) or fine < 0:
+            fine = 0
     except (TypeError, ValueError):
         fine = 0
 
@@ -1865,7 +1877,7 @@ def take_loan():
         return jsonify(success=False, error="Not logged in"), 401
 
     amount = float(request.get_json().get("amount") or 0)
-    if amount <= 0 or amount > LOAN_MAX:
+    if not math.isfinite(amount) or amount <= 0 or amount > LOAN_MAX:
         return jsonify(success=False, error=f"Loans must be between 1 and {LOAN_MAX} CB"), 400
 
     active = supabase.table("loans").select("id").eq("username", user["username"]) \
@@ -2420,7 +2432,7 @@ def ministries_fund():
     d = request.get_json()
     mid = d.get("ministry_id")
     amount = float(d.get("amount") or 0)
-    if amount <= 0:
+    if not math.isfinite(amount) or amount <= 0:
         return jsonify(success=False, error="Enter a positive amount"), 400
     m = supabase.table("ministries").select("*").eq("id", mid).execute().data
     if not m:
@@ -2465,7 +2477,7 @@ def ministries_spend():
     m = m[0]
     if not (is_treasury_admin(user) or m.get("minister") == user["username"]):
         return jsonify(success=False, error="Only this ministry's minister may spend its budget"), 403
-    if amount <= 0:
+    if not math.isfinite(amount) or amount <= 0:
         return jsonify(success=False, error="Enter a positive amount"), 400
     if (m.get("budget") or 0) < amount:
         return jsonify(success=False, error="The ministry budget is insufficient"), 400
