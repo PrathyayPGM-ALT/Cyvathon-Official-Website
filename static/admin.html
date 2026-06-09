@@ -47,7 +47,8 @@
         <h3><i class="fas fa-briefcase"></i> Enterprise & GDP</h3>
         <div class="grid2">
           <div class="field"><label>Company founding fee (CB)</label><input id="company_fee" type="number"></div>
-          <div class="field"><label>National GDP figure (CB)</label><input id="gdp" type="number"></div>
+          <div class="field"><label>GDP multiplier (×)</label><input id="gdp_multiplier" type="number" step="0.1">
+            <div class="hint">GDP auto-calculates from total national wealth, then ×this. Live GDP: <b id="gdpLive">…</b> CB</div></div>
         </div>
       </div>
 
@@ -81,7 +82,8 @@
   <script src="/static/app.js"></script>
   <script>
     const FIELDS = ["vat_rate","tax_period_days","salary_period_days","savings_rate",
-      "bond_rate","bond_days","company_fee","loan_max","loan_days","starting_grant","gdp"];
+      "bond_rate","bond_days","company_fee","loan_max","loan_days","starting_grant","gdp_multiplier"];
+    async function showLiveGdp(){ try{ const e=await api("/economy"); const el=document.getElementById("gdpLive"); if(el) el.textContent=fmt(e.gdp); }catch{} }
     const msg=(t,err=true)=>{const m=document.getElementById("msg");m.textContent=t;m.style.color=err?"var(--red)":"var(--green)";};
 
     function fill(cfg){
@@ -92,7 +94,7 @@
       const body={};
       FIELDS.forEach(f=>{ const v=document.getElementById(f).value; if(v!=="") body[f]=v; });
       try{ const r=await api("/admin/config",{method:"POST",body:JSON.stringify(body)});
-        fill(r.config); msg("Policy saved — applied nation-wide.",false);
+        fill(r.config); showLiveGdp(); msg("Policy saved — applied nation-wide.",false);
       }catch(e){ msg(e.message); }
     }
 
@@ -139,6 +141,7 @@
         document.getElementById("panel").style.display="block";
         fill(r.config);
         loadSecurity();
+        showLiveGdp();
       }catch(e){
         document.getElementById("deny").style.display="block";
       }

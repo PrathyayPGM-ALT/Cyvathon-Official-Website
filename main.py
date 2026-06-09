@@ -47,7 +47,8 @@ SALARY_PERIOD_DAYS = 7
 SAVINGS_RATE     = 0.05         # 5% monthly interest on savings
 BOND_RATE        = 0.10         # 10% return on government bonds
 BOND_DAYS        = 30           # bond maturity period
-GDP              = 500000       # national GDP figure
+GDP              = 500000       # fallback GDP if auto-calc fails
+GDP_MULTIPLIER   = 1            # President-controlled scaling of the auto GDP
 
 # These economic levers are stored in the `config` table and can be changed
 # live by the President from the admin panel. Maps config column -> global.
@@ -56,7 +57,7 @@ _CONFIG_KEYS = {
     "salary_period_days": "SALARY_PERIOD_DAYS", "savings_rate": "SAVINGS_RATE",
     "bond_rate": "BOND_RATE", "bond_days": "BOND_DAYS", "company_fee": "COMPANY_FEE",
     "loan_max": "LOAN_MAX", "loan_days": "LOAN_DAYS", "starting_grant": "STARTING_GRANT",
-    "gdp": "GDP",
+    "gdp": "GDP", "gdp_multiplier": "GDP_MULTIPLIER",
 }
 
 COMPANY_CATEGORIES = ["Finance", "Selling", "Service", "Technology", "Other"]
@@ -254,6 +255,36 @@ def get_treasury():
         return res.data[0]
     supabase.table("treasury").insert({"id": 1}).execute()
     return supabase.table("treasury").select("*").eq("id", 1).execute().data[0]
+
+
+_gdp_cache = {"v": None, "t": 0}
+
+def compute_gdp():
+    """National GDP, auto-calculated from total wealth in CB-equivalent
+    (citizens + treasury + companies + market caps) x the President's multiplier.
+    Cached for 5 minutes. Falls back to the static GDP figure on error."""
+    if _gdp_cache["v"] is not None and time() - _gdp_cache["t"] < 300:
+        return _gdp_cache["v"]
+    try:
+        vp, va = CYBUCK_VALUE["pufb"], CYBUCK_VALUE["aquilines"]
+        total = 0.0
+        for c in (supabase.table("cybucks").select("balance,pufb,aquilines,savings").execute().data or []):
+            total += (c.get("balance") or 0) + (c.get("savings") or 0) \
+                   + (c.get("pufb") or 0) * vp + (c.get("aquilines") or 0) * va
+        t = get_treasury()
+        total += (t.get("balance") or 0) + (t.get("pufb") or 0) * vp + (t.get("aquilines") or 0) * va
+        for c in (supabase.table("companies")
+                  .select("balance,pufb,aquilines,shares,last_price,ipo_price,is_public")
+                  .execute().data or []):
+            total += (c.get("balance") or 0) + (c.get("pufb") or 0) * vp + (c.get("aquilines") or 0) * va
+            if c.get("is_public"):
+                total += (c.get("last_price") or c.get("ipo_price") or 0) * (c.get("shares") or 0)
+        gdp = round(total * (GDP_MULTIPLIER or 1), 2)
+        _gdp_cache["v"], _gdp_cache["t"] = gdp, time()
+        return gdp
+    except Exception as e:
+        logging.warning("GDP auto-calc failed, using fallback: %s", e)
+        return GDP
 
 
 def treasury_add(cybucks=0, pufb=0, aquilines=0, counterparty=None, kind="manual"):
@@ -860,7 +891,7 @@ def treasury_data():
         salary=totals("salary"),
         flows=flows,
         transactions=transactions,
-        gdp=GDP,
+        gdp=compute_gdp(),
     )
 
 
@@ -2717,7 +2748,7 @@ def gov():
 # ============================================================
 CONFIG_FIELDS = ["vat_rate", "tax_period_days", "salary_period_days", "savings_rate",
                  "bond_rate", "bond_days", "company_fee", "loan_max", "loan_days",
-                 "starting_grant", "gdp"]
+                 "starting_grant", "gdp", "gdp_multiplier"]
 
 
 @app.route("/admin/config", methods=["GET"])
@@ -2756,6 +2787,7 @@ def admin_config_set():
     refresh_config()
     supabase.table("config").update(upd).eq("id", 1).execute()
     refresh_config()
+    _gdp_cache["v"] = None          # recompute GDP with the new multiplier
     r = supabase.table("config").select("*").eq("id", 1).execute().data
     return jsonify(success=True, config=(r[0] if r else {}))
 
@@ -2857,7 +2889,7 @@ def economy():
     companies = supabase.table("companies").select("id", count="exact").execute()
     return jsonify(
         success=True,
-        gdp=GDP,
+        gdp=compute_gdp(),
         treasury=t["balance"],
         citizens=citizens.count or 0,
         companies=companies.count or 0,
