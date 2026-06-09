@@ -150,6 +150,10 @@ def handle_any_error(e):
 #  IP BLOCKING  (admin can ban abusive IPs)
 # ============================================================
 def client_ip():
+    # Behind Cloudflare, the true visitor IP is in CF-Connecting-IP.
+    cf = request.headers.get("CF-Connecting-IP")
+    if cf:
+        return cf.strip()
     fwd = request.headers.get("X-Forwarded-For", "")
     return (fwd.split(",")[0].strip() if fwd else request.remote_addr) or "unknown"
 
