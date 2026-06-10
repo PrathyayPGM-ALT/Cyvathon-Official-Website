@@ -612,6 +612,10 @@ def loans_page():
 def profile_page():
     return app.send_static_file("profile.html")
 
+@app.route("/passport")
+def passport_page():
+    return app.send_static_file("passport.html")
+
 @app.route("/voting")
 def voting_page():
     return app.send_static_file("voting.html")
@@ -2156,6 +2160,129 @@ def profile_data():
         loans=loans.data or [],
         member_since=user.get("created_at"),
     )
+
+
+# ============================================================
+#  PASSPORT  &  CITIZENSHIP
+#  (schema-free: issuance + oath are stored as official Records,
+#   the passport/citizen numbers derive deterministically from id)
+# ============================================================
+PASSPORT_MARK = "national passport"
+OATH_MARK     = "oath of allegiance"
+
+
+def _passport_number(user):
+    n = int(user.get("id") or 0)
+    base = f"{n:06d}"
+    chk = sum(int(d) for d in base) % 10
+    return f"CYV{base}{chk}"
+
+
+def _citizen_number(user):
+    return f"CYV-{int(user.get('id') or 0):05d}"
+
+
+def _add_years_iso(iso, years):
+    if not iso:
+        return None
+    try:
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except Exception:
+        return None
+    try:
+        return dt.replace(year=dt.year + years).isoformat()
+    except ValueError:        # 29 Feb
+        return (dt + timedelta(days=365 * years)).isoformat()
+
+
+def _mrz(username, pno):
+    name = re.sub(r"[^A-Z]", "<", (username or "").upper()) or "CITIZEN"
+    line1 = ("P<CYV" + name).ljust(44, "<")[:44]
+    num = re.sub(r"[^A-Z0-9]", "", pno.upper())
+    line2 = (num + "CYV").ljust(44, "<")[:44]
+    return [line1, line2]
+
+
+def _passport_stamps(user, records):
+    stamps = [{"label": "BUREAU OF CITIZENSHIP", "sub": "NATURALIZED",
+               "date": user.get("created_at"), "color": "#2b6cb0"}]
+    low = [(r.get("entry") or "").lower() for r in records]
+    if any(OATH_MARK in e for e in low):
+        stamps.append({"label": "OATH OF ALLEGIANCE", "sub": "SWORN CITIZEN",
+                       "date": None, "color": "#0f9d72"})
+    desig = user.get("designation") or "Citizen"
+    if desig != "Citizen":
+        stamps.append({"label": "OFFICE OF STATE", "sub": desig.upper(),
+                       "date": None, "color": "#b8860b"})
+    try:
+        if supabase.table("companies").select("id").eq("founder", user["username"]).limit(1).execute().data:
+            stamps.append({"label": "CHAMBER OF COMMERCE", "sub": "REGISTERED FOUNDER",
+                           "date": None, "color": "#7b4bc0"})
+        if supabase.table("employment").select("id").eq("username", user["username"]) \
+                .eq("status", "employed").limit(1).execute().data:
+            stamps.append({"label": "MINISTRY OF LABOUR", "sub": "IN EMPLOYMENT",
+                           "date": None, "color": "#c0563a"})
+    except Exception:
+        pass
+    return stamps
+
+
+@app.route("/passport_data")
+def passport_data():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    records = supabase.table("records").select("entry,created_at") \
+        .eq("username", user["username"]).order("created_at").execute().data or []
+    pno = _passport_number(user)
+    issued = next((r.get("created_at") for r in records
+                   if PASSPORT_MARK in (r.get("entry") or "").lower()), None)
+    oath = any(OATH_MARK in (r.get("entry") or "").lower() for r in records)
+    return jsonify(success=True, passport={
+        "number": pno,
+        "citizen_no": _citizen_number(user),
+        "name": user["username"],
+        "designation": user.get("designation") or "Citizen",
+        "nationality": "Republic of Cyvathon",
+        "member_since": user.get("created_at"),
+        "issued": issued,
+        "expiry": _add_years_iso(issued, 5) if issued else None,
+        "oath": oath,
+        "net_worth": user_net_worth(user["username"]),
+        "mrz": _mrz(user["username"], pno),
+        "stamps": _passport_stamps(user, records),
+    })
+
+
+@limiter.limit("10/min")
+@app.route("/passport/issue", methods=["POST"])
+def passport_issue():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    recs = supabase.table("records").select("entry") \
+        .eq("username", user["username"]).execute().data or []
+    if any(PASSPORT_MARK in (r.get("entry") or "").lower() for r in recs):
+        return jsonify(success=False, error="You already hold a valid passport."), 400
+    pno = _passport_number(user)
+    add_record(user["username"], f"Issued National Passport No. {pno}.")
+    notify(user["username"], "Your Cyvathon passport has been issued.", "/passport")
+    return jsonify(success=True)
+
+
+@limiter.limit("10/min")
+@app.route("/citizenship/oath", methods=["POST"])
+def citizenship_oath():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    recs = supabase.table("records").select("entry") \
+        .eq("username", user["username"]).execute().data or []
+    if any(OATH_MARK in (r.get("entry") or "").lower() for r in recs):
+        return jsonify(success=False, error="You have already sworn the Oath of Allegiance."), 400
+    add_record(user["username"], "Swore the Oath of Allegiance to the Republic of Cyvathon.")
+    notify(user["username"], "Oath of Allegiance recorded. Welcome, sworn citizen.", "/passport")
+    return jsonify(success=True)
 
 
 # ============================================================

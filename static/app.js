@@ -2,6 +2,28 @@
    CYVATHON — shared frontend helpers
 ============================================================ */
 
+/* Apply the saved theme as early as possible to avoid a flash. */
+(function () {
+  try { if (localStorage.getItem("cyv-theme") === "light")
+    document.documentElement.setAttribute("data-theme", "light"); } catch (e) {}
+})();
+
+function toggleTheme() {
+  const light = document.documentElement.getAttribute("data-theme") === "light";
+  if (light) document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", "light");
+  try { localStorage.setItem("cyv-theme", light ? "dark" : "light"); } catch (e) {}
+  syncThemeBtn();
+}
+function syncThemeBtn() {
+  const light = document.documentElement.getAttribute("data-theme") === "light";
+  const btn = document.getElementById("themeToggle");
+  if (btn) {
+    btn.innerHTML = `<i class="fas fa-${light ? "moon" : "sun"}"></i>`;
+    btn.title = light ? "Switch to dark mode" : "Switch to light mode";
+  }
+}
+
 async function api(path, options = {}) {
   const res = await fetch(path, {
     credentials: "include",
@@ -50,7 +72,7 @@ function renderNav(active, user) {
     { label: "Business",   items: [["/company","Companies"], ["/marketplace","Marketplace"]] },
     { label: "Government",  items: [["/government","Cabinet"], ["/ministries","Ministries"], ["/legislature","Legislature"], ["/gazette","Gazette"], ["/court","Courts"], ["/fir","Report a Crime"], ["/voting","Elections"], ["/treasury","Treasury"], ["/admin","Admin Panel"]] },
     { label: "Community",   items: [["/citizens","Citizens"], ["/chat","Chat"], ["/news","News"], ["/rules","Rules"]] },
-    { label: "ID Card", href: "/profile" },
+    { label: "ID Card", items: [["/profile","ID Card"], ["/passport","Passport & Citizenship"]] },
   ];
 
   let navLinks;
@@ -75,6 +97,8 @@ function renderNav(active, user) {
        <a href="#" onclick="doLogout();return false;">Logout</a>`;
   }
 
+  navLinks += `<a href="#" id="themeToggle" class="theme-toggle" onclick="toggleTheme();return false;" title="Toggle theme"><i class="fas fa-sun"></i></a>`;
+
   const html = `
     <header><nav>
       <a href="/" class="logo" style="text-decoration:none;"><i class="fas fa-code logo-icon"></i><h1>CYVATHON</h1></a>
@@ -82,6 +106,7 @@ function renderNav(active, user) {
     </nav></header>`;
   const host = document.getElementById("nav");
   if (host) host.outerHTML = html;
+  syncThemeBtn();
   if (user) { refreshNotifBadge(); revealAthena(); }
 }
 

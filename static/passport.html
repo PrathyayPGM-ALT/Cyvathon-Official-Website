@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Passport & Citizenship · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .tabs{ display:flex; gap:.5rem; justify-content:center; margin-bottom:1.6rem; }
+    .tabs button{ width:auto; margin:0; padding:.55rem 1.3rem; border-radius:30px; font-size:.9rem;
+      background:var(--panel-2); color:var(--text); border:1px solid var(--panel-border); box-shadow:none; }
+    .tabs button.on{ background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; border-color:transparent; }
+
+    /* ---------- CITIZENSHIP CERTIFICATE ---------- */
+    .cert{ position:relative; max-width:600px; margin:0 auto; border-radius:16px; overflow:hidden;
+      background:radial-gradient(120% 120% at 0% 0%, #16325a, #0c1a30 60%);
+      border:1px solid rgba(120,180,255,.3); box-shadow:0 16px 50px rgba(0,0,0,.5);
+      padding:2.2rem 2rem 2rem; color:#eaf2ff; }
+    .cert::before{ content:""; position:absolute; inset:10px; border:1.5px double rgba(140,190,255,.35);
+      border-radius:11px; pointer-events:none; }
+    .cert .seal{ width:70px; height:70px; margin:0 auto .6rem; border-radius:50%;
+      display:flex; align-items:center; justify-content:center; font-size:1.8rem; color:#0a1f3a;
+      background:radial-gradient(circle at 35% 30%, #ffe08a, #d9a821); box-shadow:0 0 0 4px rgba(255,224,138,.18); }
+    .cert h3{ text-align:center; letter-spacing:3px; font-size:.85rem; color:#9fc2ee; text-transform:uppercase; }
+    .cert h2{ text-align:center; font-size:1.7rem; margin:.2rem 0 1rem; color:#fff; }
+    .cert .body{ text-align:center; font-size:.97rem; line-height:1.8; color:#cfe0f5; }
+    .cert .name{ font-size:1.35rem; font-weight:800; color:#ffd76a; letter-spacing:.5px; }
+    .cert .crow{ display:flex; justify-content:space-between; margin-top:1.4rem; gap:1rem;
+      border-top:1px solid rgba(255,255,255,.12); padding-top:1rem; font-size:.82rem; }
+    .cert .crow .l{ color:#8fb0d6; text-transform:uppercase; letter-spacing:1px; font-size:.66rem; }
+    .cert .crow b{ font-size:.95rem; }
+    .oathbox{ max-width:600px; margin:1.2rem auto 0; }
+    .oath-text{ font-style:italic; color:var(--muted); border-left:3px solid var(--accent);
+      padding:.4rem 0 .4rem 1rem; margin:.6rem 0 1rem; }
+
+    /* ---------- PASSPORT BOOK ---------- */
+    .pp{ max-width:640px; margin:0 auto; border-radius:14px; overflow:hidden;
+      box-shadow:0 22px 60px rgba(0,0,0,.55); border:1px solid rgba(140,170,210,.25); }
+    .pp-cover{ background:linear-gradient(160deg,#13284a,#0a1830); color:#e7c976; text-align:center;
+      padding:1.4rem 1rem; border-bottom:2px solid rgba(231,201,118,.35); }
+    .pp-cover .crest{ font-size:1.8rem; }
+    .pp-cover .t1{ letter-spacing:5px; font-size:.72rem; margin-top:.3rem; color:#cdd9ea; }
+    .pp-cover .t2{ letter-spacing:3px; font-weight:800; font-size:1.05rem; color:#ffe08a; }
+    .pp-page{ background:linear-gradient(180deg,#f3f1e6,#e9e6d6); color:#1c2530; padding:1.5rem 1.6rem; position:relative; }
+    .pp-page::after{ content:"CYVATHON"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      font-size:3.2rem; font-weight:800; color:rgba(43,108,176,.06); letter-spacing:10px; pointer-events:none; transform:rotate(-18deg); }
+    .pp-head{ display:flex; gap:1.2rem; position:relative; z-index:1; }
+    .pp-photo{ width:96px; height:120px; border-radius:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-size:2.6rem; font-weight:800; color:#fff; background:linear-gradient(135deg,#2b6cb0,#1a426f); border:2px solid #fff;
+      box-shadow:0 2px 8px rgba(0,0,0,.25); }
+    .pp-fields{ flex:1; display:grid; grid-template-columns:1fr 1fr; gap:.55rem 1rem; }
+    .pp-f .k{ font-size:.58rem; letter-spacing:1.2px; text-transform:uppercase; color:#6b7886; }
+    .pp-f .v{ font-size:.95rem; font-weight:700; color:#16202c; line-height:1.2; }
+    .pp-f.full{ grid-column:1 / -1; }
+    .pp-mrz{ margin-top:1.2rem; background:#fbfaf3; border-top:2px dashed #b9b39a; padding:.7rem .4rem .3rem;
+      font-family:"Courier New",monospace; font-size:.84rem; font-weight:700; letter-spacing:2px; color:#222;
+      white-space:nowrap; overflow-x:auto; position:relative; z-index:1; }
+    .pp-stamps{ position:relative; z-index:1; display:flex; flex-wrap:wrap; gap:.8rem; margin-top:1.3rem; justify-content:center; }
+    .stamp{ width:118px; height:118px; border-radius:50%; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; text-align:center; padding:.4rem; opacity:.82;
+      border:2.5px solid currentColor; box-shadow:inset 0 0 0 2px currentColor; }
+    .stamp .sl{ font-size:.5rem; letter-spacing:.5px; font-weight:800; line-height:1.15; }
+    .stamp .ss{ font-size:.56rem; font-weight:700; margin:.2rem 0; }
+    .stamp .sd{ font-size:.5rem; opacity:.85; }
+    .notyet{ text-align:center; padding:2.5rem 1rem; }
+    .notyet i{ font-size:2.4rem; color:var(--accent); }
+    .msg{ text-align:center; font-size:.88rem; margin-top:1rem; min-height:1.2em; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:760px;">
+    <h2 class="section-title"><i class="fas fa-passport"></i> Passport &amp; Citizenship</h2>
+    <p class="section-sub">Your official identity within the Republic of Cyvathon.</p>
+
+    <div class="tabs">
+      <button id="tabC" class="on" onclick="showTab('c')"><i class="fas fa-scroll"></i> Citizenship</button>
+      <button id="tabP" onclick="showTab('p')"><i class="fas fa-passport"></i> Passport</button>
+    </div>
+
+    <div id="viewC"></div>
+    <div id="viewP" style="display:none;"></div>
+    <p id="msg" class="msg"></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let P = null;
+    const esc = (s)=>(s||"").replace(/</g,"&lt;");
+    const dt  = (s)=> s ? new Date(s).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}) : "—";
+    const msg = (t,err=true)=>{ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
+
+    function showTab(which){
+      document.getElementById("tabC").classList.toggle("on", which==="c");
+      document.getElementById("tabP").classList.toggle("on", which==="p");
+      document.getElementById("viewC").style.display = which==="c" ? "block":"none";
+      document.getElementById("viewP").style.display = which==="p" ? "block":"none";
+    }
+
+    /* ---------------- Citizenship certificate ---------------- */
+    function renderCitizenship(){
+      const oath = P.oath;
+      document.getElementById("viewC").innerHTML = `
+        <div class="cert">
+          <div class="seal"><i class="fas fa-feather-pointed"></i></div>
+          <h3>Republic of Cyvathon</h3>
+          <h2>Certificate of Citizenship</h2>
+          <div class="body">
+            This is to certify that<br>
+            <span class="name">${esc(P.name)}</span><br>
+            is a recognised ${oath ? "sworn " : ""}citizen of the Republic of Cyvathon,
+            entitled to all rights, protections and privileges thereof.
+          </div>
+          <div class="crow">
+            <div><div class="l">Citizen No.</div><b>${esc(P.citizen_no)}</b></div>
+            <div><div class="l">Status</div><b style="color:#7ee0b6">${oath ? "Sworn Citizen" : "Citizen"}</b></div>
+            <div><div class="l">Citizen Since</div><b>${dt(P.member_since)}</b></div>
+          </div>
+        </div>
+
+        <div class="oathbox">
+          ${ oath
+            ? `<p class="small" style="text-align:center;color:var(--green)"><i class="fas fa-circle-check"></i> You have sworn the Oath of Allegiance.</p>`
+            : `<div class="panel">
+                 <h3 style="margin-bottom:.3rem;"><i class="fas fa-hand-fist"></i> Oath of Allegiance</h3>
+                 <p class="oath-text">"I solemnly pledge my loyalty to the Republic of Cyvathon, to uphold its laws,
+                    honour its institutions, and act in good faith toward my fellow citizens."</p>
+                 <button onclick="swearOath()"><i class="fas fa-feather-pointed"></i> Swear the Oath</button>
+               </div>` }
+        </div>`;
+    }
+
+    async function swearOath(){
+      try{ await api("/citizenship/oath",{method:"POST",body:"{}"}); msg("Oath recorded — you are now a sworn citizen.",false); await load(); }
+      catch(e){ msg(e.message); }
+    }
+
+    /* ---------------- Passport book ---------------- */
+    function stampHtml(s, i){
+      const rot = ((i*37) % 24) - 12;   // deterministic tilt -12°..+12°
+      return `<div class="stamp" style="color:${s.color};transform:rotate(${rot}deg)">
+        <div class="sl">${esc(s.label)}</div>
+        <div class="ss">${esc(s.sub)}</div>
+        <div class="sd">${s.date ? dt(s.date) : "★ ★ ★"}</div>
+      </div>`;
+    }
+
+    function renderPassport(){
+      const host = document.getElementById("viewP");
+      if(!P.issued){
+        host.innerHTML = `<div class="panel notyet">
+          <i class="fas fa-passport"></i>
+          <h3 style="margin:.6rem 0;">No passport on file</h3>
+          <p class="muted" style="max-width:420px;margin:0 auto 1rem;">Apply to the Bureau of Citizenship to be issued
+            your official Cyvathon passport, valid for 5 years.</p>
+          <button style="max-width:260px;margin:0 auto;" onclick="issue()"><i class="fas fa-stamp"></i> Issue my passport</button>
+        </div>`;
+        return;
+      }
+      const stamps = (P.stamps||[]).map(stampHtml).join("");
+      host.innerHTML = `
+        <div class="pp">
+          <div class="pp-cover">
+            <div class="crest">▲</div>
+            <div class="t1">PASSPORT · PASSEPORT</div>
+            <div class="t2">REPUBLIC OF CYVATHON</div>
+          </div>
+          <div class="pp-page">
+            <div class="pp-head">
+              <div class="pp-photo">${esc(P.name[0].toUpperCase())}</div>
+              <div class="pp-fields">
+                <div class="pp-f full"><div class="k">Surname / Given Names</div><div class="v">${esc(P.name)}</div></div>
+                <div class="pp-f"><div class="k">Passport No.</div><div class="v">${esc(P.number)}</div></div>
+                <div class="pp-f"><div class="k">Type</div><div class="v">P</div></div>
+                <div class="pp-f"><div class="k">Nationality</div><div class="v">CYVATHONIAN</div></div>
+                <div class="pp-f"><div class="k">Rank / Office</div><div class="v">${esc(P.designation)}</div></div>
+                <div class="pp-f"><div class="k">Date of Issue</div><div class="v">${dt(P.issued)}</div></div>
+                <div class="pp-f"><div class="k">Date of Expiry</div><div class="v">${dt(P.expiry)}</div></div>
+              </div>
+            </div>
+            <div class="pp-mrz">${esc(P.mrz[0])}<br>${esc(P.mrz[1])}</div>
+          </div>
+        </div>
+        <h3 style="text-align:center;margin:1.6rem 0 .2rem;"><i class="fas fa-stamp"></i> Official Stamps</h3>
+        <p class="small" style="text-align:center;">Endorsements earned through your service to the Republic.</p>
+        <div class="pp-stamps">${stamps}</div>`;
+    }
+
+    async function issue(){
+      try{ await api("/passport/issue",{method:"POST",body:"{}"}); msg("Passport issued.",false); await load(); }
+      catch(e){ msg(e.message); }
+    }
+
+    async function load(){
+      const d = await api("/passport_data");
+      P = d.passport;
+      renderCitizenship();
+      renderPassport();
+    }
+
+    (async function(){
+      const me = await requireAuth(); if(!me) return;
+      renderNav("/passport", me);
+      try{ await load(); }
+      catch(e){ msg(e.message); }
+    })();
+  </script>
+</body>
+</html>
