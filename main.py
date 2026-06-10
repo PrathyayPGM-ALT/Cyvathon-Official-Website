@@ -848,6 +848,19 @@ def _available_cb(username, balance):
     return (balance or 0) - _outstanding_loan(username)
 
 
+def _transferable_value(sender):
+    """Total wealth a citizen may GIFT to others, in CB-equivalent.
+    The welcome grant (and any unpaid loan) is locked — you can spend it in the
+    economy, but not transfer it to another citizen. This kills grant-farming
+    (make accounts, funnel the free grant to one account, repeat) and works
+    across all three currencies, so converting first doesn't bypass it."""
+    wealth = ((sender.get("balance") or 0)
+              + (sender.get("pufb") or 0) * CYBUCK_VALUE["pufb"]
+              + (sender.get("aquilines") or 0) * CYBUCK_VALUE["aquilines"])
+    grant_locked = STARTING_GRANT * (1 + CYBUCK_VALUE["pufb"] + CYBUCK_VALUE["aquilines"])
+    return wealth - grant_locked - _outstanding_loan(sender["username"])
+
+
 @limiter.limit("20/min")
 @app.route("/transfer", methods=["POST"])
 def transfer():
@@ -871,9 +884,10 @@ def transfer():
     sender = supabase.table("cybucks").select("*").eq("username", user["username"]).execute().data[0]
     if (sender.get(col) or 0) < amount:
         return jsonify(success=False, error="Insufficient funds"), 400
-    # Borrowed Cybucks are locked — you cannot transfer away an unpaid loan.
-    if currency == "cybucks" and amount > _available_cb(user["username"], sender.get("balance")):
-        return jsonify(success=False, error="Those Cybucks are from an unpaid loan and cannot be transferred. Repay your loan first."), 400
+    # You may only transfer money you've EARNED — the welcome grant (and any
+    # unpaid loan) is locked from gifting to other citizens.
+    if amount * CYBUCK_VALUE[currency] > _transferable_value(sender) + 1e-9:
+        return jsonify(success=False, error="You can only transfer money you've earned — your welcome grant (and any unpaid loan) can't be sent to other citizens. Earn it through jobs, sales or trading first."), 400
 
     receiver_res = supabase.table("cybucks").select("id").eq("username", to_username).execute()
     if not receiver_res.data:
