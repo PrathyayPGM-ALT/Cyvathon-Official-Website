@@ -1004,8 +1004,16 @@ def create_company():
 
     if not name or category not in COMPANY_CATEGORIES:
         return jsonify(success=False, error="Need a name and a valid category"), 400
+    if len(name) > 60 or len(description) > 500:
+        return jsonify(success=False, error="Name or description too long"), 400
     if (user.get("balance") or 0) < COMPANY_FEE:
         return jsonify(success=False, error=f"You need {COMPANY_FEE} CB to found a company"), 400
+
+    # Anti-spam: cap how many companies one citizen can found
+    mine = supabase.table("companies").select("id", count="exact") \
+        .eq("founder", user["username"]).execute()
+    if (mine.count or 0) >= 5:
+        return jsonify(success=False, error="You can found at most 5 companies"), 400
 
     exists = supabase.table("companies").select("id").eq("name", name).execute()
     if exists.data:
@@ -1234,12 +1242,15 @@ def exchange_ipo():
         return jsonify(success=False, error="Only a founder can take a company public"), 403
     if c.get("is_public"):
         return jsonify(success=False, error="Company is already public"), 400
-    if shares <= 0 or not math.isfinite(price) or price <= 0:
-        return jsonify(success=False, error="Enter a share count and IPO price"), 400
+    if (shares <= 0 or shares > 10_000_000 or not math.isfinite(price)
+            or price <= 0 or price > 1_000_000):
+        return jsonify(success=False, error="Shares 1–10,000,000 and IPO price 0–1,000,000 CB"), 400
 
+    # IMPORTANT: do NOT fabricate company capital here. Setting balance = shares*price
+    # would let a founder pay themselves a dividend from money that never existed
+    # (the "IPO money printer"). A company's capital only comes from real earnings.
     supabase.table("companies").update({
-        "is_public": True, "shares": shares, "ipo_price": price,
-        "last_price": price, "balance": round(shares * price, 2)
+        "is_public": True, "shares": shares, "ipo_price": price, "last_price": price
     }).eq("id", cid).execute()
     _add_shares(user["username"], cid, shares)         # founder owns 100% at IPO
     add_record(user["username"],
