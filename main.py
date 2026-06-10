@@ -370,13 +370,13 @@ def compute_gdp():
 
 
 def treasury_add(cybucks=0, pufb=0, aquilines=0, counterparty=None, kind="manual"):
-    """Move money in/out of the Treasury and record each currency as a ledger flow."""
-    t = get_treasury()
-    supabase.table("treasury").update({
-        "balance":   max(0, (t["balance"]   or 0) + cybucks),
-        "pufb":      max(0, (t["pufb"]       or 0) + pufb),
-        "aquilines": max(0, (t["aquilines"] or 0) + aquilines),
-    }).eq("id", 1).execute()
+    """Move money in/out of the Treasury (atomically) and log each currency as a flow.
+    The Treasury may run a deficit (negative) — that records true national debt
+    instead of silently 'minting' the shortfall by flooring at zero."""
+    get_treasury()   # ensure the row exists
+    for col, delta in (("balance", cybucks), ("pufb", pufb), ("aquilines", aquilines)):
+        if delta:
+            cas_num("treasury", [("id", 1)], col, delta, allow_negative=True)
     for cur, delta in (("cybucks", cybucks), ("pufb", pufb), ("aquilines", aquilines)):
         if delta:
             try:
@@ -1046,36 +1046,61 @@ def _holding_shares(username, company_id):
     return (r[0]["shares"] or 0) if r else 0
 
 
-def _add_shares(username, company_id, delta):
-    r = supabase.table("holdings").select("*").eq("username", username) \
-        .eq("company_id", company_id).execute().data
-    if r:
-        supabase.table("holdings").update({"shares": round((r[0]["shares"] or 0) + delta, 4)}) \
-            .eq("id", r[0]["id"]).execute()
-    else:
-        supabase.table("holdings").insert({
-            "username": username, "company_id": company_id, "shares": round(delta, 4)
-        }).execute()
-
-
-def cas_adjust(username, col, delta, allow_negative=False):
-    """Atomically change a citizen's currency column by `delta` using
-    compare-and-swap, so concurrent requests can't double-spend (the update
-    only applies if the value is still what we read). Returns True on success."""
+def cas_num(table, filters, col, delta, allow_negative=False, places=2):
+    """Atomically change a numeric column by `delta` using compare-and-swap:
+    the update only applies if the value is unchanged since we read it.
+    `filters` is a list of (column, value) identifying the row. Returns True/False."""
     for _ in range(6):
-        row = supabase.table("cybucks").select(col).eq("username", username).execute().data
+        q = supabase.table(table).select(col)
+        for k, v in filters:
+            q = q.eq(k, v)
+        row = q.execute().data
         if not row:
             return False
         old = row[0].get(col) or 0
-        new = round(old + delta, 2)
+        new = round(old + delta, places)
         if new < -1e-9 and not allow_negative:
             return False                       # would overdraw — refuse
-        res = supabase.table("cybucks").update({col: new}) \
-            .eq("username", username).eq(col, old).execute()
-        if res.data:                           # update stuck (value was unchanged)
+        u = supabase.table(table).update({col: new})
+        for k, v in filters:
+            u = u.eq(k, v)
+        if u.eq(col, old).execute().data:      # stuck = nobody changed it first
             return True
-        # else another request changed it first — retry with fresh value
     return False
+
+
+def cas_adjust(username, col, delta, allow_negative=False):
+    """Atomic change to a citizen's currency column (compare-and-swap)."""
+    return cas_num("cybucks", [("username", username)], col, delta, allow_negative, places=2)
+
+
+def cas_shares(username, company_id, delta, allow_negative=False):
+    """Atomically change a share holding; creates the row on first credit."""
+    for _ in range(6):
+        row = supabase.table("holdings").select("id,shares").eq("username", username) \
+            .eq("company_id", company_id).execute().data
+        if not row:
+            if delta < 0 and not allow_negative:
+                return False
+            try:
+                supabase.table("holdings").insert({
+                    "username": username, "company_id": company_id, "shares": round(delta, 4)
+                }).execute()
+                return True
+            except Exception:
+                continue                       # concurrent insert — retry finds the row
+        old = row[0].get("shares") or 0
+        new = round(old + delta, 4)
+        if new < -1e-9 and not allow_negative:
+            return False
+        if supabase.table("holdings").update({"shares": new}) \
+                .eq("id", row[0]["id"]).eq("shares", old).execute().data:
+            return True
+    return False
+
+
+def _add_shares(username, company_id, delta):
+    cas_shares(username, company_id, delta, allow_negative=True)
 
 
 def _add_cash(username, delta):
@@ -1121,6 +1146,15 @@ def _match(taker):
         buyer  = taker["username"] if side == "buy" else m["username"]
         seller = m["username"]     if side == "buy" else taker["username"]
 
+        # Atomically CLAIM this fill on the maker order first; if another taker
+        # grabbed it concurrently, skip (no double-fill / share minting).
+        nf = m["filled"] + fill
+        claim = supabase.table("orders").update({
+            "filled": nf, "status": "filled" if nf >= m["quantity"] else "open"
+        }).eq("id", m["id"]).eq("filled", m["filled"]).eq("status", "open").execute()
+        if not claim.data:
+            continue
+
         _add_shares(buyer, cid, fill)                 # shares -> buyer
         _add_cash(seller, round(exec_price * fill, 2))# cash -> seller
         if side == "buy":                             # refund taker's price improvement
@@ -1128,10 +1162,6 @@ def _match(taker):
             if refund > 0:
                 _add_cash(taker["username"], refund)
 
-        nf = m["filled"] + fill
-        supabase.table("orders").update({
-            "filled": nf, "status": "filled" if nf >= m["quantity"] else "open"
-        }).eq("id", m["id"]).execute()
         supabase.table("trades").insert({
             "company_id": cid, "buyer": buyer, "seller": seller,
             "price": exec_price, "quantity": fill
@@ -1294,9 +1324,9 @@ def exchange_order():
         if not cas_adjust(user["username"], "balance", -cost):
             return jsonify(success=False, error="Insufficient funds or a conflicting order — try again."), 400
     else:
-        if _holding_shares(user["username"], cid) < qty:
+        # Atomic share escrow — prevents overselling via concurrent sell orders.
+        if not cas_shares(user["username"], cid, -qty):
             return jsonify(success=False, error="You don't own that many shares"), 400
-        _add_shares(user["username"], cid, -qty)
 
     order = supabase.table("orders").insert({
         "company_id": cid, "username": user["username"], "side": side,
@@ -1323,12 +1353,21 @@ def exchange_cancel():
     if o["status"] != "open":
         return jsonify(success=False, error="Order is not open"), 400
 
-    rem = (o["quantity"] or 0) - (o["filled"] or 0)
-    if o["side"] == "buy":
-        _add_cash(user["username"], round(o["price"] * rem, 2))   # refund escrow
-    else:
-        _add_shares(user["username"], o["company_id"], rem)       # return shares
-    supabase.table("orders").update({"status": "cancelled"}).eq("id", oid).execute()
+    # Atomically claim the cancellation first, so a double-cancel (or a cancel
+    # racing the matcher) can't refund the escrow twice.
+    claim = supabase.table("orders").update({"status": "cancelled"}) \
+        .eq("id", oid).eq("status", "open").execute()
+    if not claim.data:
+        return jsonify(success=False, error="Order is no longer open"), 400
+
+    # Re-read the now-final fill so we refund only the genuinely unfilled remainder.
+    fresh = supabase.table("orders").select("quantity,filled").eq("id", oid).execute().data[0]
+    rem = (fresh["quantity"] or 0) - (fresh["filled"] or 0)
+    if rem > 0:
+        if o["side"] == "buy":
+            _add_cash(user["username"], round(o["price"] * rem, 2))   # refund escrow
+        else:
+            _add_shares(user["username"], o["company_id"], rem)       # return shares
     return jsonify(success=True)
 
 
@@ -1382,14 +1421,15 @@ def exchange_dividend():
 
     holders = supabase.table("holdings").select("*").eq("company_id", cid).execute().data or []
     total = round(sum((h["shares"] or 0) for h in holders) * per_share, 2)
-    if (c.get("balance") or 0) < total:
+    if total <= 0:
+        return jsonify(success=False, error="No shares to pay a dividend on"), 400
+    # Atomically debit the company's capital FIRST; only pay if it covered the bill.
+    if not cas_num("companies", [("id", cid)], "balance", -total):
         return jsonify(success=False, error=f"Company needs {total} CB capital to pay this"), 400
 
     for h in holders:
         if (h["shares"] or 0) > 0:
             _add_cash(h["username"], round(h["shares"] * per_share, 2))
-    supabase.table("companies").update({"balance": round((c["balance"] or 0) - total, 2)}) \
-        .eq("id", cid).execute()
     add_record(user["username"], f"Paid a {per_share} CB/share dividend for '{c['name']}' ({total} CB).")
     return jsonify(success=True, total=total)
 
@@ -1398,11 +1438,7 @@ def exchange_dividend():
 #  MARKETPLACE  (citizens & companies sell / donate goods)
 # ============================================================
 def _add_company_currency(company_id, currency, delta):
-    col = CURRENCY_COLUMN[currency]
-    r = supabase.table("companies").select(col).eq("id", company_id).execute().data
-    if r:
-        supabase.table("companies").update({col: round((r[0].get(col) or 0) + delta, 2)}) \
-            .eq("id", company_id).execute()
+    cas_num("companies", [("id", company_id)], CURRENCY_COLUMN[currency], delta, allow_negative=True)
 
 
 def _seller_label(item):
@@ -1716,8 +1752,9 @@ def jobs_pay():
     if (cb.get("balance") or 0) < salary:
         return jsonify(success=False, error="Company doesn't have enough CB to pay this salary"), 400
 
-    supabase.table("companies").update({"balance": round((cb.get("balance") or 0) - salary, 2)}) \
-        .eq("id", emp["company_id"]).execute()
+    # Atomically debit company capital first; only pay if it covered the salary.
+    if salary > 0 and not cas_num("companies", [("id", emp["company_id"])], "balance", -salary):
+        return jsonify(success=False, error="Company doesn't have enough CB to pay this salary"), 400
     _add_cash(emp["username"], salary)
     supabase.table("employment").update({
         "last_paid": _now().isoformat(), "last_flagged": None
@@ -1859,11 +1896,16 @@ def bonds_redeem():
     if _now() < _parse(b["matures_at"]):
         return jsonify(success=False, error="Bond hasn't matured yet"), 400
 
+    # Atomically claim the redemption FIRST — only the request that flips
+    # redeemed False->True may pay out. Kills the concurrent double-redeem mint.
+    claim = supabase.table("bonds").update({"redeemed": True}) \
+        .eq("id", bid).eq("redeemed", False).execute()
+    if not claim.data:
+        return jsonify(success=False, error="Already redeemed"), 400
+
     payout = round(b["principal"] * (1 + (b.get("rate") or BOND_RATE)), 2)
-    supabase.table("cybucks").update({"balance": round((user.get("balance") or 0) + payout, 2)}) \
-        .eq("username", user["username"]).execute()
+    _add_cash(user["username"], payout)
     treasury_add(cybucks=-payout, counterparty=user["username"], kind="bond_redeem")
-    supabase.table("bonds").update({"redeemed": True}).eq("id", bid).execute()
     add_record(user["username"], f"Redeemed a bond for {payout} CB.")
     notify(user["username"], f"Your government bond matured — {payout} CB paid out.", "/bank")
     return jsonify(success=True, payout=payout)
@@ -1961,6 +2003,13 @@ def court_rule():
     case = r[0]
     if case["status"] != "open":
         return jsonify(success=False, error="Case already ruled"), 400
+    # Conflict of interest: a judge may not rule on a case they are party to.
+    if user["username"] in (case.get("plaintiff"), case.get("defendant")):
+        return jsonify(success=False, error="You cannot rule on a case you are a party to"), 403
+    # Atomically claim the ruling so concurrent rulings can't double-fine.
+    if not supabase.table("court_cases").update({"status": "ruling"}) \
+            .eq("id", case["id"]).eq("status", "open").execute().data:
+        return jsonify(success=False, error="Case already being ruled"), 400
 
     verdict = d.get("verdict")          # 'guilty' | 'dismissed'
     note = (d.get("note") or "").strip()
@@ -1975,10 +2024,11 @@ def court_rule():
         paid = 0
         if fine > 0:
             defu = supabase.table("cybucks").select("balance").eq("username", case["defendant"]).execute().data[0]
-            paid = min(fine, defu.get("balance") or 0)   # take what they have
-            supabase.table("cybucks").update({"balance": round((defu.get("balance") or 0) - paid, 2)}) \
-                .eq("username", case["defendant"]).execute()
-            _add_cash(case["plaintiff"], paid)            # damages to the plaintiff
+            paid = round(min(fine, defu.get("balance") or 0), 2)   # take what they have
+            if paid > 0 and not cas_adjust(case["defendant"], "balance", -paid):
+                paid = 0                                  # balance moved — collect nothing
+            if paid > 0:
+                _add_cash(case["plaintiff"], paid)        # damages to the plaintiff
             log_txn("court", case["defendant"], case["plaintiff"], paid, "cybucks", "Court fine")
         supabase.table("court_cases").update({
             "status": "guilty", "verdict": note, "fine": paid,
@@ -2583,8 +2633,7 @@ def ministries_fund():
     if (t["balance"] or 0) < amount:
         return jsonify(success=False, error="The Treasury lacks the funds"), 400
     treasury_add(cybucks=-amount, counterparty=m[0]["name"], kind="budget")
-    supabase.table("ministries").update({"budget": round((m[0].get("budget") or 0) + amount, 2)}) \
-        .eq("id", mid).execute()
+    cas_num("ministries", [("id", mid)], "budget", amount, allow_negative=True)
     return jsonify(success=True)
 
 
@@ -2626,8 +2675,9 @@ def ministries_spend():
     if not supabase.table("cybucks").select("id").eq("username", to).execute().data:
         return jsonify(success=False, error="No such recipient"), 404
 
-    supabase.table("ministries").update({"budget": round((m.get("budget") or 0) - amount, 2)}) \
-        .eq("id", mid).execute()
+    # Atomically debit the ministry budget first; only pay if it covered the bill.
+    if not cas_num("ministries", [("id", mid)], "budget", -amount):
+        return jsonify(success=False, error="The ministry budget is insufficient"), 400
     _add_cash(to, amount)
     log_txn("ministry", m["name"], to, amount, "cybucks", reason or "Ministry disbursement")
     add_record(to, f"Received {amount} CB from the {m['name']}{(' — ' + reason) if reason else ''}.")
