@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Border Control · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    /* ---------- BORDER CONTROL ---------- */
+    .border{ max-width:620px; margin:0 auto; }
+    .gate{ text-align:center; padding:1.6rem 1rem .4rem; }
+    .gate .flag{ font-size:3.2rem; }
+    .gate h2{ margin:.2rem 0 .1rem; }
+    .gate .sub{ color:var(--muted); font-size:.9rem; }
+    .checklist{ margin:1.2rem 0; }
+    .chk{ display:flex; align-items:flex-start; gap:.8rem; padding:.7rem .2rem; border-bottom:1px solid var(--panel-border); }
+    .chk .ic{ width:26px; height:26px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.8rem; }
+    .chk .ic.pass{ background:rgba(31,214,166,.16); color:var(--green); }
+    .chk .ic.fail{ background:rgba(255,93,108,.16); color:var(--red); }
+    .chk .ic.pend{ background:var(--panel-2); color:var(--muted); }
+    .chk .t{ font-weight:600; font-size:.95rem; }
+    .chk .n{ font-size:.8rem; color:var(--muted); }
+    .chk .fix{ font-size:.8rem; }
+
+    /* scanner */
+    .scanner{ position:relative; height:120px; border-radius:12px; overflow:hidden; margin:1rem 0;
+      background:linear-gradient(180deg,#0a1424,#0e1a2e); border:1px solid var(--panel-border);
+      display:flex; align-items:center; justify-content:center; color:var(--accent); }
+    .scanner .doc{ font-size:2.6rem; opacity:.5; }
+    .scanline{ position:absolute; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,var(--accent),transparent);
+      box-shadow:0 0 14px 3px rgba(88,196,255,.6); top:0; display:none; }
+    .scanning .scanline{ display:block; animation:scan 1.1s ease-in-out infinite; }
+    @keyframes scan{ 0%{ top:6%; } 50%{ top:90%; } 100%{ top:6%; } }
+    .scanlog{ font-family:"Courier New",monospace; font-size:.78rem; color:var(--green); min-height:1.2em; text-align:center; }
+
+    .decl{ display:flex; gap:.6rem; align-items:flex-start; background:var(--panel); border:1px solid var(--panel-border);
+      border-radius:12px; padding:.9rem 1rem; margin:.8rem 0; }
+    .decl input{ width:auto; margin-top:.25rem; }
+    .decl label{ font-size:.88rem; color:var(--text); }
+    .denied{ background:rgba(255,93,108,.08); border:1px solid rgba(255,93,108,.3); border-radius:12px; padding:1rem 1.2rem; }
+
+    /* ---------- STATE MARKET ---------- */
+    .market-grid{ display:grid; gap:1.4rem; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+    .item{ background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; overflow:hidden; transition:.25s; }
+    .item:hover{ transform:translateY(-5px); border-color:rgba(88,196,255,.35); box-shadow:0 8px 25px rgba(0,0,0,.35); }
+    .item img{ width:100%; height:160px; object-fit:cover; background:#0f141b; display:block; }
+    .item .noimg{ height:160px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:2.5rem; background:#0f141b; }
+    .item .body{ padding:1rem 1.1rem; }
+    .item .price{ color:var(--accent); font-weight:700; font-size:1.1rem; }
+    .item .donate{ color:var(--green); font-weight:700; }
+    .item .seller{ font-size:.78rem; color:var(--muted); margin:.3rem 0; }
+    .item .desc{ color:var(--muted); font-size:.86rem; min-height:2.4em; }
+    .form-grid{ display:grid; gap:.6rem; grid-template-columns:1fr 1fr; }
+    .form-grid .full{ grid-column:1/-1; }
+    .banner-strip{ border-radius:14px; padding:1.1rem 1.4rem; margin-bottom:1.6rem; display:flex; align-items:center; gap:1rem; }
+    @media(max-width:600px){ .form-grid{ grid-template-columns:1fr; } }
+    .msg{ text-align:center; font-size:.88rem; margin-top:1rem; min-height:1.2em; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:900px;">
+    <p style="margin-bottom:1rem;"><a class="link" href="/states"><i class="fas fa-arrow-left"></i> All states</a></p>
+    <div id="border" class="border"></div>
+    <div id="market" style="display:none;"></div>
+    <p id="msg" class="msg"></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const qs = new URLSearchParams(location.search);
+    const SID = qs.get("id");
+    const CUR = { cybucks:"CB", pufb:"PUFB", aquilines:"AQ" };
+    const esc = (s)=>(s||"").replace(/</g,"&lt;");
+    const msg = (t,err=true)=>{ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
+    let S = null, scanDone = false, ME = null;
+
+    /* ---------------- BORDER CONTROL ---------------- */
+    function renderBorder(){
+      const host = document.getElementById("border");
+      const checks = S.checks || [];
+      const passedAll = S.can_enter;
+
+      const checkHtml = checks.map(c=>{
+        const cls = c.ok ? "pass" : "fail";
+        const icon = c.ok ? "fa-check" : "fa-xmark";
+        let fix = "";
+        if(!c.ok && (c.key==="passport"||c.key==="oath")) fix = `<a class="link fix" href="/passport">→ Resolve at Passport &amp; Citizenship</a>`;
+        return `<div class="chk"><div class="ic ${cls}"><i class="fas ${icon}"></i></div>
+          <div><div class="t">${esc(c.label)}</div><div class="n">${esc(c.note)}</div>${fix}</div></div>`;
+      }).join("");
+
+      let action;
+      if(!passedAll){
+        action = `<div class="denied">
+            <b style="color:var(--red)"><i class="fas fa-ban"></i> Entry denied</b>
+            <p class="small">You don't yet meet the requirements above. Resolve them, then return to the checkpoint.</p>
+          </div>`;
+      } else {
+        action = `
+          <div class="scanner" id="scanner">
+            <i class="fas fa-passport doc"></i><div class="scanline"></div>
+          </div>
+          <div class="scanlog" id="scanlog">${S.visited ? "Returning traveller — visa on file." : "Awaiting biometric & document scan."}</div>
+          <button class="ghost" id="scanBtn" onclick="runScan()"><i class="fas fa-fingerprint"></i> Begin security scan</button>
+
+          <div class="decl">
+            <input type="checkbox" id="decl1">
+            <label for="decl1">I declare I am carrying no restricted goods or contraband, and consent to search under the laws of ${esc(S.name)}.</label>
+          </div>
+
+          <button id="enterBtn" disabled onclick="requestEntry()"><i class="fas fa-door-open"></i> Request entry to ${esc(S.name)}</button>`;
+      }
+
+      host.innerHTML = `
+        <div class="gate" style="color:${S.color}">
+          <div class="flag">${S.flag}</div>
+          <h2 style="color:var(--text)">Border Control — ${esc(S.name)}</h2>
+          <div class="sub">${esc(S.security)} security checkpoint · Capital of ${esc(S.capital)}</div>
+        </div>
+        <div class="checklist">${checkHtml}</div>
+        ${action}`;
+
+      const d1 = document.getElementById("decl1");
+      if(d1) d1.addEventListener("change", updateEnter);
+      updateEnter();
+    }
+
+    function updateEnter(){
+      const btn = document.getElementById("enterBtn");
+      const d1 = document.getElementById("decl1");
+      if(btn) btn.disabled = !(scanDone && d1 && d1.checked);
+    }
+
+    function runScan(){
+      const sc = document.getElementById("scanner");
+      const log = document.getElementById("scanlog");
+      const btn = document.getElementById("scanBtn");
+      btn.disabled = true; sc.classList.add("scanning");
+      const steps = ["Reading passport MRZ…","Verifying citizen record…","Biometric facial scan…","Cross-checking sanctions list…","Clearance confirmed ✓"];
+      let i = 0;
+      const iv = setInterval(()=>{
+        log.textContent = steps[i]; i++;
+        if(i >= steps.length){
+          clearInterval(iv); sc.classList.remove("scanning");
+          scanDone = true; btn.innerHTML = '<i class="fas fa-check"></i> Scan complete'; updateEnter();
+        }
+      }, 650);
+    }
+
+    async function requestEntry(){
+      try{
+        await api(`/state/${SID}/enter`, {method:"POST", body:"{}"});
+        enterState();
+      }catch(e){ msg(e.message); }
+    }
+
+    /* ---------------- STATE MARKETPLACE ---------------- */
+    function enterState(){
+      document.getElementById("border").style.display = "none";
+      const m = document.getElementById("market");
+      m.style.display = "block";
+      m.innerHTML = `
+        <div class="banner-strip" style="background:linear-gradient(120deg, ${S.color}22, transparent); border:1px solid ${S.color}55; color:${S.color}">
+          <div style="font-size:2.2rem">${S.flag}</div>
+          <div style="color:var(--text)">
+            <h2 style="margin:0">${esc(S.name)} Marketplace</h2>
+            <div class="small" style="margin:0">${esc(S.tagline)} · You are cleared <i class="fas fa-circle-check" style="color:var(--green)"></i></div>
+          </div>
+        </div>
+
+        <div class="panel" style="max-width:760px;margin:0 auto 2rem;">
+          <h3><i class="fas fa-plus"></i> List an Item in ${esc(S.name)}</h3>
+          <div class="form-grid">
+            <input class="full" id="mTitle" placeholder="Item title">
+            <input class="full" id="mImage" placeholder="Image URL (https://...)">
+            <textarea class="full" id="mDesc" rows="2" placeholder="Description"></textarea>
+            <select id="mKind" onchange="togglePrice()">
+              <option value="sale">For Sale</option>
+              <option value="donation">Donation (free)</option>
+            </select>
+            <select id="mSeller"><option value="">Sell as: Myself</option></select>
+            <input id="mPrice" type="number" min="0" step="0.01" placeholder="Price">
+            <select id="mCurrency">
+              <option value="cybucks">Cybucks</option>
+              <option value="pufb">Pufferbucks</option>
+              <option value="aquilines">Aquilines</option>
+            </select>
+          </div>
+          <button onclick="listItem()">List in ${esc(S.name)}</button>
+        </div>
+        <div class="market-grid" id="grid"></div>`;
+      togglePrice();
+      loadMarket();
+    }
+
+    function togglePrice(){
+      const donation = document.getElementById("mKind").value === "donation";
+      document.getElementById("mPrice").style.display = donation ? "none" : "";
+      document.getElementById("mCurrency").style.display = donation ? "none" : "";
+    }
+
+    async function loadMarket(){
+      const d = await api(`/market?state=${SID}`);
+      const sel = document.getElementById("mSeller");
+      sel.innerHTML = '<option value="">Sell as: Myself</option>' +
+        (d.my_companies||[]).map(c=>`<option value="${c.id}">Sell as: ${esc(c.name)}</option>`).join("");
+      const grid = document.getElementById("grid");
+      if(!d.items.length){ grid.innerHTML = `<p class="muted">No goods listed in ${esc(S.name)} yet — be the first trader!</p>`; return; }
+      grid.innerHTML = d.items.map(it=>{
+        const img = it.image_url
+          ? `<img src="${esc(it.image_url)}" onerror="this.outerHTML='<div class=&quot;noimg&quot;><i class=&quot;fas fa-box&quot;></i></div>'">`
+          : `<div class="noimg"><i class="fas fa-box"></i></div>`;
+        const priceHtml = it.kind === "donation"
+          ? `<span class="donate"><i class="fas fa-gift"></i> Free Donation</span>`
+          : `<span class="price">${fmt(it.price)} ${CUR[it.currency]}</span>`;
+        const mine = it.seller === d.me;
+        const btn = mine
+          ? `<button class="danger" onclick="removeItem(${it.id})">Remove</button>`
+          : `<button onclick="buyItem(${it.id})">${it.kind==="donation"?"Claim":"Buy"}</button>`;
+        return `<div class="item">${img}<div class="body">
+          <h3>${esc(it.title)}</h3>${priceHtml}
+          <div class="seller"><i class="fas fa-user-tag"></i> ${esc(it.seller_label)}</div>
+          <div class="desc">${esc(it.description)||"<span class='muted'>No description.</span>"}</div>
+          ${btn}</div></div>`;
+      }).join("");
+    }
+
+    async function listItem(){
+      const body = {
+        title: document.getElementById("mTitle").value.trim(),
+        description: document.getElementById("mDesc").value.trim(),
+        image_url: document.getElementById("mImage").value.trim(),
+        kind: document.getElementById("mKind").value,
+        price: document.getElementById("mPrice").value,
+        currency: document.getElementById("mCurrency").value,
+        company_id: document.getElementById("mSeller").value || null,
+        state: SID,
+      };
+      if(!body.title) return msg("Give your item a title");
+      try{
+        await api("/market",{method:"POST",body:JSON.stringify(body)});
+        msg("Listed in "+S.name+"!",false);
+        ["mTitle","mDesc","mImage","mPrice"].forEach(id=>document.getElementById(id).value="");
+        loadMarket();
+      }catch(e){ msg(e.message); }
+    }
+    async function buyItem(id){
+      try{ await api("/market/buy",{method:"POST",body:JSON.stringify({item_id:id})});
+        msg("Purchase complete — see your ID Card record.",false); loadMarket();
+      }catch(e){ msg(e.message); }
+    }
+    async function removeItem(id){
+      try{ await api("/market/delete",{method:"POST",body:JSON.stringify({item_id:id})}); loadMarket(); }
+      catch(e){ msg(e.message); }
+    }
+
+    (async function(){
+      ME = await requireAuth(); if(!ME) return;
+      renderNav("/states", ME);
+      if(!SID){ document.getElementById("border").innerHTML = `<p class="muted">No state selected. <a class="link" href="/states">Choose a state →</a></p>`; return; }
+      try{
+        const d = await api("/state_info/"+encodeURIComponent(SID));
+        S = d.state;
+        renderBorder();
+      }catch(e){ msg(e.message); }
+    })();
+  </script>
+</body>
+</html>

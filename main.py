@@ -644,6 +644,14 @@ def exchange_page():
 def marketplace_page():
     return app.send_static_file("marketplace.html")
 
+@app.route("/states")
+def states_page():
+    return app.send_static_file("states.html")
+
+@app.route("/state")
+def state_page():
+    return app.send_static_file("state.html")
+
 @app.route("/news")
 def news_page():
     return app.send_static_file("news.html")
@@ -1467,11 +1475,34 @@ def _seller_label(item):
     return item["seller"]
 
 
+def _fetch_market(state):
+    """Available listings for a given state, or the stateless Import/Export
+    pool when `state` is None. Falls back gracefully if the `state` column
+    hasn't been added to market_items yet."""
+    base = supabase.table("market_items").select("*").eq("status", "available")
+    try:
+        q = base.eq("state", state) if state else base.is_("state", "null")
+        return q.order("created_at", desc=True).execute().data or []
+    except Exception:        # column not migrated yet
+        if state:
+            return []        # cannot scope to a state without the column
+        return base.order("created_at", desc=True).execute().data or []
+
+
 @app.route("/market", methods=["GET"])
 def market_list():
     user = get_current_user(run_economics=False)
-    items = supabase.table("market_items").select("*").eq("status", "available") \
-        .order("created_at", desc=True).execute().data or []
+    state = request.args.get("state") or None
+    if state:
+        if state not in STATE_IDS:
+            return jsonify(success=False, error="Unknown state"), 404
+        if not user:
+            return jsonify(success=False, error="Not logged in"), 401
+        ok, err = _state_gate(user, state)
+        if not ok:
+            return jsonify(success=False, error=err), 403
+
+    items = _fetch_market(state)
     for it in items:
         it["seller_label"] = _seller_label(it)
     # companies this citizen can sell on behalf of
@@ -1480,7 +1511,7 @@ def market_list():
         my_companies = supabase.table("companies").select("id,name") \
             .eq("founder", user["username"]).execute().data or []
     return jsonify(success=True, items=items, me=user["username"] if user else None,
-                   my_companies=my_companies)
+                   my_companies=my_companies, state=state)
 
 
 @limiter.limit("15/min")
@@ -1497,6 +1528,7 @@ def market_create():
     currency = d.get("currency", "cybucks")
     kind = d.get("kind", "sale")
     company_id = d.get("company_id") or None
+    state = d.get("state") or None
     try:
         price = float(d.get("price") or 0)
     except (TypeError, ValueError):
@@ -1513,16 +1545,32 @@ def market_create():
     if kind == "donation":
         price = 0
 
+    if state:                       # listing inside a state market needs clearance
+        if state not in STATE_IDS:
+            return jsonify(success=False, error="Unknown state"), 404
+        ok, err = _state_gate(user, state)
+        if not ok:
+            return jsonify(success=False, error=err), 403
+
     if company_id:
         c = supabase.table("companies").select("*").eq("id", company_id).execute().data
         if not c or user["username"] not in company_founders(c[0]):
             return jsonify(success=False, error="You can only sell for your own company"), 403
 
-    item = supabase.table("market_items").insert({
+    row = {
         "seller": user["username"], "company_id": company_id,
         "title": title, "description": description, "image_url": image_url,
-        "price": price, "currency": currency, "kind": kind
-    }).execute().data[0]
+        "price": price, "currency": currency, "kind": kind,
+    }
+    if state:
+        row["state"] = state
+    try:
+        item = supabase.table("market_items").insert(row).execute().data[0]
+    except Exception:
+        if state:                   # column not migrated yet
+            return jsonify(success=False,
+                           error="State marketplaces aren't enabled yet — the database needs a quick update."), 503
+        raise
     return jsonify(success=True, item=item)
 
 
@@ -1541,6 +1589,10 @@ def market_buy():
     item = r[0]
     if item["seller"] == user["username"] and not item.get("company_id"):
         return jsonify(success=False, error="You can't buy your own item"), 400
+    if item.get("state"):            # must be cleared into the state to trade there
+        ok, err = _state_gate(user, item["state"])
+        if not ok:
+            return jsonify(success=False, error=err), 403
 
     if item["kind"] == "sale":
         col = CURRENCY_COLUMN[item["currency"]]
@@ -2283,6 +2335,134 @@ def citizenship_oath():
     add_record(user["username"], "Swore the Oath of Allegiance to the Republic of Cyvathon.")
     notify(user["username"], "Oath of Allegiance recorded. Welcome, sworn citizen.", "/passport")
     return jsonify(success=True)
+
+
+# ============================================================
+#  STATES  &  BORDER CONTROL
+#  Each state has its own local marketplace. Entry requires
+#  passing border control (citizenship, passport, screening...).
+# ============================================================
+STATES = [
+    {"id": "neonhaven", "name": "Neonhaven", "flag": "\U0001F303", "color": "#58c4ff",
+     "capital": "Lumina", "security": "Standard", "need_passport": True, "need_oath": False,
+     "tagline": "The capital district — finance, neon nightlife and high tech."},
+    {"id": "cryptvale", "name": "Cryptvale", "flag": "⛰️", "color": "#a78bfa",
+     "capital": "Hashford", "security": "Standard", "need_passport": True, "need_oath": False,
+     "tagline": "Highland mining colonies and the crypto frontier."},
+    {"id": "silica", "name": "Silica Plains", "flag": "\U0001F33E", "color": "#34d399",
+     "capital": "Greenport", "security": "Basic", "need_passport": True, "need_oath": False,
+     "tagline": "Agri-tech fields and the manufacturing heartland."},
+    {"id": "portusmare", "name": "Portus Mare", "flag": "\U0001F30A", "color": "#22d3ee",
+     "capital": "Tidewell", "security": "Standard", "need_passport": True, "need_oath": False,
+     "tagline": "The coastal free-trade port and shipping gateway."},
+    {"id": "aetheris", "name": "Aetheris", "flag": "\U0001F6F0️", "color": "#fbbf24",
+     "capital": "Skyreach", "security": "Maximum", "need_passport": True, "need_oath": True,
+     "tagline": "Aerospace, research and national defense. Cleared personnel only."},
+]
+STATE_IDS = {s["id"] for s in STATES}
+
+
+def _state_by_id(sid):
+    return next((s for s in STATES if s["id"] == sid), None)
+
+
+def _state_public(s):
+    return {k: s[k] for k in ("id", "name", "flag", "color", "capital",
+                              "security", "tagline", "need_passport", "need_oath")}
+
+
+def _clearance(username):
+    """One pass over a citizen's official Records → travel clearance facts."""
+    recs = supabase.table("records").select("entry").eq("username", username).execute().data or []
+    low = " ".join((r.get("entry") or "").lower() for r in recs)
+    return {
+        "passport": PASSPORT_MARK in low,
+        "oath": OATH_MARK in low,
+        "visas": set(re.findall(r"\[visa:([a-z0-9_]+)\]", low)),
+    }
+
+
+def _entry_check(user, s, cl):
+    """Border-control checklist for a state. Returns (checks, all_ok)."""
+    checks = [
+        {"key": "citizen", "label": "Citizenship verification", "ok": True,
+         "note": "Verified citizen of the Republic of Cyvathon"},
+        {"key": "passport", "label": "Passport control", "ok": cl["passport"],
+         "note": "Passport verified" if cl["passport"]
+                 else "No passport on file — issue one at Passport & Citizenship"},
+    ]
+    if s["need_oath"]:
+        checks.append({"key": "oath", "label": "Security clearance — Oath of Allegiance",
+                       "ok": cl["oath"],
+                       "note": "Sworn citizen — clearance granted" if cl["oath"]
+                               else "Restricted: requires the Oath of Allegiance"})
+    checks.append({"key": "sanctions", "label": "Sanctions & watchlist screening",
+                   "ok": not user.get("banned"),
+                   "note": "No matches — clear" if not user.get("banned") else "Flagged"})
+    return checks, all(c["ok"] for c in checks)
+
+
+def _state_gate(user, sid):
+    """(ok, error) — may this citizen trade in state `sid`?"""
+    s = _state_by_id(sid)
+    if not s:
+        return False, "Unknown state"
+    checks, ok = _entry_check(user, s, _clearance(user["username"]))
+    if ok:
+        return True, None
+    fail = next(c for c in checks if not c["ok"])
+    return False, f"You haven't cleared {s['name']} border control: {fail['note']}."
+
+
+@app.route("/states/list")
+def states_list():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    cl = _clearance(user["username"])
+    out = []
+    for s in STATES:
+        _checks, ok = _entry_check(user, s, cl)
+        d = _state_public(s)
+        d.update(can_enter=ok, visited=(s["id"] in cl["visas"]))
+        out.append(d)
+    return jsonify(success=True, states=out)
+
+
+@app.route("/state_info/<sid>")
+def state_info(sid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    s = _state_by_id(sid)
+    if not s:
+        return jsonify(success=False, error="State not found"), 404
+    cl = _clearance(user["username"])
+    checks, ok = _entry_check(user, s, cl)
+    d = _state_public(s)
+    d.update(checks=checks, can_enter=ok, visited=(sid in cl["visas"]))
+    return jsonify(success=True, state=d)
+
+
+@limiter.limit("20/min")
+@app.route("/state/<sid>/enter", methods=["POST"])
+def state_enter(sid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    s = _state_by_id(sid)
+    if not s:
+        return jsonify(success=False, error="State not found"), 404
+    cl = _clearance(user["username"])
+    checks, ok = _entry_check(user, s, cl)
+    if not ok:
+        fail = next(c for c in checks if not c["ok"])
+        return jsonify(success=False, error=f"Entry denied at {s['name']}: {fail['note']}.",
+                       checks=checks), 403
+    if sid not in cl["visas"]:        # stamp a visa into the passport on first entry
+        add_record(user["username"],
+                   f"Cleared border control — entry visa to {s['name']}. [VISA:{sid}]")
+    return jsonify(success=True, state=_state_public(s), checks=checks)
 
 
 # ============================================================
