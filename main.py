@@ -2345,7 +2345,7 @@ def citizenship_oath():
 STATES = [
     {"id": "neonhaven", "name": "Neonhaven", "flag": "\U0001F303", "color": "#58c4ff",
      "capital": "Lumina", "security": "Standard", "need_passport": True, "need_oath": False,
-     "tagline": "The capital district — finance, neon nightlife and high tech."},
+     "tagline": "Coastal metropolis of finance, neon nightlife and high tech."},
     {"id": "cryptvale", "name": "Cryptvale", "flag": "⛰️", "color": "#a78bfa",
      "capital": "Hashford", "security": "Standard", "need_passport": True, "need_oath": False,
      "tagline": "Highland mining colonies and the crypto frontier."},
@@ -2357,9 +2357,11 @@ STATES = [
      "tagline": "The coastal free-trade port and shipping gateway."},
     {"id": "aetheris", "name": "Aetheris", "flag": "\U0001F6F0️", "color": "#fbbf24",
      "capital": "Skyreach", "security": "Maximum", "need_passport": True, "need_oath": True,
-     "tagline": "Aerospace, research and national defense. Cleared personnel only."},
+     "is_capital": True,
+     "tagline": "The national capital — seat of the President, aerospace, research and defense."},
 ]
 STATE_IDS = {s["id"] for s in STATES}
+STATE_CH_PREFIX = "State Channel — "
 
 
 def _state_by_id(sid):
@@ -2367,8 +2369,76 @@ def _state_by_id(sid):
 
 
 def _state_public(s):
-    return {k: s[k] for k in ("id", "name", "flag", "color", "capital",
-                              "security", "tagline", "need_passport", "need_oath")}
+    d = {k: s[k] for k in ("id", "name", "flag", "color", "capital",
+                           "security", "tagline", "need_passport", "need_oath")}
+    d["is_capital"] = s.get("is_capital", False)
+    return d
+
+
+def _is_president(user):
+    return user.get("designation") == "President" or user["username"] in TREASURY_ADMINS
+
+
+def _state_group_id(s, create=True):
+    """The chat channel that IS the state's resident roster. Created on demand."""
+    name = STATE_CH_PREFIX + s["name"]
+    g = supabase.table("chat_groups").select("id").eq("name", name).execute().data
+    if g:
+        return g[0]["id"]
+    if not create:
+        return None
+    return supabase.table("chat_groups").insert(
+        {"name": name, "owner": "Cyvathon"}).execute().data[0]["id"]
+
+
+def _residents(s):
+    gid = _state_group_id(s, create=False)
+    if not gid:
+        return []
+    rows = supabase.table("chat_group_members").select("username") \
+        .eq("group_id", gid).execute().data or []
+    return [r["username"] for r in rows]
+
+
+def _home_state(username):
+    """A citizen's state of residence = the state channel they belong to."""
+    mine = supabase.table("chat_group_members").select("group_id") \
+        .eq("username", username).execute().data or []
+    for m in mine:
+        g = supabase.table("chat_groups").select("name").eq("id", m["group_id"]).execute().data
+        if g and g[0]["name"].startswith(STATE_CH_PREFIX):
+            nm = g[0]["name"][len(STATE_CH_PREFIX):]
+            s = next((x for x in STATES if x["name"] == nm), None)
+            if s:
+                return s["id"]
+    return None
+
+
+def _join_state(username, s):
+    gid = _state_group_id(s)
+    if not _group_member(gid, username):
+        try:
+            supabase.table("chat_group_members").insert(
+                {"group_id": gid, "username": username}).execute()
+        except Exception:
+            pass
+    return gid
+
+
+def _leave_state(username, sid):
+    gid = _state_group_id(_state_by_id(sid), create=False)
+    if gid:
+        supabase.table("chat_group_members").delete().eq("group_id", gid) \
+            .eq("username", username).execute()
+
+
+def _ensure_president_home(user):
+    """The President resides in the capital, Aetheris — always."""
+    if _is_president(user) and _home_state(user["username"]) != "aetheris":
+        cur = _home_state(user["username"])
+        if cur:
+            _leave_state(user["username"], cur)
+        _join_state(user["username"], _state_by_id("aetheris"))
 
 
 def _clearance(username):
@@ -2419,14 +2489,17 @@ def states_list():
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
+    _ensure_president_home(user)
+    home = _home_state(user["username"])
     cl = _clearance(user["username"])
     out = []
     for s in STATES:
         _checks, ok = _entry_check(user, s, cl)
         d = _state_public(s)
-        d.update(can_enter=ok, visited=(s["id"] in cl["visas"]))
+        d.update(can_enter=ok, visited=(s["id"] in cl["visas"]),
+                 population=len(_residents(s)), is_home=(home == s["id"]))
         out.append(d)
-    return jsonify(success=True, states=out)
+    return jsonify(success=True, states=out, home=home)
 
 
 @app.route("/state_info/<sid>")
@@ -2437,11 +2510,44 @@ def state_info(sid):
     s = _state_by_id(sid)
     if not s:
         return jsonify(success=False, error="State not found"), 404
+    _ensure_president_home(user)
     cl = _clearance(user["username"])
     checks, ok = _entry_check(user, s, cl)
+    residents = _residents(s)
     d = _state_public(s)
-    d.update(checks=checks, can_enter=ok, visited=(sid in cl["visas"]))
+    d.update(checks=checks, can_enter=ok, visited=(sid in cl["visas"]),
+             population=len(residents), residents=residents[:40],
+             is_home=(_home_state(user["username"]) == sid),
+             is_president=_is_president(user))
     return jsonify(success=True, state=d)
+
+
+@limiter.limit("15/min")
+@app.route("/state/<sid>/settle", methods=["POST"])
+def state_settle(sid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    s = _state_by_id(sid)
+    if not s:
+        return jsonify(success=False, error="State not found"), 404
+    if _is_president(user) and sid != "aetheris":
+        return jsonify(success=False,
+                       error="As President you reside in the national capital, Aetheris."), 403
+    ok, err = _state_gate(user, sid)
+    if not ok:
+        return jsonify(success=False, error=err), 403
+    cur = _home_state(user["username"])
+    if cur == sid:
+        return jsonify(success=False, error=f"You already reside in {s['name']}."), 400
+    if cur:
+        _leave_state(user["username"], cur)
+    _join_state(user["username"], s)
+    add_record(user["username"], f"Settled in {s['name']} — now a resident. [HOME:{sid}]")
+    notify(user["username"],
+           f"You are now a resident of {s['name']}. Meet fellow residents in the {s['name']} channel.",
+           "/chat")
+    return jsonify(success=True, home=sid, state=_state_public(s))
 
 
 @limiter.limit("20/min")

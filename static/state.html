@@ -54,6 +54,13 @@
     .form-grid{ display:grid; gap:.6rem; grid-template-columns:1fr 1fr; }
     .form-grid .full{ grid-column:1/-1; }
     .banner-strip{ border-radius:14px; padding:1.1rem 1.4rem; margin-bottom:1.6rem; display:flex; align-items:center; gap:1rem; }
+    .community{ display:grid; grid-template-columns:1fr 1.4fr; gap:1.2rem; margin-bottom:1.8rem; }
+    @media(max-width:640px){ .community{ grid-template-columns:1fr; } }
+    .resbox{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.8rem; }
+    .rchip{ font-size:.82rem; background:var(--panel-2); border:1px solid var(--panel-border); border-radius:20px; padding:.3rem .8rem; }
+    .popbig{ font-size:2.2rem; font-weight:800; color:var(--accent); }
+    .homepill{ display:inline-flex; align-items:center; gap:.4rem; font-size:.82rem; color:var(--green);
+      background:rgba(31,214,166,.1); border:1px solid rgba(31,214,166,.3); border-radius:20px; padding:.35rem .9rem; }
     @media(max-width:600px){ .form-grid{ grid-template-columns:1fr; } }
     .msg{ text-align:center; font-size:.88rem; margin-top:1rem; min-height:1.2em; }
   </style>
@@ -157,6 +164,47 @@
       }catch(e){ msg(e.message); }
     }
 
+    /* ---------------- RESIDENCY & COMMUNITY ---------------- */
+    function communityHtml(){
+      const pop = S.population || 0;
+      const residents = S.residents || [];
+      let action;
+      if(S.is_home){
+        action = `<div class="homepill"><i class="fas fa-house-chimney"></i> You reside in ${esc(S.name)}${S.is_capital?" — the capital":""}</div>
+          <p class="small">Chat with fellow residents in the <a class="link" href="/chat">${esc(S.name)} channel</a>.</p>`;
+      } else if(S.is_president){
+        action = `<p class="small">As President, your residence is fixed to the national capital, Aetheris.</p>`;
+      } else {
+        action = `<button onclick="settleState()"><i class="fas fa-house-flag"></i> Settle in ${esc(S.name)}</button>
+          <p class="small">Become a resident to join the ${esc(S.name)} community channel.</p>`;
+      }
+      const chips = residents.length
+        ? residents.map(r=>`<span class="rchip">${userLink(r)}</span>`).join("")
+        : `<span class="small muted">No residents yet — be the first to settle here.</span>`;
+      return `<div class="community">
+        <div class="panel">
+          <h3 style="margin-bottom:.2rem;"><i class="fas fa-people-roof"></i> Residency</h3>
+          <div class="popbig">${pop}</div>
+          <div class="small" style="margin-top:-.35rem;">resident${pop===1?"":"s"} of ${esc(S.name)}</div>
+          <div style="margin-top:1rem;">${action}</div>
+        </div>
+        <div class="panel">
+          <h3 style="margin-bottom:.4rem;"><i class="fas fa-address-book"></i> Residents</h3>
+          <div class="resbox">${chips}</div>
+        </div>
+      </div>`;
+    }
+
+    async function settleState(){
+      try{
+        await api(`/state/${SID}/settle`,{method:"POST",body:"{}"});
+        msg("You've settled in "+S.name+"! Fellow residents are now in your chat.",false);
+        const d = await api("/state_info/"+encodeURIComponent(SID));
+        S = d.state;
+        enterState();
+      }catch(e){ msg(e.message); }
+    }
+
     /* ---------------- STATE MARKETPLACE ---------------- */
     function enterState(){
       document.getElementById("border").style.display = "none";
@@ -166,12 +214,15 @@
         <div class="banner-strip" style="background:linear-gradient(120deg, ${S.color}22, transparent); border:1px solid ${S.color}55; color:${S.color}">
           <div style="font-size:2.2rem">${S.flag}</div>
           <div style="color:var(--text)">
-            <h2 style="margin:0">${esc(S.name)} Marketplace</h2>
+            <h2 style="margin:0">${esc(S.name)} ${S.is_capital?'<i class="fas fa-crown" style="color:var(--gold);font-size:1rem"></i>':''}</h2>
             <div class="small" style="margin:0">${esc(S.tagline)} · You are cleared <i class="fas fa-circle-check" style="color:var(--green)"></i></div>
           </div>
         </div>
 
-        <div class="panel" style="max-width:760px;margin:0 auto 2rem;">
+        ${communityHtml()}
+
+        <h3 style="text-align:center;margin:0 0 .3rem;"><i class="fas fa-store"></i> ${esc(S.name)} Marketplace</h3>
+        <div class="panel" style="max-width:760px;margin:1rem auto 2rem;">
           <h3><i class="fas fa-plus"></i> List an Item in ${esc(S.name)}</h3>
           <div class="form-grid">
             <input class="full" id="mTitle" placeholder="Item title">

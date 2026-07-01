@@ -25,6 +25,11 @@
     .dot{ width:9px; height:9px; border-radius:50%; }
     .ok{ background:var(--green); } .no{ background:var(--gold); }
     .visited{ font-size:.72rem; color:var(--green); }
+    .capital{ font-size:.6rem; font-weight:700; letter-spacing:.4px; color:var(--gold);
+      border:1px solid rgba(255,206,86,.4); background:rgba(255,206,86,.1); padding:.12rem .5rem; border-radius:20px; vertical-align:middle; }
+    .homebadge{ font-size:.72rem; color:var(--accent); font-weight:600; }
+    .pop{ font-size:.72rem; color:var(--muted); }
+    .state.ishome{ border-color:rgba(88,196,255,.5); box-shadow:0 0 0 1px rgba(88,196,255,.25); }
   </style>
 </head>
 <body>
@@ -48,16 +53,19 @@
         ? `<span class="statusrow"><span class="dot ok"></span> Cleared for entry</span>`
         : `<span class="statusrow"><span class="dot no"></span> Additional clearance required</span>`;
       const visited = s.visited ? `<span class="visited"><i class="fas fa-stamp"></i> Visa on file</span>` : "";
-      return `<div class="state" style="color:${s.color}">
+      const capital = s.is_capital ? `<span class="capital"><i class="fas fa-crown"></i> National Capital</span>` : "";
+      const home = s.is_home ? `<span class="homebadge"><i class="fas fa-house-chimney"></i> Your residence</span>` : "";
+      const pop = `<span class="pop"><i class="fas fa-users"></i> ${s.population} resident${s.population===1?"":"s"}</span>`;
+      return `<div class="state ${s.is_home?'ishome':''}" style="color:${s.color}">
         <div class="banner" style="background:linear-gradient(160deg, ${s.color}22, transparent);">${s.flag}</div>
         <span class="sec" style="color:${secColor[s.security]||'#fff'}">${esc(s.security)} security</span>
         <div class="body" style="color:var(--text)">
-          <h3>${esc(s.name)}</h3>
-          <div class="cap"><i class="fas fa-location-dot"></i> Capital: ${esc(s.capital)}</div>
+          <h3>${esc(s.name)} ${capital}</h3>
+          <div class="cap"><i class="fas fa-location-dot"></i> Capital: ${esc(s.capital)} &nbsp;·&nbsp; ${pop}</div>
           <div class="tag">${esc(s.tagline)}</div>
-          ${status}${visited}
+          ${status}${home||visited}
           <a href="/state?id=${s.id}"><button style="margin-top:.8rem;">
-            <i class="fas fa-id-card-clip"></i> Approach border</button></a>
+            <i class="fas fa-id-card-clip"></i> ${s.is_home?"Enter home state":"Approach border"}</button></a>
         </div>
       </div>`;
     }
