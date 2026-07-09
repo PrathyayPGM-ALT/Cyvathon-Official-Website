@@ -698,16 +698,29 @@ def athena_page():
 # ============================================================
 _captchas = {}   # token -> (answer:int, expires:float)
 
+MAX_ACCOUNTS_PER_IP = 6      # one household/network may hold a handful of citizens — not hundreds
+
+
 @app.route("/captcha")
 def captcha():
-    a, b = random.randint(1, 9), random.randint(1, 9)
+    a, b = random.randint(2, 9), random.randint(2, 9)
     token = secrets.token_hex(8)
     now = time()
-    _captchas[token] = (a + b, now + 600)
+    _captchas[token] = (a + b, now + 600, now)      # (answer, expires, issued_at)
     for t in list(_captchas):            # drop expired
         if _captchas[t][1] < now:
             _captchas.pop(t, None)
     return jsonify(success=True, token=token, question=f"What is {a} + {b}?")
+
+
+def _ip_account_count(ip):
+    if not ip:
+        return 0
+    try:
+        r = supabase.table("cybucks").select("id", count="exact").eq("reg_ip", ip).execute()
+        return r.count or 0
+    except Exception:
+        return 0
 
 
 @limiter.limit("5/min")
@@ -722,11 +735,28 @@ def register():
     username = data.get("username", "").strip()
     password = data.get("password", "").strip()
 
+    # Honeypot: a hidden field real users never see. Bots that fill every field trip it.
+    if (data.get("website") or data.get("hp") or "").strip():
+        _strike(ip)
+        return jsonify(success=False, error="Signup blocked"), 400
+
     # Human-check (anti-bot CAPTCHA)
     entry = _captchas.pop(data.get("captcha_token", ""), None)
     if (not entry or entry[1] < now
             or str(data.get("captcha_answer", "")).strip() != str(entry[0])):
+        _strike(ip)      # scripts hammering the endpoint auto-temp-ban themselves
         return jsonify(success=False, error="Incorrect human-check answer — try again"), 400
+
+    # Instant submits (< 1.5s after the challenge loaded) are bots, not humans.
+    if now - entry[2] < 1.5:
+        _strike(ip)
+        return jsonify(success=False, error="Slow down — try again"), 400
+
+    # Hard cap on accounts per signup IP — the decisive block against mass farming.
+    if _ip_account_count(ip) >= MAX_ACCOUNTS_PER_IP:
+        _strike(ip)
+        return jsonify(success=False,
+                       error="Too many accounts have been created from your network."), 429
 
     recent_registrations[ip] = now
 
@@ -734,6 +764,8 @@ def register():
         return jsonify(success=False, error="Missing credentials"), 400
     if len(username) > 32 or len(password) > 200:
         return jsonify(success=False, error="Username (max 32) or password too long"), 400
+    if not re.fullmatch(r"[A-Za-z0-9 _.\-]{3,32}", username):
+        return jsonify(success=False, error="Username must be 3–32 letters, numbers, spaces, . _ -"), 400
 
     exists = supabase.table("cybucks").select("id").eq("username", username).execute()
     if exists.data:
@@ -3598,6 +3630,45 @@ def admin_purge_chat():
         return jsonify(success=False, error="President only"), 403
     supabase.table("messages").delete().gte("id", 0).execute()
     return jsonify(success=True)
+
+
+@limiter.limit("4/min")
+@app.route("/admin/purge_bots", methods=["POST"])
+def admin_purge_bots():
+    """President-only: wipe all accounts whose username starts with `prefix`
+    (default 'bot_'), plus every trace, and block the IPs they came from."""
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    prefix = (request.get_json().get("prefix") or "bot_").strip()
+    if len(prefix) < 3:
+        return jsonify(success=False, error="Prefix too short — refuse (would match real citizens)"), 400
+    if any(a.startswith(prefix) for a in TREASURY_ADMINS):
+        return jsonify(success=False, error="That prefix would match the President — refused"), 400
+
+    pat = prefix + "%"
+    ips = {r.get("reg_ip") for r in
+           (supabase.table("cybucks").select("reg_ip").like("username", pat).execute().data or [])
+           if r.get("reg_ip")}
+
+    for tbl, col in [("messages", "sender"), ("messages", "recipient"),
+                     ("records", "username"), ("notifications", "username"),
+                     ("chat_group_members", "username"), ("holdings", "username"),
+                     ("employment", "username"), ("market_items", "seller"),
+                     ("loans", "username"), ("bonds", "username")]:
+        try:
+            supabase.table(tbl).delete().like(col, pat).execute()
+        except Exception:
+            pass
+    supabase.table("cybucks").delete().like("username", pat).execute()
+
+    for ip in ips:
+        try:
+            supabase.table("blocked_ips").upsert({"ip": ip, "reason": "bot registration"}).execute()
+        except Exception:
+            pass
+    load_blocked_ips()
+    return jsonify(success=True, ips_blocked=len(ips))
 
 
 # ----- Citizens directory + direct messages -----

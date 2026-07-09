@@ -61,6 +61,11 @@
         <div class="row"><input id="blockUser" placeholder="Username to block"><input id="blockReason" placeholder="Reason (optional)"></div>
         <button class="danger" onclick="blockUser()">Block Citizen</button>
 
+        <h4 style="margin-top:1.4rem;color:var(--muted);">Purge Bot Accounts</h4>
+        <p class="small">Delete every account whose username starts with a prefix (e.g. <b>bot_</b>), wipe all their traces, and block their signup IPs.</p>
+        <div class="row"><input id="botPrefix" placeholder="Username prefix" value="bot_"></div>
+        <button class="danger" onclick="purgeBots()"><i class="fas fa-robot"></i> Purge matching accounts</button>
+
         <h4 style="margin-top:1.4rem;color:var(--muted);">Banned Citizens</h4>
         <div id="bannedList"></div>
         <h4 style="margin-top:1.2rem;color:var(--muted);">Blocked IPs</h4>
@@ -128,6 +133,15 @@
     async function blockName(username, reason){
       try{ const r=await api("/admin/block_user",{method:"POST",body:JSON.stringify({username,reason:reason||""})});
         secMsg(`${username} banned${r.ip_blocked?` and IP ${r.ip} blocked`:' (no signup IP on record)'}.`,false); loadSecurity(); }
+      catch(e){ secMsg(e.message); }
+    }
+    async function purgeBots(){
+      const prefix=document.getElementById("botPrefix").value.trim();
+      if(prefix.length<3) return secMsg("Prefix too short — refuse.");
+      if(!confirm(`Delete ALL accounts starting with "${prefix}" and block their IPs? This cannot be undone.`)) return;
+      secMsg("Purging…",false);
+      try{ const r=await api("/admin/purge_bots",{method:"POST",body:JSON.stringify({prefix})});
+        secMsg(`Done — matching accounts removed, ${r.ips_blocked} IP(s) blocked.`,false); loadSecurity(); }
       catch(e){ secMsg(e.message); }
     }
     async function unban(username){ try{ await api("/admin/unban",{method:"POST",body:JSON.stringify({username})}); loadSecurity(); }catch(e){ secMsg(e.message); } }

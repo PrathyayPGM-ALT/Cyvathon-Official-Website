@@ -36,6 +36,8 @@
         <label class="small" id="captchaQ" style="color:var(--muted);"></label>
         <input id="captchaA" placeholder="Human check — your answer" autocomplete="off">
       </div>
+      <input id="website" tabindex="-1" autocomplete="off" aria-hidden="true"
+             style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" placeholder="Leave this empty">
       <button id="submitBtn" onclick="submit()">Login</button>
 
       <p id="msg" class="small" style="text-align:center;color:var(--red);"></p>
@@ -70,7 +72,7 @@
       if(!username || !password){ $("msg").textContent = "Fill username and password"; return; }
       const path = mode==="login" ? "/login" : "/register";
       const body = {username, password};
-      if(mode==="signup"){ body.captcha_token = captchaToken; body.captcha_answer = $("captchaA").value.trim(); }
+      if(mode==="signup"){ body.captcha_token = captchaToken; body.captcha_answer = $("captchaA").value.trim(); body.website = $("website").value; }
       try{
         await api(path, {method:"POST", body:JSON.stringify(body)});
         window.location.href = "/";          // go to dashboard hub
