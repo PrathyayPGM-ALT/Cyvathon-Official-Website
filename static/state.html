@@ -79,7 +79,7 @@
   <script>
     const qs = new URLSearchParams(location.search);
     const SID = qs.get("id");
-    const CUR = { cybucks:"CB", pufb:"PUFB", aquilines:"AQ" };
+    const CUR = { cybucks:"CB", pufb:"PUFB", aquilines:"AQ", cybit:"CBT" };
     const esc = (s)=>(s||"").replace(/</g,"&lt;");
     const msg = (t,err=true)=>{ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
     let S = null, scanDone = false, ME = null;
@@ -238,6 +238,7 @@
               <option value="cybucks">Cybucks</option>
               <option value="pufb">Pufferbucks</option>
               <option value="aquilines">Aquilines</option>
+              <option value="cybit">Cybits</option>
             </select>
           </div>
           <button onclick="listItem()">List in ${esc(S.name)}</button>

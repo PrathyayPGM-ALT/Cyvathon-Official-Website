@@ -17,6 +17,7 @@
     .cur.pufb{ border-left-color:var(--gold); }
     .cur.cybucks{ border-left-color:var(--accent); }
     .cur.aquilines{ border-left-color:var(--green); }
+    .cur.cybit{ border-left-color:#a78bfa; }
     .cur .l{ font-size:.72rem; letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
     .cur .v{ font-size:1.9rem; font-weight:800; margin-top:.2rem; }
     .cur .sub{ font-size:.75rem; color:var(--muted); margin-top:.3rem; }
@@ -107,9 +108,9 @@
 
   <script src="/static/app.js"></script>
   <script>
-    const ORDER = ["cybucks","pufb","aquilines"];
-    const LABEL = { cybucks:"Cybucks", pufb:"Pufferbucks", aquilines:"Aquilines" };
-    const CBVAL = { cybucks:1, pufb:1, aquilines:0.1 };
+    const ORDER = ["cybucks","pufb","aquilines","cybit"];
+    const LABEL = { cybucks:"Cybucks", pufb:"Pufferbucks", aquilines:"Aquilines", cybit:"Cybits" };
+    const CBVAL = { cybucks:1, pufb:1, aquilines:0.1, cybit:0.02 };
 
     function curCards(host, data, opts={}){
       document.getElementById(host).innerHTML = ORDER.map(k=>{

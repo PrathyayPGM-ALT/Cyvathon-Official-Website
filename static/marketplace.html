@@ -49,6 +49,7 @@
           <option value="cybucks">Cybucks</option>
           <option value="pufb">Pufferbucks</option>
           <option value="aquilines">Aquilines</option>
+          <option value="cybit">Cybits</option>
         </select>
       </div>
       <button onclick="listItem()">List Item</button>
@@ -62,7 +63,7 @@
   <script>
     let ME = null;
     const NAME = (n)=> (n||"").replace(/</g,"&lt;");
-    const CUR = { cybucks:"CB", pufb:"PUFB", aquilines:"AQ" };
+    const CUR = { cybucks:"CB", pufb:"PUFB", aquilines:"AQ", cybit:"CBT" };
     const msg = (t,err=true)=>{ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
 
     function togglePrice(){

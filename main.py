@@ -25,11 +25,13 @@ REGISTRATION_LIMIT_WINDOW = 90   # min seconds between registrations from one IP
 # --- Economy constants -------------------------------------
 PUFB_PER_CYBUCK      = 1        # Treaty peg: 1 Pufferbuck = 1 Cybuck
 AQUILINES_PER_PUFB   = 10       # 10 Aquilines   = 1 Pufferbuck
+CYBITS_PER_CYBUCK    = 50       # 50 Cybits      = 1 Cybuck
 # Value of one unit expressed in Cybucks:
 CYBUCK_VALUE = {
     "cybucks":   1.0,
-    "pufb":      1.0 / PUFB_PER_CYBUCK,                       # 0.2
-    "aquilines": 1.0 / (PUFB_PER_CYBUCK * AQUILINES_PER_PUFB) # 0.02
+    "pufb":      1.0 / PUFB_PER_CYBUCK,                        # 1.0
+    "aquilines": 1.0 / (PUFB_PER_CYBUCK * AQUILINES_PER_PUFB), # 0.1
+    "cybit":     1.0 / CYBITS_PER_CYBUCK,                      # 0.02
 }
 
 # Maps a currency code -> the actual DB column. Cybucks live in "balance".
@@ -37,6 +39,7 @@ CURRENCY_COLUMN = {
     "cybucks":   "balance",
     "pufb":      "pufb",
     "aquilines": "aquilines",
+    "cybit":     "cybits",
 }
 
 STARTING_GRANT   = 100          # new citizens get 100 of EACH currency
@@ -348,17 +351,19 @@ def compute_gdp():
     if _gdp_cache["v"] is not None and time() - _gdp_cache["t"] < 300:
         return _gdp_cache["v"]
     try:
-        vp, va = CYBUCK_VALUE["pufb"], CYBUCK_VALUE["aquilines"]
+        vp, va, vc = CYBUCK_VALUE["pufb"], CYBUCK_VALUE["aquilines"], CYBUCK_VALUE["cybit"]
         total = 0.0
-        for c in (supabase.table("cybucks").select("balance,pufb,aquilines,savings").execute().data or []):
+        for c in (supabase.table("cybucks").select("balance,pufb,aquilines,cybits,savings").execute().data or []):
             total += (c.get("balance") or 0) + (c.get("savings") or 0) \
-                   + (c.get("pufb") or 0) * vp + (c.get("aquilines") or 0) * va
+                   + (c.get("pufb") or 0) * vp + (c.get("aquilines") or 0) * va + (c.get("cybits") or 0) * vc
         t = get_treasury()
-        total += (t.get("balance") or 0) + (t.get("pufb") or 0) * vp + (t.get("aquilines") or 0) * va
+        total += (t.get("balance") or 0) + (t.get("pufb") or 0) * vp \
+               + (t.get("aquilines") or 0) * va + (t.get("cybits") or 0) * vc
         for c in (supabase.table("companies")
-                  .select("balance,pufb,aquilines,shares,last_price,ipo_price,is_public")
+                  .select("balance,pufb,aquilines,cybits,shares,last_price,ipo_price,is_public")
                   .execute().data or []):
-            total += (c.get("balance") or 0) + (c.get("pufb") or 0) * vp + (c.get("aquilines") or 0) * va
+            total += (c.get("balance") or 0) + (c.get("pufb") or 0) * vp \
+                   + (c.get("aquilines") or 0) * va + (c.get("cybits") or 0) * vc
             if c.get("is_public"):
                 total += (c.get("last_price") or c.get("ipo_price") or 0) * (c.get("shares") or 0)
         gdp = round(total * (GDP_MULTIPLIER or 1), 2)
@@ -369,15 +374,15 @@ def compute_gdp():
         return GDP
 
 
-def treasury_add(cybucks=0, pufb=0, aquilines=0, counterparty=None, kind="manual"):
+def treasury_add(cybucks=0, pufb=0, aquilines=0, cybits=0, counterparty=None, kind="manual"):
     """Move money in/out of the Treasury (atomically) and log each currency as a flow.
     The Treasury may run a deficit (negative) — that records true national debt
     instead of silently 'minting' the shortfall by flooring at zero."""
     get_treasury()   # ensure the row exists
-    for col, delta in (("balance", cybucks), ("pufb", pufb), ("aquilines", aquilines)):
+    for col, delta in (("balance", cybucks), ("pufb", pufb), ("aquilines", aquilines), ("cybits", cybits)):
         if delta:
             cas_num("treasury", [("id", 1)], col, delta, allow_negative=True)
-    for cur, delta in (("cybucks", cybucks), ("pufb", pufb), ("aquilines", aquilines)):
+    for cur, delta in (("cybucks", cybucks), ("pufb", pufb), ("aquilines", aquilines), ("cybit", cybits)):
         if delta:
             try:
                 supabase.table("treasury_flows").insert({
@@ -452,13 +457,15 @@ def _run_economics(user):
         tax_cb = round((user.get("balance")   or 0) * VAT_RATE, 2)
         tax_pf = round((user.get("pufb")      or 0) * VAT_RATE, 2)
         tax_aq = round((user.get("aquilines") or 0) * VAT_RATE, 2)
+        tax_cy = round((user.get("cybits")    or 0) * VAT_RATE, 2)
         if tax_cb: updates["balance"]   = round((user.get("balance")   or 0) - tax_cb, 2)
         if tax_pf: updates["pufb"]      = round((user.get("pufb")      or 0) - tax_pf, 2)
         if tax_aq: updates["aquilines"] = round((user.get("aquilines") or 0) - tax_aq, 2)
-        if tax_cb or tax_pf or tax_aq:
-            treasury_add(cybucks=tax_cb, pufb=tax_pf, aquilines=tax_aq,
+        if tax_cy: updates["cybits"]    = round((user.get("cybits")    or 0) - tax_cy, 2)
+        if tax_cb or tax_pf or tax_aq or tax_cy:
+            treasury_add(cybucks=tax_cb, pufb=tax_pf, aquilines=tax_aq, cybits=tax_cy,
                          counterparty=username, kind="vat")
-            add_record(username, f"Paid monthly VAT: {tax_cb} CB / {tax_pf} PUFB / {tax_aq} AQ to the Treasury.")
+            add_record(username, f"Paid monthly VAT: {tax_cb} CB / {tax_pf} PUFB / {tax_aq} AQ / {tax_cy} CBT to the Treasury.")
         updates["last_tax"] = now.isoformat()
 
     # ---- 2. Weekly salary (from Treasury) -------------------
@@ -551,6 +558,7 @@ def public_user(user):
         "balance":     user.get("balance") or 0,
         "pufb":        user.get("pufb") or 0,
         "aquilines":   user.get("aquilines") or 0,
+        "cybits":      user.get("cybits") or 0,
         "designation": user.get("designation") or "Citizen",
         "company_id":  user.get("company_id"),
     }
@@ -565,12 +573,13 @@ def company_founders(c):
 
 
 def user_net_worth(username):
-    u = supabase.table("cybucks").select("balance,pufb,aquilines").eq("username", username).execute().data
+    u = supabase.table("cybucks").select("balance,pufb,aquilines,cybits").eq("username", username).execute().data
     if not u:
         return 0
     u = u[0]
     nw = (u.get("balance") or 0) + (u.get("pufb") or 0) * CYBUCK_VALUE["pufb"] \
-        + (u.get("aquilines") or 0) * CYBUCK_VALUE["aquilines"]
+        + (u.get("aquilines") or 0) * CYBUCK_VALUE["aquilines"] \
+        + (u.get("cybits") or 0) * CYBUCK_VALUE["cybit"]
     hs = supabase.table("holdings").select("shares,company_id").eq("username", username).execute().data or []
     for h in hs:
         if (h.get("shares") or 0) > 0:
@@ -792,18 +801,19 @@ def register():
         "balance":     STARTING_GRANT,
         "pufb":        STARTING_GRANT,
         "aquilines":   STARTING_GRANT,
+        "cybits":      STARTING_GRANT,
         "designation": designation,
         "last_tax":    _now().isoformat(),
         "last_salary": _now().isoformat(),
         "reg_ip":      ip,
     }).execute()
-    add_record(username, "Granted citizenship of Cyvathon with 100 CB / 100 PUFB / 100 AQ.")
+    add_record(username, f"Granted citizenship of Cyvathon with {STARTING_GRANT} CB / {STARTING_GRANT} PUFB / {STARTING_GRANT} AQ / {STARTING_GRANT} CBT.")
     session.permanent = True
     session["username"] = username
 
     new_user = {
         "username": username, "balance": STARTING_GRANT, "pufb": STARTING_GRANT,
-        "aquilines": STARTING_GRANT, "designation": designation, "company_id": None
+        "aquilines": STARTING_GRANT, "cybits": STARTING_GRANT, "designation": designation, "company_id": None
     }
     return jsonify(success=True, user=public_user(new_user), admin=is_treasury_admin(new_user), cia=is_cia(new_user))
 
@@ -913,8 +923,9 @@ def _transferable_value(sender):
     across all three currencies, so converting first doesn't bypass it."""
     wealth = ((sender.get("balance") or 0)
               + (sender.get("pufb") or 0) * CYBUCK_VALUE["pufb"]
-              + (sender.get("aquilines") or 0) * CYBUCK_VALUE["aquilines"])
-    grant_locked = STARTING_GRANT * (1 + CYBUCK_VALUE["pufb"] + CYBUCK_VALUE["aquilines"])
+              + (sender.get("aquilines") or 0) * CYBUCK_VALUE["aquilines"]
+              + (sender.get("cybits") or 0) * CYBUCK_VALUE["cybit"])
+    grant_locked = STARTING_GRANT * (1 + CYBUCK_VALUE["pufb"] + CYBUCK_VALUE["aquilines"] + CYBUCK_VALUE["cybit"])
     return wealth - grant_locked - _outstanding_loan(sender["username"])
 
 
@@ -1009,16 +1020,17 @@ def treasury_data():
     # Treasury is public to all citizens (read-only).
 
     t = get_treasury()
-    reserves = {"cybucks": t["balance"] or 0, "pufb": t["pufb"] or 0, "aquilines": t["aquilines"] or 0}
+    reserves = {"cybucks": t["balance"] or 0, "pufb": t["pufb"] or 0,
+                "aquilines": t["aquilines"] or 0, "cybit": t.get("cybits") or 0}
 
     # --- Money supply: what citizens hold + what the Treasury holds ---
-    citizens = supabase.table("cybucks").select("balance,pufb,aquilines").execute().data or []
-    held = {"cybucks": 0.0, "pufb": 0.0, "aquilines": 0.0}
+    citizens = supabase.table("cybucks").select("balance,pufb,aquilines,cybits").execute().data or []
+    held = {"cybucks": 0.0, "pufb": 0.0, "aquilines": 0.0, "cybit": 0.0}
     holders = 0
     for c in citizens:
-        cb, pf, aq = (c.get("balance") or 0), (c.get("pufb") or 0), (c.get("aquilines") or 0)
-        held["cybucks"] += cb; held["pufb"] += pf; held["aquilines"] += aq
-        if cb or pf or aq:
+        cb, pf, aq, cy = (c.get("balance") or 0), (c.get("pufb") or 0), (c.get("aquilines") or 0), (c.get("cybits") or 0)
+        held["cybucks"] += cb; held["pufb"] += pf; held["aquilines"] += aq; held["cybit"] += cy
+        if cb or pf or aq or cy:
             holders += 1
     supply = {k: round(held[k] + reserves[k], 2) for k in reserves}
 
@@ -1027,7 +1039,7 @@ def treasury_data():
     def totals(kind):
         rows = supabase.table("treasury_flows").select("currency,amount") \
             .eq("kind", kind).gte("created_at", year_start).execute().data or []
-        out = {"cybucks": 0.0, "pufb": 0.0, "aquilines": 0.0}
+        out = {"cybucks": 0.0, "pufb": 0.0, "aquilines": 0.0, "cybit": 0.0}
         for r in rows:
             out[r["currency"]] = round(out.get(r["currency"], 0) + (r["amount"] or 0), 2)
         return out

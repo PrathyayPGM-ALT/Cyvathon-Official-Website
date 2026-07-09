@@ -141,7 +141,8 @@
       document.getElementById("hubBalances").innerHTML = `
         <div class="bal"><div class="v">${fmt(user.balance)}</div><div class="l">Cybucks</div></div>
         <div class="bal"><div class="v">${fmt(user.pufb)}</div><div class="l">Pufferbucks</div></div>
-        <div class="bal"><div class="v">${fmt(user.aquilines)}</div><div class="l">Aquilines</div></div>`;
+        <div class="bal"><div class="v">${fmt(user.aquilines)}</div><div class="l">Aquilines</div></div>
+        <div class="bal"><div class="v">${fmt(user.cybits)}</div><div class="l">Cybits</div></div>`;
       let cards = [...HUB];
       if (cia) cards.push(["/athena","fa-eye","🦉 Athena","Cyvathon Intelligence Agency"]);
       if (admin) cards.push(["/admin","fa-sliders","Admin Panel","Set national economic policy"]);

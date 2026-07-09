@@ -12,7 +12,7 @@
 
   <div class="wrap" style="max-width:640px;">
     <h2 class="section-title"><i class="fas fa-building-columns"></i> Cyvathon Bank</h2>
-    <p class="section-sub">1 Cybuck = 1 Pufferbuck = 10 Aquilines</p>
+    <p class="section-sub">1 Cybuck = 1 Pufferbuck = 10 Aquilines = 50 Cybits</p>
 
     <div class="balances" id="balances"></div>
 
@@ -24,6 +24,7 @@
         <option value="cybucks">Cybucks</option>
         <option value="pufb">Pufferbucks</option>
         <option value="aquilines">Aquilines</option>
+        <option value="cybit">Cybits</option>
       </select>
       <input id="sendAmount" type="number" min="0" step="0.01" placeholder="Amount to send">
       <button onclick="send()">Send</button>
@@ -37,11 +38,13 @@
           <option value="cybucks">Cybucks</option>
           <option value="pufb">Pufferbucks</option>
           <option value="aquilines">Aquilines</option>
+          <option value="cybit">Cybits</option>
         </select>
         <select id="toC">
           <option value="pufb">Pufferbucks</option>
           <option value="cybucks">Cybucks</option>
           <option value="aquilines">Aquilines</option>
+          <option value="cybit">Cybits</option>
         </select>
       </div>
       <input id="convAmount" type="number" min="0" step="0.01" placeholder="Amount to convert"
@@ -82,8 +85,8 @@
 
   <script src="/static/app.js"></script>
   <script>
-    const RATE = { cybucks:1, pufb:1, aquilines:0.1 };
-    const NAME = { cybucks:"Cybucks", pufb:"Pufferbucks", aquilines:"Aquilines" };
+    const RATE = { cybucks:1, pufb:1, aquilines:0.1, cybit:0.02 };
+    const NAME = { cybucks:"Cybucks", pufb:"Pufferbucks", aquilines:"Aquilines", cybit:"Cybits" };
     let me;
 
     function paint(u){
@@ -91,7 +94,8 @@
       document.getElementById("balances").innerHTML = `
         <div class="bal"><div class="v">${fmt(u.balance)}</div><div class="l">Cybucks</div></div>
         <div class="bal"><div class="v">${fmt(u.pufb)}</div><div class="l">Pufferbucks</div></div>
-        <div class="bal"><div class="v">${fmt(u.aquilines)}</div><div class="l">Aquilines</div></div>`;
+        <div class="bal"><div class="v">${fmt(u.aquilines)}</div><div class="l">Aquilines</div></div>
+        <div class="bal"><div class="v">${fmt(u.cybits)}</div><div class="l">Cybits</div></div>`;
     }
     const msg = (t,err=true)=>{ const m=document.getElementById("msg");
       m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
