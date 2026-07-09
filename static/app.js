@@ -53,6 +53,7 @@ function fetchMe() {
 /* Returns the logged-in user, or null. */
 async function currentUser() {
   const m = await fetchMe();
+  if (m && m.user) window.__me = m.user.username;   // used to highlight @mentions of you
   return m ? m.user : null;
 }
 
@@ -151,6 +152,11 @@ function renderRich(text) {
   s = s.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
        .replace(/__([^_]+)__/g, "<u>$1</u>")
        .replace(/\*([^*]+)\*/g, "<i>$1</i>");
+  // @mentions — highlight, and flag it specially when it's you
+  s = s.replace(/(?<![\w@])@([A-Za-z0-9_.\-]{2,32})/g, function (m, name) {
+    const me = window.__me && name.toLowerCase() === String(window.__me).toLowerCase();
+    return '<span class="mention' + (me ? ' me' : '') + '">@' + name + '</span>';
+  });
   s = s.replace(/@@IMG(\d+)@@/g, function (m, i) { return '<br><img src="' + imgs[+i] + '" class="chat-img" loading="lazy" decoding="async"><br>'; });
   return s;
 }

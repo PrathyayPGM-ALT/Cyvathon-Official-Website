@@ -3537,7 +3537,24 @@ def send_message():
     row = supabase.table("messages").insert({
         "sender": user["username"], "recipient": None, "content": content
     }).execute().data[0]
+    _notify_mentions(user["username"], content, "/chat")
     return jsonify(success=True, message=row)
+
+
+_MENTION_RE = re.compile(r"@([A-Za-z0-9_.\-]{2,32})")
+
+
+def _notify_mentions(sender, content, link, exclude=None, only=None):
+    """Ping @mentioned citizens. `only` (a set) restricts to e.g. group members."""
+    names = set(_MENTION_RE.findall(content or ""))
+    names.discard(sender)
+    if exclude:
+        names.discard(exclude)
+    if only is not None:
+        names &= only
+    for n in list(names)[:10]:
+        if only is not None or supabase.table("cybucks").select("id").eq("username", n).execute().data:
+            notify(n, f"\U0001F4AC {sender} mentioned you", link)
 
 
 # ----- Chat attachments: device image upload + Tenor GIF search -----
@@ -3754,6 +3771,7 @@ def dm_send():
         "sender": user["username"], "recipient": to, "content": content
     }).execute().data[0]
     notify(to, f"💬 New message from {user['username']}", "/chat?dm=" + user["username"])
+    _notify_mentions(user["username"], content, "/chat?dm=" + user["username"], exclude=to)
     return jsonify(success=True, message=row)
 
 
@@ -3890,6 +3908,9 @@ def group_send(gid):
     row = supabase.table("messages").insert({
         "sender": user["username"], "recipient": None, "group_id": gid, "content": content
     }).execute().data[0]
+    members = {m["username"] for m in (supabase.table("chat_group_members")
+               .select("username").eq("group_id", gid).execute().data or [])}
+    _notify_mentions(user["username"], content, f"/chat?group={gid}", only=members)
     return jsonify(success=True, message=row)
 
 

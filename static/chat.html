@@ -53,7 +53,14 @@
     .bubble{ background:#1b232e; border:1px solid #2a3340; padding:.5rem .8rem; border-radius:15px;
       word-wrap:break-word; overflow-wrap:anywhere; max-width:100%; line-height:1.45; animation:pop .19s cubic-bezier(.2,.9,.3,1.3) both; }
     .grp.me .bubble{ background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#06223a; border:none; }
+    .grp.me .bubble .mention{ background:rgba(4,34,59,.16); color:#053b5e; }
     html[data-theme="light"] .bubble{ background:#eef2f8; border-color:#d8e0ec; color:#12243d; }
+    .mention-pop{ padding:.3rem; max-height:230px; overflow-y:auto; }
+    .mrow{ display:flex; align-items:center; gap:.6rem; padding:.42rem .5rem; border-radius:8px; cursor:pointer; }
+    .mrow.sel,.mrow:hover{ background:rgba(88,196,255,.14); }
+    .mrow .mav{ width:28px; height:28px; min-width:28px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:.72rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .mrow .mn{ font-weight:600; font-size:.9rem; } .mrow .mr{ font-size:.72rem; color:var(--muted); }
     @keyframes pop{ from{ transform:translateY(8px) scale(.94); opacity:0; } to{ transform:none; opacity:1; } }
     .chat-img{ max-width:250px; max-height:250px; border-radius:10px; display:block; }
     .status{ font-size:.64rem; margin-left:.4rem; opacity:.75; }
@@ -121,6 +128,7 @@
       <div class="feed" id="feed"></div>
 
       <div class="comp-wrap">
+        <div class="pop-panel mention-pop" id="mentionPop"></div>
         <div class="pop-panel emoji-pop" id="emojiPop"></div>
         <div class="pop-panel gif-pop" id="gifPop">
           <input id="gifSearch" placeholder="Search GIFs…" oninput="gifSearchDebounced()">
@@ -166,6 +174,7 @@
   <script>
     let ME=null, ADMIN=false, channel={type:"public"}, groups=[], citizens=[];
     let lastId=0, poll=null, _lastSender=null, _lastBody=null, pending=[], tmpc=0;
+    let mention={open:false,start:0,items:[],idx:0};
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const tm=(iso)=>{ try{ return iso?new Date(iso).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):""; }catch{ return ""; } };
     const EMOJIS="😀 😂 😍 😎 😭 😡 👍 👎 🙏 🔥 🎉 💀 🤖 👑 ⚖️ 💰 🦉 🚀 ❤️ ✅ ❌ 🤔 😱 🫡 🐐 🎂 🍕 ⚽ 🎮 💡 😅 🥳 😴 🤝 ✨ 🫶 😤 🤯 🙌 💯".split(" ");
@@ -319,7 +328,33 @@
     }
     function sendInput(){
       const t=document.getElementById("msg"); const v=t.value.trim(); if(!v) return;
-      t.value=""; autogrow(t); closePanels(); doSend(v);
+      t.value=""; autogrow(t); closePanels(); closeMention(); doSend(v);
+    }
+
+    /* ---------------- MENTIONS (@ping) ---------------- */
+    function closeMention(){ mention.open=false; document.getElementById("mentionPop").classList.remove("open"); }
+    function updateMention(){
+      const t=document.getElementById("msg"); const caret=t.selectionStart;
+      const m=/(?:^|[\s(])@([A-Za-z0-9_.\-]*)$/.exec(t.value.slice(0,caret));
+      if(!m){ closeMention(); return; }
+      const q=m[1].toLowerCase();
+      mention.start=caret-m[1].length-1;
+      const items=citizens.filter(c=>c.username!==ME && c.username.toLowerCase().includes(q)).slice(0,6);
+      if(!items.length){ closeMention(); return; }
+      mention.items=items; mention.idx=0; mention.open=true; renderMention();
+    }
+    function renderMention(){
+      const p=document.getElementById("mentionPop");
+      p.innerHTML=mention.items.map((c,i)=>`<div class="mrow ${i===mention.idx?'sel':''}" onmousedown="event.preventDefault()" onclick="pickMention(${i})">
+        <div class="mav">${esc(c.username[0].toUpperCase())}</div>
+        <div><div class="mn">${esc(c.username)}</div><div class="mr">${esc(c.company||c.designation||'Citizen')}</div></div></div>`).join("");
+      p.classList.add("open");
+    }
+    function pickMention(i){
+      const t=document.getElementById("msg"); const name=mention.items[i].username;
+      const before=t.value.slice(0,mention.start), after=t.value.slice(t.selectionStart), insert="@"+name+" ";
+      t.value=before+insert+after; const pos=(before+insert).length;
+      t.focus(); t.selectionStart=t.selectionEnd=pos; closeMention(); autogrow(t);
     }
 
     /* ---------------- COMPOSER TOOLS ---------------- */
@@ -327,7 +362,7 @@
     function wrap(a,b){ const t=document.getElementById("msg"); const s=t.selectionStart,e=t.selectionEnd,v=t.value;
       t.value=v.slice(0,s)+a+v.slice(s,e)+b+v.slice(e); t.focus(); t.selectionStart=t.selectionEnd=e+a.length+b.length; autogrow(t); }
     function ins(x){ const t=document.getElementById("msg"); t.value+=x; t.focus(); autogrow(t); }
-    function closePanels(){ document.querySelectorAll(".pop-panel").forEach(p=>p.classList.remove("open")); }
+    function closePanels(){ document.querySelectorAll(".emoji-pop,.gif-pop").forEach(p=>p.classList.remove("open")); }
     function togglePanel(id){
       const p=document.getElementById(id); const wasOpen=p.classList.contains("open"); closePanels();
       if(wasOpen) return;
@@ -448,8 +483,17 @@
       else openPublic();
 
       const t=document.getElementById("msg");
-      t.addEventListener("input",()=>autogrow(t));
-      t.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendInput(); }});
+      t.addEventListener("input",()=>{ autogrow(t); updateMention(); });
+      t.addEventListener("keydown",e=>{
+        if(mention.open){
+          if(e.key==="ArrowDown"){ e.preventDefault(); mention.idx=(mention.idx+1)%mention.items.length; renderMention(); return; }
+          if(e.key==="ArrowUp"){ e.preventDefault(); mention.idx=(mention.idx-1+mention.items.length)%mention.items.length; renderMention(); return; }
+          if(e.key==="Enter"||e.key==="Tab"){ e.preventDefault(); pickMention(mention.idx); return; }
+          if(e.key==="Escape"){ e.preventDefault(); closeMention(); return; }
+        }
+        if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendInput(); }
+      });
+      t.addEventListener("blur",()=>setTimeout(closeMention,150));
       document.getElementById("gifSearch").addEventListener("keydown",e=>e.stopPropagation());
     })();
   </script>
