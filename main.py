@@ -96,7 +96,7 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=6)
-app.config["MAX_CONTENT_LENGTH"] = 256 * 1024   # reject request bodies > 256 KB
+app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024   # 6 MB — allows chat image uploads (JSON bodies stay small)
 
 CORS(app, supports_credentials=True)
 logging.basicConfig(level=logging.INFO)
@@ -3502,9 +3502,101 @@ def send_message():
     if len(content) > 2000:
         return jsonify(success=False, error="Message too long (max 2000 characters)"), 400
 
-    supabase.table("messages").insert({
+    row = supabase.table("messages").insert({
         "sender": user["username"], "recipient": None, "content": content
-    }).execute()
+    }).execute().data[0]
+    return jsonify(success=True, message=row)
+
+
+# ----- Chat attachments: device image upload + Tenor GIF search -----
+_CHAT_BUCKET = "chat"
+_chat_bucket_ready = False
+
+
+def _ensure_chat_bucket():
+    global _chat_bucket_ready
+    if _chat_bucket_ready:
+        return
+    try:
+        supabase.storage.create_bucket(_CHAT_BUCKET, options={"public": True})
+    except Exception:
+        pass          # already exists (or creation not permitted) — upload will tell us
+    _chat_bucket_ready = True
+
+
+@limiter.limit("20/min")
+@app.route("/chat/upload", methods=["POST"])
+def chat_upload():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    f = request.files.get("file")
+    if not f:
+        return jsonify(success=False, error="No file"), 400
+    data = f.read()
+    if not data:
+        return jsonify(success=False, error="Empty file"), 400
+    if len(data) > 5 * 1024 * 1024:
+        return jsonify(success=False, error="Image too large (max 5 MB)"), 400
+    mime = (f.mimetype or "").lower()
+    ext = {"image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg",
+           "image/gif": "gif", "image/webp": "webp"}.get(mime)
+    if not ext:
+        return jsonify(success=False, error="Images only (png, jpg, gif, webp)"), 400
+    path = f"{user['username']}/{secrets.token_hex(10)}.{ext}"
+    try:
+        _ensure_chat_bucket()
+        supabase.storage.from_(_CHAT_BUCKET).upload(
+            path, data, {"content-type": mime, "upsert": "true"})
+        url = supabase.storage.from_(_CHAT_BUCKET).get_public_url(path)
+    except Exception as ex:
+        logging.warning("chat upload failed: %s", ex)
+        return jsonify(success=False,
+                       error="Upload failed — create a public Storage bucket named 'chat' in Supabase."), 500
+    return jsonify(success=True, url=url.rstrip("?"))
+
+
+TENOR_KEY = os.environ.get("TENOR_API_KEY", "AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ")
+
+
+@limiter.limit("40/min")
+@app.route("/gif/search")
+def gif_search():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    import requests
+    q = (request.args.get("q") or "").strip()
+    try:
+        endpoint = "search" if q else "featured"
+        params = {"key": TENOR_KEY, "client_key": "cyvathon", "limit": 24,
+                  "media_filter": "gif,tinygif", "contentfilter": "medium"}
+        if q:
+            params["q"] = q
+        r = requests.get(f"https://tenor.googleapis.com/v2/{endpoint}",
+                         params=params, timeout=6)
+        results = r.json().get("results", [])
+        gifs = []
+        for it in results:
+            mf = it.get("media_formats", {})
+            full = (mf.get("gif") or {}).get("url")
+            prev = (mf.get("tinygif") or mf.get("nanogif") or {}).get("url") or full
+            if full:
+                gifs.append({"url": full, "preview": prev})
+        return jsonify(success=True, gifs=gifs)
+    except Exception as ex:
+        logging.warning("gif search failed: %s", ex)
+        return jsonify(success=True, gifs=[], error="GIF search unavailable")
+
+
+@limiter.limit("6/min")
+@app.route("/admin/purge_chat", methods=["POST"])
+def admin_purge_chat():
+    """President-only: wipe all chat messages for a clean slate (keeps groups/DMs structure)."""
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    supabase.table("messages").delete().gte("id", 0).execute()
     return jsonify(success=True)
 
 
@@ -3516,6 +3608,12 @@ def citizens_directory():
         return jsonify(success=False, error="Not logged in"), 401
     rows = supabase.table("cybucks").select("username,designation") \
         .order("username").execute().data or []
+    companies = supabase.table("companies").select("name,founder").execute().data or []
+    by_founder = {}
+    for c in companies:
+        by_founder.setdefault(c["founder"], c["name"])
+    for r in rows:
+        r["company"] = by_founder.get(r["username"])
     return jsonify(success=True, citizens=rows, me=user["username"])
 
 
@@ -3555,11 +3653,11 @@ def dm_send():
     if not supabase.table("cybucks").select("id").eq("username", to).execute().data:
         return jsonify(success=False, error="No such citizen"), 404
 
-    supabase.table("messages").insert({
+    row = supabase.table("messages").insert({
         "sender": user["username"], "recipient": to, "content": content
-    }).execute()
-    notify(to, f"💬 New message from {user['username']}", "/citizens?dm=" + user["username"])
-    return jsonify(success=True)
+    }).execute().data[0]
+    notify(to, f"💬 New message from {user['username']}", "/chat?dm=" + user["username"])
+    return jsonify(success=True, message=row)
 
 
 @limiter.limit("90 per minute")
@@ -3692,10 +3790,10 @@ def group_send(gid):
         return jsonify(success=False, error="Empty message"), 400
     if len(content) > 2000:
         return jsonify(success=False, error="Message too long (max 2000 characters)"), 400
-    supabase.table("messages").insert({
+    row = supabase.table("messages").insert({
         "sender": user["username"], "recipient": None, "group_id": gid, "content": content
-    }).execute()
-    return jsonify(success=True)
+    }).execute().data[0]
+    return jsonify(success=True, message=row)
 
 
 # ============================================================

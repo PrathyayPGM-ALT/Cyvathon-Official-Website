@@ -3,32 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cyvathon Citizens</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <title>Citizens · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
   <style>
-    .layout{ display:grid; grid-template-columns:300px 1fr; gap:1.4rem; align-items:start; }
-    @media(max-width:760px){ .layout{ grid-template-columns:1fr; } }
-    .dir{ max-height:70vh; overflow-y:auto; }
-    .cz{ display:flex; align-items:center; gap:.7rem; padding:.6rem .7rem; border-radius:10px;
-      cursor:pointer; transition:.15s; border:1px solid transparent; }
-    .cz:hover{ background:rgba(88,196,255,.08); }
-    .cz.active{ background:rgba(88,196,255,.12); border-color:rgba(88,196,255,.35); }
-    .cz .av{ width:38px; height:38px; border-radius:50%; flex-shrink:0; display:flex; align-items:center;
-      justify-content:center; font-weight:700; color:#06223a;
-      background:linear-gradient(135deg,var(--accent),var(--accent2)); }
-    .cz .nm{ font-weight:600; } .cz .rl{ font-size:.72rem; color:var(--muted); }
-    .search{ margin:0 0 .8rem; }
-    /* DM panel */
-    .dm-head{ display:flex; justify-content:space-between; align-items:center; padding-bottom:.8rem;
-      border-bottom:1px solid var(--panel-border); margin-bottom:.8rem; }
-    .dm-box{ height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:.5rem; padding:.3rem; }
-    .bub{ max-width:72%; padding:.55rem .85rem; border-radius:14px; border:1px solid #2a3340; background:#1b222c; }
-    .line{ display:flex; } .line.me{ justify-content:flex-end; }
-    .line.me .bub{ background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#06223a; border:none; }
-    .dm-bar{ display:flex; gap:.6rem; margin-top:.8rem; }
-    .dm-bar input{ flex:1; margin:0; } .dm-bar button{ width:auto; margin:0; padding:.7rem 1.4rem; }
-    .empty{ text-align:center; color:var(--muted); padding:3rem 1rem; }
+    .search{ max-width:420px; margin:0 auto 2rem; display:block; }
+    .cz-grid{ display:grid; gap:1.1rem; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); }
+    .cz{ background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; padding:1.1rem 1.2rem;
+      display:flex; flex-direction:column; gap:.7rem; transition:.2s; }
+    .cz:hover{ transform:translateY(-4px); border-color:rgba(88,196,255,.35); box-shadow:0 10px 26px rgba(0,0,0,.3); }
+    .cz .head{ display:flex; align-items:center; gap:.8rem; }
+    .cz .av{ width:46px; height:46px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:1.1rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .cz .nm{ font-weight:700; font-size:1.05rem; }
+    .cz .nm a{ color:var(--text); text-decoration:none; } .cz .nm a:hover{ color:var(--accent); }
+    .cz .role{ font-size:.8rem; color:var(--muted); }
+    .cz .role .tag{ margin-right:.3rem; }
+    .cz .actions{ display:flex; gap:.5rem; margin-top:auto; }
+    .cz .actions a,.cz .actions button{ flex:1; margin:0; padding:.5rem; font-size:.85rem; text-align:center; text-decoration:none; border-radius:10px; }
+    .cz .view{ background:var(--panel-2); color:var(--text); border:1px solid var(--panel-border); display:flex; align-items:center; justify-content:center; gap:.4rem; }
+    .cz .view:hover{ border-color:var(--accent); color:var(--accent); }
+    .cz .dm{ background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; border:none; display:flex; align-items:center; justify-content:center; gap:.4rem; cursor:pointer; }
+    .badge-you{ font-size:.68rem; color:var(--accent); font-weight:600; }
   </style>
 </head>
 <body>
@@ -36,105 +32,50 @@
 
   <div class="wrap">
     <h2 class="section-title"><i class="fas fa-users"></i> Citizens of Cyvathon</h2>
-    <p class="section-sub">Every citizen and their role. Click anyone to view their profile or send a direct message.</p>
-
-    <div class="layout">
-      <div class="panel">
-        <input class="search" id="search" placeholder="Search citizens…" oninput="renderDir()">
-        <div class="dir" id="dir"></div>
-      </div>
-      <div class="panel" id="dmPanel">
-        <div class="empty" id="dmEmpty"><i class="fas fa-comments" style="font-size:2rem;color:var(--accent)"></i>
-          <p style="margin-top:.6rem;">Select a citizen to start a conversation.</p></div>
-        <div id="dmView" style="display:none;"></div>
-      </div>
-    </div>
+    <p class="section-sub">Every citizen and what they do. Click a name to view their ID card, or hit DM to start a conversation.</p>
+    <input class="search" id="search" placeholder="Search citizens…" oninput="render()">
+    <div class="cz-grid" id="grid"></div>
+    <p id="count" class="small" style="text-align:center;margin-top:1.5rem;"></p>
   </div>
 
   <script src="/static/app.js"></script>
   <script>
-    let ME=null, ALL=[], current=null, poll=null, lastDmId=0;
-    const qs = new URLSearchParams(location.search);
-    const esc = (s)=>(s||"").replace(/</g,"&lt;");
+    let ME=null, ALL=[];
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const enc=encodeURIComponent;
 
-    function renderDir(){
-      const q = (document.getElementById("search").value||"").toLowerCase();
-      const dir = document.getElementById("dir");
-      const list = ALL.filter(c=>c.username.toLowerCase().includes(q));
-      dir.innerHTML = list.map(c=>`
-        <div class="cz ${current===c.username?'active':''}" onclick="openDM('${encodeURIComponent(c.username)}')">
+    function card(c){
+      const you=c.username===ME;
+      const role = c.company
+        ? `<span class="tag">${esc(c.designation||'Citizen')}</span> ${esc(c.company)}`
+        : `<span class="tag">${esc(c.designation||'Citizen')}</span>`;
+      const actions = you
+        ? `<a class="view" href="/profile"><i class="fas fa-id-card"></i> My ID Card</a>`
+        : `<a class="view" href="/profile?user=${enc(c.username)}"><i class="fas fa-id-card"></i> Profile</a>
+           <button class="dm" onclick="location.href='/chat?dm=${enc(c.username)}'"><i class="fas fa-comment"></i> DM</button>`;
+      return `<div class="cz">
+        <div class="head">
           <div class="av">${esc(c.username[0].toUpperCase())}</div>
-          <div><div class="nm">${esc(c.username)}${c.username===ME?' <span class="rl">(you)</span>':''}</div>
-            <div class="rl">${esc(c.designation||'Citizen')}</div></div>
-        </div>`).join("") || `<p class="muted">No matches.</p>`;
-    }
-
-    async function loadDir(){
-      const d = await api("/citizens/list");
-      ME = d.me; ALL = d.citizens;
-      renderDir();
-    }
-
-    async function openDM(encName){
-      const name = decodeURIComponent(encName);
-      if(name === ME){ location.href = "/profile"; return; }
-      current = name; lastDmId = 0;
-      renderDir();
-      document.getElementById("dmEmpty").style.display="none";
-      const view = document.getElementById("dmView");
-      view.style.display="block";
-      view.innerHTML = `
-        <div class="dm-head">
-          <div><b>${esc(name)}</b> · <a class="link" href="/profile?user=${encodeURIComponent(name)}">View profile</a></div>
+          <div><div class="nm"><a href="${you?'/profile':'/profile?user='+enc(c.username)}">${esc(c.username)}</a>
+            ${you?' <span class="badge-you">(you)</span>':''}</div>
+            <div class="role">${role}</div></div>
         </div>
-        <div class="dm-box" id="dmBox"></div>
-        <div class="dm-bar">
-          <input id="dmInput" placeholder="Message ${esc(name)}…">
-          <button onclick="sendDM()"><i class="fas fa-paper-plane"></i></button>
-        </div>`;
-      view.querySelector("#dmInput").addEventListener("keydown",e=>{ if(e.key==="Enter") sendDM(); });
-      await loadThread();
-      if(poll) clearInterval(poll);
-      poll = setInterval(loadThread, 2500);
+        <div class="actions">${actions}</div>
+      </div>`;
     }
 
-    async function loadThread(){
-      if(!current) return;
-      try{
-        const d = await api("/dm/"+encodeURIComponent(current)+(lastDmId?`?since_id=${lastDmId}`:""));
-        const box = document.getElementById("dmBox"); if(!box) return;
-        if(!lastDmId && !d.messages.length){ box.innerHTML=`<p class="empty">No messages yet — say hi!</p>`; return; }
-        const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
-        let added=false;
-        d.messages.forEach(m=>{
-          if(m.id<=lastDmId) return;
-          lastDmId=Math.max(lastDmId,m.id);
-          if(box.querySelector(".empty")) box.innerHTML="";
-          const div=document.createElement("div");
-          div.className="line"+(m.sender===ME?" me":"");
-          div.innerHTML=`<div class="bub">${renderRich(m.content)}</div>`;
-          box.appendChild(div); added=true;
-        });
-        if(added && nearBottom) box.scrollTop=box.scrollHeight;
-      }catch{}
-    }
-
-    async function sendDM(){
-      const input = document.getElementById("dmInput");
-      const content = input.value.trim();
-      if(!content || !current) return;
-      input.value = "";
-      try{ await api("/dm",{method:"POST",body:JSON.stringify({to:current,content})}); loadThread(); }
-      catch(e){ alert(e.message); }
+    function render(){
+      const q=(document.getElementById("search").value||"").toLowerCase();
+      const list=ALL.filter(c=>c.username.toLowerCase().includes(q) || (c.company||"").toLowerCase().includes(q) || (c.designation||"").toLowerCase().includes(q));
+      document.getElementById("grid").innerHTML = list.map(card).join("") || `<p class="muted">No citizens match.</p>`;
+      document.getElementById("count").textContent = `${ALL.length} citizen${ALL.length===1?"":"s"} of the Republic`;
     }
 
     (async function(){
-      const user = await requireAuth(); if(!user) return;
-      ME = user.username;
-      renderNav("/citizens", user);
-      await loadDir();
-      const dm = qs.get("dm");
-      if(dm) openDM(encodeURIComponent(dm));
+      const user=await requireAuth(); if(!user) return;
+      ME=user.username; renderNav("/citizens", user);
+      try{ const d=await api("/citizens/list"); ME=d.me; ALL=d.citizens||[]; render(); }
+      catch(e){ document.getElementById("grid").innerHTML=`<p class="muted">${e.message}</p>`; }
     })();
   </script>
 </body>
