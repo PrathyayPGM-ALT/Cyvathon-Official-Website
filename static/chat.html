@@ -123,7 +123,7 @@
       <div class="comp-wrap">
         <div class="pop-panel emoji-pop" id="emojiPop"></div>
         <div class="pop-panel gif-pop" id="gifPop">
-          <input id="gifSearch" placeholder="Search Tenor GIFs…" oninput="gifSearchDebounced()">
+          <input id="gifSearch" placeholder="Search GIFs…" oninput="gifSearchDebounced()">
           <div class="gif-grid" id="gifGrid"></div>
           <div style="display:flex;gap:.4rem;margin-top:.5rem;">
             <input id="gifUrl" placeholder="…or paste a GIF / image URL" style="margin:0;flex:1;">
@@ -344,7 +344,7 @@
       try{
         const d=await api("/gif/search"+(q?`?q=${encodeURIComponent(q)}`:""));
         if(!d.gifs.length){
-          grid.innerHTML=`<p class="small muted" style="grid-column:1/-1">${d.error?"GIF search needs a Tenor API key — paste a URL below for now.":"No GIFs found."}</p>`; return;
+          grid.innerHTML=`<p class="small muted" style="grid-column:1/-1">${d.error?"GIF search isn't set up yet — paste a URL below for now.":"No GIFs found."}</p>`; return;
         }
         grid.innerHTML=d.gifs.map(g=>`<img loading="lazy" src="${g.preview}" onclick="sendGif('${g.url}')">`).join("");
       }catch(e){ grid.innerHTML=`<p class="small muted" style="grid-column:1/-1">${e.message}</p>`; }
