@@ -3588,7 +3588,45 @@ def chat_upload():
     return jsonify(success=True, url=url.rstrip("?"))
 
 
-TENOR_KEY = os.environ.get("TENOR_API_KEY", "AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ")
+TENOR_KEY = os.environ.get("TENOR_API_KEY", "")   # optional; GIPHY is the no-Google-Cloud path
+
+
+GIPHY_KEY = os.environ.get("GIPHY_API_KEY", "")
+
+
+def _giphy_gifs(q):
+    import requests
+    endpoint = "search" if q else "trending"
+    params = {"api_key": GIPHY_KEY, "limit": 24, "rating": "pg-13"}
+    if q:
+        params["q"] = q
+    r = requests.get(f"https://api.giphy.com/v1/gifs/{endpoint}", params=params, timeout=6)
+    gifs = []
+    for it in r.json().get("data", []):
+        im = it.get("images", {})
+        full = (im.get("downsized_medium") or im.get("original") or {}).get("url")
+        prev = (im.get("fixed_height_small") or im.get("fixed_width_small") or {}).get("url") or full
+        if full:
+            gifs.append({"url": full, "preview": prev})
+    return gifs
+
+
+def _tenor_gifs(q):
+    import requests
+    endpoint = "search" if q else "featured"
+    params = {"key": TENOR_KEY, "client_key": "cyvathon", "limit": 24,
+              "media_filter": "gif,tinygif", "contentfilter": "medium"}
+    if q:
+        params["q"] = q
+    r = requests.get(f"https://tenor.googleapis.com/v2/{endpoint}", params=params, timeout=6)
+    gifs = []
+    for it in r.json().get("results", []):
+        mf = it.get("media_formats", {})
+        full = (mf.get("gif") or {}).get("url")
+        prev = (mf.get("tinygif") or mf.get("nanogif") or {}).get("url") or full
+        if full:
+            gifs.append({"url": full, "preview": prev})
+    return gifs
 
 
 @limiter.limit("40/min")
@@ -3597,24 +3635,12 @@ def gif_search():
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-    import requests
     q = (request.args.get("q") or "").strip()
+    # Prefer GIPHY (no Google Cloud needed) when its key is set; else Tenor.
+    if not GIPHY_KEY and not TENOR_KEY:
+        return jsonify(success=True, gifs=[], error="GIF search unavailable")
     try:
-        endpoint = "search" if q else "featured"
-        params = {"key": TENOR_KEY, "client_key": "cyvathon", "limit": 24,
-                  "media_filter": "gif,tinygif", "contentfilter": "medium"}
-        if q:
-            params["q"] = q
-        r = requests.get(f"https://tenor.googleapis.com/v2/{endpoint}",
-                         params=params, timeout=6)
-        results = r.json().get("results", [])
-        gifs = []
-        for it in results:
-            mf = it.get("media_formats", {})
-            full = (mf.get("gif") or {}).get("url")
-            prev = (mf.get("tinygif") or mf.get("nanogif") or {}).get("url") or full
-            if full:
-                gifs.append({"url": full, "preview": prev})
+        gifs = _giphy_gifs(q) if GIPHY_KEY else _tenor_gifs(q)
         return jsonify(success=True, gifs=gifs)
     except Exception as ex:
         logging.warning("gif search failed: %s", ex)
