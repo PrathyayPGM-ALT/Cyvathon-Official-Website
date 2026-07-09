@@ -574,11 +574,24 @@ def user_net_worth(username):
     hs = supabase.table("holdings").select("shares,company_id").eq("username", username).execute().data or []
     for h in hs:
         if (h.get("shares") or 0) > 0:
-            c = supabase.table("companies").select("last_price,ipo_price").eq("id", h["company_id"]).execute().data
+            c = supabase.table("companies").select("balance,shares,last_price,ipo_price") \
+                .eq("id", h["company_id"]).execute().data
             if c:
-                lp = c[0].get("last_price") or c[0].get("ipo_price") or 0
-                nw += lp * h["shares"]
+                nw += _share_value(c[0]) * h["shares"]
     return round(nw, 2)
+
+
+def _share_value(c):
+    """A share is worth what the company can actually back — its book value per
+    share (NAV) — capped by the market price. This makes net worth un-inflatable:
+    an empty company with an arbitrarily high founder-set price is worth ~0, so no
+    one can pump a sham stock to fake a fortune."""
+    comp_shares = c.get("shares") or 0
+    if comp_shares <= 0:
+        return 0
+    nav = max(c.get("balance") or 0, 0) / comp_shares
+    price = c.get("last_price") or c.get("ipo_price") or 0
+    return min(price, nav)
 
 
 # ============================================================
@@ -1330,9 +1343,9 @@ def exchange_ipo():
         return jsonify(success=False, error="Only a founder can take a company public"), 403
     if c.get("is_public"):
         return jsonify(success=False, error="Company is already public"), 400
-    if (shares <= 0 or shares > 10_000_000 or not math.isfinite(price)
-            or price <= 0 or price > 1_000_000):
-        return jsonify(success=False, error="Shares 1–10,000,000 and IPO price 0–1,000,000 CB"), 400
+    if (shares <= 0 or shares > 1_000_000 or not math.isfinite(price)
+            or price <= 0 or price > 100_000):
+        return jsonify(success=False, error="Shares 1–1,000,000 and IPO price 0–100,000 CB"), 400
 
     # IMPORTANT: do NOT fabricate company capital here. Setting balance = shares*price
     # would let a founder pay themselves a dividend from money that never existed
@@ -1364,8 +1377,8 @@ def exchange_order():
 
     if side not in ("buy", "sell"):
         return jsonify(success=False, error="Pick buy or sell"), 400
-    if qty <= 0 or not math.isfinite(price) or price <= 0:
-        return jsonify(success=False, error="Enter a positive price and quantity"), 400
+    if qty <= 0 or qty > 10_000_000 or not math.isfinite(price) or price <= 0 or price > 1_000_000:
+        return jsonify(success=False, error="Price 0–1,000,000 CB and a positive quantity"), 400
 
     c_res = supabase.table("companies").select("is_public").eq("id", cid).execute().data
     if not c_res or not c_res[0].get("is_public"):
