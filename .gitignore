@@ -12,6 +12,8 @@ __pycache__/
 # IDE
 .idea/
 
-# Standalone treaty (not part of the website)
+# Standalone treaties (not part of the website)
 cyvathon-aquilithia-treaty.pdf
 build_treaty.py
+cyvathon-crystonia-treaty.pdf
+build_treaty_crystonia.py

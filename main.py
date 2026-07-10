@@ -20,7 +20,7 @@ from google import genai
 #  CONFIG
 # ============================================================
 recent_registrations = {}
-REGISTRATION_LIMIT_WINDOW = 90   # min seconds between registrations from one IP
+REGISTRATION_LIMIT_WINDOW = 10   # min seconds between registrations from one IP
 
 # In-memory chat presence + typing (ephemeral — fine to lose on restart)
 _presence = {}      # username -> last-active unix ts
