@@ -3320,7 +3320,7 @@ def athena_data():
     return jsonify(success=True, roster=roster, firs=firs,
                    is_director=is_cia_director(user), my_rank=cia_rank(user),
                    me=user["username"], ranks=CIA_RANKS,
-                   ops=ops, intel=_athena_intel(25), threats=threats,
+                   ops=ops, intel=_athena_intel(25), threats=threats, surveil=_surveil_payload(),
                    op_cooldown=max(0, int(ATHENA_OP_COOLDOWN - (now - _last_op.get(user["username"], 0)))))
 
 
@@ -3508,6 +3508,104 @@ def athena_report():
     except Exception:
         return jsonify(success=False, error="Intel dossier isn't enabled yet — the database needs a quick update."), 503
     return jsonify(success=True)
+
+
+# ----- Classified: External surveillance (public-site uptime/version monitor) -----
+SURVEIL_TARGETS = {
+    "aquilithia": os.environ.get("SURVEIL_AQUILITHIA", "https://aquilithia.onrender.com/"),
+}
+SURVEIL_MIN_GAP = 15          # never re-ping a target more often than this (be a good netizen)
+_surveil = {}                 # target key -> {"state": last check, "log": [recent checks]}
+
+
+def _do_surveil(key):
+    """One respectful GET to a rival's PUBLIC homepage — reconnaissance from
+    freely-served content only: status, latency, version, tech stack, and the
+    routes they advertise. No auth bypass, no hidden-route probing."""
+    import requests
+    url = SURVEIL_TARGETS[key]
+    slot = _surveil.setdefault(key, {"state": None, "log": []})
+    t0 = time()
+    try:
+        r = requests.get(url, timeout=12, headers={"User-Agent": "Cyvathon-Athena-Monitor/1.0"})
+        ms = int((time() - t0) * 1000)
+        html = r.text or ""
+        ver = re.search(r"v(\d+\.\d+(?:\.\d+)?)", html)
+        title = re.search(r"<title[^>]*>(.*?)</title>", html, re.S | re.I)
+        links = sorted(set(re.findall(r'href="(/[a-zA-Z0-9_\-/]*)"', html)))[:40]
+        server = r.headers.get("Server", "")
+        cloudflare = bool(r.headers.get("CF-RAY") or "cloudflare" in server.lower())
+        res = {"up": r.status_code < 400, "code": r.status_code, "ms": ms,
+               "version": ver.group(1) if ver else None,
+               "title": (title.group(1).strip()[:80] if title else None),
+               "links": links, "server": server[:60], "cloudflare": cloudflare,
+               "powered": r.headers.get("X-Powered-By", "")[:60],
+               "size": len(html), "ts": time()}
+    except Exception as ex:
+        res = {"up": False, "code": 0, "ms": int((time() - t0) * 1000),
+               "version": None, "title": None, "links": [], "server": "",
+               "cloudflare": False, "powered": "", "size": 0, "ts": time(), "err": str(ex)[:80]}
+
+    prev = slot["state"]
+    if prev:      # auto-file intel when the target changes
+        if res.get("version") and prev.get("version") and res["version"] != prev["version"]:
+            _surveil_intel(key, f"{key.title()} updated: v{prev['version']} → v{res['version']}",
+                           "Surveillance detected a version change on the target's homepage.")
+        elif res["up"] != prev.get("up"):
+            _surveil_intel(key, f"{key.title()} is now {'ONLINE' if res['up'] else 'OFFLINE'}",
+                           f"Target status changed (HTTP {res['code']}).")
+        newlinks = set(res.get("links") or []) - set(prev.get("links") or [])
+        if newlinks:
+            _surveil_intel(key, f"{key.title()}: new public route(s) detected",
+                           "Newly advertised on their homepage: " + ", ".join(sorted(newlinks)[:8]))
+    slot["state"] = res
+    slot["log"].insert(0, res)
+    del slot["log"][30:]
+    return res
+
+
+def _surveil_intel(key, title, detail):
+    try:
+        supabase.table("athena_intel").insert({
+            "agent": "Athena", "kind": "report", "title": title, "detail": detail, "reward": 0
+        }).execute()
+    except Exception:
+        pass
+
+
+def _surveil_payload():
+    now = time()
+    def fmt(x):
+        if not x:
+            return None
+        return {"up": x["up"], "code": x["code"], "ms": x["ms"], "version": x.get("version"),
+                "title": x.get("title"), "links": x.get("links") or [], "server": x.get("server"),
+                "cloudflare": x.get("cloudflare"), "powered": x.get("powered"),
+                "size": x.get("size"), "err": x.get("err"), "ago": int(now - x["ts"])}
+    out = {}
+    for key in SURVEIL_TARGETS:
+        slot = _surveil.get(key, {"state": None, "log": []})
+        log = slot["log"]
+        uptime = round(100 * sum(1 for x in log if x["up"]) / len(log)) if log else None
+        lat = [x["ms"] for x in log if x["up"] and x.get("ms")]
+        out[key] = {"target": SURVEIL_TARGETS[key], "state": fmt(slot["state"]),
+                    "log": [fmt(x) for x in log[:15]], "checks": len(log),
+                    "uptime": uptime, "avg_ms": int(sum(lat) / len(lat)) if lat else None}
+    return out
+
+
+@limiter.limit("40/min")
+@app.route("/athena/surveil", methods=["GET", "POST"])
+def athena_surveil():
+    user = get_current_user(run_economics=False)
+    if not user or not is_cia(user):
+        return jsonify(success=False, error="Clearance denied"), 403
+    key = (request.args.get("target") or (request.get_json(silent=True) or {}).get("target") or "aquilithia")
+    if key in SURVEIL_TARGETS:
+        st = _surveil.get(key, {}).get("state")
+        if not st or time() - st["ts"] >= SURVEIL_MIN_GAP:   # only actually ping when stale
+            _do_surveil(key)
+    return jsonify(success=True, surveil=_surveil_payload())
 
 
 # ============================================================

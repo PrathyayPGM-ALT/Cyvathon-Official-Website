@@ -44,6 +44,21 @@
     .threat{ background:var(--bg-soft); border-left:3px solid var(--red); border-radius:0 8px 8px 0;
       padding:.5rem .8rem; margin-bottom:.45rem; }
     .threat .p{ font-family:"Courier New",monospace; font-size:.8rem; color:var(--amber); word-break:break-all; }
+    .starget{ background:var(--bg-soft); border:1px solid var(--panel-border); border-radius:12px; padding:1rem 1.2rem; }
+    .shead{ display:flex; align-items:center; gap:.6rem; }
+    .sb{ font-size:.72rem; font-weight:700; padding:.15rem .6rem; border-radius:20px; }
+    .sb.up{ background:rgba(31,214,166,.15); color:var(--green); }
+    .sb.down{ background:rgba(255,93,108,.15); color:var(--red); }
+    .statgrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:.6rem; margin:.7rem 0; }
+    .statgrid .k{ font-size:.64rem; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+    .statgrid .v{ font-size:1.05rem; font-weight:700; color:var(--amber); }
+    .techbadge{ display:inline-block; font-size:.72rem; padding:.15rem .6rem; border-radius:20px;
+      background:var(--panel-2); border:1px solid var(--panel-border); margin:0 .3rem .3rem 0; }
+    .rchip2{ display:inline-block; font-size:.76rem; font-family:"Courier New",monospace; padding:.15rem .55rem;
+      border-radius:6px; background:var(--panel-2); margin:.15rem .2rem 0 0; color:var(--accent); }
+    .spark{ display:flex; align-items:flex-end; gap:2px; height:44px; margin-top:.3rem; }
+    .spark .bar{ flex:1; min-width:3px; background:var(--accent); border-radius:2px 2px 0 0; opacity:.8; }
+    .spark .bar.d{ background:var(--red); opacity:.5; height:100%; }
     .deny{ text-align:center; padding:5rem 1rem; }
   </style>
 </head>
@@ -106,6 +121,14 @@
         </div>`).join("")}</div>
       </div>`;
 
+      // Foreign surveillance (public-site monitor)
+      html+=`<div class="panel" style="margin-bottom:1.6rem;">
+        <h3><i class="fas fa-satellite-dish"></i> Foreign Surveillance
+          <button class="ghost" style="width:auto;margin:0 0 0 .5rem;padding:.28rem .8rem;font-size:.78rem;" onclick="pingSurveil()"><i class="fas fa-satellite"></i> Ping now</button></h3>
+        <p class="small">Passive monitoring of rival nations' <b>public</b> sites — uptime, latency, tech stack, and changes. Auto-refreshes; version bumps &amp; new routes auto-file to the dossier.</p>
+        <div id="surveilBox"><p class="small muted">Establishing uplink…</p></div>
+      </div>`;
+
       // Foreign intrusion feed (counter-intelligence)
       html+=`<div class="panel" style="margin-bottom:1.6rem;">
         <h3><i class="fas fa-triangle-exclamation"></i> Foreign Intrusion Feed</h3>
@@ -154,6 +177,46 @@
 
       document.getElementById("view").innerHTML=html;
       applyCooldown(d.op_cooldown||0);
+      renderSurveil(d.surveil);
+    }
+
+    function renderSurveil(surveil){
+      const box=document.getElementById("surveilBox"); if(!box||!surveil) return;
+      box.innerHTML = Object.keys(surveil).map(k=>{
+        const t=surveil[k], s=t.state;
+        const name=(s&&s.title)?s.title.split("|")[0].trim():(k.charAt(0).toUpperCase()+k.slice(1));
+        if(!s) return `<div class="starget"><b>${esc(name)}</b> <span class="small muted">— never checked. Hit “Ping now”.</span></div>`;
+        const badge=s.up?`<span class="sb up">● ONLINE</span>`:`<span class="sb down">● OFFLINE</span>`;
+        const routes=(s.links||[]).length?(s.links.map(l=>`<span class="rchip2">${esc(l)}</span>`).join("")):'<span class="small muted">none advertised</span>';
+        const bars=(t.log||[]).slice().reverse();
+        const max=Math.max(1,...bars.map(b=>b.up?b.ms:0));
+        const spark=bars.map(b=>`<span class="bar ${b.up?'':'d'}" title="${b.up?b.ms+'ms':'down'}" style="${b.up?'height:'+Math.max(8,Math.round(b.ms/max*100))+'%':''}"></span>`).join("")||'<span class="small muted">no history yet</span>';
+        return `<div class="starget">
+          <div class="shead"><b>${esc(name)}</b> ${badge}</div>
+          <div class="small muted" style="margin-bottom:.3rem;">${esc(t.target)} · checked ${s.ago}s ago${s.err?` · <span style="color:var(--red)">${esc(s.err)}</span>`:''}</div>
+          <div class="statgrid">
+            <div><div class="k">Latency</div><div class="v">${s.up?s.ms+" ms":"—"}</div></div>
+            <div><div class="k">Uptime</div><div class="v">${t.uptime!=null?t.uptime+"%":"—"}</div></div>
+            <div><div class="k">Avg</div><div class="v">${t.avg_ms!=null?t.avg_ms+" ms":"—"}</div></div>
+            <div><div class="k">Version</div><div class="v">${s.version?"v"+esc(s.version):"?"}</div></div>
+          </div>
+          <div style="margin:.3rem 0;">
+            ${s.cloudflare?'<span class="techbadge"><i class="fas fa-cloud"></i> Cloudflare</span>':''}
+            ${s.server?`<span class="techbadge">${esc(s.server)}</span>`:''}
+            ${s.powered?`<span class="techbadge">${esc(s.powered)}</span>`:''}
+          </div>
+          <div class="small muted">Public routes they advertise:</div>
+          <div style="margin:.3rem 0 .5rem;">${routes}</div>
+          <div class="small muted">Latency history:</div>
+          <div class="spark">${spark}</div>
+        </div>`;
+      }).join("");
+    }
+    async function pingSurveil(){
+      try{ const d=await api("/athena/surveil",{method:"POST",body:JSON.stringify({target:"aquilithia"})}); renderSurveil(d.surveil); }catch(e){}
+    }
+    async function refreshSurveil(){
+      try{ const d=await api("/athena/surveil"); renderSurveil(d.surveil); }catch(e){}
     }
 
     function applyCooldown(secs){
@@ -203,7 +266,9 @@
     (async function(){
       const user=await requireAuth(); if(!user) return;
       renderNav("/athena", user);
-      load();
+      await load();
+      pingSurveil();                               // first surveillance sweep
+      setInterval(refreshSurveil, 20000);          // keep the uplink warm
     })();
   </script>
 </body>
