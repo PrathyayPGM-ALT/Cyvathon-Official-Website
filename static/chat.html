@@ -90,6 +90,35 @@
     .composer .send{ width:46px; height:46px; flex-shrink:0; border-radius:50%; margin:0; padding:0; }
     .uploading{ font-size:.75rem; color:var(--accent); padding:.2rem .3rem; }
 
+    /* reply / quote */
+    .bubble{ position:relative; }
+    .replybtn{ position:absolute; top:-9px; right:-9px; width:24px; height:24px; border-radius:50%; display:none;
+      align-items:center; justify-content:center; background:var(--bg-soft); border:1px solid var(--panel-border);
+      color:var(--muted); cursor:pointer; font-size:.68rem; z-index:2; }
+    .grp.me .replybtn{ right:auto; left:-9px; }
+    .bubble:hover .replybtn{ display:flex; }
+    .replybtn:hover{ color:var(--accent); border-color:var(--accent); }
+    .quote{ border-left:3px solid var(--accent); background:rgba(88,196,255,.09); padding:.28rem .55rem;
+      border-radius:0 7px 7px 0; margin-bottom:.4rem; font-size:.82rem; cursor:pointer; }
+    .grp.me .quote{ background:rgba(4,34,59,.14); border-left-color:#053b5e; }
+    .quote b{ display:block; font-size:.72rem; opacity:.95; }
+    .quote .qt{ opacity:.75; }
+    .bubble.flash{ outline:2px solid var(--accent); outline-offset:1px; }
+    .reply-bar{ display:none; align-items:center; gap:.55rem; padding:.4rem .7rem; margin-bottom:.45rem;
+      background:var(--panel); border:1px solid var(--panel-border); border-left:3px solid var(--accent);
+      border-radius:8px; font-size:.82rem; }
+    .reply-bar.open{ display:flex; }
+    .reply-bar span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .reply-bar .x{ margin-left:auto; cursor:pointer; color:var(--muted); flex-shrink:0; }
+    .reply-bar .x:hover{ color:var(--red); }
+
+    /* presence + typing */
+    .pdot{ width:9px; height:9px; border-radius:50%; background:transparent; margin-left:auto; flex-shrink:0; }
+    .pdot.on{ background:var(--green); box-shadow:0 0 6px rgba(31,214,166,.7); }
+    .typing-row{ height:0; overflow:hidden; transition:height .12s; font-size:.78rem; color:var(--muted);
+      font-style:italic; padding:0 1.2rem; }
+    .typing-row.show{ height:20px; padding:.05rem 1.2rem; }
+
     /* modal */
     .modal{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:200; }
     .modal.open{ display:flex; }
@@ -126,8 +155,10 @@
       </div>
 
       <div class="feed" id="feed"></div>
+      <div class="typing-row" id="typingRow"></div>
 
       <div class="comp-wrap">
+        <div class="reply-bar" id="replyBar"></div>
         <div class="pop-panel mention-pop" id="mentionPop"></div>
         <div class="pop-panel emoji-pop" id="emojiPop"></div>
         <div class="pop-panel gif-pop" id="gifPop">
@@ -175,6 +206,7 @@
     let ME=null, ADMIN=false, channel={type:"public"}, groups=[], citizens=[];
     let lastId=0, poll=null, _lastSender=null, _lastBody=null, pending=[], tmpc=0;
     let mention={open:false,start:0,items:[],idx:0};
+    let replyTo=null, onlineSet=new Set(), lastTyping=0;
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const tm=(iso)=>{ try{ return iso?new Date(iso).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):""; }catch{ return ""; } };
     const EMOJIS="😀 😂 😍 😎 😭 😡 👍 👎 🙏 🔥 🎉 💀 🤖 👑 ⚖️ 💰 🦉 🚀 ❤️ ✅ ❌ 🤔 😱 🫡 🐐 🎂 🍕 ⚽ 🎮 💡 😅 🥳 😴 🤝 ✨ 🫶 😤 🤯 🙌 💯".split(" ");
@@ -199,9 +231,14 @@
       const cs=citizens.filter(c=>c.username!==ME && c.username.toLowerCase().includes(q));
       html+= cs.length ? cs.map(c=>`<div class="row ${active('dm',c.username)}" onclick="openDM('${encodeURIComponent(c.username)}')">
         <div class="av">${esc(c.username[0].toUpperCase())}</div>
-        <div class="txt"><div class="nm">${esc(c.username)}</div><div class="rl">${esc(c.company||c.designation||'Citizen')}</div></div></div>`).join("")
+        <div class="txt"><div class="nm">${esc(c.username)}</div><div class="rl">${esc(c.company||c.designation||'Citizen')}</div></div>
+        <span class="pdot" data-u="${esc(c.username)}"></span></div>`).join("")
         : `<p class="small muted" style="padding:.2rem .6rem;">No citizens found.</p>`;
       el.innerHTML=html;
+      applyPresence();
+    }
+    function applyPresence(){
+      document.querySelectorAll(".pdot").forEach(d=>d.classList.toggle("on", onlineSet.has(d.dataset.u)));
     }
 
     /* ---------------- CHANNEL SWITCHING ---------------- */
@@ -213,11 +250,12 @@
       document.getElementById("cAct").innerHTML=actHtml||"";
     }
     function switchTo(ch){
-      channel=ch; lastId=0; _lastSender=null; _lastBody=null; pending=[];
+      channel=ch; lastId=0; _lastSender=null; _lastBody=null; pending=[]; cancelReply();
       document.getElementById("feed").innerHTML="";
+      document.getElementById("typingRow").classList.remove("show");
       document.getElementById("shell").classList.add("showmain");
-      closePanels(); renderSide(); loadNew(true);
-      if(poll) clearInterval(poll); poll=setInterval(()=>loadNew(false),2500);
+      closePanels(); renderSide(); loadNew(true); refreshTyping();
+      if(poll) clearInterval(poll); poll=setInterval(()=>{ loadNew(false); refreshTyping(); },2500);
     }
     function showList(){ document.getElementById("shell").classList.remove("showmain"); }
 
@@ -265,12 +303,21 @@
       const body=bubbleBlock(m.sender);
       const b=document.createElement("div");
       b.className="bubble"+(opts.pending?" sending":"");
-      let status="";
-      if(m.sender===ME) status=`<span class="status">${opts.pending?'<i class="fas fa-clock"></i>':'<i class="fas fa-check"></i>'}</span>`;
-      b.innerHTML=renderRich(m.content)+status;
+      b.dataset.mid=m.id||"";
+      b._msg={id:m.id, sender:m.sender, text:m.content};
+      const quote = m.reply_to
+        ? `<div class="quote" onclick="jumpTo(${m.reply_to})"><b>${esc(m.reply_sender||'')}</b><span class="qt">${esc((m.reply_text||'').slice(0,120))}</span></div>` : "";
+      const status = m.sender===ME
+        ? `<span class="status">${opts.pending?'<i class="fas fa-clock"></i>':'<i class="fas fa-check"></i>'}</span>` : "";
+      b.innerHTML=quote+renderRich(m.content)+status
+        +`<span class="replybtn" title="Reply" onclick="startReplyEl(this)"><i class="fas fa-reply"></i></span>`;
       body.appendChild(b);
       scrollDown(true);
       return b;
+    }
+    function jumpTo(id){
+      const b=document.querySelector('.bubble[data-mid="'+id+'"]');
+      if(b){ b.scrollIntoView({behavior:"smooth",block:"center"}); b.classList.add("flash"); setTimeout(()=>b.classList.remove("flash"),1200); }
     }
     function scrollDown(force){
       const box=document.getElementById("feed");
@@ -301,7 +348,7 @@
     function markSent(el,m){
       el.classList.remove("sending");
       const s=el.querySelector(".status"); if(s) s.innerHTML='<i class="fas fa-check"></i>';
-      if(m&&m.id) lastId=Math.max(lastId,m.id);
+      if(m&&m.id){ lastId=Math.max(lastId,m.id); el.dataset.mid=m.id; if(el._msg) el._msg.id=m.id; }
     }
     function markFail(el,content){
       el.classList.remove("sending");
@@ -310,15 +357,20 @@
     }
     window.retry=function(elp,b64){ const c=decodeURIComponent(escape(atob(b64))); elp.closest(".bubble").remove(); doSend(c); };
 
-    function postMessage(content){
-      if(channel.type==="public") return api("/messages",{method:"POST",body:JSON.stringify({content})});
-      if(channel.type==="group") return api(`/groups/${channel.id}/messages`,{method:"POST",body:JSON.stringify({content})});
-      return api("/dm",{method:"POST",body:JSON.stringify({to:channel.name,content})});
+    function postMessage(content,r){
+      const body={content};
+      if(r){ body.reply_to=r.id; body.reply_sender=r.sender; body.reply_text=r.text; }
+      if(channel.type==="public") return api("/messages",{method:"POST",body:JSON.stringify(body)});
+      if(channel.type==="group") return api(`/groups/${channel.id}/messages`,{method:"POST",body:JSON.stringify(body)});
+      body.to=channel.name; return api("/dm",{method:"POST",body:JSON.stringify(body)});
     }
     function doSend(content){
-      const el=addBubble({sender:ME,content},{pending:true});   // show instantly
+      const r=replyTo; cancelReply();
+      const m={sender:ME,content};
+      if(r){ m.reply_to=r.id; m.reply_sender=r.sender; m.reply_text=r.text; }
+      const el=addBubble(m,{pending:true});   // show instantly
       const rec={content,el}; pending.push(rec);
-      postMessage(content).then(res=>{
+      postMessage(content,r).then(res=>{
         const i=pending.indexOf(rec); if(i>=0) pending.splice(i,1);
         markSent(el,res&&res.message);
       }).catch(err=>{
@@ -329,6 +381,45 @@
     function sendInput(){
       const t=document.getElementById("msg"); const v=t.value.trim(); if(!v) return;
       t.value=""; autogrow(t); closePanels(); closeMention(); doSend(v);
+    }
+
+    /* ---------------- REPLY / QUOTE ---------------- */
+    function startReplyEl(btn){ const b=btn.closest(".bubble"); if(b && b._msg) startReply(b._msg); }
+    function startReply(m){
+      replyTo={ id:m.id, sender:m.sender, text:(m.text||"").replace(/\s+/g," ").trim().slice(0,120) };
+      const bar=document.getElementById("replyBar");
+      bar.innerHTML=`<i class="fas fa-reply" style="color:var(--accent)"></i>
+        <span>Replying to <b>${esc(m.sender)}</b>${replyTo.text?": "+esc(replyTo.text):""}</span>
+        <span class="x" onclick="cancelReply()"><i class="fas fa-xmark"></i></span>`;
+      bar.classList.add("open");
+      document.getElementById("msg").focus();
+    }
+    function cancelReply(){ replyTo=null; const b=document.getElementById("replyBar"); if(b) b.classList.remove("open"); }
+
+    /* ---------------- PRESENCE + TYPING ---------------- */
+    function convoKey(){
+      if(channel.type==="public") return "public";
+      if(channel.type==="group") return "group:"+channel.id;
+      return "dm:"+[ME,channel.name].sort().join("|");
+    }
+    async function refreshPresence(){
+      try{ const d=await api("/presence",{method:"POST",body:"{}"}); onlineSet=new Set(d.online||[]); applyPresence(); }catch{}
+    }
+    function sendTyping(){
+      const now=Date.now(); if(now-lastTyping<2500) return; lastTyping=now;
+      api("/typing",{method:"POST",body:JSON.stringify({convo:convoKey()})}).catch(()=>{});
+    }
+    async function refreshTyping(){
+      try{ const d=await api("/typing?convo="+encodeURIComponent(convoKey())); renderTyping(d.typing||[]); }catch{}
+    }
+    function renderTyping(list){
+      const el=document.getElementById("typingRow");
+      const names=(list||[]).filter(u=>u!==ME);
+      if(!names.length){ el.classList.remove("show"); el.textContent=""; return; }
+      el.textContent = names.length===1 ? `${names[0]} is typing…`
+        : names.length===2 ? `${names[0]} and ${names[1]} are typing…`
+        : "Several people are typing…";
+      el.classList.add("show");
     }
 
     /* ---------------- MENTIONS (@ping) ---------------- */
@@ -483,7 +574,7 @@
       else openPublic();
 
       const t=document.getElementById("msg");
-      t.addEventListener("input",()=>{ autogrow(t); updateMention(); });
+      t.addEventListener("input",()=>{ autogrow(t); updateMention(); sendTyping(); });
       t.addEventListener("keydown",e=>{
         if(mention.open){
           if(e.key==="ArrowDown"){ e.preventDefault(); mention.idx=(mention.idx+1)%mention.items.length; renderMention(); return; }
@@ -491,10 +582,13 @@
           if(e.key==="Enter"||e.key==="Tab"){ e.preventDefault(); pickMention(mention.idx); return; }
           if(e.key==="Escape"){ e.preventDefault(); closeMention(); return; }
         }
+        if(e.key==="Escape" && replyTo){ e.preventDefault(); cancelReply(); return; }
         if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendInput(); }
       });
       t.addEventListener("blur",()=>setTimeout(closeMention,150));
       document.getElementById("gifSearch").addEventListener("keydown",e=>e.stopPropagation());
+
+      refreshPresence(); setInterval(refreshPresence, 12000);   // online dots
     })();
   </script>
 </body>

@@ -22,6 +22,12 @@ from google import genai
 recent_registrations = {}
 REGISTRATION_LIMIT_WINDOW = 90   # min seconds between registrations from one IP
 
+# In-memory chat presence + typing (ephemeral — fine to lose on restart)
+_presence = {}      # username -> last-active unix ts
+_typing = {}        # convo key -> {username: expiry ts}
+PRESENCE_TTL = 45   # seconds since last activity to still count as "online"
+TYPING_TTL = 6      # seconds a "typing…" ping stays live
+
 # --- Economy constants -------------------------------------
 PUFB_PER_CYBUCK      = 1        # Treaty peg: 1 Pufferbuck = 1 Cybuck
 AQUILINES_PER_PUFB   = 10       # 10 Aquilines   = 1 Pufferbuck
@@ -549,6 +555,7 @@ def get_current_user(run_economics=True):
         return None
     if user.get("approved", True) is False:   # not yet approved by the President
         return None
+    _presence[username] = time()               # any authenticated request = "online"
     if run_economics:
         user = apply_economics(user)
     return user
@@ -3622,6 +3629,58 @@ def economy():
 # ============================================================
 #  CHAT  (now gated behind the single national account)
 # ============================================================
+def _insert_message(row, data):
+    """Insert a message, attaching reply-to metadata when present.
+    Fails open if the reply_* columns haven't been migrated yet."""
+    reply_to = (data or {}).get("reply_to")
+    if reply_to:
+        try:
+            return supabase.table("messages").insert({
+                **row,
+                "reply_to": reply_to,
+                "reply_sender": ((data.get("reply_sender") or "")[:32]),
+                "reply_text": ((data.get("reply_text") or "")[:140]),
+            }).execute().data[0]
+        except Exception:
+            pass          # columns not present — fall through to a plain insert
+    return supabase.table("messages").insert(row).execute().data[0]
+
+
+@limiter.limit("120 per minute")
+@app.route("/presence", methods=["GET", "POST"])
+def presence():
+    user = get_current_user(run_economics=False)   # this call also marks me online
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    now = time()
+    online = [u for u, t in list(_presence.items()) if now - t < PRESENCE_TTL]
+    for u, t in list(_presence.items()):           # prune stale entries
+        if now - t > PRESENCE_TTL * 4:
+            _presence.pop(u, None)
+    return jsonify(success=True, online=online)
+
+
+@limiter.limit("240 per minute")
+@app.route("/typing", methods=["GET", "POST"])
+def typing():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    now = time()
+    convo = (request.args.get("convo")
+             or (request.get_json(silent=True) or {}).get("convo") or "").strip()
+    if not convo:
+        return jsonify(success=True, typing=[])
+    room = _typing.setdefault(convo, {})
+    if request.method == "POST":
+        room[user["username"]] = now + TYPING_TTL
+    others = [u for u, exp in list(room.items()) if exp > now and u != user["username"]]
+    for u, exp in list(room.items()):
+        if exp <= now:
+            room.pop(u, None)
+    return jsonify(success=True, typing=others)
+
+
 @limiter.limit("60 per minute")
 @app.route("/messages", methods=["POST"])
 def send_message():
@@ -3635,9 +3694,8 @@ def send_message():
     if len(content) > 2000:
         return jsonify(success=False, error="Message too long (max 2000 characters)"), 400
 
-    row = supabase.table("messages").insert({
-        "sender": user["username"], "recipient": None, "content": content
-    }).execute().data[0]
+    row = _insert_message({"sender": user["username"], "recipient": None, "content": content},
+                          request.get_json())
     _notify_mentions(user["username"], content, "/chat")
     return jsonify(success=True, message=row)
 
@@ -3868,9 +3926,7 @@ def dm_send():
     if not supabase.table("cybucks").select("id").eq("username", to).execute().data:
         return jsonify(success=False, error="No such citizen"), 404
 
-    row = supabase.table("messages").insert({
-        "sender": user["username"], "recipient": to, "content": content
-    }).execute().data[0]
+    row = _insert_message({"sender": user["username"], "recipient": to, "content": content}, d)
     notify(to, f"💬 New message from {user['username']}", "/chat?dm=" + user["username"])
     _notify_mentions(user["username"], content, "/chat?dm=" + user["username"], exclude=to)
     return jsonify(success=True, message=row)
@@ -4006,9 +4062,8 @@ def group_send(gid):
         return jsonify(success=False, error="Empty message"), 400
     if len(content) > 2000:
         return jsonify(success=False, error="Message too long (max 2000 characters)"), 400
-    row = supabase.table("messages").insert({
-        "sender": user["username"], "recipient": None, "group_id": gid, "content": content
-    }).execute().data[0]
+    row = _insert_message({"sender": user["username"], "recipient": None,
+                           "group_id": gid, "content": content}, request.get_json())
     members = {m["username"] for m in (supabase.table("chat_group_members")
                .select("username").eq("group_id", gid).execute().data or [])}
     _notify_mentions(user["username"], content, f"/chat?group={gid}", only=members)
