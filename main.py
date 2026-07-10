@@ -3535,16 +3535,32 @@ def _do_surveil(key):
         links = sorted(set(re.findall(r'href="(/[a-zA-Z0-9_\-/]*)"', html)))[:40]
         server = r.headers.get("Server", "")
         cloudflare = bool(r.headers.get("CF-RAY") or "cloudflare" in server.lower())
+        # Defensive posture — which security headers they serve (passive audit)
+        h = r.headers
+        sec = {"hsts": bool(h.get("Strict-Transport-Security")),
+               "csp": bool(h.get("Content-Security-Policy")),
+               "xfo": bool(h.get("X-Frame-Options")),
+               "nosniff": bool(h.get("X-Content-Type-Options")),
+               "referrer": bool(h.get("Referrer-Policy"))}
+        # Advertised national stats + detected features, from their public text
+        text = re.sub(r"<[^>]+>", " ", html)
+        stats = dict(re.findall(r"(\d{1,4})\s+(Currencies|Branches[A-Za-z ]*|State Offices|Citizens|Companies)", text))
+        FEATURES = ["Parliament", "Court", "Stock Exchange", "Marketplace", "Mail",
+                    "Elections", "Gazette", "AI Assistant", "Companies", "Dividends", "Bonds", "Passport"]
+        features = [w for w in FEATURES if w.lower() in text.lower()]
         res = {"up": r.status_code < 400, "code": r.status_code, "ms": ms,
                "version": ver.group(1) if ver else None,
                "title": (title.group(1).strip()[:80] if title else None),
                "links": links, "server": server[:60], "cloudflare": cloudflare,
                "powered": r.headers.get("X-Powered-By", "")[:60],
+               "sec": sec, "sec_score": sum(sec.values()),
+               "stats": {v: k for k, v in stats.items()}, "features": features,
                "size": len(html), "ts": time()}
     except Exception as ex:
         res = {"up": False, "code": 0, "ms": int((time() - t0) * 1000),
                "version": None, "title": None, "links": [], "server": "",
-               "cloudflare": False, "powered": "", "size": 0, "ts": time(), "err": str(ex)[:80]}
+               "cloudflare": False, "powered": "", "sec": {}, "sec_score": 0,
+               "stats": {}, "features": [], "size": 0, "ts": time(), "err": str(ex)[:80]}
 
     prev = slot["state"]
     if prev:      # auto-file intel when the target changes
@@ -3581,7 +3597,9 @@ def _surveil_payload():
         return {"up": x["up"], "code": x["code"], "ms": x["ms"], "version": x.get("version"),
                 "title": x.get("title"), "links": x.get("links") or [], "server": x.get("server"),
                 "cloudflare": x.get("cloudflare"), "powered": x.get("powered"),
-                "size": x.get("size"), "err": x.get("err"), "ago": int(now - x["ts"])}
+                "sec": x.get("sec") or {}, "sec_score": x.get("sec_score", 0),
+                "stats": x.get("stats") or {}, "features": x.get("features") or [],
+                "recon": x.get("recon"), "size": x.get("size"), "err": x.get("err"), "ago": int(now - x["ts"])}
     out = {}
     for key in SURVEIL_TARGETS:
         slot = _surveil.get(key, {"state": None, "log": []})
@@ -3590,8 +3608,51 @@ def _surveil_payload():
         lat = [x["ms"] for x in log if x["up"] and x.get("ms")]
         out[key] = {"target": SURVEIL_TARGETS[key], "state": fmt(slot["state"]),
                     "log": [fmt(x) for x in log[:15]], "checks": len(log),
-                    "uptime": uptime, "avg_ms": int(sum(lat) / len(lat)) if lat else None}
+                    "uptime": uptime, "avg_ms": int(sum(lat) / len(lat)) if lat else None,
+                    "recon": slot.get("recon") or []}
     return out
+
+
+_recon_last = {}
+RECON_MIN_GAP = 60      # deep recon (robots/sitemap) at most once/min per target
+
+
+@limiter.limit("10/min")
+@app.route("/athena/recon", methods=["POST"])
+def athena_recon():
+    """Deep recon: read the target's robots.txt & sitemap.xml — files a site
+    intentionally publishes for crawlers — to map the routes they expose."""
+    user = get_current_user(run_economics=False)
+    if not user or not is_cia(user):
+        return jsonify(success=False, error="Clearance denied"), 403
+    key = (request.get_json(silent=True) or {}).get("target") or "aquilithia"
+    if key not in SURVEIL_TARGETS:
+        return jsonify(success=False, error="Unknown target"), 400
+    now = time()
+    if now - _recon_last.get(key, 0) < RECON_MIN_GAP:
+        return jsonify(success=False, error=f"Recon cooling down — retry in {int(RECON_MIN_GAP-(now-_recon_last[key]))}s."), 429
+    _recon_last[key] = now
+
+    import requests
+    base = SURVEIL_TARGETS[key].rstrip("/")
+    found = set()
+    for path in ("/robots.txt", "/sitemap.xml"):
+        try:
+            rr = requests.get(base + path, timeout=8, headers={"User-Agent": "Cyvathon-Athena-Monitor/1.0"})
+            if rr.status_code < 400:
+                txt = rr.text or ""
+                found |= set(re.findall(r"(?:Disallow|Allow):\s*(/[^\s]*)", txt))
+                found |= set(re.findall(r"<loc>\s*https?://[^/]+(/[^<\s]*)", txt))
+        except Exception:
+            pass
+    routes = sorted(r for r in found if r and len(r) < 60)[:60]
+    slot = _surveil.setdefault(key, {"state": None, "log": []})
+    prev = set(slot.get("recon") or [])
+    slot["recon"] = routes
+    if routes and prev and (set(routes) - prev):
+        _surveil_intel(key, f"{key.title()}: routes discovered via robots/sitemap",
+                       ", ".join(sorted(set(routes) - prev)[:10]))
+    return jsonify(success=True, surveil=_surveil_payload(), found=len(routes))
 
 
 @limiter.limit("40/min")

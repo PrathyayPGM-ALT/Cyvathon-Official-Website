@@ -191,8 +191,17 @@
         const bars=(t.log||[]).slice().reverse();
         const max=Math.max(1,...bars.map(b=>b.up?b.ms:0));
         const spark=bars.map(b=>`<span class="bar ${b.up?'':'d'}" title="${b.up?b.ms+'ms':'down'}" style="${b.up?'height:'+Math.max(8,Math.round(b.ms/max*100))+'%':''}"></span>`).join("")||'<span class="small muted">no history yet</span>';
+        const sec=s.sec||{};
+        const secItem=(ok,label)=>`<span class="techbadge" style="color:${ok?'var(--green)':'var(--red)'};border-color:${ok?'rgba(31,214,166,.4)':'rgba(255,93,108,.4)'}"><i class="fas fa-${ok?'shield-halved':'triangle-exclamation'}"></i> ${label}</span>`;
+        const secRow=Object.keys(sec).length
+          ? secItem(sec.hsts,"HSTS")+secItem(sec.csp,"CSP")+secItem(sec.xfo,"X-Frame")+secItem(sec.nosniff,"No-Sniff")+secItem(sec.referrer,"Referrer")
+          : '<span class="small muted">unknown</span>';
+        const stats=Object.entries(s.stats||{}).map(([k,v])=>`<span class="rchip2" style="color:var(--gold)">${esc(v)} ${esc(k.trim())}</span>`).join("")||'<span class="small muted">none found</span>';
+        const feats=(s.features||[]).map(f=>`<span class="rchip2" style="color:var(--green)">${esc(f)}</span>`).join("")||'<span class="small muted">none detected</span>';
+        const recon=(t.recon||[]).length?(t.recon.map(r=>`<span class="rchip2">${esc(r)}</span>`).join("")):'<span class="small muted">run Deep Recon to map robots.txt / sitemap</span>';
         return `<div class="starget">
-          <div class="shead"><b>${esc(name)}</b> ${badge}</div>
+          <div class="shead"><b>${esc(name)}</b> ${badge}
+            <button class="ghost" style="width:auto;margin:0 0 0 auto;padding:.25rem .7rem;font-size:.76rem;" onclick="reconTarget('${k}')"><i class="fas fa-magnifying-glass"></i> Deep Recon</button></div>
           <div class="small muted" style="margin-bottom:.3rem;">${esc(t.target)} · checked ${s.ago}s ago${s.err?` · <span style="color:var(--red)">${esc(s.err)}</span>`:''}</div>
           <div class="statgrid">
             <div><div class="k">Latency</div><div class="v">${s.up?s.ms+" ms":"—"}</div></div>
@@ -205,8 +214,12 @@
             ${s.server?`<span class="techbadge">${esc(s.server)}</span>`:''}
             ${s.powered?`<span class="techbadge">${esc(s.powered)}</span>`:''}
           </div>
-          <div class="small muted">Public routes they advertise:</div>
-          <div style="margin:.3rem 0 .5rem;">${routes}</div>
+          <div class="small muted">Defensive posture (${s.sec_score||0}/5 security headers):</div>
+          <div style="margin:.3rem 0 .5rem;">${secRow}</div>
+          <div class="small muted">Their advertised stats:</div><div style="margin:.3rem 0 .5rem;">${stats}</div>
+          <div class="small muted">Detected features:</div><div style="margin:.3rem 0 .5rem;">${feats}</div>
+          <div class="small muted">Advertised routes:</div><div style="margin:.3rem 0 .3rem;">${routes}</div>
+          <div class="small muted">Deep-recon routes (robots/sitemap):</div><div style="margin:.3rem 0 .5rem;">${recon}</div>
           <div class="small muted">Latency history:</div>
           <div class="spark">${spark}</div>
         </div>`;
@@ -217,6 +230,10 @@
     }
     async function refreshSurveil(){
       try{ const d=await api("/athena/surveil"); renderSurveil(d.surveil); }catch(e){}
+    }
+    async function reconTarget(key){
+      try{ const d=await api("/athena/recon",{method:"POST",body:JSON.stringify({target:key})}); renderSurveil(d.surveil); }
+      catch(e){ alert(e.message); }
     }
 
     function applyCooldown(secs){
