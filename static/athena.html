@@ -34,6 +34,16 @@
     .ops{ display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.7rem; }
     .ops input{ width:auto; flex:1; min-width:120px; margin:0; padding:.45rem .7rem; }
     .ops button{ width:auto; margin:0; padding:.45rem .9rem; font-size:.82rem; }
+    .opgrid{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); margin-top:.6rem; }
+    .opcard{ background:var(--bg-soft); border:1px solid var(--panel-border); border-radius:12px;
+      padding:.9rem 1rem; display:flex; flex-direction:column; gap:.35rem; }
+    .opcard b{ color:var(--amber); }
+    .opcard .m{ font-size:.78rem; color:var(--accent); }
+    .opcard button{ margin:.4rem 0 0; width:100%; padding:.45rem; font-size:.82rem; }
+    .opcard button:disabled{ opacity:.4; cursor:not-allowed; filter:grayscale(1); }
+    .threat{ background:var(--bg-soft); border-left:3px solid var(--red); border-radius:0 8px 8px 0;
+      padding:.5rem .8rem; margin-bottom:.45rem; }
+    .threat .p{ font-family:"Courier New",monospace; font-size:.8rem; color:var(--amber); word-break:break-all; }
     .deny{ text-align:center; padding:5rem 1rem; }
   </style>
 </head>
@@ -43,7 +53,7 @@
 
   <script src="/static/app.js"></script>
   <script>
-    let ME=null, DIR=false;
+    let ME=null, DIR=false, cdTimer=null;
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const ul=(n)=> !n ? '<span class="muted">unknown</span>' : `<a class="link" href="/profile?user=${encodeURIComponent(n)}">${esc(n)}</a>`;
 
@@ -82,6 +92,43 @@
       }
       html+=`</div>`;
 
+      // Field operations (espionage)
+      html+=`<div class="panel" style="margin-bottom:1.6rem;">
+        <h3><i class="fas fa-crosshairs"></i> Field Operations</h3>
+        <p class="small">Run covert operations against foreign intelligence. Success is paid in <b>Cybits</b>; agents must lie low between operations. Higher rank = bigger payouts.</p>
+        <p id="opMsg" class="small" style="min-height:1.1em;font-weight:600;"></p>
+        <p id="opCd" class="small" style="color:var(--amber);"></p>
+        <div class="opgrid">${(d.ops||[]).map(o=>`<div class="opcard">
+          <b>${esc(o.name)}</b>
+          <div class="small muted">${esc(o.desc)}</div>
+          <div class="m">Payout ${o.min}–${o.max} CBT · ${Math.round(o.success*100)}% success</div>
+          <button class="launchbtn" onclick="runOp('${o.key}')"><i class="fas fa-user-secret"></i> Launch</button>
+        </div>`).join("")}</div>
+      </div>`;
+
+      // Foreign intrusion feed (counter-intelligence)
+      html+=`<div class="panel" style="margin-bottom:1.6rem;">
+        <h3><i class="fas fa-triangle-exclamation"></i> Foreign Intrusion Feed</h3>
+        <p class="small">Firewall-flagged probes against Cyvathon — likely AIA reconnaissance.</p>
+        ${(d.threats||[]).length ? d.threats.map(t=>`<div class="threat">
+            <b>${esc(t.ip)}</b> <span class="small muted">· ${t.ago}s ago</span>
+            <div class="p">${esc(t.path)}</div>
+            ${t.ua?`<div class="small muted">UA: ${esc(t.ua)}</div>`:''}</div>`).join("")
+          : `<p class="small muted"><i class="fas fa-shield-halved" style="color:var(--green)"></i> No hostile probes detected. All quiet on the wire.</p>`}
+      </div>`;
+
+      // Intel dossier
+      html+=`<div class="panel" style="margin-bottom:1.6rem;">
+        <h3><i class="fas fa-file-shield"></i> Intel Dossier</h3>
+        <div class="ops"><input id="repT" placeholder="Report title…"><button onclick="fileReport()">File Report</button></div>
+        <textarea id="repD" rows="2" placeholder="Details (optional)…" style="margin-top:.5rem;"></textarea>
+        <div style="margin-top:.8rem;">${(d.intel||[]).length ? d.intel.map(i=>`<div class="ev ${i.reward>0?'':'note'}">
+            <b>${esc(i.title)}</b> ${i.reward>0?`<span class="rank">+${i.reward} CBT</span>`:''}
+            ${i.detail?`<div class="small muted">${esc(i.detail)}</div>`:''}
+            <div class="a">— ${ul(i.agent)} · ${i.created_at?new Date(i.created_at).toLocaleString():''}</div></div>`).join("")
+          : `<p class="small muted">No intel on file. Run an operation or file a report.</p>`}</div>
+      </div>`;
+
       // Case files
       html+=`<h3 style="margin-bottom:1rem;"><i class="fas fa-folder-open"></i> Case Files (${d.firs.length})</h3>`;
       if(!d.firs.length) html+=`<p class="muted">No reports filed.</p>`;
@@ -106,6 +153,37 @@
       }).join("");
 
       document.getElementById("view").innerHTML=html;
+      applyCooldown(d.op_cooldown||0);
+    }
+
+    function applyCooldown(secs){
+      if(cdTimer) clearInterval(cdTimer);
+      const set=(s)=>{
+        document.querySelectorAll(".launchbtn").forEach(b=>b.disabled=s>0);
+        const el=document.getElementById("opCd"); if(el) el.textContent = s>0 ? `⏱ Next operation available in ${s}s` : "";
+      };
+      let s=secs; set(s);
+      if(s>0){ cdTimer=setInterval(()=>{ s--; set(s); if(s<=0) clearInterval(cdTimer); },1000); }
+    }
+
+    async function runOp(key){
+      try{
+        const r=await api("/athena/op",{method:"POST",body:JSON.stringify({op:key})});
+        await load();
+        const m=document.getElementById("opMsg");
+        if(m){ m.style.color=r.op_success?"var(--green)":"var(--red)";
+          m.textContent = r.op_success ? `✔ ${r.detail}  (+${r.reward} Cybits)` : `✘ ${r.detail}`; }
+      }catch(e){
+        const m=document.getElementById("opMsg");
+        if(m){ m.style.color="var(--red)"; m.textContent=e.message; } else alert(e.message);
+      }
+    }
+    async function fileReport(){
+      const title=document.getElementById("repT").value.trim();
+      const detail=document.getElementById("repD").value.trim();
+      if(!title) return;
+      try{ await api("/athena/report",{method:"POST",body:JSON.stringify({title,detail})}); load(); }
+      catch(e){ alert(e.message); }
     }
 
     async function recruit(){

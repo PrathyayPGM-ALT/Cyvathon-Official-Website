@@ -28,6 +28,15 @@ _typing = {}        # convo key -> {username: expiry ts}
 PRESENCE_TTL = 45   # seconds since last activity to still count as "online"
 TYPING_TTL = 6      # seconds a "typing…" ping stays live
 
+# Athena counter-intelligence: recent firewall-blocked "probes" (e.g. AIA scans)
+_threats = []       # newest first: {ip, path, ua, ts}
+_last_op = {}       # username -> last field-operation ts (op cooldown)
+
+
+def _log_threat(ip, path, ua):
+    _threats.insert(0, {"ip": ip, "path": (path or "")[:120], "ua": (ua or "")[:90], "ts": time()})
+    del _threats[60:]
+
 # --- Economy constants -------------------------------------
 PUFB_PER_CYBUCK      = 1        # Treaty peg: 1 Pufferbuck = 1 Cybuck
 AQUILINES_PER_PUFB   = 10       # 10 Aquilines   = 1 Pufferbuck
@@ -227,6 +236,7 @@ def _firewall():
     ua = request.headers.get("User-Agent", "")
     if _WAF_PATTERNS.search(target) or _BAD_AGENTS.search(ua):
         _strike(ip)
+        _log_threat(ip, target, ua)
         logging.warning("FIREWALL blocked %s from %s (UA=%s)", target[:160], ip, ua[:100])
         return jsonify(success=False, error="Request blocked by the Cyvathon firewall."), 403
 
@@ -3302,9 +3312,16 @@ def athena_data():
     roster = supabase.table("cia_agents").select("*").order("created_at").execute().data or []
     firs = supabase.table("firs").select("*").order("created_at", desc=True).limit(100).execute().data or []
     firs = [{**f, "log": _fir_log(f["id"], agent_view=True)} for f in firs]
+    now = time()
+    ops = [{"key": k, **{x: v[x] for x in ("name", "desc", "min", "max", "success")}}
+           for k, v in ATHENA_OPS.items()]
+    threats = [{"ip": t["ip"], "path": t["path"], "ua": t["ua"], "ago": int(now - t["ts"])}
+               for t in _threats[:20]]
     return jsonify(success=True, roster=roster, firs=firs,
                    is_director=is_cia_director(user), my_rank=cia_rank(user),
-                   me=user["username"], ranks=CIA_RANKS)
+                   me=user["username"], ranks=CIA_RANKS,
+                   ops=ops, intel=_athena_intel(25), threats=threats,
+                   op_cooldown=max(0, int(ATHENA_OP_COOLDOWN - (now - _last_op.get(user["username"], 0)))))
 
 
 @limiter.limit("15/min")
@@ -3407,6 +3424,90 @@ def athena_escalate():
     notify(f["accused"], f"⚖️ FIR '{f['title']}' has been escalated to the Courts against you.", "/court")
     notify(f["complainant"], f"Your report '{f['title']}' was taken to court by Athena.", "/court")
     return jsonify(success=True, case_id=case["id"])
+
+
+# ----- Classified: Espionage — field operations, intel dossier, threat feed -----
+ATHENA_OPS = {
+    "surveil": {"name": "Surveillance Sweep", "min": 40, "max": 110, "success": 0.9,
+                "desc": "Monitor foreign chatter for loose intelligence."},
+    "counter": {"name": "Counter-Intrusion", "min": 70, "max": 180, "success": 0.75,
+                "desc": "Trace and sever an active AIA probe against Cyvathon."},
+    "recon":   {"name": "Deep Cyber-Recon", "min": 110, "max": 260, "success": 0.6,
+                "desc": "Infiltrate a rival network for high-value intel."},
+}
+ATHENA_OP_COOLDOWN = 600      # seconds between operations, per agent
+RANK_MULT = {"Director": 2.0, "Spy": 1.6, "Detective": 1.3, "Agent": 1.0}
+_OP_WIN = ["Intel recovered: intercepted AIA field chatter.",
+           "Probe traced to its source and neutralized.",
+           "Recovered a fragment of the enemy's playbook.",
+           "Turned a foreign asset — a clean operation.",
+           "Decrypted a batch of intercepted traffic."]
+_OP_LOSS = ["Operation compromised — the asset went dark.",
+            "Counter-surveillance detected us; we pulled out clean but empty-handed.",
+            "The trail went cold. No intel recovered.",
+            "Enemy encryption held. Mission aborted."]
+
+
+def _athena_intel(limit=25):
+    try:
+        return supabase.table("athena_intel").select("*") \
+            .order("created_at", desc=True).limit(limit).execute().data or []
+    except Exception:
+        return []      # table not migrated yet
+
+
+@limiter.limit("30/min")
+@app.route("/athena/op", methods=["POST"])
+def athena_op():
+    user = get_current_user(run_economics=False)
+    if not user or not is_cia(user):
+        return jsonify(success=False, error="Clearance denied"), 403
+    me = user["username"]
+    key = (request.get_json() or {}).get("op")
+    op = ATHENA_OPS.get(key)
+    if not op:
+        return jsonify(success=False, error="Unknown operation"), 400
+    now = time()
+    wait = ATHENA_OP_COOLDOWN - (now - _last_op.get(me, 0))
+    if wait > 0:
+        return jsonify(success=False, error=f"Agents must lie low. Next operation in {int(wait)}s."), 429
+    _last_op[me] = now
+
+    mult = RANK_MULT.get(cia_rank(user) or "Agent", 1.0)
+    success = random.random() < op["success"]
+    reward = round(random.uniform(op["min"], op["max"]) * mult) if success else 0
+    detail = (random.choice(_OP_WIN) if success else random.choice(_OP_LOSS))
+    if reward:
+        cas_adjust(me, "cybits", reward, allow_negative=True)   # paid in Cybits
+    try:
+        supabase.table("athena_intel").insert({
+            "agent": me, "kind": "operation",
+            "title": op["name"] + (" — SUCCESS" if success else " — FAILED"),
+            "detail": detail, "reward": reward,
+        }).execute()
+    except Exception:
+        pass          # log table not migrated — op still resolves
+    return jsonify(success=True, op_success=success, reward=reward, detail=detail)
+
+
+@limiter.limit("20/min")
+@app.route("/athena/report", methods=["POST"])
+def athena_report():
+    user = get_current_user(run_economics=False)
+    if not user or not is_cia(user):
+        return jsonify(success=False, error="Clearance denied"), 403
+    d = request.get_json() or {}
+    title = (d.get("title") or "").strip()[:120]
+    detail = (d.get("detail") or "").strip()[:1000]
+    if not title:
+        return jsonify(success=False, error="Give the report a title"), 400
+    try:
+        supabase.table("athena_intel").insert({
+            "agent": user["username"], "kind": "report", "title": title, "detail": detail, "reward": 0
+        }).execute()
+    except Exception:
+        return jsonify(success=False, error="Intel dossier isn't enabled yet — the database needs a quick update."), 503
+    return jsonify(success=True)
 
 
 # ============================================================
