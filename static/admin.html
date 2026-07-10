@@ -55,6 +55,12 @@
       <button style="margin-top:1.4rem;" onclick="save()"><i class="fas fa-floppy-disk"></i> Save Policy</button>
       <p id="msg" class="small" style="text-align:center;"></p>
 
+      <div class="panel" style="margin-top:1.6rem;border-color:rgba(255,206,86,.4);">
+        <h3><i class="fas fa-user-check"></i> Pending Citizenship Applications <span id="pendCount" class="tag" style="background:rgba(255,206,86,.15);color:var(--gold)"></span></h3>
+        <p class="small">Every new signup waits here until you let them in. <b>Approve</b> to grant access, <b>Reject</b> to delete the application (optionally blocking their IP).</p>
+        <div id="pendingList"></div>
+      </div>
+
       <div class="panel" style="margin-top:1.6rem;">
         <h3><i class="fas fa-ban"></i> Security — Block a Citizen</h3>
         <p class="small">Enter a username to <b>ban the account and block their signup IP</b> automatically — no need to find the IP yourself.</p>
@@ -111,6 +117,16 @@
     async function loadSecurity(){
       try{
         const d=await api("/admin/security");
+        const pend = d.pending||[];
+        document.getElementById("pendCount").textContent = pend.length ? pend.length+" waiting" : "";
+        document.getElementById("pendingList").innerHTML = pend.length
+          ? pend.map(p=>rowHtml(
+              `<span><b>${esc(p.username)}</b> <span class="small muted">${esc(p.reg_ip)||'no IP'} · ${p.created_at?new Date(p.created_at).toLocaleString():''}</span></span>`,
+              `<span style="display:flex;gap:.4rem;">
+                 <button style="width:auto;margin:0;padding:.3rem .9rem;font-size:.8rem;" onclick="approve('${esc(p.username)}')">Approve</button>
+                 <button class="danger" style="width:auto;margin:0;padding:.3rem .8rem;font-size:.8rem;" onclick="reject('${esc(p.username)}')">Reject</button>
+               </span>`)).join("")
+          : `<p class="small muted">No pending applications — you're all caught up.</p>`;
         document.getElementById("bannedList").innerHTML = (d.banned||[]).length
           ? d.banned.map(b=>rowHtml(`<span><b>${esc(b.username)}</b> <span class="small muted">${esc(b.reg_ip)||'no IP'}</span></span>`,
               `<button class="ghost" style="width:auto;margin:0;padding:.3rem .8rem;font-size:.8rem;" onclick="unban('${esc(b.username)}')">Unban</button>`)).join("")
@@ -123,6 +139,18 @@
             `<span>${esc(s.username)} <span class="small muted">${esc(s.reg_ip)||'—'}</span>${s.banned?' <span class="tag" style="background:rgba(255,93,108,.15);color:var(--red)">banned</span>':''}</span>`,
             s.banned?'' :`<button class="danger" style="width:auto;margin:0;padding:.3rem .8rem;font-size:.78rem;" onclick="blockName('${esc(s.username)}')">Block</button>`)).join("");
       }catch{}
+    }
+    async function approve(username){
+      try{ await api("/admin/approve",{method:"POST",body:JSON.stringify({username})});
+        secMsg(`${username} approved — they can now log in.`,false); loadSecurity(); }
+      catch(e){ secMsg(e.message); }
+    }
+    async function reject(username){
+      if(!confirm(`Delete ${username}'s application? This removes the account.`)) return;
+      const alsoBlock = confirm("Also block their signup IP so they can't re-apply from it?");
+      try{ const r=await api("/admin/reject",{method:"POST",body:JSON.stringify({username,block:alsoBlock})});
+        secMsg(`${username} rejected${r.ip_blocked?" and IP blocked":""}.`,false); loadSecurity(); }
+      catch(e){ secMsg(e.message); }
     }
     async function blockUser(){
       const username=document.getElementById("blockUser").value.trim(); const reason=document.getElementById("blockReason").value.trim();

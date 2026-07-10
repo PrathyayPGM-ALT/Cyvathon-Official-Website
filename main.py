@@ -547,6 +547,8 @@ def get_current_user(run_economics=True):
     user = result.data[0]
     if user.get("banned"):        # banned accounts are logged out everywhere
         return None
+    if user.get("approved", True) is False:   # not yet approved by the President
+        return None
     if run_economics:
         user = apply_economics(user)
     return user
@@ -794,7 +796,8 @@ def register():
         return jsonify(success=False, error="Username exists"), 400
 
     hashed = generate_password_hash(password)
-    designation = "President" if username in TREASURY_ADMINS else "Citizen"
+    is_admin = username in TREASURY_ADMINS
+    designation = "President" if is_admin else "Citizen"
     supabase.table("cybucks").insert({
         "username":    username,
         "password":    hashed,
@@ -807,10 +810,27 @@ def register():
         "last_salary": _now().isoformat(),
         "reg_ip":      ip,
     }).execute()
-    add_record(username, f"Granted citizenship of Cyvathon with {STARTING_GRANT} CB / {STARTING_GRANT} PUFB / {STARTING_GRANT} AQ / {STARTING_GRANT} CBT.")
+
+    # Every new citizen must be approved by the President before they can enter.
+    # (The President's own accounts are auto-approved.) Fail-open if the column
+    # isn't present yet, so signups never hard-error.
+    pending = not is_admin
+    if pending:
+        try:
+            supabase.table("cybucks").update({"approved": False}).eq("username", username).execute()
+        except Exception:
+            pending = False        # column missing → approval not enforced yet
+    add_record(username, "Applied for citizenship of Cyvathon — awaiting Presidential approval."
+               if pending else
+               f"Granted citizenship of Cyvathon with {STARTING_GRANT} of each currency.")
+
+    if pending:
+        notify("Cyvathon", f"New citizenship application: {username}", "/admin")
+        return jsonify(success=True, pending=True,
+                       message="Application submitted. You'll be able to log in once the President approves your citizenship.")
+
     session.permanent = True
     session["username"] = username
-
     new_user = {
         "username": username, "balance": STARTING_GRANT, "pufb": STARTING_GRANT,
         "aquilines": STARTING_GRANT, "cybits": STARTING_GRANT, "designation": designation, "company_id": None
@@ -835,6 +855,9 @@ def login():
     if not check_password_hash(user["password"], password):
         _strike(client_ip())          # brute-force protection: too many → auto-ban
         return jsonify(success=False, error="Incorrect password"), 401
+    if user.get("approved", True) is False:
+        return jsonify(success=False,
+                       error="Your citizenship application is awaiting Presidential approval. Please check back later."), 403
 
     session.permanent = True
     session["username"] = username
@@ -3451,7 +3474,60 @@ def admin_security():
     signups = supabase.table("cybucks").select("username,reg_ip,created_at,banned") \
         .order("created_at", desc=True).limit(40).execute().data or []
     banned = supabase.table("cybucks").select("username,reg_ip").eq("banned", True).execute().data or []
-    return jsonify(success=True, blocked=blocked, signups=signups, banned=banned)
+    try:
+        pending = supabase.table("cybucks").select("username,reg_ip,created_at") \
+            .eq("approved", False).order("created_at", desc=True).execute().data or []
+    except Exception:
+        pending = []      # column not migrated yet
+    return jsonify(success=True, blocked=blocked, signups=signups, banned=banned, pending=pending)
+
+
+@limiter.limit("60/min")
+@app.route("/admin/approve", methods=["POST"])
+def admin_approve():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    target = (request.get_json().get("username") or "").strip()
+    if not supabase.table("cybucks").select("id").eq("username", target).execute().data:
+        return jsonify(success=False, error="No such applicant"), 404
+    supabase.table("cybucks").update({"approved": True}).eq("username", target).execute()
+    add_record(target, "Citizenship application approved by the President.")
+    notify(target, "\U0001F389 Your Cyvathon citizenship has been approved — you can now log in!", "/login")
+    return jsonify(success=True)
+
+
+@limiter.limit("60/min")
+@app.route("/admin/reject", methods=["POST"])
+def admin_reject():
+    """Reject a pending applicant: delete the account and block their signup IP."""
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    target = (request.get_json().get("username") or "").strip()
+    if target in TREASURY_ADMINS:
+        return jsonify(success=False, error="You cannot reject the President"), 400
+    row = supabase.table("cybucks").select("reg_ip,approved").eq("username", target).execute().data
+    if not row:
+        return jsonify(success=False, error="No such applicant"), 404
+    if row[0].get("approved", True) is not False:
+        return jsonify(success=False, error="That citizen is already approved — ban them instead."), 400
+    for tbl, col in [("records", "username"), ("notifications", "username"),
+                     ("chat_group_members", "username")]:
+        try:
+            supabase.table(tbl).delete().eq(col, target).execute()
+        except Exception:
+            pass
+    supabase.table("cybucks").delete().eq("username", target).execute()
+    ip = row[0].get("reg_ip")
+    block = bool(request.get_json().get("block")) and ip
+    if block:
+        try:
+            supabase.table("blocked_ips").upsert({"ip": ip, "reason": "rejected applicant"}).execute()
+        except Exception:
+            supabase.table("blocked_ips").insert({"ip": ip, "reason": "rejected applicant"}).execute()
+        load_blocked_ips()
+    return jsonify(success=True, ip_blocked=bool(block))
 
 
 @limiter.limit("30/min")

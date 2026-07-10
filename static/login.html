@@ -74,9 +74,16 @@
       const body = {username, password};
       if(mode==="signup"){ body.captcha_token = captchaToken; body.captcha_answer = $("captchaA").value.trim(); body.website = $("website").value; }
       try{
-        await api(path, {method:"POST", body:JSON.stringify(body)});
+        const r = await api(path, {method:"POST", body:JSON.stringify(body)});
+        if(r.pending){                       // signup awaiting Presidential approval
+          $("msg").style.color = "var(--green)";
+          $("msg").textContent = r.message || "Application submitted — awaiting Presidential approval.";
+          setMode("login");
+          return;
+        }
         window.location.href = "/";          // go to dashboard hub
       }catch(e){
+        $("msg").style.color = "var(--red)";
         $("msg").textContent = e.message;
         if(mode==="signup"){ loadCaptcha(); $("captchaA").value=""; }  // refresh challenge
       }
