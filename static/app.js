@@ -69,7 +69,7 @@ async function requireAuth() {
 function renderNav(active, user) {
   const GROUPS = [
     { label: "Home", href: "/" },
-    { label: "Money",      items: [["/bank","Bank"], ["/exchange","Stock Exchange"], ["/loans","Loans"]] },
+    { label: "Money",      items: [["/bank","Bank"], ["/exchange","Stock Exchange"], ["/loans","Loans"], ["/casino","Casino"]] },
     { label: "Business",   items: [["/company","Companies"], ["/states","States"], ["/marketplace","Import & Export"]] },
     { label: "Government",  items: [["/government","Cabinet"], ["/ministries","Ministries"], ["/legislature","Legislature"], ["/gazette","Gazette"], ["/court","Courts"], ["/fir","Report a Crime"], ["/voting","Elections"], ["/treasury","Treasury"], ["/admin","Admin Panel"]] },
     { label: "Community",   items: [["/citizens","Citizens"], ["/chat","Chat"], ["/news","News"], ["/rules","Rules"]] },

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Casino · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .cgrid{ display:grid; gap:1.4rem; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); }
+    .game{ background:linear-gradient(180deg,rgba(20,60,40,.35),var(--panel)); border:1px solid var(--panel-border);
+      border-radius:16px; padding:1.4rem; display:flex; flex-direction:column; align-items:center; gap:.7rem; }
+    .game h3{ color:var(--gold); }
+    .game .edge{ font-size:.72rem; color:var(--muted); }
+    .stage{ height:120px; display:flex; align-items:center; justify-content:center; gap:.5rem; }
+    .betrow{ display:flex; gap:.5rem; width:100%; }
+    .betrow input{ margin:0; flex:1; }
+    .betrow button{ margin:0; width:auto; padding:.6rem 1.1rem; }
+    .pick{ display:flex; gap:.4rem; flex-wrap:wrap; justify-content:center; }
+    .pick button{ margin:0; width:auto; padding:.4rem .8rem; font-size:.85rem; background:var(--panel-2);
+      color:var(--text); border:1px solid var(--panel-border); box-shadow:none; }
+    .pick button.on{ background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; border-color:transparent; }
+    .res{ min-height:1.4em; font-weight:600; text-align:center; font-size:.92rem; }
+
+    /* coin */
+    .coin{ width:84px; height:84px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:2.2rem; font-weight:800; color:#5a3d00;
+      background:radial-gradient(circle at 35% 30%,#ffe488,#d9a821); box-shadow:0 6px 16px rgba(0,0,0,.4); }
+    .coin.spin{ animation:flip .6s linear infinite; }
+    @keyframes flip{ 0%{ transform:rotateY(0) } 100%{ transform:rotateY(360deg) } }
+
+    /* dice */
+    .die{ width:84px; height:84px; border-radius:16px; background:#f4f4f4; color:#141414;
+      display:flex; align-items:center; justify-content:center; font-size:3rem; font-weight:800;
+      box-shadow:0 6px 16px rgba(0,0,0,.4); }
+    .die.roll{ animation:shake .12s linear infinite; }
+    @keyframes shake{ 0%{transform:translate(0,0) rotate(0)} 25%{transform:translate(-3px,2px) rotate(-8deg)}
+      50%{transform:translate(3px,-2px) rotate(6deg)} 75%{transform:translate(-2px,-2px) rotate(-4deg)} 100%{transform:translate(0,0) rotate(0)} }
+
+    /* slots */
+    .reels{ display:flex; gap:.5rem; }
+    .reel{ width:64px; height:80px; border-radius:12px; background:#0a0f16; border:2px solid var(--gold);
+      display:flex; align-items:center; justify-content:center; font-size:2.3rem; overflow:hidden; }
+    .reel.spin{ animation:blur .35s linear infinite; }
+    @keyframes blur{ 0%{ filter:blur(0) } 50%{ filter:blur(2px); transform:translateY(-3px) } 100%{ filter:blur(0) } }
+
+    .win{ color:var(--green); } .lose{ color:var(--red); }
+    .flash-win{ animation:pop .5s ease; }
+    @keyframes pop{ 0%{ transform:scale(.8); } 50%{ transform:scale(1.12); } 100%{ transform:scale(1); } }
+    .log{ max-width:520px; margin:1.6rem auto 0; }
+    .logrow{ display:flex; justify-content:space-between; padding:.4rem .3rem; border-bottom:1px solid rgba(255,255,255,.06); font-size:.86rem; }
+    .house{ text-align:center; color:var(--muted); font-size:.82rem; margin-top:.4rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <h2 class="section-title"><i class="fas fa-dice"></i> Cyvathon Casino</h2>
+    <p class="section-sub">Bet your Cybucks against <b>the House</b> — the National Treasury. Win and the Treasury pays you; lose and it funds the nation. Bet responsibly, citizen. 🎲</p>
+
+    <div class="balances" id="balances"></div>
+
+    <div class="cgrid">
+      <!-- COIN -->
+      <div class="game">
+        <h3><i class="fas fa-coins"></i> Coin Flip</h3>
+        <div class="edge">Win pays 1.95× · ~2.5% house edge</div>
+        <div class="stage"><div class="coin" id="coin">?</div></div>
+        <div class="pick" id="coinPick">
+          <button class="on" data-c="heads" onclick="pickCoin(this)">Heads</button>
+          <button data-c="tails" onclick="pickCoin(this)">Tails</button>
+        </div>
+        <div class="betrow"><input id="coinBet" type="number" min="1" step="1" placeholder="Bet (CB)"><button onclick="playCoin()">Flip</button></div>
+        <div class="res" id="coinRes"></div>
+      </div>
+
+      <!-- DICE -->
+      <div class="game">
+        <h3><i class="fas fa-dice-five"></i> Lucky Number</h3>
+        <div class="edge">Guess the roll · pays 5×</div>
+        <div class="stage"><div class="die" id="die">?</div></div>
+        <div class="pick" id="dicePick"></div>
+        <div class="betrow"><input id="diceBet" type="number" min="1" step="1" placeholder="Bet (CB)"><button onclick="playDice()">Roll</button></div>
+        <div class="res" id="diceRes"></div>
+      </div>
+
+      <!-- SLOTS -->
+      <div class="game">
+        <h3><i class="fas fa-crown"></i> Lucky 7 Slots</h3>
+        <div class="edge">🍒🍋🔔 pair 1.2× · 3-match 5× · 💎 10× · 7️⃣ 20×</div>
+        <div class="stage"><div class="reels"><div class="reel" id="r0">🍒</div><div class="reel" id="r1">🔔</div><div class="reel" id="r2">💎</div></div></div>
+        <div class="betrow"><input id="slotBet" type="number" min="1" step="1" placeholder="Bet (CB)"><button onclick="playSlots()">Spin</button></div>
+        <div class="res" id="slotRes"></div>
+      </div>
+    </div>
+
+    <div class="panel log" id="logBox" style="display:none;">
+      <h3 style="margin-bottom:.4rem;"><i class="fas fa-receipt"></i> This Session</h3>
+      <div id="log"></div>
+      <div class="house" id="houseLine"></div>
+    </div>
+    <p id="msg" class="small" style="text-align:center;"></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, coinChoice="heads", diceChoice=1, busy=false, net=0, plays=0;
+    const SYM=["🍒","🍋","🔔","💎","7️⃣"];
+    const msg=(t,err=true)=>{ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
+
+    function paint(u){
+      ME=u;
+      document.getElementById("balances").innerHTML=`
+        <div class="bal"><div class="v">${fmt(u.balance)}</div><div class="l">Cybucks</div></div>
+        <div class="bal"><div class="v">${fmt(u.cybits)}</div><div class="l">Cybits</div></div>`;
+    }
+    function pickCoin(b){ coinChoice=b.dataset.c; document.querySelectorAll("#coinPick button").forEach(x=>x.classList.toggle("on",x===b)); }
+    function buildDicePicks(){
+      const p=document.getElementById("dicePick");
+      p.innerHTML=[1,2,3,4,5,6].map(n=>`<button data-n="${n}" class="${n===1?'on':''}" onclick="pickDie(this)">${n}</button>`).join("");
+    }
+    function pickDie(b){ diceChoice=+b.dataset.n; document.querySelectorAll("#dicePick button").forEach(x=>x.classList.toggle("on",x===b)); }
+
+    function readBet(id){ const v=parseFloat(document.getElementById(id).value); return (v>0)?v:0; }
+    function logRow(game, detail, net){
+      plays++; window.net = (window.net||0)+net;
+      const box=document.getElementById("logBox"); box.style.display="block";
+      const row=document.createElement("div"); row.className="logrow";
+      row.innerHTML=`<span>${game} · ${detail}</span><b class="${net>=0?'win':'lose'}">${net>=0?'+':''}${fmt(net)} CB</b>`;
+      const log=document.getElementById("log"); log.insertBefore(row, log.firstChild);
+      while(log.children.length>10) log.removeChild(log.lastChild);
+      document.getElementById("houseLine").textContent=`${plays} play${plays===1?'':'s'} · net ${window.net>=0?'+':''}${fmt(window.net)} CB this session`;
+    }
+    async function play(game, choice){
+      const betId={coin:"coinBet",dice:"diceBet",slots:"slotBet"}[game];
+      const bet=readBet(betId);
+      if(!bet) return msg("Enter a bet first");
+      if(busy) return; busy=true; msg("");
+      try{
+        const d=await api("/casino/play",{method:"POST",body:JSON.stringify({game,bet,choice})});
+        paint(d.user);
+        return d;
+      }catch(e){ msg(e.message); return null; }
+      finally{ busy=false; }
+    }
+
+    async function playCoin(){
+      const coin=document.getElementById("coin"); const res=document.getElementById("coinRes");
+      coin.classList.add("spin"); res.textContent="";
+      const d=await play("coin",coinChoice);
+      setTimeout(()=>{
+        coin.classList.remove("spin");
+        if(!d) { coin.textContent="?"; return; }
+        coin.textContent = d.outcome==="heads"?"H":"T";
+        res.className="res "+(d.win?"win flash-win":"lose");
+        res.textContent = d.detail+" "+(d.win?`(+${fmt(d.payout)} CB)`:"");
+        logRow("Coin", d.outcome, d.net);
+      }, 650);
+    }
+    async function playDice(){
+      const die=document.getElementById("die"); const res=document.getElementById("diceRes");
+      die.classList.add("roll"); res.textContent="";
+      const d=await play("dice",diceChoice);
+      setTimeout(()=>{
+        die.classList.remove("roll");
+        if(!d){ die.textContent="?"; return; }
+        die.textContent=d.outcome;
+        res.className="res "+(d.win?"win flash-win":"lose");
+        res.textContent=d.detail+" "+(d.win?`(+${fmt(d.payout)} CB)`:"");
+        logRow("Dice", "rolled "+d.outcome, d.net);
+      }, 700);
+    }
+    async function playSlots(){
+      const reels=[document.getElementById("r0"),document.getElementById("r1"),document.getElementById("r2")];
+      const res=document.getElementById("slotRes"); res.textContent="";
+      reels.forEach(r=>r.classList.add("spin"));
+      const spin=setInterval(()=>reels.forEach(r=>r.textContent=SYM[Math.floor(Math.random()*SYM.length)]), 80);
+      const d=await play("slots",null);
+      setTimeout(()=>{
+        clearInterval(spin);
+        if(!d){ reels.forEach(r=>r.classList.remove("spin")); return; }
+        const faces=d.outcome.split(" ");
+        reels.forEach((r,i)=>{ setTimeout(()=>{ r.classList.remove("spin"); r.textContent=faces[i]||"❓"; if(i===2){
+          res.className="res "+(d.win?"win flash-win":"lose");
+          res.textContent=d.detail+" "+(d.win?`(+${fmt(d.payout)} CB)`:"");
+          logRow("Slots", faces.join(""), d.net);
+        } }, i*300); });
+      }, 500);
+    }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      renderNav("/casino", user);
+      buildDicePicks();
+      try{ const d=await api("/me"); paint(d.user); }catch{ paint(user); }
+    })();
+  </script>
+</body>
+</html>

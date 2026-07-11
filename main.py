@@ -693,6 +693,10 @@ def states_page():
 def state_page():
     return app.send_static_file("state.html")
 
+@app.route("/casino")
+def casino_page():
+    return app.send_static_file("casino.html")
+
 @app.route("/news")
 def news_page():
     return app.send_static_file("news.html")
@@ -3884,6 +3888,89 @@ def economy():
             "rates": {"pufb_per_cybuck": PUFB_PER_CYBUCK, "aquilines_per_pufb": AQUILINES_PER_PUFB},
         }
     return jsonify(cached_json("economy", 45, build))
+
+
+# ============================================================
+#  CASINO  (the Treasury is the house)
+# ============================================================
+CASINO_MAX_BET = 5000        # cap per spin — limits variance & abuse
+_SLOT_SYMBOLS = ["🍒", "🍋", "🔔", "💎", "7️⃣"]
+_SLOT_MULT = {"7️⃣": 20, "💎": 10}     # three-of-a-kind jackpots; others pay 5x
+
+
+def _casino_resolve(game, bet, choice):
+    """Server-side RNG. Returns (payout, outcome, detail). payout=0 means a loss."""
+    if game == "coin":
+        flip = random.choice(["heads", "tails"])
+        if choice == flip:
+            return round(bet * 1.95, 2), flip, f"The coin landed {flip} — you won!"
+        return 0, flip, f"The coin landed {flip}. Better luck next time."
+    if game == "dice":
+        roll = random.randint(1, 6)
+        if choice == roll:
+            return round(bet * 5, 2), roll, f"Rolled a {roll} — dead on! 5×!"
+        return 0, roll, f"Rolled a {roll}. Not your number."
+    # slots
+    reels = [random.choice(_SLOT_SYMBOLS) for _ in range(3)]
+    face = " ".join(reels)
+    if reels[0] == reels[1] == reels[2]:
+        mult = _SLOT_MULT.get(reels[0], 5)
+        return round(bet * mult, 2), face, f"{face} — THREE OF A KIND! {mult}×!"
+    if reels[0] == reels[1] or reels[1] == reels[2] or reels[0] == reels[2]:
+        return round(bet * 1.2, 2), face, f"{face} — a pair! 1.2×."
+    return 0, face, f"{face} — no match."
+
+
+@limiter.limit("60/min")
+@app.route("/casino/play", methods=["POST"])
+def casino_play():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json() or {}
+    game = d.get("game")
+    if game not in ("coin", "dice", "slots"):
+        return jsonify(success=False, error="Unknown game"), 400
+    try:
+        bet = float(d.get("bet") or 0)
+    except (TypeError, ValueError):
+        bet = float("nan")
+    if not math.isfinite(bet) or bet <= 0:
+        return jsonify(success=False, error="Enter a valid bet"), 400
+    bet = round(bet, 2)
+    if bet > CASINO_MAX_BET:
+        return jsonify(success=False, error=f"Table limit is {CASINO_MAX_BET} CB per play"), 400
+
+    # validate the player's pick
+    choice = d.get("choice")
+    if game == "coin" and choice not in ("heads", "tails"):
+        return jsonify(success=False, error="Pick heads or tails"), 400
+    if game == "dice":
+        try:
+            choice = int(choice)
+        except (TypeError, ValueError):
+            choice = 0
+        if not 1 <= choice <= 6:
+            return jsonify(success=False, error="Pick a number from 1 to 6"), 400
+
+    me = user["username"]
+    fresh = supabase.table("cybucks").select("balance").eq("username", me).execute().data[0]
+    if bet > _available_cb(me, fresh.get("balance")):
+        return jsonify(success=False, error="Not enough spendable Cybucks (borrowed funds can't be gambled)"), 400
+    # take the stake atomically — no race double-spend
+    if not cas_adjust(me, "balance", -bet):
+        return jsonify(success=False, error="Insufficient funds or a conflicting bet — try again"), 400
+
+    payout, outcome, detail = _casino_resolve(game, bet, choice)
+    if payout > 0:
+        cas_adjust(me, "balance", payout, allow_negative=True)
+    treasury_add(cybucks=round(bet - payout, 2), counterparty=me, kind="casino")  # house = Treasury
+    net = round(payout - bet, 2)
+    log_txn("casino", "The House" if net >= 0 else "Casino", me, abs(net), "cybucks",
+            f"{game}: {detail}")
+    fresh2 = supabase.table("cybucks").select("*").eq("username", me).execute().data[0]
+    return jsonify(success=True, win=payout > 0, bet=bet, payout=payout, net=net,
+                   outcome=outcome, detail=detail, user=public_user(fresh2))
 
 
 # ============================================================
