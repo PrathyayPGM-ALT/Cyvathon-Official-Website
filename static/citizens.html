@@ -55,7 +55,7 @@
            <button class="dm" onclick="location.href='/chat?dm=${enc(c.username)}'"><i class="fas fa-comment"></i> DM</button>`;
       return `<div class="cz">
         <div class="head">
-          <div class="av">${esc(c.username[0].toUpperCase())}</div>
+          <div class="av" ${avatarStyle(c.avatar)}>${c.avatar?'':esc(c.username[0].toUpperCase())}</div>
           <div><div class="nm"><a href="${you?'/profile':'/profile?user='+enc(c.username)}">${esc(c.username)}</a>
             ${you?' <span class="badge-you">(you)</span>':''}</div>
             <div class="role">${role}</div></div>

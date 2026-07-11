@@ -94,7 +94,7 @@ function renderNav(active, user) {
       </div>`;
     }).join("");
     navLinks += `<a href="/notifications" id="navBell" title="Notifications"><i class="fas fa-bell"></i><span id="notifDot" class="notif-dot" style="display:none"></span></a>
-       <span id="navUser"><i class="fas fa-user-shield"></i> ${user.username}</span>
+       <span id="navUser"><span class="nav-av" ${avatarStyle(user.avatar)}>${user.avatar ? "" : (user.username[0] || "?").toUpperCase()}</span>${user.username}</span>
        <a href="#" onclick="doLogout();return false;">Logout</a>`;
   }
 
