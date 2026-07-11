@@ -44,6 +44,38 @@
       }).join("");
     }
 
+    /* ---- Profile picture ---- */
+    function compressImg(file, max){
+      return new Promise((resolve,reject)=>{
+        const img=new Image(), rd=new FileReader();
+        rd.onload=()=>{ img.onload=()=>{
+          let{width:w,height:h}=img;
+          if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
+          const c=document.createElement("canvas"); c.width=w; c.height=h;
+          c.getContext("2d").drawImage(img,0,0,w,h);
+          c.toBlob(b=>b?resolve(b):reject(new Error("Compress failed")),"image/jpeg",0.85);
+        }; img.onerror=()=>reject(new Error("Bad image")); img.src=rd.result; };
+        rd.onerror=()=>reject(new Error("Read failed")); rd.readAsDataURL(file);
+      });
+    }
+    function changeAvatar(){
+      const inp=document.createElement("input"); inp.type="file"; inp.accept="image/*";
+      inp.onchange=async()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+        try{
+          const blob = f.type==="image/gif" ? f : await compressImg(f,400);
+          const fd=new FormData(); fd.append("file", blob, f.name||"avatar.jpg");
+          const r=await fetch("/avatar",{method:"POST",credentials:"include",body:fd});
+          const d=await r.json();
+          if(!r.ok||d.success===false) throw new Error(d.error||"Upload failed");
+          showOwn();
+        }catch(e){ alert(e.message); }
+      };
+      inp.click();
+    }
+    async function removeAvatar(){
+      try{ await api("/avatar/remove",{method:"POST",body:"{}"}); showOwn(); }catch(e){ alert(e.message); }
+    }
+
     /* ---- Own full ID card ---- */
     async function showOwn(){
       const d = await api("/profile_data");
@@ -52,8 +84,13 @@
         <h2 class="section-title"><i class="fas fa-id-card"></i> Citizen ID Card</h2>
         <div class="id-card">
           <div class="id-top">
-            <div class="id-avatar">${esc(p.username[0].toUpperCase())}</div>
-            <div><h2>${esc(p.username)}</h2><span class="pill">${esc(p.designation)}</span></div>
+            <div class="id-avatar" ${avatarStyle(p.avatar)}>${p.avatar?'':esc(p.username[0].toUpperCase())}</div>
+            <div><h2>${esc(p.username)}</h2><span class="pill">${esc(p.designation)}</span>
+              <div style="margin-top:.5rem;">
+                <button class="ghost" style="width:auto;margin:0;padding:.3rem .8rem;font-size:.78rem;" onclick="changeAvatar()"><i class="fas fa-camera"></i> ${p.avatar?'Change':'Add'} photo</button>
+                ${p.avatar?`<button class="ghost" style="width:auto;margin:0 0 0 .3rem;padding:.3rem .7rem;font-size:.78rem;" onclick="removeAvatar()">Remove</button>`:''}
+              </div>
+            </div>
           </div>
           <div class="id-body">
             <div class="id-row"><span class="l">Cybucks</span><b>${fmt(p.balance)}</b></div>
@@ -86,7 +123,7 @@
         <h2 class="section-title"><i class="fas fa-id-card"></i> Citizen Profile</h2>
         <div class="id-card">
           <div class="id-top">
-            <div class="id-avatar">${esc(p.username[0].toUpperCase())}</div>
+            <div class="id-avatar" ${avatarStyle(p.avatar)}>${p.avatar?'':esc(p.username[0].toUpperCase())}</div>
             <div><h2>${esc(p.username)}</h2><span class="pill">${esc(p.designation)}</span></div>
           </div>
           <div class="id-body">

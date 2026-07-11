@@ -579,6 +579,7 @@ def public_user(user):
         "aquilines":   user.get("aquilines") or 0,
         "cybits":      user.get("cybits") or 0,
         "designation": user.get("designation") or "Citizen",
+        "avatar":      user.get("avatar"),
         "company_id":  user.get("company_id"),
     }
 
@@ -934,6 +935,7 @@ def public_profile(username):
     return jsonify(success=True, profile={
         "username": u["username"],
         "designation": u.get("designation") or "Citizen",
+        "avatar": u.get("avatar"),
         "member_since": u.get("created_at"),
         "net_worth": user_net_worth(username),
         "companies": founded, "jobs": job_list, "records": records,
@@ -4079,6 +4081,29 @@ def _ensure_chat_bucket():
     _chat_bucket_ready = True
 
 
+def _store_image(f, folder):
+    """Validate + upload an image to the public 'chat' bucket. Returns (url, error)."""
+    data = f.read()
+    if not data:
+        return None, "Empty file"
+    if len(data) > 5 * 1024 * 1024:
+        return None, "Image too large (max 5 MB)"
+    mime = (f.mimetype or "").lower()
+    ext = {"image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg",
+           "image/gif": "gif", "image/webp": "webp"}.get(mime)
+    if not ext:
+        return None, "Images only (png, jpg, gif, webp)"
+    path = f"{folder}/{secrets.token_hex(10)}.{ext}"
+    try:
+        _ensure_chat_bucket()
+        supabase.storage.from_(_CHAT_BUCKET).upload(path, data, {"content-type": mime, "upsert": "true"})
+        url = supabase.storage.from_(_CHAT_BUCKET).get_public_url(path)
+    except Exception as ex:
+        logging.warning("image store failed: %s", ex)
+        return None, "Upload failed — create a public Storage bucket named 'chat' in Supabase."
+    return url.rstrip("?"), None
+
+
 @limiter.limit("20/min")
 @app.route("/chat/upload", methods=["POST"])
 def chat_upload():
@@ -4088,27 +4113,42 @@ def chat_upload():
     f = request.files.get("file")
     if not f:
         return jsonify(success=False, error="No file"), 400
-    data = f.read()
-    if not data:
-        return jsonify(success=False, error="Empty file"), 400
-    if len(data) > 5 * 1024 * 1024:
-        return jsonify(success=False, error="Image too large (max 5 MB)"), 400
-    mime = (f.mimetype or "").lower()
-    ext = {"image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg",
-           "image/gif": "gif", "image/webp": "webp"}.get(mime)
-    if not ext:
-        return jsonify(success=False, error="Images only (png, jpg, gif, webp)"), 400
-    path = f"{user['username']}/{secrets.token_hex(10)}.{ext}"
+    url, err = _store_image(f, user["username"])
+    if err:
+        return jsonify(success=False, error=err), 400 if "Images only" in err or "Empty" in err or "too large" in err else 500
+    return jsonify(success=True, url=url)
+
+
+@limiter.limit("12/min")
+@app.route("/avatar", methods=["POST"])
+def set_avatar():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    f = request.files.get("file")
+    if not f:
+        return jsonify(success=False, error="No file"), 400
+    url, err = _store_image(f, "avatars")
+    if err:
+        return jsonify(success=False, error=err), 400 if "Images only" in err or "Empty" in err or "too large" in err else 500
     try:
-        _ensure_chat_bucket()
-        supabase.storage.from_(_CHAT_BUCKET).upload(
-            path, data, {"content-type": mime, "upsert": "true"})
-        url = supabase.storage.from_(_CHAT_BUCKET).get_public_url(path)
-    except Exception as ex:
-        logging.warning("chat upload failed: %s", ex)
-        return jsonify(success=False,
-                       error="Upload failed — create a public Storage bucket named 'chat' in Supabase."), 500
-    return jsonify(success=True, url=url.rstrip("?"))
+        supabase.table("cybucks").update({"avatar": url}).eq("username", user["username"]).execute()
+    except Exception:
+        return jsonify(success=False, error="Profile pictures aren't enabled yet — the database needs a quick update."), 503
+    return jsonify(success=True, url=url)
+
+
+@limiter.limit("12/min")
+@app.route("/avatar/remove", methods=["POST"])
+def remove_avatar():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        supabase.table("cybucks").update({"avatar": None}).eq("username", user["username"]).execute()
+    except Exception:
+        pass
+    return jsonify(success=True)
 
 
 TENOR_KEY = os.environ.get("TENOR_API_KEY", "")   # optional; GIPHY is the no-Google-Cloud path
@@ -4226,8 +4266,12 @@ def citizens_directory():
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-    rows = supabase.table("cybucks").select("username,designation") \
-        .order("username").execute().data or []
+    try:
+        rows = supabase.table("cybucks").select("username,designation,avatar") \
+            .order("username").execute().data or []
+    except Exception:      # avatar column not migrated yet
+        rows = supabase.table("cybucks").select("username,designation") \
+            .order("username").execute().data or []
     companies = supabase.table("companies").select("name,founder").execute().data or []
     by_founder = {}
     for c in companies:

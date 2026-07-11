@@ -142,6 +142,11 @@ async function doLogout() {
 
 const fmt = (n) => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString();
 
+/* Inline style that turns any avatar circle into a photo when a url is set. */
+function avatarStyle(url) {
+  return url ? `style="background-image:url('${(url + "").replace(/'/g, "%27")}');background-size:cover;background-position:center;"` : "";
+}
+
 /* Render chat text safely with **bold**, *italic*, __underline__, emojis,
    inline image/GIF URLs, and links. Escapes HTML first. */
 function renderRich(text) {

@@ -206,7 +206,7 @@
     let ME=null, ADMIN=false, channel={type:"public"}, groups=[], citizens=[];
     let lastId=0, poll=null, _lastSender=null, _lastBody=null, pending=[], tmpc=0;
     let mention={open:false,start:0,items:[],idx:0};
-    let replyTo=null, onlineSet=new Set(), lastTyping=0;
+    let replyTo=null, onlineSet=new Set(), lastTyping=0, AVATARS={};
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const tm=(iso)=>{ try{ return iso?new Date(iso).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):""; }catch{ return ""; } };
     const EMOJIS="😀 😂 😍 😎 😭 😡 👍 👎 🙏 🔥 🎉 💀 🤖 👑 ⚖️ 💰 🦉 🚀 ❤️ ✅ ❌ 🤔 😱 🫡 🐐 🎂 🍕 ⚽ 🎮 💡 😅 🥳 😴 🤝 ✨ 🫶 😤 🤯 🙌 💯".split(" ");
@@ -230,7 +230,7 @@
       html+=`<h4>Direct Messages</h4>`;
       const cs=citizens.filter(c=>c.username!==ME && c.username.toLowerCase().includes(q));
       html+= cs.length ? cs.map(c=>`<div class="row ${active('dm',c.username)}" onclick="openDM('${encodeURIComponent(c.username)}')">
-        <div class="av">${esc(c.username[0].toUpperCase())}</div>
+        <div class="av" ${avatarStyle(c.avatar)}>${c.avatar?'':esc(c.username[0].toUpperCase())}</div>
         <div class="txt"><div class="nm">${esc(c.username)}</div><div class="rl">${esc(c.company||c.designation||'Citizen')}</div></div>
         <span class="pdot" data-u="${esc(c.username)}"></span></div>`).join("")
         : `<p class="small muted" style="padding:.2rem .6rem;">No citizens found.</p>`;
@@ -291,7 +291,7 @@
       if(sender!==_lastSender || !_lastBody){
         const grp=document.createElement("div");
         grp.className="grp"+(mine?" me":"");
-        grp.innerHTML=`<div class="gav">${esc((sender||"?")[0].toUpperCase())}</div><div class="body">
+        grp.innerHTML=`<div class="gav" ${avatarStyle(AVATARS[sender])}>${AVATARS[sender]?'':esc((sender||"?")[0].toUpperCase())}</div><div class="body">
           <div class="meta">${mine?"You":userLink(sender)}</div></div>`;
         box.appendChild(grp);
         _lastBody=grp.querySelector(".body"); _lastSender=sender;
@@ -564,8 +564,8 @@
     (async function(){
       const user=await requireAuth(); if(!user) return;
       ME=user.username; renderNav("/chat", user);
-      try{ const me=await api("/me"); ADMIN=!!me.admin; }catch{}
-      try{ const d=await api("/citizens/list"); citizens=d.citizens||[]; }catch{}
+      try{ const me=await api("/me"); ADMIN=!!me.admin; if(me.user&&me.user.avatar) AVATARS[ME]=me.user.avatar; }catch{}
+      try{ const d=await api("/citizens/list"); citizens=d.citizens||[]; citizens.forEach(c=>{ if(c.avatar) AVATARS[c.username]=c.avatar; }); }catch{}
       await loadGroups();
       const qs=new URLSearchParams(location.search);
       const dm=qs.get("dm"), gid=qs.get("group");
