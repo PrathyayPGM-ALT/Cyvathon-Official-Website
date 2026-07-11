@@ -2403,6 +2403,7 @@ def passport_data():
         "issued": issued,
         "expiry": _add_years_iso(issued, 5) if issued else None,
         "oath": oath,
+        "avatar": user.get("avatar"),
         "net_worth": user_net_worth(user["username"]),
         "mrz": _mrz(user["username"], pno),
         "stamps": _passport_stamps(user, records),

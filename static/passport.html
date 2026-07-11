@@ -169,7 +169,7 @@
           </div>
           <div class="pp-page">
             <div class="pp-head">
-              <div class="pp-photo">${esc(P.name[0].toUpperCase())}</div>
+              <div class="pp-photo" ${avatarStyle(P.avatar)}>${P.avatar?'':esc(P.name[0].toUpperCase())}</div>
               <div class="pp-fields">
                 <div class="pp-f full"><div class="k">Surname / Given Names</div><div class="v">${esc(P.name)}</div></div>
                 <div class="pp-f"><div class="k">Passport No.</div><div class="v">${esc(P.number)}</div></div>
