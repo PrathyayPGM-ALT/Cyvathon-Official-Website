@@ -906,9 +906,9 @@ def users():
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-    res = supabase.table("cybucks").select("username") \
+    res = supabase.table("cybucks").select("username,banned") \
         .neq("username", user["username"]).execute()
-    return jsonify(success=True, users=[u["username"] for u in res.data])
+    return jsonify(success=True, users=[u["username"] for u in res.data if not u.get("banned")])
 
 
 @app.route("/u/<username>")
@@ -4268,17 +4268,19 @@ def citizens_directory():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     try:
-        rows = supabase.table("cybucks").select("username,designation,avatar") \
+        rows = supabase.table("cybucks").select("username,designation,avatar,banned") \
             .order("username").execute().data or []
     except Exception:      # avatar column not migrated yet
-        rows = supabase.table("cybucks").select("username,designation") \
+        rows = supabase.table("cybucks").select("username,designation,banned") \
             .order("username").execute().data or []
+    rows = [r for r in rows if not r.get("banned")]      # hide banned citizens
     companies = supabase.table("companies").select("name,founder").execute().data or []
     by_founder = {}
     for c in companies:
         by_founder.setdefault(c["founder"], c["name"])
     for r in rows:
         r["company"] = by_founder.get(r["username"])
+        r.pop("banned", None)
     return jsonify(success=True, citizens=rows, me=user["username"])
 
 
