@@ -26,6 +26,32 @@
     .stat{ padding:.6rem 1.2rem; border-radius:30px; background:var(--panel); border:1px solid var(--panel-border); }
     .stat b{ color:var(--accent); }
     .hub-card{ text-align:center; text-decoration:none; color:inherit; display:block; }
+
+    /* ---- refined dashboard hub ---- */
+    .hub-hero{ padding:2.6rem 1.5rem 1rem; }
+    .hub-welcome{ display:flex; align-items:center; justify-content:center; gap:.7rem; }
+    .hub-av{ width:42px; height:42px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:800; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); font-size:1.05rem; }
+    .bstrip{ display:grid; grid-template-columns:repeat(4,1fr); gap:.8rem; max-width:760px; margin:1.6rem auto 0; }
+    @media(max-width:600px){ .bstrip{ grid-template-columns:repeat(2,1fr); } }
+    .bcard{ background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; padding:1rem .8rem; text-align:center; }
+    .bcard .bi{ font-size:.9rem; margin-bottom:.35rem; }
+    .bcard .bv{ font-size:1.45rem; font-weight:800; letter-spacing:-.5px; }
+    .bcard .bl{ font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:.15rem; }
+    .hub-section{ margin-bottom:1.8rem; }
+    .hub-section > h3{ font-size:.74rem; text-transform:uppercase; letter-spacing:1.6px; color:var(--muted);
+      margin:0 0 .85rem .2rem; display:flex; align-items:center; gap:.7rem; font-weight:600; }
+    .hub-section > h3::after{ content:""; flex:1; height:1px; background:var(--panel-border); }
+    .hub-grid{ display:grid; gap:.85rem; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); }
+    .hc{ display:flex; align-items:center; gap:.85rem; padding:.95rem 1.05rem; text-decoration:none; color:inherit;
+      background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; transition:.18s; }
+    .hc:hover{ transform:translateY(-3px); border-color:rgba(88,196,255,.45); box-shadow:0 10px 26px rgba(0,0,0,.32); }
+    .hc .ic{ width:44px; height:44px; flex-shrink:0; border-radius:12px; display:flex; align-items:center; justify-content:center;
+      font-size:1.15rem; color:var(--accent); background:rgba(88,196,255,.12); }
+    .hc.gold .ic{ color:var(--gold); background:rgba(255,206,86,.12); }
+    .hc .tx{ min-width:0; }
+    .hc .tx h4{ margin:0; font-size:.96rem; font-weight:600; color:var(--text); }
+    .hc .tx p{ margin:.1rem 0 0; font-size:.78rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   </style>
 </head>
 <body>
@@ -86,13 +112,16 @@
 
   <!-- ============ LOGGED-IN DASHBOARD HUB ============ -->
   <div id="hubView" style="display:none;">
-    <section class="hero" style="padding-bottom:1rem;">
-      <h2 style="font-size:2.2rem;">Citizen Dashboard</h2>
-      <p>Welcome back, <b id="hubName" style="color:var(--accent)"></b> <span class="tag" id="hubDesig"></span></p>
-      <div class="balances" id="hubBalances"></div>
+    <section class="hero hub-hero">
+      <h2 style="font-size:2.05rem;margin-bottom:.7rem;">Citizen Dashboard</h2>
+      <div class="hub-welcome">
+        <div class="hub-av" id="hubAv"></div>
+        <p style="margin:0;">Welcome back, <b id="hubName" style="color:var(--accent)"></b> <span class="tag" id="hubDesig"></span></p>
+      </div>
+      <div class="bstrip" id="hubBalances"></div>
     </section>
-    <section class="wrap" style="padding-top:1rem;">
-      <div class="grid" id="hubGrid"></div>
+    <section class="wrap" style="padding-top:.5rem;">
+      <div id="hubGrid"></div>
     </section>
     <section class="wrap" id="hubNewsWrap" style="padding-top:0; display:none;">
       <h2 class="section-title" style="font-size:1.4rem;"><i class="fas fa-newspaper"></i> National News</h2>
@@ -107,25 +136,44 @@
 
   <script src="/static/app.js"></script>
   <script>
-    const HUB = [
-      ["/bank","fa-building-columns","Bank","Send money & convert currencies"],
-      ["/citizens","fa-users","Citizens","Directory & direct messages"],
-      ["/chat","fa-comments","Chat","Talk with fellow citizens"],
-      ["/company","fa-briefcase","Companies","Found, browse & work at companies"],
-      ["/marketplace","fa-store","Marketplace","Buy, sell & donate goods"],
-      ["/exchange","fa-chart-line","Stock Exchange","Trade company shares"],
-      ["/loans","fa-hand-holding-dollar","Loans","Borrow up to 5000 CB"],
-      ["/casino","fa-dice","Casino","Bet Cybucks against the House"],
-      ["/legislature","fa-scale-balanced","Legislature","Table & vote on bills"],
-      ["/gazette","fa-stamp","Official Gazette","The register of laws & decrees"],
-      ["/court","fa-gavel","Courts","File & rule on legal cases"],
-      ["/voting","fa-check-to-slot","Elections","Elect the Prime Minister"],
-      ["/government","fa-landmark","Government","See the cabinet"],
-      ["/ministries","fa-landmark-dome","Ministries","Departments, ministers & budgets"],
-      ["/fir","fa-file-shield","Report a Crime","File an FIR & submit evidence"],
-      ["/profile","fa-id-card","ID Card","Your designation & record"],
-      ["/treasury","fa-vault","Treasury","View the national vault"],
-      ["/rules","fa-scroll","Rules","The laws of Cyvathon"],
+    const GROUPS = [
+      ["Money & Markets", [
+        ["/bank","fa-building-columns","Bank","Send & convert money"],
+        ["/exchange","fa-chart-line","Stock Exchange","Trade company shares"],
+        ["/loans","fa-hand-holding-dollar","Loans","Borrow up to 5000 CB"],
+        ["/casino","fa-dice","Casino","Bet against the House"],
+        ["/treasury","fa-vault","Treasury","The national vault"],
+      ]],
+      ["Business & Trade", [
+        ["/company","fa-briefcase","Companies","Found & work at companies"],
+        ["/states","fa-map-location-dot","States","Local state marketplaces"],
+        ["/marketplace","fa-store","Import & Export","National cross-border trade"],
+      ]],
+      ["Government", [
+        ["/government","fa-landmark","Government","See the cabinet"],
+        ["/ministries","fa-landmark-dome","Ministries","Departments & budgets"],
+        ["/legislature","fa-scale-balanced","Legislature","Table & vote on bills"],
+        ["/voting","fa-check-to-slot","Elections","Elect the Prime Minister"],
+        ["/court","fa-gavel","Courts","File & rule on cases"],
+        ["/fir","fa-file-shield","Report a Crime","File an FIR"],
+        ["/gazette","fa-stamp","Gazette","Laws & decrees"],
+      ]],
+      ["Community", [
+        ["/citizens","fa-users","Citizens","Directory & DMs"],
+        ["/chat","fa-comments","Chat","Talk with citizens"],
+        ["/news","fa-newspaper","News","National headlines"],
+        ["/rules","fa-scroll","Rules","The laws of Cyvathon"],
+      ]],
+      ["Identity", [
+        ["/profile","fa-id-card","ID Card","Your record & balances"],
+        ["/passport","fa-passport","Passport","Citizenship & visas"],
+      ]],
+    ];
+    const CUR = [
+      ["balance","Cybucks","fa-coins","var(--accent)"],
+      ["pufb","Pufferbucks","fa-fish-fins","var(--gold)"],
+      ["aquilines","Aquilines","fa-feather-pointed","var(--green)"],
+      ["cybits","Cybits","fa-bolt","#a78bfa"],
     ];
 
     function showGuest(){
@@ -139,16 +187,29 @@
       document.getElementById("hubView").style.display = "block";
       document.getElementById("hubName").textContent = user.username;
       document.getElementById("hubDesig").textContent = user.designation;
-      document.getElementById("hubBalances").innerHTML = `
-        <div class="bal"><div class="v">${fmt(user.balance)}</div><div class="l">Cybucks</div></div>
-        <div class="bal"><div class="v">${fmt(user.pufb)}</div><div class="l">Pufferbucks</div></div>
-        <div class="bal"><div class="v">${fmt(user.aquilines)}</div><div class="l">Aquilines</div></div>
-        <div class="bal"><div class="v">${fmt(user.cybits)}</div><div class="l">Cybits</div></div>`;
-      let cards = [...HUB];
-      if (cia) cards.push(["/athena","fa-eye","🦉 Athena","Cyvathon Intelligence Agency"]);
-      if (admin) cards.push(["/admin","fa-sliders","Admin Panel","Set national economic policy"]);
-      document.getElementById("hubGrid").innerHTML = cards.map(([h,i,t,d]) =>
-        `<a class="card hub-card" href="${h}"><i class="fas ${i} icon"></i><h3>${t}</h3><p>${d}</p></a>`).join("");
+      const av = document.getElementById("hubAv");
+      if(user.avatar){ av.setAttribute("style", `background-image:url('${(user.avatar+'').replace(/'/g,"%27")}');background-size:cover;background-position:center;`); av.textContent=""; }
+      else av.textContent = (user.username[0]||"?").toUpperCase();
+
+      document.getElementById("hubBalances").innerHTML = CUR.map(([k,label,icon,color])=>`
+        <div class="bcard"><div class="bi" style="color:${color}"><i class="fas ${icon}"></i></div>
+          <div class="bv" style="color:${color}">${fmt(user[k])}</div><div class="bl">${label}</div></div>`).join("");
+
+      const groups = GROUPS.map(g=>[g[0], g[1].slice()]);
+      const extra = [];
+      if (cia) extra.push(["/athena","fa-eye","Athena","Intelligence Agency", true]);
+      if (admin) extra.push(["/admin","fa-sliders","Admin Panel","National economic policy", true]);
+      if (extra.length) groups.push(["Classified & Admin", extra]);
+
+      document.getElementById("hubGrid").innerHTML = groups.map(([title, cards])=>`
+        <div class="hub-section">
+          <h3>${title}</h3>
+          <div class="hub-grid">${cards.map(([h,i,t,d,gold])=>`
+            <a class="hc ${gold?'gold':''}" href="${h}">
+              <div class="ic"><i class="fas ${i}"></i></div>
+              <div class="tx"><h4>${t}</h4><p>${d}</p></div>
+            </a>`).join("")}</div>
+        </div>`).join("");
       loadHubNews();
     }
 
