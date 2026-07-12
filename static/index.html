@@ -42,16 +42,23 @@
     .hub-section > h3{ font-size:.74rem; text-transform:uppercase; letter-spacing:1.6px; color:var(--muted);
       margin:0 0 .85rem .2rem; display:flex; align-items:center; gap:.7rem; font-weight:600; }
     .hub-section > h3::after{ content:""; flex:1; height:1px; background:var(--panel-border); }
-    .hub-grid{ display:grid; gap:.85rem; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); }
-    .hc{ display:flex; align-items:center; gap:.85rem; padding:.95rem 1.05rem; text-decoration:none; color:inherit;
-      background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; transition:.18s; }
-    .hc:hover{ transform:translateY(-3px); border-color:rgba(88,196,255,.45); box-shadow:0 10px 26px rgba(0,0,0,.32); }
-    .hc .ic{ width:44px; height:44px; flex-shrink:0; border-radius:12px; display:flex; align-items:center; justify-content:center;
-      font-size:1.15rem; color:var(--accent); background:rgba(88,196,255,.12); }
-    .hc.gold .ic{ color:var(--gold); background:rgba(255,206,86,.12); }
-    .hc .tx{ min-width:0; }
-    .hc .tx h4{ margin:0; font-size:.96rem; font-weight:600; color:var(--text); }
-    .hc .tx p{ margin:.1rem 0 0; font-size:.78rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .hub-grid{ display:grid; gap:1.1rem; grid-template-columns:repeat(auto-fill,minmax(245px,1fr)); }
+    .hc{ position:relative; display:flex; flex-direction:column; align-items:center; text-align:center; gap:.9rem;
+      padding:1.7rem 1.4rem; text-decoration:none; color:inherit; min-height:186px; overflow:hidden; justify-content:flex-start;
+      background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.015));
+      border:1px solid var(--panel-border); border-radius:20px;
+      transition:transform .2s, box-shadow .2s, border-color .2s; }
+    .hc::after{ content:""; position:absolute; top:-58px; left:50%; transform:translateX(-50%); width:165px; height:165px;
+      border-radius:50%; background:var(--ac,var(--accent)); opacity:.09; transition:.25s; }
+    .hc:hover{ transform:translateY(-6px); border-color:var(--ac,var(--accent)); box-shadow:0 18px 42px rgba(0,0,0,.42); }
+    .hc:hover::after{ opacity:.17; transform:translateX(-50%) scale(1.2); }
+    .hc .ic{ width:58px; height:58px; border-radius:17px; display:flex; align-items:center; justify-content:center;
+      font-size:1.55rem; color:#06223a; background:var(--ac,var(--accent)); box-shadow:0 8px 22px rgba(0,0,0,.3);
+      transition:transform .2s; position:relative; z-index:1; }
+    .hc:hover .ic{ transform:scale(1.08) rotate(-4deg); }
+    .hc .tx{ position:relative; z-index:1; }
+    .hc .tx h4{ margin:0; font-size:1.18rem; font-weight:700; color:var(--text); }
+    .hc .tx p{ margin:.35rem 0 0; font-size:.85rem; color:var(--muted); line-height:1.45; }
   </style>
 </head>
 <body>
@@ -137,19 +144,19 @@
   <script src="/static/app.js"></script>
   <script>
     const GROUPS = [
-      ["Money & Markets", [
+      ["Money & Markets", "#58c4ff", [
         ["/bank","fa-building-columns","Bank","Send & convert money"],
         ["/exchange","fa-chart-line","Stock Exchange","Trade company shares"],
         ["/loans","fa-hand-holding-dollar","Loans","Borrow up to 5000 CB"],
         ["/casino","fa-dice","Casino","Bet against the House"],
         ["/treasury","fa-vault","Treasury","The national vault"],
       ]],
-      ["Business & Trade", [
+      ["Business & Trade", "#1fd6a6", [
         ["/company","fa-briefcase","Companies","Found & work at companies"],
         ["/states","fa-map-location-dot","States","Local state marketplaces"],
         ["/marketplace","fa-store","Import & Export","National cross-border trade"],
       ]],
-      ["Government", [
+      ["Government", "#ffce56", [
         ["/government","fa-landmark","Government","See the cabinet"],
         ["/ministries","fa-landmark-dome","Ministries","Departments & budgets"],
         ["/legislature","fa-scale-balanced","Legislature","Table & vote on bills"],
@@ -158,13 +165,13 @@
         ["/fir","fa-file-shield","Report a Crime","File an FIR"],
         ["/gazette","fa-stamp","Gazette","Laws & decrees"],
       ]],
-      ["Community", [
+      ["Community", "#a78bfa", [
         ["/citizens","fa-users","Citizens","Directory & DMs"],
         ["/chat","fa-comments","Chat","Talk with citizens"],
         ["/news","fa-newspaper","News","National headlines"],
         ["/rules","fa-scroll","Rules","The laws of Cyvathon"],
       ]],
-      ["Identity", [
+      ["Identity", "#ff8fb0", [
         ["/profile","fa-id-card","ID Card","Your record & balances"],
         ["/passport","fa-passport","Passport","Citizenship & visas"],
       ]],
@@ -195,17 +202,17 @@
         <div class="bcard"><div class="bi" style="color:${color}"><i class="fas ${icon}"></i></div>
           <div class="bv" style="color:${color}">${fmt(user[k])}</div><div class="bl">${label}</div></div>`).join("");
 
-      const groups = GROUPS.map(g=>[g[0], g[1].slice()]);
+      const groups = GROUPS.map(g=>[g[0], g[1], g[2].slice()]);
       const extra = [];
-      if (cia) extra.push(["/athena","fa-eye","Athena","Intelligence Agency", true]);
-      if (admin) extra.push(["/admin","fa-sliders","Admin Panel","National economic policy", true]);
-      if (extra.length) groups.push(["Classified & Admin", extra]);
+      if (cia) extra.push(["/athena","fa-eye","Athena","Intelligence Agency"]);
+      if (admin) extra.push(["/admin","fa-sliders","Admin Panel","National economic policy"]);
+      if (extra.length) groups.push(["Classified & Admin", "#ff5d6c", extra]);
 
-      document.getElementById("hubGrid").innerHTML = groups.map(([title, cards])=>`
+      document.getElementById("hubGrid").innerHTML = groups.map(([title, color, cards])=>`
         <div class="hub-section">
           <h3>${title}</h3>
-          <div class="hub-grid">${cards.map(([h,i,t,d,gold])=>`
-            <a class="hc ${gold?'gold':''}" href="${h}">
+          <div class="hub-grid">${cards.map(([h,i,t,d])=>`
+            <a class="hc" href="${h}" style="--ac:${color}">
               <div class="ic"><i class="fas ${i}"></i></div>
               <div class="tx"><h4>${t}</h4><p>${d}</p></div>
             </a>`).join("")}</div>
