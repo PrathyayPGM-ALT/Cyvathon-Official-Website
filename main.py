@@ -647,6 +647,10 @@ def ai_page():
 def company_page():
     return app.send_static_file("company.html")
 
+@app.route("/jobs")
+def jobs_page():
+    return app.send_static_file("jobs.html")
+
 @app.route("/loans")
 def loans_page():
     return app.send_static_file("loans.html")
@@ -1843,6 +1847,35 @@ def add_cofounder():
 
 
 @limiter.limit("10/min")
+@app.route("/jobs/board")
+def jobs_board():
+    """Nationwide careers board: every company, its size, and your standing with it."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    companies = supabase.table("companies") \
+        .select("id,name,category,description,founder,cofounders").execute().data or []
+    emps = supabase.table("employment").select("company_id,username,status").execute().data or []
+    count, my_status = {}, {}
+    for e in emps:
+        if e["status"] == "employed":
+            count[e["company_id"]] = count.get(e["company_id"], 0) + 1
+        if e["username"] == me:
+            my_status[e["company_id"]] = e["status"]
+    out = []
+    for c in companies:
+        out.append({
+            "id": c["id"], "name": c["name"], "category": c["category"],
+            "description": c.get("description", ""), "founder": c["founder"],
+            "employees": count.get(c["id"], 0),
+            "is_founder": me in company_founders(c),
+            "my_status": my_status.get(c["id"]),
+        })
+    out.sort(key=lambda x: (-x["employees"], x["name"].lower()))
+    return jsonify(success=True, companies=out, me=me)
+
+
 @app.route("/jobs/apply", methods=["POST"])
 def jobs_apply():
     user = get_current_user(run_economics=False)

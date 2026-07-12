@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobs Board · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .search{ max-width:420px; margin:0 auto 1.6rem; display:block; }
+    .mine{ max-width:760px; margin:0 auto 2rem; }
+    .mine .chip{ display:inline-flex; align-items:center; gap:.4rem; background:var(--panel-2);
+      border:1px solid var(--panel-border); border-radius:20px; padding:.3rem .9rem; font-size:.85rem; margin:.2rem .3rem 0 0; }
+    .job-grid{ display:grid; gap:1.1rem; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); }
+    .job{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; padding:1.3rem 1.4rem;
+      display:flex; flex-direction:column; gap:.5rem; transition:.2s; }
+    .job:hover{ transform:translateY(-4px); border-color:rgba(88,196,255,.35); box-shadow:0 12px 30px rgba(0,0,0,.32); }
+    .job .top{ display:flex; align-items:center; gap:.75rem; }
+    .job .logo{ width:46px; height:46px; border-radius:13px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:1.2rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .job h3{ margin:0; font-size:1.08rem; }
+    .job .cat{ font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+    .job .desc{ font-size:.85rem; color:var(--muted); flex:1; min-height:2.6em; }
+    .job .meta{ display:flex; justify-content:space-between; align-items:center; font-size:.8rem; color:var(--muted); }
+    .job button, .job .state{ width:100%; margin:.4rem 0 0; padding:.55rem; font-size:.88rem; border-radius:10px; text-align:center; }
+    .state{ font-weight:600; }
+    .state.emp{ background:rgba(31,214,166,.12); color:var(--green); border:1px solid rgba(31,214,166,.3); }
+    .state.pend{ background:rgba(255,206,86,.12); color:var(--gold); border:1px solid rgba(255,206,86,.3); }
+    .state.own{ background:var(--panel-2); color:var(--accent); border:1px solid rgba(88,196,255,.3); text-decoration:none; display:block; }
+    .cat-Finance{ background:linear-gradient(135deg,#1fd6a6,#0f9d72)!important; }
+    .cat-Technology{ background:linear-gradient(135deg,#58c4ff,#3aa0ee)!important; }
+    .cat-Selling{ background:linear-gradient(135deg,#ffce56,#d9a821)!important; }
+    .cat-Service{ background:linear-gradient(135deg,#a78bfa,#7b4bc0)!important; }
+    .cat-Other{ background:linear-gradient(135deg,#94a2b4,#5f6e80)!important; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <h2 class="section-title"><i class="fas fa-briefcase"></i> Jobs Board</h2>
+    <p class="section-sub">Find work across every company in Cyvathon. Apply here; the founder reviews and hires you with a role &amp; salary. Earn a regular wage on top of your welcome grant.</p>
+
+    <div class="mine" id="mine"></div>
+    <input class="search" id="search" placeholder="Search companies or roles…" oninput="render()">
+    <div class="job-grid" id="grid"></div>
+    <p id="msg" class="small" style="text-align:center;margin-top:1.4rem;"></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, ALL=[];
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const enc=encodeURIComponent;
+    const msg=(t,err=true)=>{ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
+
+    function card(c){
+      const logo=`<div class="logo cat-${esc(c.category)}">${esc(c.name[0].toUpperCase())}</div>`;
+      let action;
+      if(c.is_founder) action=`<a class="state own" href="/company?id=${c.id}"><i class="fas fa-gear"></i> Manage company</a>`;
+      else if(c.my_status==="employed") action=`<div class="state emp"><i class="fas fa-circle-check"></i> You work here</div>`;
+      else if(c.my_status==="pending") action=`<div class="state pend"><i class="fas fa-hourglass-half"></i> Application pending</div>`;
+      else action=`<button onclick="applyJob(${c.id},'${esc(c.name).replace(/'/g,"&#39;")}')"><i class="fas fa-paper-plane"></i> Apply</button>`;
+      return `<div class="job">
+        <div class="top">${logo}<div><h3>${esc(c.name)}</h3><div class="cat">${esc(c.category)}</div></div></div>
+        <div class="desc">${esc(c.description)||'<span class="muted">No description provided.</span>'}</div>
+        <div class="meta"><span><i class="fas fa-user-tie"></i> ${userLink(c.founder)}</span>
+          <span><i class="fas fa-users"></i> ${c.employees} staff</span></div>
+        ${action}
+      </div>`;
+    }
+
+    function render(){
+      const q=(document.getElementById("search").value||"").toLowerCase();
+      const list=ALL.filter(c=>c.name.toLowerCase().includes(q) || (c.category||"").toLowerCase().includes(q));
+      document.getElementById("grid").innerHTML = list.map(card).join("") || `<p class="muted">No companies match.</p>`;
+    }
+
+    function renderMine(){
+      const emp=ALL.filter(c=>c.my_status==="employed");
+      const pend=ALL.filter(c=>c.my_status==="pending");
+      const own=ALL.filter(c=>c.is_founder);
+      let h="";
+      if(emp.length) h+=emp.map(c=>`<span class="chip" style="color:var(--green)"><i class="fas fa-briefcase"></i> Employed at <b>${esc(c.name)}</b></span>`).join("");
+      if(pend.length) h+=pend.map(c=>`<span class="chip" style="color:var(--gold)"><i class="fas fa-hourglass-half"></i> Pending: ${esc(c.name)}</span>`).join("");
+      if(own.length) h+=own.map(c=>`<span class="chip" style="color:var(--accent)"><i class="fas fa-crown"></i> Founder of ${esc(c.name)}</span>`).join("");
+      document.getElementById("mine").innerHTML = h
+        ? `<p class="small" style="text-align:center;margin-bottom:.4rem;color:var(--muted)">Your standing</p><div style="text-align:center;">${h}</div>`
+        : `<p class="small" style="text-align:center;color:var(--muted)">You're not employed anywhere yet — apply below to start earning a wage.</p>`;
+    }
+
+    async function applyJob(id, name){
+      try{ await api("/jobs/apply",{method:"POST",body:JSON.stringify({company_id:id})});
+        msg(`Applied to ${name}! The founder will review your application.`,false); await load();
+      }catch(e){ msg(e.message); }
+    }
+
+    async function load(){
+      const d=await api("/jobs/board"); ME=d.me; ALL=d.companies||[];
+      renderMine(); render();
+    }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      renderNav("/jobs", user);
+      try{ await load(); }
+      catch(e){ document.getElementById("grid").innerHTML=`<p class="muted">${e.message}</p>`; }
+    })();
+  </script>
+</body>
+</html>
