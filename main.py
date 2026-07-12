@@ -553,6 +553,33 @@ def _run_economics(user):
     return user
 
 
+def _sweep_cybits(user):
+    """Keep Cybuck balances whole: sweep any fractional Cybuck into Cybits
+    (1 CB = 50 CBT). Only writes when there's actually a fraction to move, and
+    uses a compare-and-swap so it never clobbers a concurrent balance change."""
+    try:
+        bal = user.get("balance")
+        if bal is None:
+            return user
+        cyb = user.get("cybits") or 0
+        whole = math.floor(bal + 1e-9)
+        frac_cbt = round((bal - whole) * CYBITS_PER_CYBUCK)     # fractional CB -> whole Cybits
+        if frac_cbt >= CYBITS_PER_CYBUCK:                       # rounded up to a full Cybuck
+            whole += 1
+            frac_cbt -= CYBITS_PER_CYBUCK
+        new_cyb = round(cyb) + frac_cbt
+        if whole == bal and new_cyb == cyb:
+            return user                                        # already clean — no write
+        upd = supabase.table("cybucks").update({"balance": whole, "cybits": new_cyb}) \
+            .eq("username", user["username"]).eq("balance", bal).eq("cybits", cyb).execute()
+        if upd.data:
+            user["balance"] = whole
+            user["cybits"] = new_cyb
+    except Exception:
+        pass
+    return user
+
+
 def get_current_user(run_economics=True):
     username = session.get("username")
     if not username:
@@ -566,6 +593,7 @@ def get_current_user(run_economics=True):
     if user.get("approved", True) is False:   # not yet approved by the President
         return None
     _presence[username] = time()               # any authenticated request = "online"
+    user = _sweep_cybits(user)                  # Cybucks whole; fraction -> Cybits
     if run_economics:
         user = apply_economics(user)
     return user
