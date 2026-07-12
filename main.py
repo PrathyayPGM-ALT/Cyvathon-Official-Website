@@ -580,6 +580,7 @@ def public_user(user):
         "cybits":      user.get("cybits") or 0,
         "designation": user.get("designation") or "Citizen",
         "avatar":      user.get("avatar"),
+        "email":       user.get("email"),
         "company_id":  user.get("company_id"),
     }
 
@@ -812,6 +813,9 @@ def register():
         return jsonify(success=False, error="Username (max 32) or password too long"), 400
     if not re.fullmatch(r"[A-Za-z0-9 _.\-]{3,32}", username):
         return jsonify(success=False, error="Username must be 3–32 letters, numbers, spaces, . _ -"), 400
+    email = (data.get("email") or "").strip()[:120]
+    if email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        return jsonify(success=False, error="That doesn't look like a valid email"), 400
 
     exists = supabase.table("cybucks").select("id").eq("username", username).execute()
     if exists.data:
@@ -836,6 +840,11 @@ def register():
     # Every new citizen must be approved by the President before they can enter.
     # (The President's own accounts are auto-approved.) Fail-open if the column
     # isn't present yet, so signups never hard-error.
+    if email:      # store email (fail-open if the column isn't there yet)
+        try:
+            supabase.table("cybucks").update({"email": email}).eq("username", username).execute()
+        except Exception:
+            pass
     pending = not is_admin
     if pending:
         try:

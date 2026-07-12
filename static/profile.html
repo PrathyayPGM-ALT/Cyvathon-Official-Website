@@ -97,6 +97,7 @@
             <div class="id-row"><span class="l">Pufferbucks</span><b>${fmt(p.pufb)}</b></div>
             <div class="id-row"><span class="l">Aquilines</span><b>${fmt(p.aquilines)}</b></div>
             <div class="id-row"><span class="l">Cybits</span><b>${fmt(p.cybits)}</b></div>
+            <div class="id-row"><span class="l">Email</span><b>${p.email?esc(p.email):"—"}</b></div>
             <div class="id-row"><span class="l">Weekly Salary</span><b>${fmt(d.salary)} CB</b></div>
             <div class="id-row"><span class="l">Company</span><b>${d.company?esc(d.company.name):"None"}</b></div>
             <div class="id-row"><span class="l">Citizen Since</span><b>${d.member_since?new Date(d.member_since).toLocaleDateString():"—"}</b></div>

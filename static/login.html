@@ -4,43 +4,70 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login · Cyvathon</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
   <style>
     body{ display:flex; flex-direction:column; min-height:100vh; }
-    .login-wrap{ flex:1; display:flex; align-items:center; justify-content:center; padding:2rem 1rem; }
-    .login-card{ width:100%; max-width:420px; }
-    .login-card .logo{ justify-content:center; margin-bottom:.4rem; }
-    .login-card h2{ text-align:center; }
-    .tabs{ display:flex; gap:.5rem; margin:1.2rem 0 .4rem; }
-    .tabs button{ background:transparent; border:1px solid var(--panel-border); color:var(--muted); }
-    .tabs button.active{ background:rgba(88,196,255,.12); border-color:var(--accent); color:var(--accent); }
-    .back{ text-align:center; margin-top:1rem; }
+    .auth-wrap{ flex:1; display:flex; align-items:center; justify-content:center; padding:2rem 1rem; }
+    .auth-card{ width:100%; max-width:430px; padding:2.4rem 2.2rem 2rem; position:relative; overflow:hidden;
+      animation:fadeUp .5s ease both; }
+    .auth-card::before{ content:""; position:absolute; top:-45%; left:-20%; width:140%; height:70%;
+      background:radial-gradient(circle, rgba(88,196,255,.16), transparent 62%); pointer-events:none; }
+    .brand{ display:flex; align-items:center; justify-content:center; gap:.55rem; position:relative; }
+    .brand i{ font-size:1.55rem; color:var(--accent); filter:drop-shadow(0 0 10px rgba(88,196,255,.5)); }
+    .brand h1{ font-size:1.5rem; font-weight:800; letter-spacing:.5px;
+      background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .auth-card h2{ text-align:center; font-size:1.55rem; margin:.9rem 0 .25rem; }
+    .sub{ text-align:center; color:var(--muted); font-size:.87rem; margin-bottom:1.35rem; line-height:1.5; }
+    .tabs{ display:flex; background:var(--panel-2); border:1px solid var(--panel-border); border-radius:13px;
+      padding:.3rem; margin-bottom:1.25rem; gap:.3rem; }
+    .tabs button{ flex:1; margin:0; padding:.6rem; border:none; background:transparent; color:var(--muted);
+      box-shadow:none; font-weight:600; border-radius:10px; transition:.2s; }
+    .tabs button:hover{ color:var(--text); transform:none; }
+    .tabs button.active{ background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; box-shadow:0 4px 14px rgba(58,160,238,.3); }
+    .field{ position:relative; margin-bottom:.8rem; }
+    .field > i{ position:absolute; left:15px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:.95rem; pointer-events:none; }
+    .field input{ margin:0; padding-left:42px; }
+    .captcha-q{ display:block; font-size:.85rem; color:var(--muted); margin:.25rem 0 .35rem .2rem; }
+    #submitBtn{ margin-top:.5rem; padding:.85rem; font-size:1rem; }
+    .msg{ text-align:center; font-size:.86rem; margin-top:.9rem; min-height:1.25em; }
+    .back{ text-align:center; margin-top:1.05rem; }
+    .hp{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
   </style>
 </head>
 <body>
-  <div class="login-wrap">
-    <div class="panel login-card">
-      <div class="logo"><i class="fas fa-code logo-icon"></i><h1>CYVATHON</h1></div>
+  <div class="auth-wrap">
+    <div class="panel auth-card">
+      <div class="brand"><i class="fas fa-code"></i><h1>CYVATHON</h1></div>
       <h2 id="title">Welcome Back</h2>
-      <p class="small" style="text-align:center;">Sign up to unlock the Bank, Chat, Companies, Loans &amp; Voting. New citizens get <b>100 of each currency</b>.</p>
+      <p class="sub" id="sub">Log in to your citizen account.</p>
 
       <div class="tabs">
-        <button id="tabLogin" class="active" onclick="setMode('login')">Login</button>
-        <button id="tabSignup" onclick="setMode('signup')">Sign Up</button>
+        <button id="tabLogin" class="active" type="button" onclick="setMode('login')">Login</button>
+        <button id="tabSignup" type="button" onclick="setMode('signup')">Sign Up</button>
       </div>
 
-      <input id="username" placeholder="Username" autocomplete="username">
-      <input id="password" type="password" placeholder="Password" autocomplete="current-password">
-      <div id="captchaBox" style="display:none;">
-        <label class="small" id="captchaQ" style="color:var(--muted);"></label>
-        <input id="captchaA" placeholder="Human check — your answer" autocomplete="off">
-      </div>
-      <input id="website" tabindex="-1" autocomplete="off" aria-hidden="true"
-             style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" placeholder="Leave this empty">
-      <button id="submitBtn" onclick="submit()">Login</button>
+      <form id="authForm" onsubmit="doAuth();return false;">
+        <div class="field"><i class="fas fa-user"></i>
+          <input id="username" placeholder="Username" autocomplete="username" autofocus></div>
 
-      <p id="msg" class="small" style="text-align:center;color:var(--red);"></p>
+        <div class="field" id="emailField" style="display:none;"><i class="fas fa-envelope"></i>
+          <input id="email" type="email" placeholder="Email (shown on your ID card)" autocomplete="email"></div>
+
+        <div class="field"><i class="fas fa-lock"></i>
+          <input id="password" type="password" placeholder="Password" autocomplete="current-password"></div>
+
+        <div id="captchaBox" style="display:none;">
+          <label class="captcha-q" id="captchaQ"></label>
+          <div class="field"><i class="fas fa-shield-halved"></i>
+            <input id="captchaA" placeholder="Human check — your answer" autocomplete="off"></div>
+        </div>
+
+        <input id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" placeholder="Leave this empty">
+        <button id="submitBtn" type="submit"><i class="fas fa-right-to-bracket"></i> Login</button>
+      </form>
+
+      <p id="msg" class="msg" style="color:var(--red);"></p>
       <p class="back"><a class="link" href="/"><i class="fas fa-arrow-left"></i> Back to home</a></p>
     </div>
   </div>
@@ -60,39 +87,49 @@
       $("tabLogin").classList.toggle("active", m==="login");
       $("tabSignup").classList.toggle("active", m==="signup");
       $("title").textContent = m==="login" ? "Welcome Back" : "Become a Citizen";
-      $("submitBtn").textContent = m==="login" ? "Login" : "Sign Up";
+      $("sub").innerHTML = m==="login"
+        ? "Log in to your citizen account."
+        : "Join the Republic — new citizens get <b>100 of each currency</b>. Signups are reviewed by the President.";
+      $("submitBtn").innerHTML = m==="login"
+        ? '<i class="fas fa-right-to-bracket"></i> Login'
+        : '<i class="fas fa-user-plus"></i> Sign Up';
+      $("emailField").style.display = m==="signup" ? "block" : "none";
       $("captchaBox").style.display = m==="signup" ? "block" : "none";
+      $("password").autocomplete = m==="login" ? "current-password" : "new-password";
       $("msg").textContent = "";
       if(m==="signup") loadCaptcha();
     }
 
-    async function submit(){
+    async function doAuth(){
       const username = $("username").value.trim();
       const password = $("password").value.trim();
-      if(!username || !password){ $("msg").textContent = "Fill username and password"; return; }
+      if(!username || !password){ $("msg").style.color="var(--red)"; $("msg").textContent = "Fill in username and password"; return; }
       const path = mode==="login" ? "/login" : "/register";
       const body = {username, password};
-      if(mode==="signup"){ body.captcha_token = captchaToken; body.captcha_answer = $("captchaA").value.trim(); body.website = $("website").value; }
+      if(mode==="signup"){
+        body.captcha_token = captchaToken;
+        body.captcha_answer = $("captchaA").value.trim();
+        body.email = $("email").value.trim();
+        body.website = $("website").value;
+      }
+      $("submitBtn").disabled = true;
       try{
         const r = await api(path, {method:"POST", body:JSON.stringify(body)});
-        if(r.pending){                       // signup awaiting Presidential approval
+        if(r.pending){
           $("msg").style.color = "var(--green)";
           $("msg").textContent = r.message || "Application submitted — awaiting Presidential approval.";
           setMode("login");
           return;
         }
-        window.location.href = "/";          // go to dashboard hub
+        window.location.href = "/";
       }catch(e){
         $("msg").style.color = "var(--red)";
         $("msg").textContent = e.message;
-        if(mode==="signup"){ loadCaptcha(); $("captchaA").value=""; }  // refresh challenge
-      }
+        if(mode==="signup"){ loadCaptcha(); $("captchaA").value=""; }
+      }finally{ $("submitBtn").disabled = false; }
     }
 
-    document.addEventListener("keydown", e=>{ if(e.key==="Enter") submit(); });
-
     (async function(){
-      // already logged in? skip straight to the dashboard
       if(await currentUser()) window.location.href = "/";
     })();
   </script>
