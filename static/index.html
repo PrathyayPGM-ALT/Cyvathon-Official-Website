@@ -59,6 +59,39 @@
     .hc .tx{ position:relative; z-index:1; }
     .hc .tx h4{ margin:0; font-size:1.18rem; font-weight:700; color:var(--text); }
     .hc .tx p{ margin:.35rem 0 0; font-size:.85rem; color:var(--muted); line-height:1.45; }
+
+    /* ---- landing (guest) ---- */
+    .lhero{ text-align:center; max-width:860px; margin:auto; padding:3.8rem 1.5rem 2.4rem; position:relative; }
+    .lhero::before{ content:""; position:absolute; top:-30px; left:50%; transform:translateX(-50%); width:680px; height:520px;
+      background:radial-gradient(circle,rgba(88,196,255,.16),transparent 68%); z-index:-1; pointer-events:none; }
+    .lbadge{ display:inline-flex; align-items:center; gap:.4rem; font-size:.8rem; padding:.35rem 1rem; border-radius:30px;
+      border:1px solid rgba(88,196,255,.3); background:rgba(88,196,255,.08); color:var(--accent); margin-bottom:1.3rem; }
+    .lhero h1{ font-size:3.4rem; font-weight:800; letter-spacing:-1.6px; line-height:1.06; margin-bottom:1.1rem; color:#eef4fb; }
+    .lhero h1 .typing-text{ background:linear-gradient(90deg,var(--accent),#a78bfa); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .lsub{ font-size:1.12rem; color:var(--muted); max-width:660px; margin:0 auto 1.9rem; line-height:1.6; }
+    .lcta-row{ display:flex; gap:1rem; justify-content:center; align-items:center; flex-wrap:wrap; margin-bottom:.7rem; }
+    button.big{ width:auto; padding:.92rem 2.3rem; font-size:1.05rem; }
+    .glink{ color:var(--accent); font-weight:600; text-decoration:none; }
+    .glink:hover{ color:var(--accent2); }
+    @media(max-width:600px){ .lhero h1{ font-size:2.4rem; } }
+
+    .lfeat{ display:grid; gap:1.1rem; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); }
+    .lf{ background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015)); border:1px solid var(--panel-border);
+      border-radius:18px; padding:1.5rem; transition:transform .2s, border-color .2s, box-shadow .2s; }
+    .lf:hover{ transform:translateY(-5px); border-color:var(--ac,var(--accent)); box-shadow:0 16px 38px rgba(0,0,0,.42); }
+    .lf .ic{ width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.4rem;
+      color:#06223a; background:var(--ac,var(--accent)); margin-bottom:.9rem; box-shadow:0 8px 20px rgba(0,0,0,.3); }
+    .lf h3{ font-size:1.12rem; margin-bottom:.4rem; color:var(--text); }
+    .lf p{ color:var(--muted); font-size:.9rem; line-height:1.5; }
+
+    .lsteps{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+    .lstep{ text-align:center; }
+    .lstep .n{ width:46px; height:46px; margin:0 auto .7rem; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:1.15rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+
+    .lfinal{ text-align:center; padding:2.8rem 2rem; border-radius:var(--radius-lg);
+      background:linear-gradient(135deg,rgba(88,196,255,.13),rgba(167,139,250,.09)); border:1px solid rgba(88,196,255,.28); }
+    .lfinal h2{ font-size:1.9rem; margin-bottom:.5rem; }
   </style>
 </head>
 <body>
@@ -66,46 +99,55 @@
 
   <!-- ============ LOGGED-OUT VIEW ============ -->
   <div id="guestView" style="display:none;">
-    <section class="hero">
-      <h2>Welcome to <span class="typing-text"></span></h2>
-      <p>Cyvathon — a cyber micronation built on code, currency and creativity.</p>
-      <div style="margin-top:1.8rem;">
-        <a href="/login"><button style="width:auto;padding:.85rem 2.4rem;font-size:1.05rem;">
-          <i class="fas fa-right-to-bracket"></i> &nbsp;Login / Sign Up</button></a>
+    <!-- HERO -->
+    <section class="lhero">
+      <span class="lbadge"><i class="fas fa-globe"></i> A cyber micronation</span>
+      <h1>Welcome to <span class="typing-text"></span></h1>
+      <p class="lsub">Cyvathon is a living digital nation — a real economy with four currencies, companies and a stock market, an elected government, states you can travel between, and a whole community that runs it. Become a citizen and help build it.</p>
+      <div class="lcta-row">
+        <a href="/login"><button class="big"><i class="fas fa-user-plus"></i> &nbsp;Become a Citizen</button></a>
+        <a href="/login" class="glink">or log in →</a>
       </div>
-      <p class="small" style="margin-top:.8rem;">New citizens get <b>100 of each currency</b>.</p>
+      <p class="small">New citizens get <b>100 of each currency</b> to start.</p>
       <div class="stat-strip" id="statStrip"></div>
     </section>
 
-    <!-- WHAT WE DO -->
-    <section class="wrap" id="about">
-      <h2 class="section-title">What We Do</h2>
-      <p class="section-sub">We are coders, builders and digital citizens.</p>
-      <div class="grid">
-        <div class="card"><i class="fas fa-laptop-code icon"></i><h3>Python, C & Web Dev</h3>
-          <p>We build high-performance apps and stunning web systems with modern tools.</p></div>
-        <div class="card"><i class="fas fa-terminal icon"></i><h3>Cybersecurity & Ethical Hacking</h3>
-          <p>We explore security concepts and ethical hacking to understand and protect systems.</p></div>
-        <div class="card"><i class="fas fa-coins icon"></i><h3>A Real Digital Economy</h3>
-          <p>Three currencies, companies, loans, taxes and a national treasury — all live.</p></div>
+    <!-- FEATURES -->
+    <section class="wrap" id="about" style="padding-top:1rem;">
+      <h2 class="section-title">Everything a nation needs</h2>
+      <p class="section-sub">A complete, living micronation — all in your browser.</p>
+      <div class="lfeat">
+        <div class="lf" style="--ac:#58c4ff"><div class="ic"><i class="fas fa-building-columns"></i></div><h3>A Real Economy</h3><p>Four currencies, a bank, savings, bonds and loans. Send, convert and invest — with a national Treasury and monthly taxes.</p></div>
+        <div class="lf" style="--ac:#1fd6a6"><div class="ic"><i class="fas fa-chart-line"></i></div><h3>Companies & Stocks</h3><p>Found a company, take it public, and trade its shares on a live order-book Stock Exchange. Pay dividends to shareholders.</p></div>
+        <div class="lf" style="--ac:#ffce56"><div class="ic"><i class="fas fa-landmark"></i></div><h3>Elected Government</h3><p>Vote for leaders, pass bills in the Legislature, and settle disputes in the National Court. Real politics, real power.</p></div>
+        <div class="lf" style="--ac:#a78bfa"><div class="ic"><i class="fas fa-map-location-dot"></i></div><h3>States & Passports</h3><p>Five states to explore. Get a passport, clear border control, settle down, and collect visa stamps as you travel.</p></div>
+        <div class="lf" style="--ac:#22d3ee"><div class="ic"><i class="fas fa-briefcase"></i></div><h3>Jobs & Marketplaces</h3><p>Get hired at a company for a wage, or buy and sell goods on the national and per-state marketplaces.</p></div>
+        <div class="lf" style="--ac:#58c4ff"><div class="ic"><i class="fas fa-comments"></i></div><h3>Chat & Community</h3><p>A full modern messenger — public square, group &amp; state channels, DMs, @mentions, GIFs and profile pictures.</p></div>
+        <div class="lf" style="--ac:#ff8fb0"><div class="ic"><i class="fas fa-dice"></i></div><h3>Casino & Fun</h3><p>Feeling lucky? Bet your Cybucks against the national Treasury at the coin flip, dice and slots.</p></div>
+        <div class="lf" style="--ac:#a78bfa"><div class="ic"><i class="fas fa-robot"></i></div><h3>AI Guide</h3><p>A friendly AI mascot that explains how anything in the nation works — perfect for new citizens.</p></div>
       </div>
     </section>
 
-    <!-- HOW WE DO IT -->
-    <section class="wrap" id="how">
-      <h2 class="section-title">How We Do It</h2>
-      <p class="section-sub">Structure, technology and a thriving community.</p>
-      <div class="grid">
-        <div class="card"><i class="fas fa-people-group icon"></i><h3>Citizenship</h3>
-          <p>Anyone can become a citizen, found a company, take a loan and vote for leaders.</p></div>
-        <div class="card"><i class="fas fa-landmark icon"></i><h3>Government</h3>
-          <p>A President leads a cabinet; the Prime Minister is chosen by national vote.</p></div>
-        <div class="card"><i class="fas fa-shield-halved icon"></i><h3>Secure Systems</h3>
-          <p>Hashed passwords, session security and rate limiting keep the realm safe.</p></div>
+    <!-- HOW TO JOIN -->
+    <section class="wrap">
+      <h2 class="section-title">Become a citizen in 3 steps</h2>
+      <div class="lsteps">
+        <div class="lstep panel"><div class="n">1</div><h3>Sign up</h3><p class="small">Pick a username &amp; password — takes 30 seconds.</p></div>
+        <div class="lstep panel"><div class="n">2</div><h3>Get approved</h3><p class="small">The President reviews new citizens to keep the nation safe.</p></div>
+        <div class="lstep panel"><div class="n">3</div><h3>Start building</h3><p class="small">Get 100 of each currency and dive into the economy, government &amp; more.</p></div>
       </div>
     </section>
 
-    <!-- CHAIRISM -->
+    <!-- FINAL CTA -->
+    <section class="wrap">
+      <div class="lfinal">
+        <h2>Ready to join the Republic?</h2>
+        <p class="muted" style="max-width:520px;margin:0 auto 1.4rem;">Your citizenship, your company, your vote. Cyvathon is built by its citizens — become one today.</p>
+        <a href="/login"><button class="big"><i class="fas fa-right-to-bracket"></i> &nbsp;Claim your citizenship</button></a>
+      </div>
+    </section>
+
+    <!-- CHAIRISM (lore) -->
     <section class="wrap" id="chairism">
       <h2 class="section-title">Chairism</h2>
       <div class="panel chairism">
