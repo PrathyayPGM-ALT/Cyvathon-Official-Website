@@ -773,6 +773,10 @@ def notifications_page():
 def citizens_page():
     return app.send_static_file("citizens.html")
 
+@app.route("/leaderboard")
+def leaderboard_page():
+    return app.send_static_file("leaderboard.html")
+
 @app.route("/court")
 def court_page():
     return app.send_static_file("court.html")
@@ -4639,6 +4643,83 @@ def citizens_directory():
         r["company"] = by_founder.get(r["username"])
         r.pop("banned", None)
     return jsonify(success=True, citizens=rows, me=user["username"])
+
+
+# ---- National activity feed ------------------------------------------------
+# Public-record events that make the homepage feel alive. We show human events
+# (founded, hired, settled, sworn in, citizenship, elections…) and skip the
+# noisy recurring money lines (VAT, salaries, taxes) so the feed reads well.
+_FEED_SKIP = ("vat", "salary", "tax", "monthly", "interest", "upkeep", "rent to")
+
+@app.route("/activity")
+def activity_feed():
+    try:
+        rows = supabase.table("records").select("username,entry,created_at") \
+            .order("id", desc=True).limit(80).execute().data or []
+    except Exception:
+        return jsonify(success=True, activity=[])
+    out = []
+    for r in rows:
+        entry = (r.get("entry") or "")
+        if any(s in entry.lower() for s in _FEED_SKIP):
+            continue
+        out.append({"username": r.get("username"), "entry": entry,
+                    "created_at": r.get("created_at")})
+        if len(out) >= 25:
+            break
+    return jsonify(success=True, activity=out)
+
+
+# ---- Leaderboards ----------------------------------------------------------
+@app.route("/leaderboard_data")
+def leaderboard_data():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        cits = supabase.table("cybucks") \
+            .select("username,balance,pufb,aquilines,cybits,banned,avatar,referred_by") \
+            .execute().data or []
+    except Exception:      # avatar / referred_by columns not migrated yet
+        cits = supabase.table("cybucks") \
+            .select("username,balance,pufb,aquilines,cybits,banned").execute().data or []
+    avatar = {c["username"]: c.get("avatar") for c in cits}
+    active = [c for c in cits if not c.get("banned")]
+
+    def wealth(c):
+        return round((c.get("balance") or 0)
+                     + (c.get("pufb") or 0) * CYBUCK_VALUE["pufb"]
+                     + (c.get("aquilines") or 0) * CYBUCK_VALUE["aquilines"]
+                     + (c.get("cybits") or 0) * CYBUCK_VALUE["cybit"], 2)
+
+    richest = sorted(active, key=lambda c: -wealth(c))[:10]
+    richest = [{"username": c["username"], "avatar": avatar.get(c["username"]),
+                "value": wealth(c)} for c in richest]
+
+    # Top founders — companies started per citizen.
+    try:
+        comps = supabase.table("companies").select("founder").execute().data or []
+    except Exception:
+        comps = []
+    fc = {}
+    for c in comps:
+        f = c.get("founder")
+        if f:
+            fc[f] = fc.get(f, 0) + 1
+    founders = sorted(fc.items(), key=lambda x: -x[1])[:10]
+    founders = [{"username": u, "avatar": avatar.get(u), "value": n} for u, n in founders]
+
+    # Top recruiters — citizens brought in via referrals.
+    rc = {}
+    for c in cits:
+        rb = c.get("referred_by")
+        if rb:
+            rc[rb] = rc.get(rb, 0) + 1
+    recruiters = sorted(rc.items(), key=lambda x: -x[1])[:10]
+    recruiters = [{"username": u, "avatar": avatar.get(u), "value": n} for u, n in recruiters]
+
+    return jsonify(success=True, me=user["username"],
+                   richest=richest, founders=founders, recruiters=recruiters)
 
 
 @limiter.limit("90 per minute")

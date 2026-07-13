@@ -92,6 +92,18 @@
     .lfinal{ text-align:center; padding:2.8rem 2rem; border-radius:var(--radius-lg);
       background:linear-gradient(135deg,rgba(88,196,255,.13),rgba(167,139,250,.09)); border:1px solid rgba(88,196,255,.28); }
     .lfinal h2{ font-size:1.9rem; margin-bottom:.5rem; }
+
+    /* ---- live activity feed ---- */
+    .feed{ display:flex; flex-direction:column; gap:.55rem; max-width:720px; margin:0 auto; }
+    .fi{ display:flex; align-items:center; gap:.85rem; background:var(--panel); border:1px solid var(--panel-border);
+      border-radius:12px; padding:.7rem .95rem; animation:fiIn .35s ease both; }
+    @keyframes fiIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+    .fi .fic{ width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+      font-size:.9rem; color:#06223a; flex-shrink:0; box-shadow:0 4px 12px rgba(0,0,0,.25); }
+    .fi .ft{ flex:1; min-width:0; font-size:.9rem; color:#cdd6e0; line-height:1.4; }
+    .fi .ft a{ color:var(--text); font-weight:700; text-decoration:none; }
+    .fi .ft a:hover{ color:var(--accent); }
+    .fi .fw{ font-size:.72rem; color:var(--muted); white-space:nowrap; flex-shrink:0; }
   </style>
 </head>
 <body>
@@ -110,6 +122,13 @@
       </div>
       <p class="small">New citizens get <b>100 of each currency</b> to start.</p>
       <div class="stat-strip" id="statStrip"></div>
+    </section>
+
+    <!-- LIVE ACTIVITY (social proof) -->
+    <section class="wrap" id="guestFeedWrap" style="display:none;padding-top:.5rem;">
+      <h2 class="section-title" style="font-size:1.5rem;"><i class="fas fa-bolt" style="color:var(--gold)"></i> Live from the Republic</h2>
+      <p class="section-sub">Real things citizens are doing right now.</p>
+      <div class="feed" id="guestFeed"></div>
     </section>
 
     <!-- FEATURES -->
@@ -172,6 +191,10 @@
     <section class="wrap" style="padding-top:.5rem;">
       <div id="hubGrid"></div>
     </section>
+    <section class="wrap" id="hubFeedWrap" style="padding-top:0; display:none;">
+      <h2 class="section-title" style="font-size:1.4rem;"><i class="fas fa-bolt" style="color:var(--gold)"></i> Live from the Republic</h2>
+      <div class="feed" id="hubFeed"></div>
+    </section>
     <section class="wrap" id="hubNewsWrap" style="padding-top:0; display:none;">
       <h2 class="section-title" style="font-size:1.4rem;"><i class="fas fa-newspaper"></i> National News</h2>
       <div id="hubNews"></div>
@@ -210,6 +233,7 @@
       ]],
       ["Community", "#a78bfa", [
         ["/citizens","fa-users","Citizens","Directory & DMs"],
+        ["/leaderboard","fa-ranking-star","Leaderboards","See who's on top"],
         ["/chat","fa-comments","Chat","Talk with citizens"],
         ["/ai","fa-robot","Cyvathon AI","Ask how anything works"],
         ["/portfolio","fa-chart-pie","Portfolio","Your cash & investments"],
@@ -234,6 +258,55 @@
       document.getElementById("hubView").style.display = "none";
       typeLoop();
       loadStats();
+      loadFeed("guestFeed", "guestFeedWrap", 8);
+    }
+
+    // ---- live activity feed (shared by guest + hub) ----
+    function feedIcon(entry){
+      const e = (entry||"").toLowerCase();
+      if(/(found|incorporat|compan)/.test(e))            return ["fa-building","#1fd6a6"];
+      if(/(hired|\bjob|employ|wage|salar)/.test(e))       return ["fa-briefcase","#22d3ee"];
+      if(/(passport|settle|border|visa|travel|stamp)/.test(e)) return ["fa-passport","#a78bfa"];
+      if(/(citizen|approv|joined|welcome|oath|sworn)/.test(e)) return ["fa-user-plus","#58c4ff"];
+      if(/(elect|\bvote|minister|president|cabinet|office)/.test(e)) return ["fa-landmark","#ffce56"];
+      if(/(won|casino|jackpot|slots|dice)/.test(e))       return ["fa-dice","#ff8fb0"];
+      if(/(share|stock|dividend|\bipo|listed)/.test(e))   return ["fa-chart-line","#1fd6a6"];
+      if(/(loan|bond|deposit|savings)/.test(e))           return ["fa-hand-holding-dollar","#58c4ff"];
+      if(/(bill|\blaw|court|case|verdict|decree)/.test(e))return ["fa-scale-balanced","#ffce56"];
+      return ["fa-circle-info","#58c4ff"];
+    }
+    function timeAgo(ts){
+      if(!ts) return "";
+      const t = new Date(ts).getTime(); if(isNaN(t)) return "";
+      const s = Math.max(0,(Date.now()-t)/1000);
+      if(s<60) return "just now";
+      if(s<3600) return Math.floor(s/60)+"m ago";
+      if(s<86400) return Math.floor(s/3600)+"h ago";
+      return Math.floor(s/86400)+"d ago";
+    }
+    function renderFeed(list, elId){
+      const box = document.getElementById(elId); if(!box) return;
+      const esc = (s)=>(s||"").replace(/</g,"&lt;");
+      box.innerHTML = list.map(a=>{
+        const [ic,c] = feedIcon(a.entry);
+        const name = esc(a.username||"Someone");
+        const link = a.username ? `/profile?user=${encodeURIComponent(a.username)}` : "#";
+        return `<div class="fi">
+          <div class="fic" style="background:${c}"><i class="fas ${ic}"></i></div>
+          <div class="ft"><a href="${link}">${name}</a> ${esc(a.entry)}</div>
+          <div class="fw">${timeAgo(a.created_at)}</div>
+        </div>`;
+      }).join("");
+    }
+    async function loadFeed(elId, wrapId, limit){
+      try{
+        const d = await api("/activity");
+        const list = (d.activity||[]).slice(0, limit||8);
+        if(!list.length) return;
+        renderFeed(list, elId);
+        const w = document.getElementById(wrapId);
+        if(w) w.style.display = "block";
+      }catch{}
     }
     function showHub(user, admin, cia){
       document.getElementById("guestView").style.display = "none";
@@ -263,6 +336,7 @@
               <div class="tx"><h4>${t}</h4><p>${d}</p></div>
             </a>`).join("")}</div>
         </div>`).join("");
+      loadFeed("hubFeed", "hubFeedWrap", 12);
       loadHubNews();
     }
 

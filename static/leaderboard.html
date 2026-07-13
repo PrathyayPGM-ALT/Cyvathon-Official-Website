@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboards · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .lb-tabs{ display:flex; gap:.5rem; justify-content:center; flex-wrap:wrap; margin:0 auto 1.8rem; }
+    .lb-tab{ padding:.55rem 1.1rem; border-radius:999px; background:var(--panel); border:1px solid var(--panel-border);
+      color:var(--muted); font-weight:600; cursor:pointer; transition:.18s; font-size:.92rem; display:flex; align-items:center; gap:.5rem; }
+    .lb-tab:hover{ color:var(--text); border-color:var(--accent); }
+    .lb-tab.on{ color:#06223a; background:linear-gradient(135deg,var(--tc,#58c4ff),var(--tc2,#3aa0ee)); border-color:transparent; }
+
+    .board{ max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:.6rem; }
+    .row{ display:flex; align-items:center; gap:1rem; background:var(--panel); border:1px solid var(--panel-border);
+      border-radius:14px; padding:.85rem 1.1rem; transition:.18s; }
+    .row:hover{ transform:translateX(3px); border-color:rgba(88,196,255,.35); }
+    .row.me{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
+    .rank{ width:2rem; text-align:center; font-weight:800; font-size:1.1rem; color:var(--muted); flex-shrink:0; }
+    .row.top1 .rank{ color:#ffce56; } .row.top2 .rank{ color:#cdd6e0; } .row.top3 .rank{ color:#e8a06a; }
+    .medal-ico{ font-size:1.25rem; }
+    .av{ width:44px; height:44px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:1.05rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .who{ flex:1; min-width:0; }
+    .who .nm{ font-weight:700; font-size:1.02rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .who .nm a{ color:var(--text); text-decoration:none; } .who .nm a:hover{ color:var(--accent); }
+    .who .sub{ font-size:.78rem; color:var(--muted); }
+    .val{ font-weight:800; font-size:1.05rem; text-align:right; flex-shrink:0; color:var(--tc,#58c4ff); }
+    .val .u{ font-size:.72rem; color:var(--muted); font-weight:600; margin-left:.2rem; }
+    .youtag{ font-size:.66rem; color:var(--accent); font-weight:700; margin-left:.35rem; }
+    .empty{ text-align:center; color:var(--muted); padding:2rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <h2 class="section-title"><i class="fas fa-ranking-star"></i> Leaderboards</h2>
+    <p class="section-sub">The richest, the busiest founders, and the citizens who built the Republic by bringing others in.</p>
+
+    <div class="lb-tabs" id="tabs"></div>
+    <div class="board" id="board"><p class="empty">Loading…</p></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, DATA={};
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const enc=encodeURIComponent;
+
+    const BOARDS = [
+      { key:"richest",    label:"Richest",       icon:"fa-coins",      c1:"#ffce56", c2:"#f0a92c", unit:"CB",       sub:"net cash worth",   fmtv:(v)=>fmt(v) },
+      { key:"founders",   label:"Top Founders",  icon:"fa-building",   c1:"#1fd6a6", c2:"#12a37c", unit:"companies",sub:"companies founded",fmtv:(v)=>v },
+      { key:"recruiters", label:"Top Recruiters",icon:"fa-user-plus",  c1:"#a78bfa", c2:"#7c5cf0", unit:"citizens", sub:"citizens recruited",fmtv:(v)=>v },
+    ];
+    let current = "richest";
+
+    function renderTabs(){
+      document.getElementById("tabs").innerHTML = BOARDS.map(b=>
+        `<div class="lb-tab ${b.key===current?'on':''}" style="--tc:${b.c1};--tc2:${b.c2}" onclick="pick('${b.key}')">
+           <i class="fas ${b.icon}"></i> ${b.label}</div>`).join("");
+    }
+
+    function pick(k){ current=k; renderTabs(); renderBoard(); }
+
+    function renderBoard(){
+      const b = BOARDS.find(x=>x.key===current);
+      const list = DATA[current] || [];
+      const box = document.getElementById("board");
+      box.style.setProperty("--tc", b.c1);
+      if(!list.length){ box.innerHTML = `<p class="empty">Nobody's on this board yet — be the first.</p>`; return; }
+      const trophy = ["🥇","🥈","🥉"];
+      box.innerHTML = list.map((r,i)=>{
+        const you = r.username===ME;
+        const rankCell = i<3 ? `<span class="medal-ico">${trophy[i]}</span>` : (i+1);
+        return `<div class="row ${you?'me':''} ${i<3?'top'+(i+1):''}" style="--tc:${b.c1}">
+          <div class="rank">${rankCell}</div>
+          <div class="av" ${avatarStyle(r.avatar)}>${r.avatar?'':esc((r.username||'?')[0].toUpperCase())}</div>
+          <div class="who">
+            <div class="nm"><a href="${you?'/profile':'/profile?user='+enc(r.username)}">${esc(r.username)}</a>${you?'<span class="youtag">YOU</span>':''}</div>
+            <div class="sub">${b.sub}</div>
+          </div>
+          <div class="val">${b.fmtv(r.value)}<span class="u">${b.unit}</span></div>
+        </div>`;
+      }).join("");
+    }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      ME=user.username; renderNav("/leaderboard", user);
+      renderTabs();
+      try{
+        const d=await api("/leaderboard_data");
+        ME=d.me||ME;
+        DATA={ richest:d.richest||[], founders:d.founders||[], recruiters:d.recruiters||[] };
+        renderBoard();
+      }catch(e){
+        document.getElementById("board").innerHTML=`<p class="empty">${esc(e.message)}</p>`;
+      }
+    })();
+  </script>
+</body>
+</html>
