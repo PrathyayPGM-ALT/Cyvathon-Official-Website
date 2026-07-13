@@ -121,7 +121,7 @@
         document.getElementById("pendCount").textContent = pend.length ? pend.length+" waiting" : "";
         document.getElementById("pendingList").innerHTML = pend.length
           ? pend.map(p=>rowHtml(
-              `<span><b>${esc(p.username)}</b> <span class="small muted">${esc(p.reg_ip)||'no IP'} · ${p.created_at?new Date(p.created_at).toLocaleString():''}</span></span>`,
+              `<span><b>${esc(p.username)}</b> <span class="small muted">${esc(p.reg_ip)||'no IP'} · ${p.created_at?new Date(p.created_at).toLocaleString():''}</span>${p.referred_by?` <span class="tag" style="background:rgba(31,214,166,.15);color:var(--green)">invited by ${esc(p.referred_by)}</span>`:''}</span>`,
               `<span style="display:flex;gap:.4rem;">
                  <button style="width:auto;margin:0;padding:.3rem .9rem;font-size:.8rem;" onclick="approve('${esc(p.username)}')">Approve</button>
                  <button class="danger" style="width:auto;margin:0;padding:.3rem .8rem;font-size:.8rem;" onclick="reject('${esc(p.username)}')">Reject</button>

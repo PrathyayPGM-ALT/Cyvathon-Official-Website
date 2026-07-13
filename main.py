@@ -58,6 +58,7 @@ CURRENCY_COLUMN = {
 }
 
 STARTING_GRANT   = 100          # new citizens get 100 of EACH currency
+REFERRAL_BONUS   = 500          # Cybucks paid to a referrer when their invite is approved
 COMPANY_FEE      = 1000         # cost in Cybucks to found a company
 LOAN_MAX         = 5000         # max loan in Cybucks
 LOAN_DAYS        = 30           # repay within 30 days
@@ -679,6 +680,10 @@ def company_page():
 def jobs_page():
     return app.send_static_file("jobs.html")
 
+@app.route("/invite")
+def invite_page():
+    return app.send_static_file("invite.html")
+
 @app.route("/loans")
 def loans_page():
     return app.send_static_file("loans.html")
@@ -875,6 +880,13 @@ def register():
     if email:      # store email (fail-open if the column isn't there yet)
         try:
             supabase.table("cybucks").update({"email": email}).eq("username", username).execute()
+        except Exception:
+            pass
+    ref = (data.get("ref") or "").strip()[:32]      # who invited them
+    if ref and ref != username and \
+            supabase.table("cybucks").select("id").eq("username", ref).execute().data:
+        try:
+            supabase.table("cybucks").update({"referred_by": ref}).eq("username", username).execute()
         except Exception:
             pass
     pending = not is_admin
@@ -1875,6 +1887,29 @@ def add_cofounder():
 
 
 @limiter.limit("10/min")
+@app.route("/referrals")
+def referrals():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    counts, my_count = {}, 0
+    try:
+        rows = supabase.table("cybucks").select("referred_by,banned").execute().data or []
+        for r in rows:
+            rb = r.get("referred_by")
+            if rb and not r.get("banned"):
+                counts[rb] = counts.get(rb, 0) + 1
+        my_count = counts.get(me, 0)
+    except Exception:
+        pass      # column not migrated yet
+    leaderboard = [{"username": k, "count": v}
+                   for k, v in sorted(counts.items(), key=lambda x: -x[1])[:10]]
+    return jsonify(success=True, me=me, my_count=my_count,
+                   earned=my_count * REFERRAL_BONUS, bonus=REFERRAL_BONUS,
+                   leaderboard=leaderboard)
+
+
 @app.route("/jobs/board")
 def jobs_board():
     """Nationwide careers board: every company, its size, and your standing with it."""
@@ -3819,10 +3854,14 @@ def admin_security():
         .order("created_at", desc=True).limit(40).execute().data or []
     banned = supabase.table("cybucks").select("username,reg_ip").eq("banned", True).execute().data or []
     try:
-        pending = supabase.table("cybucks").select("username,reg_ip,created_at") \
+        pending = supabase.table("cybucks").select("username,reg_ip,created_at,referred_by") \
             .eq("approved", False).order("created_at", desc=True).execute().data or []
     except Exception:
-        pending = []      # column not migrated yet
+        try:
+            pending = supabase.table("cybucks").select("username,reg_ip,created_at") \
+                .eq("approved", False).order("created_at", desc=True).execute().data or []
+        except Exception:
+            pending = []      # columns not migrated yet
     return jsonify(success=True, blocked=blocked, signups=signups, banned=banned, pending=pending)
 
 
@@ -3833,12 +3872,21 @@ def admin_approve():
     if not user or not is_treasury_admin(user):
         return jsonify(success=False, error="President only"), 403
     target = (request.get_json().get("username") or "").strip()
-    if not supabase.table("cybucks").select("id").eq("username", target).execute().data:
+    row = supabase.table("cybucks").select("approved,referred_by").eq("username", target).execute().data
+    if not row:
         return jsonify(success=False, error="No such applicant"), 404
+    was_pending = row[0].get("approved") is False      # only reward on the FIRST approval
     supabase.table("cybucks").update({"approved": True}).eq("username", target).execute()
     add_record(target, "Citizenship application approved by the President.")
     notify(target, "\U0001F389 Your Cyvathon citizenship has been approved — you can now log in!", "/login")
-    return jsonify(success=True)
+
+    ref = (row[0].get("referred_by") or "").strip()
+    if was_pending and ref and ref != target and \
+            supabase.table("cybucks").select("id").eq("username", ref).execute().data:
+        cas_adjust(ref, "balance", REFERRAL_BONUS, allow_negative=True)
+        add_record(ref, f"Referral bonus: {target} joined Cyvathon on your invite (+{REFERRAL_BONUS} CB).")
+        notify(ref, f"\U0001F389 {target} joined on your invite! You earned {REFERRAL_BONUS} CB.", "/invite")
+    return jsonify(success=True, referral_paid=bool(was_pending and ref))
 
 
 @limiter.limit("60/min")

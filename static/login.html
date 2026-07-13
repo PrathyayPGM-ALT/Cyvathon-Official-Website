@@ -75,6 +75,7 @@
   <script src="/static/app.js"></script>
   <script>
     let mode = "login", captchaToken = "";
+    const REF = (new URLSearchParams(location.search).get("ref") || "").trim();
     const $ = (id)=>document.getElementById(id);
 
     async function loadCaptcha(){
@@ -111,6 +112,7 @@
         body.captcha_answer = $("captchaA").value.trim();
         body.email = $("email").value.trim();
         body.website = $("website").value;
+        if(REF) body.ref = REF;
       }
       $("submitBtn").disabled = true;
       try{
@@ -130,7 +132,11 @@
     }
 
     (async function(){
-      if(await currentUser()) window.location.href = "/";
+      if(await currentUser()){ window.location.href = "/"; return; }
+      if(REF){
+        setMode("signup");
+        $("sub").innerHTML = `<i class="fas fa-gift" style="color:var(--accent)"></i> Invited by <b>${REF.replace(/</g,"&lt;")}</b> — join the Republic! New citizens get <b>100 of each currency</b>.`;
+      }
     })();
   </script>
 </body>
