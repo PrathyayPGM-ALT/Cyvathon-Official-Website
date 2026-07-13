@@ -69,10 +69,10 @@ async function requireAuth() {
 function renderNav(active, user) {
   const GROUPS = [
     { label: "Home", href: "/" },
-    { label: "Money",      items: [["/bank","Bank"], ["/exchange","Stock Exchange"], ["/portfolio","Portfolio"], ["/loans","Loans"], ["/casino","Casino"]] },
+    { label: "Money",      items: [["/bank","Bank"], ["/exchange","Stock Exchange"], ["/loans","Loans"], ["/casino","Casino"]] },
     { label: "Business",   items: [["/company","Companies"], ["/jobs","Jobs Board"], ["/states","States"], ["/marketplace","Import & Export"]] },
     { label: "Government",  items: [["/government","Cabinet"], ["/ministries","Ministries"], ["/legislature","Legislature"], ["/gazette","Gazette"], ["/court","Courts"], ["/fir","Report a Crime"], ["/voting","Elections"], ["/treasury","Treasury"], ["/admin","Admin Panel"]] },
-    { label: "Community",   items: [["/citizens","Citizens"], ["/chat","Chat"], ["/ai","Cyvathon AI"], ["/invite","Invite Friends"], ["/news","News"], ["/rules","Rules"]] },
+    { label: "Community",   items: [["/citizens","Citizens"], ["/chat","Chat"], ["/ai","Cyvathon AI"], ["/portfolio","Portfolio"], ["/invite","Invite Friends"], ["/news","News"], ["/rules","Rules"]] },
     { label: "ID Card", items: [["/profile","ID Card"], ["/passport","Passport & Citizenship"]] },
   ];
 
@@ -108,21 +108,7 @@ function renderNav(active, user) {
   const host = document.getElementById("nav");
   if (host) host.outerHTML = html;
   syncThemeBtn();
-  if (user) { refreshNotifBadge(); revealAthena(); revealWarRoom(); }
-}
-
-/* Reveal the restricted War Room link only to cleared citizens. */
-async function revealWarRoom() {
-  try {
-    const me = await fetchMe();
-    if (!me || !me.war || document.getElementById("warNav")) return;
-    const links = document.querySelector(".nav-links");
-    if (!links) return;
-    const a = document.createElement("a");
-    a.id = "warNav"; a.href = "/warroom"; a.title = "War Room";
-    a.style.color = "var(--red)"; a.innerHTML = "⚔️ War Room";
-    links.insertBefore(a, document.getElementById("navUser") || null);
-  } catch {}
+  if (user) { refreshNotifBadge(); revealAthena(); }
 }
 
 /* Reveal the classified Athena link only to agency members. */

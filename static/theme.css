@@ -46,7 +46,7 @@ header{ background:rgba(10,13,20,0.72); backdrop-filter:blur(16px) saturate(140%
   padding:.85rem 0; position:sticky; top:0; z-index:200;
   border-bottom:1px solid rgba(255,255,255,.06); }
 nav{ max-width:1250px; margin:auto; display:flex; justify-content:space-between;
-  align-items:center; padding:0 1.5rem; flex-wrap:wrap; gap:.8rem; }
+  align-items:center; padding:0 1.5rem; gap:1rem; }
 .logo{ display:flex; align-items:center; gap:.65rem; }
 .logo-icon{ font-size:1.7rem; color:var(--accent); filter:drop-shadow(0 0 10px rgba(88,196,255,.5)); }
 .logo h1{ font-size:1.45rem; font-weight:800; letter-spacing:.5px;
