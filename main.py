@@ -610,8 +610,29 @@ def public_user(user):
         "designation": user.get("designation") or "Citizen",
         "avatar":      user.get("avatar"),
         "email":       user.get("email"),
+        "bio":         user.get("bio"),
         "company_id":  user.get("company_id"),
     }
+
+
+def _gov_role(username):
+    """The government office(s) this citizen holds, if any (cabinet + ministries)."""
+    roles = []
+    try:
+        for r in (supabase.table("government").select("position,holder")
+                  .eq("holder", username).execute().data or []):
+            if r.get("position"):
+                roles.append(r["position"])
+    except Exception:
+        pass
+    try:
+        for r in (supabase.table("ministries").select("name,minister")
+                  .eq("minister", username).execute().data or []):
+            if r.get("name") and r["name"] not in roles:
+                roles.append(r["name"])
+    except Exception:
+        pass
+    return roles
 
 
 def company_founders(c):
@@ -989,11 +1010,28 @@ def public_profile(username):
         "username": u["username"],
         "designation": u.get("designation") or "Citizen",
         "avatar": u.get("avatar"),
+        "bio": u.get("bio"),
+        "cabinet_role": _gov_role(username),
         "member_since": u.get("created_at"),
         "net_worth": user_net_worth(username),
         "companies": founded, "jobs": job_list, "records": records,
         "is_self": viewer["username"] == username,
     })
+
+
+@limiter.limit("20/min")
+@app.route("/bio", methods=["POST"])
+def set_bio():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    bio = (request.get_json() or {}).get("bio", "")
+    bio = (bio or "").strip()[:300]
+    try:
+        supabase.table("cybucks").update({"bio": bio or None}).eq("username", user["username"]).execute()
+    except Exception:
+        return jsonify(success=False, error="Descriptions aren't enabled yet — the database needs a quick update."), 503
+    return jsonify(success=True, bio=bio)
 
 
 # ============================================================
@@ -2414,6 +2452,7 @@ def profile_data():
     return jsonify(
         success=True,
         profile=public_user(user),
+        cabinet_role=_gov_role(user["username"]),
         salary=SALARY_TABLE.get(user.get("designation", "Citizen"), 100),
         company=company,
         records=records.data or [],

@@ -77,9 +77,27 @@
     }
 
     /* ---- Own full ID card ---- */
+    function editBio(){
+      const box=document.getElementById("bioText"); if(!box) return;
+      box.outerHTML = `<div style="margin-top:.5rem;">
+        <textarea id="bioInput" rows="3" maxlength="300" placeholder="e.g. President of Cyvathon, founder of Import &amp; Export, aspiring tycoon.">${esc(window._bio||"")}</textarea>
+        <div class="row" style="gap:.5rem;margin-top:.5rem;">
+          <button onclick="saveBio()">Save</button>
+          <button class="ghost" onclick="showOwn()">Cancel</button>
+        </div></div>`;
+      document.getElementById("bioInput").focus();
+    }
+    async function saveBio(){
+      const v=document.getElementById("bioInput").value;
+      try{ await api("/bio",{method:"POST",body:JSON.stringify({bio:v})}); showOwn(); }
+      catch(e){ alert(e.message); }
+    }
+
     async function showOwn(){
       const d = await api("/profile_data");
       const p = d.profile;
+      window._bio = p.bio || "";
+      const roles = (d.cabinet_role||[]);
       document.getElementById("view").innerHTML = `
         <h2 class="section-title"><i class="fas fa-id-card"></i> Citizen ID Card</h2>
         <div class="id-card">
@@ -99,13 +117,21 @@
             <div class="id-row"><span class="l">Cybits</span><b>${fmt(p.cybits)}</b></div>
             <div class="id-row"><span class="l">Email</span><b>${p.email?esc(p.email):"—"}</b></div>
             <div class="id-row"><span class="l">Weekly Salary</span><b>${fmt(d.salary)} CB</b></div>
+            ${roles.length?`<div class="id-row"><span class="l">Cabinet Role</span><b style="color:var(--gold)">${roles.map(esc).join(", ")}</b></div>`:''}
             <div class="id-row"><span class="l">Company</span><b>${d.company?esc(d.company.name):"None"}</b></div>
             <div class="id-row"><span class="l">Citizen Since</span><b>${d.member_since?new Date(d.member_since).toLocaleDateString():"—"}</b></div>
             <div class="id-watermark">★ REPUBLIC OF CYVATHON ★</div>
           </div>
         </div>
-        <p style="text-align:center;margin:-.6rem 0 1.4rem;">
+        <p style="text-align:center;margin:-.6rem 0 1.2rem;">
           <a class="link" href="/passport"><i class="fas fa-passport"></i> View Passport &amp; Citizenship →</a></p>
+        <div class="panel" style="text-align:left;margin:0 0 1.4rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
+            <b><i class="fas fa-circle-info"></i> What I Do</b>
+            <button class="ghost" style="width:auto;margin:0;padding:.3rem .8rem;font-size:.78rem;" onclick="editBio()"><i class="fas fa-pen"></i> Edit</button>
+          </div>
+          <p id="bioText" style="margin-top:.5rem;white-space:pre-wrap;color:${p.bio?'var(--text)':'var(--muted)'};">${p.bio?esc(p.bio):"Add a description of what you do in Cyvathon."}</p>
+        </div>
         <h3 style="margin-bottom:.8rem;"><i class="fas fa-file-lines"></i> Official Record</h3>
         <div>${recordsHtml(d.records)}</div>`;
     }
@@ -129,12 +155,14 @@
           </div>
           <div class="id-body">
             <div class="id-row"><span class="l">Net Worth</span><b style="color:var(--accent)">${fmt(p.net_worth)} CB</b></div>
+            ${(p.cabinet_role&&p.cabinet_role.length)?`<div class="id-row"><span class="l">Cabinet Role</span><b style="color:var(--gold)">${p.cabinet_role.map(esc).join(", ")}</b></div>`:''}
             <div class="id-row"><span class="l">Companies Founded</span><b>${companies}</b></div>
             <div class="id-row"><span class="l">Employment</span><b>${jobs}</b></div>
             <div class="id-row"><span class="l">Citizen Since</span><b>${p.member_since?new Date(p.member_since).toLocaleDateString():"—"}</b></div>
             <div class="id-watermark">★ REPUBLIC OF CYVATHON ★</div>
           </div>
         </div>
+        ${p.bio?`<div class="panel" style="text-align:left;margin:0 0 1.4rem;"><b><i class="fas fa-circle-info"></i> What ${esc(p.username)} Does</b><p style="margin-top:.5rem;white-space:pre-wrap;">${esc(p.bio)}</p></div>`:''}
         <h3 style="margin-bottom:.8rem;"><i class="fas fa-file-lines"></i> Public Record</h3>
         <div>${recordsHtml(p.records)}</div>`;
     }
