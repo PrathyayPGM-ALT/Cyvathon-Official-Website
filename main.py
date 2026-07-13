@@ -4811,6 +4811,62 @@ def group_send(gid):
     return jsonify(success=True, message=row)
 
 
+# ----- Message reactions -----
+REACT_EMOJIS = {"👍", "❤️", "😂", "🔥", "🎉", "😮", "😢", "👀", "💯", "🙏"}
+
+
+def _reactions_for(ids, me):
+    if not ids:
+        return {}
+    try:
+        rows = supabase.table("message_reactions").select("message_id,username,emoji") \
+            .in_("message_id", ids).execute().data or []
+    except Exception:
+        return {}
+    agg = {}
+    for r in rows:
+        mid, e = r["message_id"], r["emoji"]
+        d = agg.setdefault(mid, {}).setdefault(e, {"emoji": e, "count": 0, "mine": False})
+        d["count"] += 1
+        if r["username"] == me:
+            d["mine"] = True
+    return {mid: list(v.values()) for mid, v in agg.items()}
+
+
+@limiter.limit("120/min")
+@app.route("/messages/<int:mid>/react", methods=["POST"])
+def message_react(mid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    emoji = (request.get_json() or {}).get("emoji", "")
+    if emoji not in REACT_EMOJIS:
+        return jsonify(success=False, error="Unknown reaction"), 400
+    me = user["username"]
+    try:
+        existing = supabase.table("message_reactions").select("id") \
+            .eq("message_id", mid).eq("username", me).eq("emoji", emoji).execute().data
+        if existing:
+            supabase.table("message_reactions").delete().eq("id", existing[0]["id"]).execute()
+        else:
+            supabase.table("message_reactions").insert(
+                {"message_id": mid, "username": me, "emoji": emoji}).execute()
+    except Exception:
+        return jsonify(success=False, error="Reactions aren't enabled yet — the database needs a quick update."), 503
+    return jsonify(success=True, reactions=_reactions_for([mid], me).get(mid, []))
+
+
+@limiter.limit("240/min")
+@app.route("/reactions")
+def reactions_get():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    idlist = [int(x) for x in (request.args.get("ids") or "").split(",")
+              if x.strip().isdigit()][:100]
+    return jsonify(success=True, reactions=_reactions_for(idlist, user["username"]))
+
+
 # ============================================================
 #  AI ASSISTANT
 # ============================================================

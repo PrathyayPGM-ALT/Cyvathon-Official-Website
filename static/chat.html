@@ -119,6 +119,27 @@
       font-style:italic; padding:0 1.2rem; }
     .typing-row.show{ height:20px; padding:.05rem 1.2rem; }
 
+    /* reactions */
+    .reactbtn{ position:absolute; top:-9px; right:22px; width:24px; height:24px; border-radius:50%; display:none;
+      align-items:center; justify-content:center; background:var(--bg-soft); border:1px solid var(--panel-border);
+      color:var(--muted); cursor:pointer; font-size:.68rem; z-index:2; }
+    .grp.me .reactbtn{ right:auto; left:22px; }
+    .bubble:hover .reactbtn{ display:flex; }
+    .reactbtn:hover{ color:var(--gold); border-color:var(--gold); }
+    .reacts{ display:flex; flex-wrap:wrap; gap:.3rem; margin-top:.4rem; }
+    .reacts:empty{ display:none; }
+    .chip{ font-size:.78rem; background:var(--panel-2); border:1px solid var(--panel-border); border-radius:20px;
+      padding:.05rem .55rem; cursor:pointer; user-select:none; transition:.12s; }
+    .chip:hover{ border-color:var(--accent); }
+    .chip.mine{ background:rgba(88,196,255,.2); border-color:rgba(88,196,255,.55); color:var(--accent); }
+    .grp.me .chip{ background:rgba(4,34,59,.18); color:#04314f; border-color:rgba(4,34,59,.25); }
+    .grp.me .chip.mine{ background:rgba(4,34,59,.32); }
+    .react-picker{ position:fixed; display:none; gap:.15rem; background:#0e1320; border:1px solid var(--panel-border);
+      border-radius:24px; padding:.3rem .5rem; box-shadow:var(--shadow); z-index:9998; }
+    .react-picker.open{ display:flex; }
+    .react-picker span{ cursor:pointer; font-size:1.3rem; padding:.1rem .28rem; border-radius:8px; transition:.1s; }
+    .react-picker span:hover{ background:rgba(88,196,255,.15); transform:scale(1.2); }
+
     /* modal */
     .modal{ position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:200; }
     .modal.open{ display:flex; }
@@ -254,8 +275,8 @@
       document.getElementById("feed").innerHTML="";
       document.getElementById("typingRow").classList.remove("show");
       document.getElementById("shell").classList.add("showmain");
-      closePanels(); renderSide(); loadNew(true); refreshTyping();
-      if(poll) clearInterval(poll); poll=setInterval(()=>{ loadNew(false); refreshTyping(); },2500);
+      closePanels(); renderSide(); loadNew(true).then(refreshReactions); refreshTyping();
+      if(poll) clearInterval(poll); poll=setInterval(()=>{ loadNew(false); refreshTyping(); refreshReactions(); },2500);
     }
     function showList(){ document.getElementById("shell").classList.remove("showmain"); }
 
@@ -310,7 +331,9 @@
       const status = m.sender===ME
         ? `<span class="status">${opts.pending?'<i class="fas fa-clock"></i>':'<i class="fas fa-check"></i>'}</span>` : "";
       b.innerHTML=quote+renderRich(m.content)+status
-        +`<span class="replybtn" title="Reply" onclick="startReplyEl(this)"><i class="fas fa-reply"></i></span>`;
+        +`<div class="reacts"></div>`
+        +`<span class="replybtn" title="Reply" onclick="startReplyEl(this)"><i class="fas fa-reply"></i></span>`
+        +`<span class="reactbtn" title="React" onclick="openReactPicker(this)"><i class="fas fa-face-smile"></i></span>`;
       body.appendChild(b);
       scrollDown(true);
       return b;
@@ -395,6 +418,44 @@
       document.getElementById("msg").focus();
     }
     function cancelReply(){ replyTo=null; const b=document.getElementById("replyBar"); if(b) b.classList.remove("open"); }
+
+    /* ---------------- REACTIONS ---------------- */
+    const REACT_SET=["👍","❤️","😂","🔥","🎉","😮","😢","👀"];
+    function renderReacts(el, list){
+      if(!el) return;
+      el.innerHTML=(list||[]).map(r=>`<span class="chip ${r.mine?'mine':''}" onclick="reactChip(this,'${r.emoji}')">${r.emoji} ${r.count}</span>`).join("");
+    }
+    function reactChip(el, emoji){ const b=el.closest(".bubble"); if(b&&b.dataset.mid) react(b.dataset.mid, emoji); }
+    async function react(mid, emoji){
+      try{
+        const d=await api(`/messages/${mid}/react`,{method:"POST",body:JSON.stringify({emoji})});
+        const b=document.querySelector(`#feed .bubble[data-mid="${mid}"]`);
+        if(b) renderReacts(b.querySelector(".reacts"), d.reactions);
+      }catch(e){}
+    }
+    function openReactPicker(btn){
+      const b=btn.closest(".bubble"); if(!b||!b.dataset.mid) return;
+      let p=document.getElementById("reactPicker");
+      if(!p){ p=document.createElement("div"); p.id="reactPicker"; p.className="react-picker"; document.body.appendChild(p); }
+      p.innerHTML=REACT_SET.map(e=>`<span onclick="pickReact('${e}')">${e}</span>`).join("");
+      p._mid=b.dataset.mid;
+      const r=btn.getBoundingClientRect();
+      p.style.left=Math.max(8,Math.min(r.left-70, window.innerWidth-230))+"px";
+      p.style.top=Math.max(8,r.top-46)+"px";
+      p.classList.add("open");
+    }
+    function pickReact(e){ const p=document.getElementById("reactPicker"); const mid=p&&p._mid; if(p) p.classList.remove("open"); if(mid) react(mid,e); }
+    document.addEventListener("click",e=>{ const p=document.getElementById("reactPicker");
+      if(p&&p.classList.contains("open")&&!p.contains(e.target)&&!e.target.closest(".reactbtn")) p.classList.remove("open"); });
+    async function refreshReactions(){
+      const bubbles=[...document.querySelectorAll('#feed .bubble[data-mid]')].filter(b=>b.dataset.mid);
+      if(!bubbles.length) return;
+      const ids=bubbles.map(b=>b.dataset.mid);
+      try{ const d=await api("/reactions?ids="+ids.join(","));
+        const r=d.reactions||{};
+        bubbles.forEach(b=>renderReacts(b.querySelector(".reacts"), r[b.dataset.mid]||[]));
+      }catch(e){}
+    }
 
     /* ---------------- PRESENCE + TYPING ---------------- */
     function convoKey(){
