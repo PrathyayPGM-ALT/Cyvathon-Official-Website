@@ -108,7 +108,40 @@ function renderNav(active, user) {
   const host = document.getElementById("nav");
   if (host) host.outerHTML = html;
   syncThemeBtn();
-  if (user) { refreshNotifBadge(); revealAthena(); }
+  if (user) { refreshNotifBadge(); revealAthena(); startToasts(); }
+}
+
+/* Pop a toast when a new notification (DM, mention, approval, referral…) arrives. */
+let _toastMax = null, _toastTimer = null;
+function startToasts() {
+  if (_toastTimer) return;
+  pollToasts();
+  _toastTimer = setInterval(pollToasts, 15000);
+}
+async function pollToasts() {
+  try {
+    const d = await api("/notifications/list");
+    const rows = d.notifications || [];
+    if (!rows.length) return;
+    const maxId = Math.max(...rows.map(r => r.id));
+    if (_toastMax === null) { _toastMax = maxId; return; }   // baseline — don't toast old ones
+    const fresh = rows.filter(r => r.id > _toastMax && !r.read).sort((a, b) => a.id - b.id);
+    fresh.forEach(showToast);
+    _toastMax = Math.max(_toastMax, maxId);
+    if (fresh.length) refreshNotifBadge();
+  } catch {}
+}
+function showToast(n) {
+  let wrap = document.getElementById("toastWrap");
+  if (!wrap) { wrap = document.createElement("div"); wrap.id = "toastWrap"; wrap.className = "toast-wrap"; document.body.appendChild(wrap); }
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.innerHTML = `<i class="fas fa-bell"></i><div class="tmsg">${(n.message || "").replace(/</g, "&lt;")}</div><span class="tx">&times;</span>`;
+  t.onclick = () => { if (n.link) location.href = n.link; };
+  t.querySelector(".tx").onclick = (e) => { e.stopPropagation(); t.classList.remove("show"); setTimeout(() => t.remove(), 300); };
+  wrap.appendChild(t);
+  requestAnimationFrame(() => t.classList.add("show"));
+  setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 300); }, 6500);
 }
 
 /* Reveal the classified Athena link only to agency members. */

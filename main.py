@@ -2575,6 +2575,43 @@ def _passport_stamps(user, records):
 
 
 @app.route("/passport_data")
+def _achievements(user, records, net_worth):
+    """Medals earned by this citizen — computed live from their activity."""
+    me = user["username"]
+    low = " ".join((r.get("entry") or "").lower() for r in records)
+    has_passport = PASSPORT_MARK in low
+    has_oath = OATH_MARK in low
+    visas = len(set(re.findall(r"\[visa:([a-z0-9_]+)\]", low)))
+    try:
+        companies = supabase.table("companies").select("id", count="exact").eq("founder", me).execute().count or 0
+    except Exception:
+        companies = 0
+    has_shares = any((h.get("shares") or 0) > 0 for h in
+                     (supabase.table("holdings").select("shares").eq("username", me).execute().data or []))
+    employed = bool(supabase.table("employment").select("id").eq("username", me)
+                    .eq("status", "employed").limit(1).execute().data)
+    try:
+        referrals = supabase.table("cybucks").select("id", count="exact").eq("referred_by", me).execute().count or 0
+    except Exception:
+        referrals = 0
+    office = bool(_gov_role(me))
+    defs = [
+        ("passport", "Passport Holder", "fa-passport", "#58c4ff", "Issue a national passport", has_passport),
+        ("oath", "Sworn Citizen", "fa-hand-fist", "#1fd6a6", "Swear the Oath of Allegiance", has_oath),
+        ("founder", "Entrepreneur", "fa-briefcase", "#ffce56", "Found a company", companies >= 1),
+        ("mogul", "Business Mogul", "fa-city", "#ff8fb0", "Found 3 companies", companies >= 3),
+        ("investor", "Investor", "fa-arrow-trend-up", "#22d3ee", "Own shares in a company", has_shares),
+        ("worker", "Working Citizen", "fa-user-tie", "#a78bfa", "Get hired at a company", employed),
+        ("millionaire", "Millionaire", "fa-sack-dollar", "#ffce56", "Reach 1,000,000 CB net worth", net_worth >= 1_000_000),
+        ("globetrotter", "Globetrotter", "fa-earth-americas", "#34d399", "Visit all 5 states", visas >= 5),
+        ("recruiter", "Recruiter", "fa-user-plus", "#ff8fb0", "Invite a friend who joins", referrals >= 1),
+        ("patriot", "Patriot", "fa-flag", "#ff5d6c", "Recruit 5+ citizens", referrals >= 5),
+        ("statesman", "Statesman", "fa-landmark", "#ffce56", "Hold a government office", office),
+    ]
+    return [{"key": k, "name": n, "icon": i, "color": c, "desc": d, "earned": bool(e)}
+            for (k, n, i, c, d, e) in defs]
+
+
 def passport_data():
     user = get_current_user(run_economics=False)
     if not user:
@@ -2585,6 +2622,7 @@ def passport_data():
     issued = next((r.get("created_at") for r in records
                    if PASSPORT_MARK in (r.get("entry") or "").lower()), None)
     oath = any(OATH_MARK in (r.get("entry") or "").lower() for r in records)
+    nw = user_net_worth(user["username"])
     return jsonify(success=True, passport={
         "number": pno,
         "citizen_no": _citizen_number(user),
@@ -2596,10 +2634,10 @@ def passport_data():
         "expiry": _add_years_iso(issued, 5) if issued else None,
         "oath": oath,
         "avatar": user.get("avatar"),
-        "net_worth": user_net_worth(user["username"]),
+        "net_worth": nw,
         "mrz": _mrz(user["username"], pno),
         "stamps": _passport_stamps(user, records),
-    })
+    }, achievements=_achievements(user, records, nw))
 
 
 @limiter.limit("10/min")

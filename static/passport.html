@@ -66,6 +66,18 @@
     .notyet{ text-align:center; padding:2.5rem 1rem; }
     .notyet i{ font-size:2.4rem; color:var(--accent); }
     .msg{ text-align:center; font-size:.88rem; margin-top:1rem; min-height:1.2em; }
+    /* medals */
+    .medals{ display:grid; gap:.9rem; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); }
+    .medal{ text-align:center; padding:1.1rem .8rem; border-radius:16px; border:1px solid var(--panel-border);
+      background:var(--panel); transition:.2s; }
+    .medal.on{ box-shadow:0 8px 24px rgba(0,0,0,.3); }
+    .medal.on:hover{ transform:translateY(-4px); }
+    .medal.off{ opacity:.42; filter:grayscale(.7); }
+    .mic{ width:56px; height:56px; margin:0 auto .6rem; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:1.5rem; background:var(--panel-2); color:var(--muted); border:2px solid var(--panel-border); }
+    .medal.on .mic{ border-color:transparent; box-shadow:0 6px 18px rgba(0,0,0,.35); }
+    .mn{ font-weight:700; font-size:.92rem; }
+    .md{ font-size:.72rem; color:var(--muted); margin-top:.2rem; line-height:1.35; }
   </style>
 </head>
 <body>
@@ -82,6 +94,7 @@
 
     <div id="viewC"></div>
     <div id="viewP" style="display:none;"></div>
+    <div id="medalsBox"></div>
     <p id="msg" class="msg"></p>
   </div>
 
@@ -193,11 +206,26 @@
       catch(e){ msg(e.message); }
     }
 
+    function renderMedals(list){
+      list = list || [];
+      const earned = list.filter(a=>a.earned).length;
+      document.getElementById("medalsBox").innerHTML = `
+        <h3 class="section-title" style="font-size:1.4rem;margin-top:2.4rem;"><i class="fas fa-medal"></i> Honours &amp; Medals</h3>
+        <p class="section-sub" style="margin-bottom:1.4rem;">${earned} of ${list.length} earned. Achievements unlock automatically as you build your life in Cyvathon.</p>
+        <div class="medals">${list.map(a=>`
+          <div class="medal ${a.earned?'on':'off'}" title="${esc(a.desc)}">
+            <div class="mic" ${a.earned?`style="background:${a.color};color:#06223a;"`:''}><i class="fas ${a.icon}"></i></div>
+            <div class="mn">${esc(a.name)}</div>
+            <div class="md">${esc(a.desc)}</div>
+          </div>`).join("")}</div>`;
+    }
+
     async function load(){
       const d = await api("/passport_data");
       P = d.passport;
       renderCitizenship();
       renderPassport();
+      renderMedals(d.achievements);
     }
 
     (async function(){
