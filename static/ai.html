@@ -8,16 +8,43 @@
   <link rel="stylesheet" href="/static/theme.css">
   <style>
     .ai-wrap{ max-width:760px; margin:0 auto; }
-    .feed{ min-height:46vh; max-height:60vh; overflow-y:auto; display:flex; flex-direction:column; gap:.9rem; padding:.4rem; margin-bottom:1rem; }
-    .msg{ display:flex; gap:.7rem; align-items:flex-start; max-width:88%; }
+
+    /* ---- the mascot ---- */
+    .mascot-stage{ display:flex; flex-direction:column; align-items:center; margin-bottom:1rem; }
+    .mascot{ width:132px; height:132px; animation:float 3.6s ease-in-out infinite; }
+    @keyframes float{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-9px) } }
+    .mascot .eye{ transform-origin:center; animation:blink 4.2s infinite; }
+    @keyframes blink{ 0%,94%,100%{ transform:scaleY(1) } 97%{ transform:scaleY(.1) } }
+    .mascot .antenna-tip{ animation:pulse 2s ease-in-out infinite; }
+    @keyframes pulse{ 0%,100%{ opacity:1 } 50%{ opacity:.35 } }
+    .mascot.thinking{ animation:none; }
+    .mascot.thinking .eye{ animation:none; }
+    .bot-name{ font-weight:800; letter-spacing:.5px; margin-top:.4rem;
+      background:linear-gradient(90deg,#a78bfa,#58c4ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+    /* ---- conversation + speech bubbles ---- */
+    .feed{ min-height:34vh; max-height:52vh; overflow-y:auto; display:flex; flex-direction:column; gap:1rem; padding:.4rem; margin-bottom:1rem; }
+    .msg{ display:flex; gap:.6rem; align-items:flex-end; max-width:88%; }
     .msg.me{ flex-direction:row-reverse; align-self:flex-end; }
-    .av{ width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.9rem;
-      color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
-    .msg.ai .av{ background:linear-gradient(135deg,#a78bfa,#7b4bc0); color:#fff; }
-    .bubble{ background:#1b232e; border:1px solid #2a3340; padding:.7rem 1rem; border-radius:15px; line-height:1.5; white-space:pre-wrap; word-wrap:break-word; overflow-wrap:anywhere; }
-    .msg.me .bubble{ background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#06223a; border:none; }
-    html[data-theme="light"] .bubble{ background:#eef2f8; border-color:#d8e0ec; color:#12243d; }
-    .bubble.think{ color:var(--muted); font-style:italic; }
+    .mini{ width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-size:.85rem; color:#fff; background:linear-gradient(135deg,#a78bfa,#7b4bc0); box-shadow:0 3px 8px rgba(0,0,0,.3); }
+    .msg.me .mini{ color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .bubble{ position:relative; background:#fff; color:#1a2536; padding:.8rem 1.1rem; border-radius:18px;
+      line-height:1.5; white-space:pre-wrap; word-wrap:break-word; overflow-wrap:anywhere; font-size:.95rem;
+      box-shadow:0 4px 14px rgba(0,0,0,.28); animation:pop .22s cubic-bezier(.2,.9,.3,1.3) both; }
+    /* comic tail for the AI (points left toward the mascot) */
+    .msg.ai .bubble{ border-bottom-left-radius:5px; }
+    .msg.ai .bubble::before{ content:""; position:absolute; left:-8px; bottom:8px;
+      border:8px solid transparent; border-right-color:#fff; border-left:0; filter:drop-shadow(-2px 2px 2px rgba(0,0,0,.12)); }
+    /* the citizen speaks on the right in accent */
+    .msg.me .bubble{ background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#06223a; border-bottom-right-radius:5px; box-shadow:0 4px 14px rgba(58,160,238,.3); }
+    .msg.me .bubble::after{ content:""; position:absolute; right:-8px; bottom:8px;
+      border:8px solid transparent; border-left-color:var(--accent2); border-right:0; }
+    @keyframes pop{ from{ transform:translateY(8px) scale(.94); opacity:0 } to{ transform:none; opacity:1 } }
+    .dots span{ display:inline-block; width:7px; height:7px; margin:0 1px; border-radius:50%; background:#8a93a3; animation:bd 1s infinite; }
+    .dots span:nth-child(2){ animation-delay:.15s } .dots span:nth-child(3){ animation-delay:.3s }
+    @keyframes bd{ 0%,60%,100%{ transform:translateY(0); opacity:.4 } 30%{ transform:translateY(-5px); opacity:1 } }
+
     .suggest{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1rem; justify-content:center; }
     .suggest button{ width:auto; margin:0; padding:.5rem .9rem; font-size:.83rem; background:var(--panel-2);
       color:var(--text); border:1px solid var(--panel-border); box-shadow:none; }
@@ -31,8 +58,27 @@
   <div id="nav"></div>
 
   <div class="wrap ai-wrap">
-    <h2 class="section-title"><i class="fas fa-robot"></i> Cyvathon AI</h2>
-    <p class="section-sub">Your guide to the Republic. Ask how anything works — the Bank, companies, states, passports, elections, or the economy.</p>
+    <div class="mascot-stage">
+      <svg class="mascot" id="mascot" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cyvathon AI mascot">
+        <defs>
+          <linearGradient id="mg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#58c4ff"/>
+          </linearGradient>
+        </defs>
+        <line x1="60" y1="20" x2="60" y2="9" stroke="url(#mg)" stroke-width="3" stroke-linecap="round"/>
+        <circle class="antenna-tip" cx="60" cy="7" r="5" fill="#58c4ff"/>
+        <rect x="20" y="20" width="80" height="66" rx="22" fill="url(#mg)"/>
+        <rect x="30" y="30" width="60" height="46" rx="15" fill="#0e1320"/>
+        <circle cx="46" cy="52" r="8" fill="#fff"/><circle class="eye" cx="46" cy="52" r="4" fill="#0e1320"/>
+        <circle cx="74" cy="52" r="8" fill="#fff"/><circle class="eye" cx="74" cy="52" r="4" fill="#0e1320"/>
+        <path d="M48 64 Q60 72 72 64" stroke="#58c4ff" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="34" cy="63" r="4" fill="#ff8fb0" opacity=".55"/><circle cx="86" cy="63" r="4" fill="#ff8fb0" opacity=".55"/>
+        <rect x="40" y="88" width="40" height="20" rx="8" fill="url(#mg)" opacity=".9"/>
+        <rect x="30" y="92" width="10" height="4" rx="2" fill="url(#mg)"/><rect x="80" y="92" width="10" height="4" rx="2" fill="url(#mg)"/>
+      </svg>
+      <div class="bot-name">CYVATHON AI</div>
+      <p class="small" style="margin:.2rem 0 0;">Your friendly guide to the Republic</p>
+    </div>
 
     <div class="suggest" id="suggest">
       <button onclick="ask(this.textContent)">How do I found a company?</button>
@@ -55,12 +101,12 @@
     let ME=null, history=[], busy=false;
     const esc=(s)=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;");
 
-    function add(role, text){
+    function add(role, html, isHtml){
       const feed=document.getElementById("feed");
       const wrap=document.createElement("div");
       wrap.className="msg "+(role==="me"?"me":"ai");
-      const av = role==="me" ? (ME?ME[0].toUpperCase():"U") : '<i class="fas fa-robot"></i>';
-      wrap.innerHTML=`<div class="av">${av}</div><div class="bubble">${esc(text)}</div>`;
+      const mini = role==="me" ? esc(ME?ME[0].toUpperCase():"U") : '<i class="fas fa-robot"></i>';
+      wrap.innerHTML=`<div class="mini">${mini}</div><div class="bubble">${isHtml?html:esc(html)}</div>`;
       feed.appendChild(wrap); feed.scrollTop=feed.scrollHeight;
       return wrap.querySelector(".bubble");
     }
@@ -74,7 +120,8 @@
       document.getElementById("suggest").style.display="none";
       add("me", msg);
       history.push({role:"user", content:msg});
-      const think=add("ai","Thinking…"); think.classList.add("think");
+      const think=add("ai", '<span class="dots"><span></span><span></span><span></span></span>', true);
+      document.getElementById("mascot").classList.add("thinking");
       busy=true;
       try{
         const res=await fetch("/ai_ask",{method:"POST",credentials:"include",
@@ -82,11 +129,14 @@
           body:JSON.stringify({message:msg, history:history.slice(-6)})});
         const d=await res.json();
         const reply=d.reply||"No response.";
-        think.classList.remove("think"); think.textContent=reply;
+        think.textContent=reply;
         history.push({role:"assistant", content:reply});
       }catch(e){
-        think.classList.remove("think"); think.textContent="Sorry — I couldn't reach the assistant. Try again.";
-      }finally{ busy=false; document.getElementById("feed").scrollTop=document.getElementById("feed").scrollHeight; }
+        think.textContent="Beep boop — I couldn't reach my brain. Try again!";
+      }finally{
+        busy=false; document.getElementById("mascot").classList.remove("thinking");
+        document.getElementById("feed").scrollTop=document.getElementById("feed").scrollHeight;
+      }
     }
 
     function autogrow(t){ t.style.height="auto"; t.style.height=Math.min(t.scrollHeight,120)+"px"; }
@@ -94,7 +144,7 @@
     (async function(){
       const user=await requireAuth(); if(!user) return;
       ME=user.username; renderNav("/ai", user);
-      add("ai", `Hi${ME?" "+ME:""}! 👋 I'm Cyvathon AI — your guide to the Republic. Tap a question above or ask me anything about how Cyvathon works.`);
+      add("ai", `Hi${ME?" "+ME:""}! 👋 I'm Cyvathon AI. Tap a question above, or ask me anything about how the Republic works!`);
       const t=document.getElementById("q");
       t.addEventListener("input",()=>autogrow(t));
       t.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); ask(); }});
