@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .sumgrid{ display:grid; gap:1rem; grid-template-columns:repeat(4,1fr); margin-bottom:2rem; }
+    @media(max-width:640px){ .sumgrid{ grid-template-columns:repeat(2,1fr); } }
+    .sc{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; padding:1.25rem 1.1rem; text-align:center; }
+    .sc .l{ font-size:.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
+    .sc .v{ font-size:1.7rem; font-weight:800; letter-spacing:-.5px; margin-top:.25rem; }
+    .sc .s{ font-size:.72rem; color:var(--muted); margin-top:.2rem; }
+    .hgrid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); }
+    .h{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; padding:1.2rem 1.3rem; transition:.2s; }
+    .h:hover{ transform:translateY(-4px); border-color:rgba(88,196,255,.35); box-shadow:0 12px 30px rgba(0,0,0,.3); }
+    .h .top{ display:flex; align-items:center; gap:.75rem; margin-bottom:.7rem; }
+    .h .logo{ width:44px; height:44px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:1.15rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .h h3{ margin:0; font-size:1.05rem; }
+    .h .founder{ font-size:.72rem; color:var(--gold); }
+    .h .rows .r{ display:flex; justify-content:space-between; padding:.35rem 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:.88rem; }
+    .h .rows .r .k{ color:var(--muted); }
+    .h .mv{ color:var(--accent); font-weight:700; }
+    .h a{ display:block; text-align:center; margin-top:.8rem; padding:.5rem; border-radius:10px; text-decoration:none;
+      background:var(--panel-2); color:var(--accent); border:1px solid rgba(88,196,255,.3); font-size:.85rem; font-weight:600; }
+    .h a:hover{ background:rgba(88,196,255,.12); }
+    .empty{ text-align:center; padding:3rem 1rem; color:var(--muted); }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <h2 class="section-title"><i class="fas fa-chart-pie"></i> My Portfolio</h2>
+    <p class="section-sub">Everything you own — cash across all currencies and your company shareholdings, valued live.</p>
+
+    <div class="sumgrid" id="summary"></div>
+    <h3 style="margin-bottom:1rem;"><i class="fas fa-layer-group"></i> Holdings <span id="posCount" class="tag"></span></h3>
+    <div class="hgrid" id="holdings"></div>
+    <p id="msg" class="small" style="text-align:center;margin-top:1.4rem;"></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      renderNav("/portfolio", user);
+      let d;
+      try{ d=await api("/portfolio_data"); }
+      catch(e){ document.getElementById("msg").textContent=e.message; document.getElementById("msg").style.color="var(--red)"; return; }
+
+      document.getElementById("summary").innerHTML = `
+        <div class="sc"><div class="l">Net Worth</div><div class="v" style="color:var(--accent)">${fmt(d.net_worth)}</div><div class="s">CB (backed value)</div></div>
+        <div class="sc"><div class="l">Cash</div><div class="v">${fmt(d.cash.cybucks)}</div><div class="s">≈ ${fmt(d.cash_cb)} CB all currencies</div></div>
+        <div class="sc"><div class="l">Investments</div><div class="v" style="color:var(--green)">${fmt(d.market_total)}</div><div class="s">CB market value</div></div>
+        <div class="sc"><div class="l">Backed (NAV)</div><div class="v" style="color:var(--gold)">${fmt(d.book_total)}</div><div class="s">CB book value</div></div>`;
+
+      const hs=d.holdings||[];
+      document.getElementById("posCount").textContent = hs.length ? `${hs.length} position${hs.length===1?'':'s'}` : '';
+      const host=document.getElementById("holdings");
+      if(!hs.length){
+        host.outerHTML = `<div class="empty"><i class="fas fa-arrow-trend-up" style="font-size:2.4rem;color:var(--accent)"></i>
+          <p style="margin:.7rem 0;">You don't hold any shares yet.</p>
+          <a class="link" href="/exchange"><i class="fas fa-chart-line"></i> Visit the Stock Exchange to invest →</a></div>`;
+        return;
+      }
+      host.innerHTML = hs.map(h=>`
+        <div class="h">
+          <div class="top">
+            <div class="logo">${esc(h.name[0].toUpperCase())}</div>
+            <div><h3>${esc(h.name)}</h3>${h.is_founder?'<span class="founder"><i class="fas fa-crown"></i> You founded this</span>':`<span class="small muted">by ${esc(h.founder)}</span>`}</div>
+          </div>
+          <div class="rows">
+            <div class="r"><span class="k">Shares held</span><b>${fmt(h.shares)}</b></div>
+            <div class="r"><span class="k">Price / share</span><b>${fmt(h.price)} CB</b></div>
+            <div class="r"><span class="k">Market value</span><b class="mv">${fmt(h.market_value)} CB</b></div>
+            <div class="r"><span class="k">Backed value</span><b>${fmt(h.book_value)} CB</b></div>
+          </div>
+          <a href="/exchange?company=${h.company_id}"><i class="fas fa-right-left"></i> Trade</a>
+        </div>`).join("");
+    })();
+  </script>
+</body>
+</html>

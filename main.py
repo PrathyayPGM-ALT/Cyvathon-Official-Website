@@ -737,6 +737,10 @@ def treasury_page():
 def login_page():
     return app.send_static_file("login.html")
 
+@app.route("/portfolio")
+def portfolio_page():
+    return app.send_static_file("portfolio.html")
+
 @app.route("/exchange")
 def exchange_page():
     return app.send_static_file("exchange.html")
@@ -1616,6 +1620,45 @@ def exchange_portfolio():
         })
     return jsonify(success=True, holdings=out, total_value=round(total, 2),
                    cash=user.get("balance") or 0)
+
+
+@app.route("/portfolio_data")
+def portfolio_data():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    rows = supabase.table("holdings").select("*").eq("username", me).execute().data or []
+    holdings, market_total, book_total = [], 0.0, 0.0
+    for h in rows:
+        sh = h.get("shares") or 0
+        if sh <= 0:
+            continue
+        c = supabase.table("companies").select("id,name,founder,cofounders,balance,shares,last_price,ipo_price") \
+            .eq("id", h["company_id"]).execute().data
+        if not c:
+            continue
+        c = c[0]
+        price = c.get("last_price") or c.get("ipo_price") or 0
+        comp_shares = c.get("shares") or 0
+        nav = (max(c.get("balance") or 0, 0) / comp_shares) if comp_shares > 0 else 0
+        mv, bv = round(price * sh, 2), round(nav * sh, 2)
+        market_total += mv
+        book_total += bv
+        holdings.append({
+            "company_id": c["id"], "name": c["name"], "shares": sh,
+            "price": round(price, 2), "market_value": mv, "book_value": bv,
+            "founder": c["founder"], "is_founder": me in company_founders(c),
+        })
+    holdings.sort(key=lambda x: -x["market_value"])
+    cash = {"cybucks": user.get("balance") or 0, "pufb": user.get("pufb") or 0,
+            "aquilines": user.get("aquilines") or 0, "cybits": user.get("cybits") or 0}
+    cash_cb = round(cash["cybucks"] + cash["pufb"] * CYBUCK_VALUE["pufb"]
+                    + cash["aquilines"] * CYBUCK_VALUE["aquilines"]
+                    + cash["cybits"] * CYBUCK_VALUE["cybit"], 2)
+    return jsonify(success=True, holdings=holdings,
+                   market_total=round(market_total, 2), book_total=round(book_total, 2),
+                   cash=cash, cash_cb=cash_cb, net_worth=user_net_worth(me))
 
 
 @limiter.limit("10/min")
