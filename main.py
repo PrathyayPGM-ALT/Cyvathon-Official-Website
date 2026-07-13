@@ -4585,21 +4585,82 @@ def group_send(gid):
 # ============================================================
 #  AI ASSISTANT
 # ============================================================
-@limiter.limit("10/min")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+CYVATHON_GUIDE = """You are Cyvathon AI, the friendly in-app guide for Cyvathon — a cyber micronation web app. Your job is to help citizens understand the website and the nation. Be warm, concise and practical, and point people to the right page (e.g. "head to the Bank at /bank"). Only discuss Cyvathon; if asked something unrelated, gently steer back. Never invent features that don't exist. Use short paragraphs or bullet points.
+
+ABOUT CYVATHON — a digital micronation with a live economy and an elected government.
+
+CURRENCIES: The Cybuck (CB) is the main currency. Pegs: 1 CB = 1 Pufferbuck (PUFB) = 10 Aquilines (AQ) = 50 Cybits (CBT). Cybits are the small "change" of a Cybuck — fractional Cybucks are automatically kept as Cybits so Cybuck balances stay whole. New citizens receive 100 of each currency.
+
+MONEY — the Bank (/bank): send money to other citizens, convert between the four currencies, a Savings account (5% monthly interest), Government Bonds (+10% after 30 days), and Loans up to 5000 CB (/loans). A 10% VAT is collected monthly into the Treasury. Borrowed money and your welcome grant can't be transferred away — only money you've earned.
+
+BUSINESS: Found a company for 1000 CB (/company); take it public (IPO) and trade its shares on the Stock Exchange (/exchange); pay dividends to shareholders. The Jobs Board (/jobs) lets you apply to any company for a salaried role. Marketplaces: the national Import & Export hub (/marketplace) and per-state local markets.
+
+STATES (/states): five states — Neonhaven, Cryptvale, Silica Plains, Portus Mare, and Aetheris (the national capital). Each has its own marketplace. To enter a state you pass Border Control (you need a Passport; the capital Aetheris also requires the Oath of Allegiance). "Settle" in a state to become a resident and join its chat channel. The President resides in the capital.
+
+IDENTITY: your ID Card (/profile) shows your record and balances; you can set a profile picture there. Issue a Passport and swear the Oath of Allegiance (/passport) to become a sworn citizen and collect visa stamps by clearing state borders.
+
+GOVERNMENT: a President leads the nation; the Prime Minister and Judge are elected by vote (/voting). The Legislature (/legislature) is where citizens table and vote on bills; the Gazette (/gazette) records laws and decrees; the National Court (/court) rules on cases; report a crime with an FIR (/fir); Ministries (/ministries) run departments with budgets; the Treasury (/treasury) holds national funds.
+
+COMMUNITY: Chat (/chat) is a full messenger — public square, group channels, per-state channels and DMs, with @mentions, replies, typing indicators, GIFs and image sharing. Browse the Citizens directory (/citizens) and National News (/news).
+
+CASINO (/casino): bet Cybucks against the House (the Treasury) — Coin Flip, Lucky Number dice, and Slots.
+
+GROW CYVATHON: invite friends via /invite — you earn 500 CB for every friend who joins on your link and gets approved by the President. New signups are reviewed and approved by the President before they can log in, to keep bad actors out.
+"""
+
+
+def _ai_context(user):
+    if not user:
+        return "\nThe person asking is a guest (not logged in)."
+    return (f"\nYou are helping the citizen {user['username']} "
+            f"(role: {user.get('designation', 'Citizen')}). Their balances: "
+            f"{user.get('balance', 0)} CB, {user.get('pufb', 0)} PUFB, "
+            f"{user.get('aquilines', 0)} AQ, {user.get('cybits', 0)} Cybits. "
+            f"Address them by name when natural.")
+
+
+def _groq_reply(messages):
+    import requests
+    r = requests.post("https://api.groq.com/openai/v1/chat/completions",
+                      headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+                      json={"model": GROQ_MODEL, "temperature": 0.4, "max_tokens": 700,
+                            "messages": messages}, timeout=30)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].strip()
+
+
+@limiter.limit("20/min")
 @app.route("/ai_ask", methods=["POST"])
 def ai_ask():
     try:
-        if genai_client is None:
-            return jsonify(reply="Cyvathon AI is offline (no API key configured)."), 200
-        data = request.get_json(force=True)
-        message = data.get("message", "").strip()
+        data = request.get_json(force=True) or {}
+        message = (data.get("message") or "").strip()
         if not message:
             return jsonify(reply="Please enter a message."), 200
-        response = genai_client.models.generate_content(
-            model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"), contents=message
-        )
-        reply = response.text if response.text else "No response generated."
-        return jsonify(reply=reply), 200
+        user = get_current_user(run_economics=False)
+        system = CYVATHON_GUIDE + _ai_context(user)
+
+        if GROQ_API_KEY:
+            msgs = [{"role": "system", "content": system}]
+            for h in (data.get("history") or [])[-6:]:      # recent conversation turns
+                role = "assistant" if h.get("role") == "assistant" else "user"
+                msgs.append({"role": role, "content": str(h.get("content", ""))[:1500]})
+            msgs.append({"role": "user", "content": message[:2000]})
+            try:
+                return jsonify(reply=_groq_reply(msgs)), 200
+            except Exception as e:
+                logging.warning("Groq failed, falling back: %s", e)
+
+        if genai_client is not None:
+            resp = genai_client.models.generate_content(
+                model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+                contents=system + "\n\nCitizen's question: " + message)
+            return jsonify(reply=(resp.text or "No response generated.")), 200
+
+        return jsonify(reply="Cyvathon AI is offline — an admin needs to set a GROQ_API_KEY."), 200
     except Exception as e:
         logging.exception("Cyvathon AI error: %s", e)
         return jsonify(reply="Cyvathon AI backend error. Check server logs."), 500
