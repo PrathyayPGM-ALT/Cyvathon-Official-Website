@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>War Room · Classified</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .crest{ text-align:center; font-size:2.6rem; }
+    .classified{ display:inline-block; border:2px solid var(--red); color:var(--red); font-weight:800; letter-spacing:3px;
+      padding:.2rem 1rem; border-radius:6px; transform:rotate(-2deg); font-size:.8rem; margin-bottom:.6rem; }
+    .alert{ text-align:center; padding:1.6rem; border-radius:18px; margin-bottom:1.8rem; border:2px solid var(--panel-border); }
+    .alert .lvl{ font-size:2rem; font-weight:800; letter-spacing:2px; }
+    .alert .by{ font-size:.8rem; color:var(--muted); margin-top:.3rem; }
+    .alert.peace{ border-color:var(--green); background:rgba(31,214,166,.08); } .alert.peace .lvl{ color:var(--green); }
+    .alert.alertlvl{ border-color:var(--gold); background:rgba(255,206,86,.08); } .alert.alertlvl .lvl{ color:var(--gold); }
+    .alert.war{ border-color:var(--red); background:rgba(255,93,108,.1); animation:warpulse 1.7s infinite; } .alert.war .lvl{ color:var(--red); }
+    @keyframes warpulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,93,108,.35) } 50%{ box-shadow:0 0 34px 5px rgba(255,93,108,.22) } }
+    .lvlbtns{ display:flex; gap:.5rem; flex-wrap:wrap; }
+    .lvlbtns button{ width:auto; margin:0; padding:.5rem 1rem; font-size:.85rem; }
+    .rally{ border-left:4px solid var(--gold); background:var(--panel); border-radius:0 12px 12px 0; padding:1.1rem 1.3rem; white-space:pre-wrap; }
+    .threat{ background:var(--bg-soft); border-left:3px solid var(--red); border-radius:0 8px 8px 0; padding:.5rem .8rem; margin-bottom:.45rem; }
+    .threat .p{ font-family:"Courier New",monospace; font-size:.8rem; color:var(--gold); word-break:break-all; }
+    .sb{ font-size:.72rem; font-weight:700; padding:.15rem .6rem; border-radius:20px; }
+    .sb.up{ background:rgba(31,214,166,.15); color:var(--green); } .sb.down{ background:rgba(255,93,108,.15); color:var(--red); }
+    .mem{ display:flex; justify-content:space-between; align-items:center; padding:.5rem .3rem; border-bottom:1px solid rgba(255,255,255,.06); }
+    .ops{ display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.7rem; }
+    .ops input{ width:auto; flex:1; min-width:140px; margin:0; padding:.5rem .7rem; }
+    .ops button{ width:auto; margin:0; padding:.5rem .9rem; font-size:.85rem; }
+    .deny{ text-align:center; padding:5rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+  <div class="wrap" style="max-width:820px;"><div id="view"></div></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let PRES=false;
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const ul=(n)=> !n ? '<span class="muted">unknown</span>' : `<a class="link" href="/profile?user=${encodeURIComponent(n)}">${esc(n)}</a>`;
+    const LVL={ peace:["peace","🟢 DEFCON: PEACE"], alert:["alertlvl","🟡 DEFCON: ALERT"], war:["war","🔴 DEFCON: WAR"] };
+
+    async function load(){
+      let d;
+      try{ d=await api("/warroom/data"); }
+      catch(e){
+        document.getElementById("view").innerHTML=`<div class="deny"><div class="crest">⚔️</div>
+          <h2 style="letter-spacing:3px;">CLASSIFIED</h2><p class="muted">${esc(e.message)}</p>
+          <a class="link" href="/">← Return</a></div>`; return;
+      }
+      PRES=d.is_president;
+      const lv=LVL[d.alert_level]||LVL.peace;
+
+      let html=`<div style="text-align:center;">
+        <div class="crest">⚔️</div>
+        <span class="classified">TOP SECRET · WAR ROOM</span>
+        <h2 class="section-title" style="margin-bottom:.3rem;">Cyvathon War Room</h2>
+        <p class="section-sub">Restricted command post. "Defence, not invasion."</p>
+      </div>`;
+
+      // Alert banner
+      html+=`<div class="alert ${lv[0]}"><div class="lvl">${lv[1]}</div>
+        ${d.updated_by?`<div class="by">Set by ${esc(d.updated_by)}</div>`:''}</div>`;
+
+      // President controls
+      if(PRES){
+        html+=`<div class="panel" style="margin-bottom:1.6rem;">
+          <h3><i class="fas fa-sliders"></i> National Command</h3>
+          <p class="small">Set the national alert level — visible to everyone with War Room access.</p>
+          <div class="lvlbtns">
+            <button onclick="setLevel('peace')" style="background:linear-gradient(135deg,#1fd6a6,#0f9d72)">🟢 Peace</button>
+            <button onclick="setLevel('alert')" style="background:linear-gradient(135deg,#ffce56,#d9a821);color:#3a2a00">🟡 Alert</button>
+            <button class="danger" onclick="setLevel('war')">🔴 War</button>
+          </div>
+          <h4 style="margin:1.2rem 0 .3rem;color:var(--muted)">Rally the Nation</h4>
+          <textarea id="rally" rows="3" placeholder="A message to your war council…">${esc(d.message)}</textarea>
+          <button onclick="saveRally()" style="margin-top:.6rem;"><i class="fas fa-bullhorn"></i> Broadcast Message</button>
+        </div>`;
+      }
+
+      // Rally message
+      if(d.message){
+        html+=`<h3 style="margin-bottom:.6rem;"><i class="fas fa-bullhorn"></i> Word from the President</h3>
+          <div class="rally">${esc(d.message)}</div><div style="height:1.6rem;"></div>`;
+      }
+
+      // Threat feed
+      html+=`<div class="panel" style="margin-bottom:1.6rem;">
+        <h3><i class="fas fa-triangle-exclamation"></i> Live Intrusion Feed</h3>
+        <p class="small">Firewall-blocked probes against Cyvathon — likely AIA reconnaissance.</p>
+        ${(d.threats||[]).length ? d.threats.map(t=>`<div class="threat"><b>${esc(t.ip)}</b> <span class="small muted">· ${t.ago}s ago</span>
+            <div class="p">${esc(t.path)}</div></div>`).join("")
+          : `<p class="small muted"><i class="fas fa-shield-halved" style="color:var(--green)"></i> No hostile probes detected. The wall holds.</p>`}
+      </div>`;
+
+      // Enemy surveillance
+      const aq=(d.surveil||{}).aquilithia, s=aq&&aq.state;
+      html+=`<div class="panel" style="margin-bottom:1.6rem;">
+        <h3><i class="fas fa-satellite-dish"></i> Enemy Watch — Aquilithia</h3>
+        ${s?`<p style="margin:.4rem 0;"><span class="sb ${s.up?'up':'down'}">${s.up?'● ONLINE':'● OFFLINE'}</span>
+            <span class="small muted">&nbsp; ${s.version?'v'+esc(s.version):'v?'} · ${s.up?s.ms+'ms':'unreachable'} · checked ${s.ago}s ago</span></p>
+          <p class="small muted">${esc(aq.target)}</p>`
+          : `<p class="small muted">No surveillance data yet — Athena will report in.</p>`}
+      </div>`;
+
+      // War council (President only)
+      if(PRES){
+        html+=`<div class="panel">
+          <h3><i class="fas fa-users-gear"></i> War Council <span class="tag">${(d.members||[]).length} cleared</span></h3>
+          <p class="small">Only you and these citizens can see the War Room.</p>
+          <div>${(d.members||[]).length ? d.members.map(m=>`<div class="mem">${ul(m)}
+              <button class="danger" style="width:auto;margin:0;padding:.3rem .8rem;font-size:.8rem;" onclick="revoke('${esc(m)}')">Revoke</button></div>`).join("")
+            : '<p class="small muted">No one else has access yet.</p>'}</div>
+          <div class="ops"><input id="grantU" placeholder="Grant a citizen access…"><button onclick="grant()">Grant Access</button></div>
+          <p id="msg" class="small" style="text-align:center;"></p>
+        </div>`;
+      }
+
+      document.getElementById("view").innerHTML=html;
+    }
+
+    async function setLevel(lvl){ try{ await api("/warroom/set",{method:"POST",body:JSON.stringify({alert_level:lvl})}); load(); }catch(e){ alert(e.message); } }
+    async function saveRally(){ const m=document.getElementById("rally").value; try{ await api("/warroom/set",{method:"POST",body:JSON.stringify({message:m})}); load(); }catch(e){ alert(e.message); } }
+    async function grant(){ const u=document.getElementById("grantU").value.trim(); if(!u) return;
+      try{ await api("/warroom/grant",{method:"POST",body:JSON.stringify({username:u})}); load(); }
+      catch(e){ document.getElementById("msg").textContent=e.message; document.getElementById("msg").style.color="var(--red)"; } }
+    async function revoke(u){ try{ await api("/warroom/revoke",{method:"POST",body:JSON.stringify({username:u})}); load(); }catch(e){ alert(e.message); } }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      renderNav("/warroom", user);
+      load();
+    })();
+  </script>
+</body>
+</html>

@@ -801,6 +801,10 @@ def fir_page():
 def athena_page():
     return app.send_static_file("athena.html")
 
+@app.route("/warroom")
+def warroom_page():
+    return app.send_static_file("warroom.html")
+
 
 # ============================================================
 #  AUTH  (single account gates bank + chat + everything)
@@ -976,7 +980,8 @@ def me():
     user = get_current_user()
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-    return jsonify(success=True, user=public_user(user), admin=is_treasury_admin(user), cia=is_cia(user))
+    return jsonify(success=True, user=public_user(user), admin=is_treasury_admin(user),
+                   cia=is_cia(user), war=_war_cleared(user))
 
 
 @app.route("/users")
@@ -3861,6 +3866,110 @@ def athena_surveil():
         if not st or time() - st["ts"] >= SURVEIL_MIN_GAP:   # only actually ping when stale
             _do_surveil(key)
     return jsonify(success=True, surveil=_surveil_payload())
+
+
+# ============================================================
+#  WAR ROOM  (President-controlled, restricted access)
+# ============================================================
+def _war_room():
+    """The single war-room state row (id=1). Creates it on demand. Fail-open."""
+    try:
+        r = supabase.table("war_room").select("*").eq("id", 1).execute().data
+        if r:
+            return r[0]
+        row = {"id": 1, "alert_level": "peace", "message": "", "members": []}
+        try:
+            supabase.table("war_room").insert(row).execute()
+        except Exception:
+            pass
+        return row
+    except Exception:
+        return None      # table not migrated yet
+
+
+def _war_members(wr):
+    m = (wr or {}).get("members")
+    return [str(x) for x in m] if isinstance(m, list) else []
+
+
+def _war_cleared(user):
+    if not user:
+        return False
+    if is_treasury_admin(user):
+        return True
+    return user["username"] in _war_members(_war_room())
+
+
+@app.route("/warroom/data")
+def warroom_data():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not _war_cleared(user):
+        return jsonify(success=False, error="CLASSIFIED — War Room access is restricted."), 403
+    wr = _war_room() or {}
+    now = time()
+    threats = [{"ip": t["ip"], "path": t["path"], "ua": t["ua"], "ago": int(now - t["ts"])}
+               for t in _threats[:20]]
+    return jsonify(success=True,
+                   alert_level=wr.get("alert_level") or "peace",
+                   message=wr.get("message") or "",
+                   updated_by=wr.get("updated_by"),
+                   members=_war_members(wr),
+                   is_president=is_treasury_admin(user),
+                   threats=threats, surveil=_surveil_payload(), me=user["username"])
+
+
+@limiter.limit("30/min")
+@app.route("/warroom/set", methods=["POST"])
+def warroom_set():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json() or {}
+    upd = {"updated_by": user["username"]}
+    if d.get("alert_level") in ("peace", "alert", "war"):
+        upd["alert_level"] = d["alert_level"]
+    if "message" in d:
+        upd["message"] = (d.get("message") or "").strip()[:400]
+    try:
+        _war_room()
+        supabase.table("war_room").update(upd).eq("id", 1).execute()
+    except Exception:
+        return jsonify(success=False, error="War Room isn't enabled yet — the database needs a quick update."), 503
+    return jsonify(success=True)
+
+
+@limiter.limit("30/min")
+@app.route("/warroom/grant", methods=["POST"])
+def warroom_grant():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    target = (request.get_json().get("username") or "").strip()
+    if not supabase.table("cybucks").select("id").eq("username", target).execute().data:
+        return jsonify(success=False, error="No such citizen"), 404
+    wr = _war_room() or {}
+    members = sorted(set(_war_members(wr)) | {target})
+    try:
+        supabase.table("war_room").update({"members": members}).eq("id", 1).execute()
+    except Exception:
+        return jsonify(success=False, error="War Room isn't enabled yet."), 503
+    notify(target, "⚔️ You have been granted access to the Cyvathon War Room.", "/warroom")
+    return jsonify(success=True)
+
+
+@limiter.limit("30/min")
+@app.route("/warroom/revoke", methods=["POST"])
+def warroom_revoke():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    target = (request.get_json().get("username") or "").strip()
+    wr = _war_room() or {}
+    members = [m for m in _war_members(wr) if m != target]
+    supabase.table("war_room").update({"members": members}).eq("id", 1).execute()
+    return jsonify(success=True)
 
 
 # ============================================================

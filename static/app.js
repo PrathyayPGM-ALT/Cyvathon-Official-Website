@@ -108,7 +108,21 @@ function renderNav(active, user) {
   const host = document.getElementById("nav");
   if (host) host.outerHTML = html;
   syncThemeBtn();
-  if (user) { refreshNotifBadge(); revealAthena(); }
+  if (user) { refreshNotifBadge(); revealAthena(); revealWarRoom(); }
+}
+
+/* Reveal the restricted War Room link only to cleared citizens. */
+async function revealWarRoom() {
+  try {
+    const me = await fetchMe();
+    if (!me || !me.war || document.getElementById("warNav")) return;
+    const links = document.querySelector(".nav-links");
+    if (!links) return;
+    const a = document.createElement("a");
+    a.id = "warNav"; a.href = "/warroom"; a.title = "War Room";
+    a.style.color = "var(--red)"; a.innerHTML = "⚔️ War Room";
+    links.insertBefore(a, document.getElementById("navUser") || null);
+  } catch {}
 }
 
 /* Reveal the classified Athena link only to agency members. */
