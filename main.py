@@ -2574,27 +2574,36 @@ def _passport_stamps(user, records):
     return stamps
 
 
-@app.route("/passport_data")
+def _count_rows(table, col, val):
+    try:
+        return supabase.table(table).select("id", count="exact").eq(col, val).execute().count or 0
+    except Exception:
+        return 0
+
+
 def _achievements(user, records, net_worth):
-    """Medals earned by this citizen — computed live from their activity."""
-    me = user["username"]
-    low = " ".join((r.get("entry") or "").lower() for r in records)
-    has_passport = PASSPORT_MARK in low
-    has_oath = OATH_MARK in low
-    visas = len(set(re.findall(r"\[visa:([a-z0-9_]+)\]", low)))
+    """Medals earned by this citizen — computed live. Never raises."""
     try:
-        companies = supabase.table("companies").select("id", count="exact").eq("founder", me).execute().count or 0
+        me = user["username"]
+        low = " ".join((r.get("entry") or "").lower() for r in records)
+        has_passport = PASSPORT_MARK in low
+        has_oath = OATH_MARK in low
+        visas = len(set(re.findall(r"\[visa:([a-z0-9_]+)\]", low)))
+        companies = _count_rows("companies", "founder", me)
+        referrals = _count_rows("cybucks", "referred_by", me)
+        try:
+            has_shares = any((h.get("shares") or 0) > 0 for h in
+                             (supabase.table("holdings").select("shares").eq("username", me).execute().data or []))
+        except Exception:
+            has_shares = False
+        try:
+            employed = bool(supabase.table("employment").select("id").eq("username", me)
+                            .eq("status", "employed").limit(1).execute().data)
+        except Exception:
+            employed = False
+        office = bool(_gov_role(me))
     except Exception:
-        companies = 0
-    has_shares = any((h.get("shares") or 0) > 0 for h in
-                     (supabase.table("holdings").select("shares").eq("username", me).execute().data or []))
-    employed = bool(supabase.table("employment").select("id").eq("username", me)
-                    .eq("status", "employed").limit(1).execute().data)
-    try:
-        referrals = supabase.table("cybucks").select("id", count="exact").eq("referred_by", me).execute().count or 0
-    except Exception:
-        referrals = 0
-    office = bool(_gov_role(me))
+        return []
     defs = [
         ("passport", "Passport Holder", "fa-passport", "#58c4ff", "Issue a national passport", has_passport),
         ("oath", "Sworn Citizen", "fa-hand-fist", "#1fd6a6", "Swear the Oath of Allegiance", has_oath),
@@ -2612,6 +2621,7 @@ def _achievements(user, records, net_worth):
             for (k, n, i, c, d, e) in defs]
 
 
+@app.route("/passport_data")
 def passport_data():
     user = get_current_user(run_economics=False)
     if not user:
