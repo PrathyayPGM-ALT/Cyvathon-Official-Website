@@ -63,6 +63,8 @@
             <input id="captchaA" placeholder="Human check — your answer" autocomplete="off"></div>
         </div>
 
+        <div id="tsBox" style="display:none; margin:.2rem 0 .6rem;"></div>
+
         <input id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" placeholder="Leave this empty">
         <button id="submitBtn" type="submit"><i class="fas fa-right-to-bracket"></i> Login</button>
       </form>
@@ -74,7 +76,7 @@
 
   <script src="/static/app.js"></script>
   <script>
-    let mode = "login", captchaToken = "";
+    let mode = "login", captchaToken = "", TS_ON = false;
     const REF = (new URLSearchParams(location.search).get("ref") || "").trim();
     const $ = (id)=>document.getElementById(id);
 
@@ -82,6 +84,27 @@
       try{ const d = await api("/captcha"); captchaToken = d.token; $("captchaQ").textContent = d.question; }
       catch{ $("captchaQ").textContent = "Human check unavailable — try reloading."; }
     }
+
+    // Cloudflare Turnstile — render only if the server has it configured.
+    window.cfTurnstileReady = function(){
+      try{ window.__tsWidgetId = turnstile.render("#tsBox", { sitekey: window.__tsSiteKey, theme:"dark" }); }
+      catch(e){}
+    };
+    async function initTurnstile(){
+      try{
+        const c = await api("/public_config");
+        if(c.turnstile && c.turnstile_sitekey){
+          TS_ON = true;
+          window.__tsSiteKey = c.turnstile_sitekey;
+          const s = document.createElement("script");
+          s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=cfTurnstileReady";
+          s.async = true; s.defer = true;
+          document.head.appendChild(s);
+          if(mode === "signup"){ $("tsBox").style.display = "block"; $("captchaBox").style.display = "none"; }
+        }
+      }catch{}
+    }
+    function tsReset(){ try{ if(TS_ON && window.turnstile) turnstile.reset(window.__tsWidgetId); }catch(e){} }
 
     function setMode(m){
       mode = m;
@@ -95,10 +118,11 @@
         ? '<i class="fas fa-right-to-bracket"></i> Login'
         : '<i class="fas fa-user-plus"></i> Sign Up';
       $("emailField").style.display = m==="signup" ? "block" : "none";
-      $("captchaBox").style.display = m==="signup" ? "block" : "none";
+      $("captchaBox").style.display = (m==="signup" && !TS_ON) ? "block" : "none";
+      $("tsBox").style.display = (m==="signup" && TS_ON) ? "block" : "none";
       $("password").autocomplete = m==="login" ? "current-password" : "new-password";
       $("msg").textContent = "";
-      if(m==="signup") loadCaptcha();
+      if(m==="signup" && !TS_ON) loadCaptcha();
     }
 
     async function doAuth(){
@@ -108,8 +132,14 @@
       const path = mode==="login" ? "/login" : "/register";
       const body = {username, password};
       if(mode==="signup"){
-        body.captcha_token = captchaToken;
-        body.captcha_answer = $("captchaA").value.trim();
+        if(TS_ON){
+          const tok = (window.turnstile && window.__tsWidgetId!=null) ? turnstile.getResponse(window.__tsWidgetId) : "";
+          if(!tok){ $("msg").style.color="var(--red)"; $("msg").textContent = "Please complete the human check."; return; }
+          body.cf_turnstile_response = tok;
+        } else {
+          body.captcha_token = captchaToken;
+          body.captcha_answer = $("captchaA").value.trim();
+        }
         body.email = $("email").value.trim();
         body.website = $("website").value;
         if(REF) body.ref = REF;
@@ -127,12 +157,16 @@
       }catch(e){
         $("msg").style.color = "var(--red)";
         $("msg").textContent = e.message;
-        if(mode==="signup"){ loadCaptcha(); $("captchaA").value=""; }
+        if(mode==="signup"){
+          if(TS_ON) tsReset();
+          else { loadCaptcha(); $("captchaA").value=""; }
+        }
       }finally{ $("submitBtn").disabled = false; }
     }
 
     (async function(){
       if(await currentUser()){ window.location.href = "/"; return; }
+      await initTurnstile();
       if(REF){
         setMode("signup");
         $("sub").innerHTML = `<i class="fas fa-gift" style="color:var(--accent)"></i> Invited by <b>${REF.replace(/</g,"&lt;")}</b> — join the Republic! New citizens get <b>100 of each currency</b>.`;

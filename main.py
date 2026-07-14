@@ -819,6 +819,45 @@ _captchas = {}   # token -> (answer:int, expires:float)
 
 MAX_ACCOUNTS_PER_IP = 6      # one household/network may hold a handful of citizens — not hundreds
 
+# --- Cloudflare Turnstile (invisible bot protection) --------------------------
+# Enabled only when BOTH env vars are set (site key is public, secret stays in env).
+# When unset, signup falls back to the built-in math CAPTCHA so nothing breaks.
+TURNSTILE_SITEKEY = os.environ.get("TURNSTILE_SITEKEY", "").strip()
+TURNSTILE_SECRET  = os.environ.get("TURNSTILE_SECRET", "").strip()
+
+def _turnstile_on():
+    return bool(TURNSTILE_SITEKEY and TURNSTILE_SECRET)
+
+def _verify_turnstile(token, ip):
+    """Verify a Turnstile token with Cloudflare. Returns True to allow the signup.
+    Fails OPEN if the token is missing only-when the feature is off, or if
+    Cloudflare itself is unreachable (real users aren't locked out; every signup
+    still needs Presidential approval, plus honeypot/IP-cap/strike all still apply)."""
+    if not _turnstile_on():
+        return True
+    if not token:
+        return False
+    try:
+        import requests
+        r = requests.post(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            data={"secret": TURNSTILE_SECRET, "response": token, "remoteip": ip or ""},
+            timeout=8,
+        )
+        return bool(r.json().get("success"))
+    except Exception as ex:
+        logging.warning("Turnstile verify unreachable, allowing: %s", ex)
+        return True
+
+
+@app.route("/public_config")
+def public_config():
+    """Non-secret front-end config (safe to expose). Lets the static login page
+    know whether to render the Turnstile widget and which site key to use."""
+    return jsonify(success=True,
+                   turnstile=_turnstile_on(),
+                   turnstile_sitekey=TURNSTILE_SITEKEY if _turnstile_on() else "")
+
 
 @app.route("/captcha")
 def captcha():
@@ -859,17 +898,23 @@ def register():
         _strike(ip)
         return jsonify(success=False, error="Signup blocked"), 400
 
-    # Human-check (anti-bot CAPTCHA)
-    entry = _captchas.pop(data.get("captcha_token", ""), None)
-    if (not entry or entry[1] < now
-            or str(data.get("captcha_answer", "")).strip() != str(entry[0])):
-        _strike(ip)      # scripts hammering the endpoint auto-temp-ban themselves
-        return jsonify(success=False, error="Incorrect human-check answer — try again"), 400
-
-    # Instant submits (< 1.5s after the challenge loaded) are bots, not humans.
-    if now - entry[2] < 1.5:
-        _strike(ip)
-        return jsonify(success=False, error="Slow down — try again"), 400
+    # Human-check. Cloudflare Turnstile when configured; otherwise the built-in
+    # math CAPTCHA. Either way the honeypot, IP cap and strike system still apply.
+    if _turnstile_on():
+        token = (data.get("cf_turnstile_response") or data.get("cf-turnstile-response") or "").strip()
+        if not _verify_turnstile(token, ip):
+            _strike(ip)
+            return jsonify(success=False, error="Human check failed — please try again"), 400
+    else:
+        entry = _captchas.pop(data.get("captcha_token", ""), None)
+        if (not entry or entry[1] < now
+                or str(data.get("captcha_answer", "")).strip() != str(entry[0])):
+            _strike(ip)      # scripts hammering the endpoint auto-temp-ban themselves
+            return jsonify(success=False, error="Incorrect human-check answer — try again"), 400
+        # Instant submits (< 1.5s after the challenge loaded) are bots, not humans.
+        if now - entry[2] < 1.5:
+            _strike(ip)
+            return jsonify(success=False, error="Slow down — try again"), 400
 
     # Hard cap on accounts per signup IP — the decisive block against mass farming.
     if _ip_account_count(ip) >= MAX_ACCOUNTS_PER_IP:
