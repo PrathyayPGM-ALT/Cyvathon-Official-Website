@@ -370,7 +370,9 @@ def compute_gdp():
     try:
         vp, va, vc = CYBUCK_VALUE["pufb"], CYBUCK_VALUE["aquilines"], CYBUCK_VALUE["cybit"]
         total = 0.0
-        for c in (supabase.table("cybucks").select("balance,pufb,aquilines,cybits,savings").execute().data or []):
+        for c in (supabase.table("cybucks").select("balance,pufb,aquilines,cybits,savings,banned").execute().data or []):
+            if c.get("banned"):      # frozen accounts aren't part of the economy
+                continue
             total += (c.get("balance") or 0) + (c.get("savings") or 0) \
                    + (c.get("pufb") or 0) * vp + (c.get("aquilines") or 0) * va + (c.get("cybits") or 0) * vc
         t = get_treasury()
@@ -1174,10 +1176,13 @@ def treasury_data():
                 "aquilines": t["aquilines"] or 0, "cybit": t.get("cybits") or 0}
 
     # --- Money supply: what citizens hold + what the Treasury holds ---
-    citizens = supabase.table("cybucks").select("balance,pufb,aquilines,cybits").execute().data or []
+    # Banned accounts are frozen — exclude their currency and holder count.
+    citizens = supabase.table("cybucks").select("balance,pufb,aquilines,cybits,banned").execute().data or []
     held = {"cybucks": 0.0, "pufb": 0.0, "aquilines": 0.0, "cybit": 0.0}
     holders = 0
     for c in citizens:
+        if c.get("banned"):
+            continue
         cb, pf, aq, cy = (c.get("balance") or 0), (c.get("pufb") or 0), (c.get("aquilines") or 0), (c.get("cybits") or 0)
         held["cybucks"] += cb; held["pufb"] += pf; held["aquilines"] += aq; held["cybit"] += cy
         if cb or pf or aq or cy:
