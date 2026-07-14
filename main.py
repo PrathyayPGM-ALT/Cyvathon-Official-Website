@@ -4244,11 +4244,17 @@ def admin_unblock():
 def economy():
     def build():
         t = get_treasury()
-        citizens = supabase.table("cybucks").select("id", count="exact").execute()
+        total = supabase.table("cybucks").select("id", count="exact").execute().count or 0
+        try:      # exclude banned citizens, matching the Citizens page (null banned = still a citizen)
+            banned = supabase.table("cybucks").select("id", count="exact") \
+                .eq("banned", True).execute().count or 0
+        except Exception:      # banned column not migrated — count everyone
+            banned = 0
+        citizen_count = max(0, total - banned)
         companies = supabase.table("companies").select("id", count="exact").execute()
         return {
             "success": True, "gdp": compute_gdp(), "treasury": t["balance"],
-            "citizens": citizens.count or 0, "companies": companies.count or 0,
+            "citizens": citizen_count, "companies": companies.count or 0,
             "rates": {"pufb_per_cybuck": PUFB_PER_CYBUCK, "aquilines_per_pufb": AQUILINES_PER_PUFB},
         }
     return jsonify(cached_json("economy", 45, build))
