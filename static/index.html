@@ -85,17 +85,44 @@
     .int-cta{ color:var(--accent); font-weight:800; white-space:nowrap; font-size:1rem; }
 
     /* ---- landing (guest) ---- */
-    .lhero{ text-align:center; max-width:860px; margin:auto; padding:3.8rem 1.5rem 2.4rem; position:relative; }
-    .lhero::before{ content:""; position:absolute; top:-30px; left:50%; transform:translateX(-50%); width:680px; height:520px;
-      background:radial-gradient(circle,rgba(88,196,255,.16),transparent 68%); z-index:-1; pointer-events:none; }
-    .lbadge{ display:inline-flex; align-items:center; gap:.4rem; font-size:.8rem; padding:.35rem 1rem; border-radius:30px;
-      border:1px solid rgba(88,196,255,.3); background:rgba(88,196,255,.08); color:var(--accent); margin-bottom:1.3rem; }
-    .lhero h1{ font-size:3.4rem; font-weight:800; letter-spacing:-1.6px; line-height:1.06; margin-bottom:1.1rem; color:#eef4fb; }
+    .lhero{ text-align:center; margin:auto; padding:5.5rem 1.5rem 3.5rem; position:relative; overflow:hidden; }
+    .lhero-inner{ max-width:900px; margin:auto; position:relative; z-index:1; }
+    /* animated aurora + grid backdrop */
+    .aurora{ position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+    .blob{ position:absolute; border-radius:50%; filter:blur(80px); opacity:.55; animation:floatb 20s ease-in-out infinite; }
+    .blob.b1{ width:440px; height:440px; background:#58c4ff; top:-140px; left:6%; }
+    .blob.b2{ width:400px; height:400px; background:#a78bfa; top:-90px; right:4%; animation-delay:-7s; }
+    .blob.b3{ width:340px; height:340px; background:#1fd6a6; bottom:-160px; left:38%; animation-delay:-13s; opacity:.4; }
+    @keyframes floatb{ 0%,100%{ transform:translate(0,0) scale(1); } 33%{ transform:translate(34px,44px) scale(1.12); } 66%{ transform:translate(-26px,22px) scale(.94); } }
+    .hero-grid{ position:absolute; inset:0; z-index:0; pointer-events:none;
+      background-image:linear-gradient(rgba(88,196,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(88,196,255,.07) 1px,transparent 1px);
+      background-size:46px 46px;
+      -webkit-mask-image:radial-gradient(ellipse 75% 55% at 50% 32%, #000 42%, transparent 76%);
+      mask-image:radial-gradient(ellipse 75% 55% at 50% 32%, #000 42%, transparent 76%); }
+    .lbadge{ display:inline-flex; align-items:center; gap:.45rem; font-size:.82rem; padding:.4rem 1.1rem; border-radius:30px;
+      border:1px solid rgba(88,196,255,.35); background:rgba(88,196,255,.1); color:var(--accent); margin-bottom:1.6rem;
+      backdrop-filter:blur(4px); box-shadow:0 0 24px rgba(88,196,255,.18); }
+    .lhero h1{ font-size:clamp(2.6rem,6.4vw,4.7rem); font-weight:900; letter-spacing:-2.4px; line-height:1.02; margin-bottom:1.3rem; color:#eef4fb; }
     .lhero h1 .typing-text,
-    .lhero h1 .ydiy{ background:linear-gradient(90deg,var(--accent),#a78bfa); -webkit-background-clip:text; background-clip:text; color:transparent; }
-    .lsub{ font-size:1.12rem; color:var(--muted); max-width:660px; margin:0 auto 1.9rem; line-height:1.6; }
-    .lcta-row{ display:flex; gap:1rem; justify-content:center; align-items:center; flex-wrap:wrap; margin-bottom:.7rem; }
-    button.big{ width:auto; padding:.92rem 2.3rem; font-size:1.05rem; }
+    .lhero h1 .ydiy{ background:linear-gradient(100deg,#58c4ff,#7cb8ff 35%,#a78bfa 65%,#ff9ec4);
+      -webkit-background-clip:text; background-clip:text; color:transparent; background-size:220% auto; animation:shine 7s linear infinite; }
+    @keyframes shine{ to{ background-position:220% center; } }
+    .lsub{ font-size:1.16rem; color:var(--muted); max-width:640px; margin:0 auto 2.2rem; line-height:1.65; }
+    .lcta-row{ display:flex; gap:1.1rem; justify-content:center; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
+    button.big{ width:auto; padding:1rem 2.5rem; font-size:1.08rem; box-shadow:0 10px 34px rgba(88,196,255,.45);
+      transition:transform .18s, box-shadow .18s; }
+    button.big:hover{ transform:translateY(-3px); box-shadow:0 16px 44px rgba(88,196,255,.65); }
+    /* feature marquee */
+    .marquee{ margin-top:2.6rem; overflow:hidden;
+      -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);
+      mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent); }
+    .marquee-track{ display:flex; gap:.9rem; width:max-content; animation:mscroll 32s linear infinite; }
+    .lhero:hover .marquee-track{ animation-play-state:paused; }
+    .fchip{ display:flex; align-items:center; gap:.6rem; padding:.7rem 1.25rem; border-radius:14px; white-space:nowrap;
+      font-weight:600; font-size:.95rem; color:var(--text);
+      background:rgba(255,255,255,.05); border:1px solid var(--panel-border); backdrop-filter:blur(6px); }
+    @keyframes mscroll{ to{ transform:translateX(-50%); } }
+    @media(prefers-reduced-motion:reduce){ .blob,.marquee-track,.lhero h1 .ydiy{ animation:none; } }
     .glink{ color:var(--accent); font-weight:600; text-decoration:none; }
     .glink:hover{ color:var(--accent2); }
     @media(max-width:600px){ .lhero h1{ font-size:2.4rem; } }
@@ -138,15 +165,20 @@
   <div id="guestView" style="display:none;">
     <!-- HERO -->
     <section class="lhero">
-      <span class="lbadge"><i class="fas fa-globe"></i> A cyber micronation</span>
-      <h1>A micronation, where <span class="ydiy">you do you</span>.</h1>
-      <p class="lsub">Cyvathon is a living digital nation — a real economy with four currencies, companies and a stock market, an elected government, states you can travel between, video, blogs and a whole community that runs it. Tell us what you love, and we'll build your Cyvathon around it.</p>
-      <div class="lcta-row">
-        <a href="/login"><button class="big"><i class="fas fa-user-plus"></i> &nbsp;Become a Citizen</button></a>
-        <a href="/login" class="glink">or log in →</a>
+      <div class="aurora"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
+      <div class="hero-grid"></div>
+      <div class="lhero-inner">
+        <span class="lbadge"><i class="fas fa-globe"></i> A cyber micronation · built by its citizens</span>
+        <h1>A micronation,<br>where <span class="ydiy">you do you</span>.</h1>
+        <p class="lsub">Your own money, companies and a live stock market. An elected government, states to explore, video, blogs and a real community. Tell us what you love — and we'll shape Cyvathon around <b style="color:var(--text)">you</b>.</p>
+        <div class="lcta-row">
+          <a href="/login"><button class="big"><i class="fas fa-user-plus"></i> &nbsp;Become a Citizen — free</button></a>
+          <a href="/login" class="glink">or log in →</a>
+        </div>
+        <p class="small">Get <b>100 of each currency</b> to start · takes 30 seconds</p>
+        <div class="stat-strip" id="statStrip"></div>
+        <div class="marquee"><div class="marquee-track" id="mtrack"></div></div>
       </div>
-      <p class="small">New citizens get <b>100 of each currency</b> to start.</p>
-      <div class="stat-strip" id="statStrip"></div>
     </section>
 
     <!-- LIVE ACTIVITY (social proof) -->
@@ -260,12 +292,10 @@
       ]],
       ["Community", "#a78bfa", [
         ["/citizens","fa-users","Citizens","Directory & DMs"],
-        ["/leaderboard","fa-ranking-star","Leaderboards","See who's on top"],
         ["/chat","fa-comments","Chat","Talk with citizens"],
         ["/videos","fa-video","Videos","Share & watch videos"],
         ["/blogs","fa-feather-pointed","Blogs","Write & read posts"],
         ["/ai","fa-robot","Cyvathon AI","Ask how anything works"],
-        ["/portfolio","fa-chart-pie","Portfolio","Your cash & investments"],
         ["/invite","fa-user-plus","Invite Friends","Earn 500 CB per friend"],
         ["/news","fa-newspaper","News","National headlines"],
         ["/rules","fa-scroll","Rules","The laws of Cyvathon"],
@@ -273,6 +303,8 @@
       ["Identity", "#ff8fb0", [
         ["/profile","fa-id-card","ID Card","Your record & balances"],
         ["/passport","fa-passport","Passport","Citizenship & visas"],
+        ["/portfolio","fa-chart-pie","Portfolio","Your cash & investments"],
+        ["/leaderboard","fa-ranking-star","Leaderboards","See who's on top"],
       ]],
     ];
     const CUR = [
@@ -287,7 +319,22 @@
       document.getElementById("hubView").style.display = "none";
       typeLoop();
       loadStats();
+      buildMarquee();
       loadFeed("guestFeed", "guestFeedWrap", 8);
+    }
+
+    function buildMarquee(){
+      const feats = [
+        ["fa-building-columns","Bank","#58c4ff"], ["fa-chart-line","Stock Exchange","#1fd6a6"],
+        ["fa-briefcase","Companies","#22d3ee"], ["fa-landmark","Government","#ffce56"],
+        ["fa-video","Videos","#ff5d6c"], ["fa-feather-pointed","Blogs","#a78bfa"],
+        ["fa-comments","Chat","#58c4ff"], ["fa-dice","Casino","#ff8fb0"],
+        ["fa-map-location-dot","States","#a78bfa"], ["fa-passport","Passport","#22d3ee"],
+        ["fa-hand-holding-dollar","Loans","#58c4ff"], ["fa-scale-balanced","Legislature","#ffce56"],
+      ];
+      const one = feats.map(([i,t,c])=>`<div class="fchip"><i class="fas ${i}" style="color:${c}"></i> ${t}</div>`).join("");
+      const t = document.getElementById("mtrack");
+      if(t) t.innerHTML = one + one;   // duplicated for a seamless loop
     }
 
     // ---- live activity feed (shared by guest + hub) ----
