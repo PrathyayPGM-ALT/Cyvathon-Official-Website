@@ -9,11 +9,19 @@
   <style>
     .notif{ display:flex; gap:.9rem; align-items:flex-start; padding:1rem 1.2rem; margin-bottom:.7rem;
       background:var(--panel); border:1px solid var(--panel-border); border-radius:12px; text-decoration:none; color:inherit; transition:.2s; }
-    .notif:hover{ border-color:rgba(88,196,255,.35); }
+    .notif:hover{ border-color:rgba(88,196,255,.35); transform:translateX(2px); }
     .notif.unread{ border-left:4px solid var(--accent); }
-    .notif .ico{ color:var(--accent); font-size:1.2rem; margin-top:.15rem; }
+    .notif.gov{ border-left:4px solid var(--gold); background:linear-gradient(90deg, rgba(255,206,86,.08), var(--panel) 40%); }
+    .notif .ico{ font-size:1.25rem; margin-top:.1rem; width:1.4rem; text-align:center; flex-shrink:0; }
     .notif .msg{ flex:1; }
     .notif .time{ font-size:.75rem; color:var(--muted); margin-top:.2rem; }
+    .ntag{ display:inline-block; font-size:.66rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px;
+      color:#2a1e00; background:var(--gold); padding:.1rem .45rem; border-radius:5px; margin-right:.45rem; vertical-align:middle; }
+    .sec-label{ font-size:.72rem; text-transform:uppercase; letter-spacing:1.4px; color:var(--muted); font-weight:700;
+      margin:.3rem 0 .7rem .2rem; display:flex; align-items:center; gap:.6rem; }
+    .sec-label::after{ content:""; flex:1; height:1px; background:var(--panel-border); }
+    .allclear{ text-align:center; color:var(--muted); padding:3rem 1rem; }
+    .allclear i{ font-size:2.4rem; color:var(--green); display:block; margin-bottom:.7rem; }
   </style>
 </head>
 <body>
@@ -21,27 +29,55 @@
 
   <div class="wrap" style="max-width:680px;">
     <h2 class="section-title"><i class="fas fa-bell"></i> Notifications</h2>
-    <p class="section-sub">Everything that's happened to you in Cyvathon.</p>
+    <p class="section-sub">Official business first. These clear once you've seen them.</p>
     <div id="list"></div>
   </div>
 
   <script src="/static/app.js"></script>
   <script>
     const NAME = (n)=> (n||"").replace(/</g,"&lt;");
+
+    function metaFor(n){
+      const l = (n.link||""), P=(p)=>l.startsWith(p);
+      if(P("/voting"))        return {ico:"fa-check-to-slot",  c:"var(--gold)", tag:"Election"};
+      if(P("/news"))          return {ico:"fa-newspaper",      c:"var(--gold)", tag:"News"};
+      if(P("/legislature"))   return {ico:"fa-scale-balanced", c:"var(--gold)", tag:"Legislature"};
+      if(P("/court")||P("/fir")) return {ico:"fa-gavel",       c:"var(--gold)", tag:"Justice"};
+      if(P("/gazette")||P("/ministries")||P("/treasury")||P("/admin")) return {ico:"fa-landmark", c:"var(--gold)", tag:"Government"};
+      if(P("/warroom"))       return {ico:"fa-shield-halved",  c:"#ff5d6c",     tag:"War Room"};
+      if(P("/blogs"))         return {ico:"fa-feather-pointed",c:"#a78bfa"};
+      if(P("/videos"))        return {ico:"fa-video",          c:"#ff5d6c"};
+      if(P("/chat")||l.includes("dm="))  return {ico:"fa-comment", c:"#58c4ff"};
+      if(P("/invite"))        return {ico:"fa-user-plus",      c:"#1fd6a6"};
+      return {ico:"fa-circle-info", c:"var(--accent)"};
+    }
+    function card(n){
+      const m = metaFor(n);
+      return `<a class="notif unread ${n.priority?'gov':''}" href="${n.link||'#'}">
+        <i class="fas ${m.ico} ico" style="color:${m.c}"></i>
+        <div class="msg">${m.tag?`<span class="ntag">${m.tag}</span>`:''}${NAME(n.message)}
+          <div class="time">${new Date(n.created_at).toLocaleString()}</div></div>
+      </a>`;
+    }
+
     (async function(){
       const user = await requireAuth(); if(!user) return;
       renderNav("/notifications", user);
 
-      const d = await api("/notifications/list");
+      const d = await api("/notifications/list?unread=1");
+      const rows = d.notifications || [];
       const list = document.getElementById("list");
-      if(!d.notifications.length){ list.innerHTML = `<p class="muted">No notifications yet.</p>`; }
-      else list.innerHTML = d.notifications.map(n=>`
-        <a class="notif ${n.read?'':'unread'}" href="${n.link||'#'}">
-          <i class="fas fa-circle-info ico"></i>
-          <div class="msg">${NAME(n.message)}<div class="time">${new Date(n.created_at).toLocaleString()}</div></div>
-        </a>`).join("");
+      if(!rows.length){
+        list.innerHTML = `<div class="allclear"><i class="fas fa-circle-check"></i>You're all caught up.<br><span class="small">New notifications will show here.</span></div>`;
+      } else {
+        const gov = rows.filter(n=>n.priority), rest = rows.filter(n=>!n.priority);
+        let html = "";
+        if(gov.length)  html += `<div class="sec-label"><i class="fas fa-landmark"></i> Government &amp; official</div>` + gov.map(card).join("");
+        if(rest.length) html += `<div class="sec-label"><i class="fas fa-bell"></i> Everything else</div>` + rest.map(card).join("");
+        list.innerHTML = html;
+      }
 
-      // mark all read, then refresh the bell badge
+      // Viewing = read. They won't show next time (they "close").
       try{ await api("/notifications/read",{method:"POST",body:"{}"}); refreshNotifBadge(); }catch{}
     })();
   </script>

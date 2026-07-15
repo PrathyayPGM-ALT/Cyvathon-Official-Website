@@ -3287,13 +3287,28 @@ def news_delete():
 # ============================================================
 #  NOTIFICATIONS
 # ============================================================
+# Official / government notifications jump the queue on the notifications page.
+_GOV_NOTIF_PREFIXES = ("/voting", "/news", "/legislature", "/court", "/fir",
+                       "/gazette", "/ministries", "/treasury", "/admin", "/warroom")
+
+def _notif_priority(n):
+    link = (n.get("link") or "")
+    return any(link.startswith(p) for p in _GOV_NOTIF_PREFIXES)
+
+
 @app.route("/notifications/list", methods=["GET"])
 def notifications_list():
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     rows = supabase.table("notifications").select("*").eq("username", user["username"]) \
-        .order("created_at", desc=True).limit(40).execute().data or []
+        .order("created_at", desc=True).limit(60).execute().data or []
+    if request.args.get("unread") == "1":      # notifications page: only what's new
+        rows = [r for r in rows if not r.get("read")]
+    for r in rows:
+        r["priority"] = _notif_priority(r)
+    # Stable sort keeps newest-first within each group; government first overall.
+    rows.sort(key=lambda r: 0 if r["priority"] else 1)
     unread = sum(1 for r in rows if not r.get("read"))
     return jsonify(success=True, notifications=rows, unread=unread)
 
