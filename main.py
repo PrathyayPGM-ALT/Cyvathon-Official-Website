@@ -432,6 +432,23 @@ def notify(username, message, link=""):
         logging.warning("notify failed: %s", ex)
 
 
+def notify_all(message, link="", exclude=None):
+    """Broadcast a notification to every (non-banned) citizen. Used for
+    nation-wide events like a news post or an election opening."""
+    try:
+        rows = supabase.table("cybucks").select("username,banned").execute().data or []
+    except Exception:
+        return
+    payload = [{"username": r["username"], "message": message, "link": link}
+               for r in rows if not r.get("banned") and r.get("username") != exclude]
+    if not payload:
+        return
+    try:
+        supabase.table("notifications").insert(payload).execute()
+    except Exception as ex:
+        logging.warning("notify_all failed: %s", ex)
+
+
 def log_txn(kind, from_party, to_party, amount, currency, detail=""):
     """Record a citizen-level transaction for the national activity feed."""
     try:
@@ -3155,6 +3172,8 @@ def create_poll():
         "title": title, "position": position,
         "options": options, "created_by": user["username"]
     }).execute().data[0]
+    notify_all(f"🗳️ Election opened — {position}: {title}. Cast your vote!",
+               "/voting", exclude=user["username"])
     return jsonify(success=True, poll=poll)
 
 
@@ -3251,6 +3270,7 @@ def news_create():
     item = supabase.table("news").insert({
         "title": title, "body": body, "author": user["username"]
     }).execute().data[0]
+    notify_all(f"📰 National News: {title}", "/news", exclude=user["username"])
     return jsonify(success=True, item=item)
 
 

@@ -122,7 +122,15 @@
       font-weight:600; font-size:.95rem; color:var(--text);
       background:rgba(255,255,255,.05); border:1px solid var(--panel-border); backdrop-filter:blur(6px); }
     @keyframes mscroll{ to{ transform:translateX(-50%); } }
-    @media(prefers-reduced-motion:reduce){ .blob,.marquee-track,.lhero h1 .ydiy{ animation:none; } }
+
+    /* full-page ambient aura behind the whole landing — blue-focused */
+    .page-aura{ position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
+    .page-aura .pb{ position:absolute; border-radius:50%; filter:blur(95px); animation:floatb 28s ease-in-out infinite; }
+    .page-aura .pb1{ width:560px; height:560px; background:#58c4ff; top:6%;  left:-12%; opacity:.26; }
+    .page-aura .pb2{ width:500px; height:500px; background:#3aa0ee; top:44%; right:-14%; opacity:.24; animation-delay:-9s; }
+    .page-aura .pb3{ width:460px; height:460px; background:#5ec5ff; top:76%; left:30%;  opacity:.18; animation-delay:-16s; }
+    .page-aura .pb4{ width:360px; height:360px; background:#1fd6a6; top:54%; left:16%;  opacity:.10; animation-delay:-5s; }
+    @media(prefers-reduced-motion:reduce){ .blob,.marquee-track,.lhero h1 .ydiy,.page-aura .pb{ animation:none; } }
     .glink{ color:var(--accent); font-weight:600; text-decoration:none; }
     .glink:hover{ color:var(--accent2); }
     @media(max-width:600px){ .lhero h1{ font-size:2.4rem; } }
@@ -163,6 +171,7 @@
 
   <!-- ============ LOGGED-OUT VIEW ============ -->
   <div id="guestView" style="display:none;">
+    <div class="page-aura"><span class="pb pb1"></span><span class="pb pb2"></span><span class="pb pb3"></span><span class="pb pb4"></span></div>
     <!-- HERO -->
     <section class="lhero">
       <div class="aurora"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
