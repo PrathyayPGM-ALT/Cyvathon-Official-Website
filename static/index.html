@@ -60,6 +60,30 @@
     .hc .tx h4{ margin:0; font-size:1.18rem; font-weight:700; color:var(--text); }
     .hc .tx p{ margin:.35rem 0 0; font-size:.85rem; color:var(--muted); line-height:1.45; }
 
+    /* ---- recommended-for-you (bigger, colorful) ---- */
+    .rec-wrap{ margin-bottom:2.3rem; }
+    .rec-grid{ display:grid; gap:1.2rem; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); }
+    .rc{ position:relative; display:flex; align-items:center; gap:1.15rem; padding:1.7rem 1.6rem; border-radius:22px;
+      text-decoration:none; color:#fff; min-height:126px; overflow:hidden; background:var(--rc,#58c4ff);
+      background-image:linear-gradient(135deg, rgba(255,255,255,.20), rgba(0,0,0,.28));
+      border:1px solid rgba(255,255,255,.16); box-shadow:0 14px 34px rgba(0,0,0,.42);
+      transition:transform .2s, box-shadow .2s; }
+    .rc:hover{ transform:translateY(-6px) scale(1.012); box-shadow:0 24px 52px rgba(0,0,0,.55); }
+    .rc .ric{ width:66px; height:66px; border-radius:19px; display:flex; align-items:center; justify-content:center;
+      font-size:1.75rem; background:rgba(255,255,255,.22); flex-shrink:0; box-shadow:0 6px 16px rgba(0,0,0,.2); }
+    .rc .rtx h4{ margin:0; font-size:1.32rem; font-weight:800; letter-spacing:-.3px; }
+    .rc .rtx p{ margin:.32rem 0 0; font-size:.92rem; opacity:.92; line-height:1.4; }
+
+    /* ---- interests prompt banner ---- */
+    .int-banner{ display:flex; align-items:center; justify-content:space-between; gap:1rem; text-decoration:none;
+      padding:1.25rem 1.6rem; border-radius:18px; margin-bottom:2rem;
+      background:linear-gradient(135deg, rgba(167,139,250,.20), rgba(88,196,255,.12));
+      border:1px solid rgba(167,139,250,.45); transition:transform .18s, box-shadow .18s; }
+    .int-banner:hover{ transform:translateY(-3px); box-shadow:0 14px 34px rgba(0,0,0,.35); }
+    .int-banner b{ color:var(--text); font-size:1.1rem; display:block; }
+    .int-banner .int-sub{ color:var(--muted); font-size:.9rem; margin-top:.25rem; }
+    .int-cta{ color:var(--accent); font-weight:800; white-space:nowrap; font-size:1rem; }
+
     /* ---- landing (guest) ---- */
     .lhero{ text-align:center; max-width:860px; margin:auto; padding:3.8rem 1.5rem 2.4rem; position:relative; }
     .lhero::before{ content:""; position:absolute; top:-30px; left:50%; transform:translateX(-50%); width:680px; height:520px;
@@ -190,6 +214,8 @@
       <div class="bstrip" id="hubBalances"></div>
     </section>
     <section class="wrap" style="padding-top:.5rem;">
+      <div id="interestBanner"></div>
+      <div id="hubRec"></div>
       <div id="hubGrid"></div>
     </section>
     <section class="wrap" id="hubFeedWrap" style="padding-top:0; display:none;">
@@ -236,6 +262,8 @@
         ["/citizens","fa-users","Citizens","Directory & DMs"],
         ["/leaderboard","fa-ranking-star","Leaderboards","See who's on top"],
         ["/chat","fa-comments","Chat","Talk with citizens"],
+        ["/videos","fa-video","Videos","Share & watch videos"],
+        ["/blogs","fa-feather-pointed","Blogs","Write & read posts"],
         ["/ai","fa-robot","Cyvathon AI","Ask how anything works"],
         ["/portfolio","fa-chart-pie","Portfolio","Your cash & investments"],
         ["/invite","fa-user-plus","Invite Friends","Earn 500 CB per friend"],
@@ -337,8 +365,36 @@
               <div class="tx"><h4>${t}</h4><p>${d}</p></div>
             </a>`).join("")}</div>
         </div>`).join("");
+      loadRecommended();
       loadFeed("hubFeed", "hubFeedWrap", 12);
       loadHubNews();
+    }
+
+    // Personalized recommendations + interests prompt.
+    async function loadRecommended(){
+      try{
+        const d = await api("/recommended");
+        const rec = d.recommended || [];
+        if(!(d.interests || []).length){
+          document.getElementById("interestBanner").innerHTML = `
+            <a href="/profile" class="int-banner">
+              <div><b>✨ Tell us what you love</b>
+                <div class="int-sub">Pick your interests so we can tailor Cyvathon to you — and drop you into group chats with people who share them.</div></div>
+              <span class="int-cta">Set interests →</span></a>`;
+          return;
+        }
+        if(rec.length){
+          document.getElementById("hubRec").innerHTML = `
+            <div class="hub-section rec-wrap">
+              <h3 style="color:var(--gold);"><i class="fas fa-star"></i> Recommended for you</h3>
+              <div class="rec-grid">${rec.map(c=>`
+                <a class="rc" href="${c.href}" style="--rc:${c.color}">
+                  <div class="ric"><i class="fas ${c.icon}"></i></div>
+                  <div class="rtx"><h4>${c.title}</h4><p>${c.desc}</p></div>
+                </a>`).join("")}</div>
+            </div>`;
+        }
+      }catch{}
     }
 
     async function loadHubNews(){

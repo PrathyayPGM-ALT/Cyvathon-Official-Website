@@ -33,6 +33,12 @@
     .msg{ text-align:center; font-size:.86rem; margin-top:.9rem; min-height:1.25em; }
     .back{ text-align:center; margin-top:1.05rem; }
     .hp{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
+    .chips{ display:flex; flex-wrap:wrap; gap:.45rem; margin-bottom:.7rem; }
+    .chip{ display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .75rem; border-radius:999px; cursor:pointer;
+      border:1px solid var(--panel-border); background:var(--panel-2); color:var(--muted); font-size:.82rem; font-weight:600;
+      transition:.15s; user-select:none; }
+    .chip:hover{ color:var(--text); border-color:var(--accent); }
+    .chip.on{ color:#06223a; background:linear-gradient(135deg,#5ec5ff,#3aa0ee); border-color:transparent; }
   </style>
 </head>
 <body>
@@ -56,6 +62,11 @@
 
         <div class="field"><i class="fas fa-lock"></i>
           <input id="password" type="password" placeholder="Password" autocomplete="current-password"></div>
+
+        <div id="interestBox" style="display:none;">
+          <label class="captcha-q">What do you love to do? <span style="opacity:.7">(pick a few — we'll tailor Cyvathon to you)</span></label>
+          <div class="chips" id="chips"></div>
+        </div>
 
         <div id="captchaBox" style="display:none;">
           <label class="captcha-q" id="captchaQ"></label>
@@ -83,6 +94,22 @@
     async function loadCaptcha(){
       try{ const d = await api("/captcha"); captchaToken = d.token; $("captchaQ").textContent = d.question; }
       catch{ $("captchaQ").textContent = "Human check unavailable — try reloading."; }
+    }
+
+    // Interest chips shown on signup.
+    let selInterests = new Set();
+    async function loadInterests(){
+      if($("chips").dataset.loaded) return;
+      try{
+        const d = await api("/interests_catalog");
+        $("chips").innerHTML = (d.interests||[]).map(i=>
+          `<span class="chip" data-k="${i.key}" onclick="toggleChip(this,'${i.key}')"><i class="fas ${i.icon}"></i> ${i.label}</span>`).join("");
+        $("chips").dataset.loaded = "1";
+      }catch{}
+    }
+    function toggleChip(el,k){
+      if(selInterests.has(k)){ selInterests.delete(k); el.classList.remove("on"); }
+      else { selInterests.add(k); el.classList.add("on"); }
     }
 
     // Cloudflare Turnstile — render only if the server has it configured, and
@@ -127,6 +154,8 @@
         ? '<i class="fas fa-right-to-bracket"></i> Login'
         : '<i class="fas fa-user-plus"></i> Sign Up';
       $("emailField").style.display = m==="signup" ? "block" : "none";
+      $("interestBox").style.display = m==="signup" ? "block" : "none";
+      if(m==="signup") loadInterests();
       $("captchaBox").style.display = (m==="signup" && !TS_ON) ? "block" : "none";
       $("tsBox").style.display = (m==="signup" && TS_ON) ? "block" : "none";
       $("password").autocomplete = m==="login" ? "current-password" : "new-password";
@@ -152,6 +181,7 @@
         }
         body.email = $("email").value.trim();
         body.website = $("website").value;
+        body.interests = Array.from(selInterests);
         if(REF) body.ref = REF;
       }
       $("submitBtn").disabled = true;

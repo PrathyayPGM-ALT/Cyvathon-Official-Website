@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blogs · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .bcol{ max-width:660px; margin:0 auto; }
+    .writer{ margin-bottom:1.6rem; }
+    .writer textarea{ min-height:150px; resize:vertical; line-height:1.55; }
+    .toggle-write{ display:flex; align-items:center; gap:.7rem; cursor:pointer; }
+    .bfeed{ display:flex; flex-direction:column; gap:1.1rem; }
+    .bpost{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; padding:1.3rem 1.4rem; }
+    .bhead{ display:flex; align-items:center; gap:.7rem; margin-bottom:.8rem; }
+    .av{ width:40px; height:40px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .bhead .nm{ font-weight:700; } .bhead .nm a{ color:var(--text); text-decoration:none; } .bhead .nm a:hover{ color:var(--accent); }
+    .bhead .dt{ font-size:.78rem; color:var(--muted); }
+    .btitle{ font-size:1.35rem; font-weight:800; letter-spacing:-.3px; margin-bottom:.5rem; }
+    .bexcerpt,.bfull{ color:#cdd6e0; line-height:1.65; white-space:pre-wrap; }
+    .bfull{ display:none; }
+    .readmore{ color:var(--accent); cursor:pointer; font-weight:600; font-size:.9rem; display:inline-block; margin-top:.5rem; }
+    .brow{ display:flex; gap:1.4rem; align-items:center; margin-top:1rem; padding-top:.8rem; border-top:1px solid var(--panel-border); }
+    .bbtn{ background:none; border:none; color:var(--muted); cursor:pointer; font-size:.92rem; padding:0; margin:0; box-shadow:none;
+      display:flex; align-items:center; gap:.45rem; transition:.15s; }
+    .bbtn:hover{ color:var(--text); transform:none; }
+    .bbtn.liked{ color:#ff5d6c; }
+    .comments{ margin-top:1rem; display:none; flex-direction:column; gap:.7rem; }
+    .cmt{ display:flex; gap:.6rem; align-items:flex-start; }
+    .cmt .av{ width:32px; height:32px; font-size:.8rem; }
+    .cmt .cb{ background:var(--panel-2); border:1px solid var(--panel-border); border-radius:10px; padding:.5rem .75rem; flex:1; }
+    .cmt .cn{ font-weight:700; font-size:.83rem; } .cmt .cn a{ color:var(--text); text-decoration:none; }
+    .cmt .ct{ font-size:.92rem; color:#cdd6e0; white-space:pre-wrap; }
+    .cbox{ display:flex; gap:.5rem; margin-top:.3rem; }
+    .cbox input{ margin:0; } .cbox button{ margin:0; width:auto; padding:.55rem 1rem; }
+    .empty{ text-align:center; color:var(--muted); padding:2.5rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <h2 class="section-title"><i class="fas fa-feather-pointed" style="color:#a78bfa"></i> Cyvathon Blogs</h2>
+    <p class="section-sub">Write what's on your mind. Get likes, comments and a following.</p>
+
+    <div class="bcol">
+      <div class="panel writer">
+        <div class="toggle-write" onclick="toggleWriter()">
+          <i class="fas fa-pen-to-square" style="color:var(--accent)"></i>
+          <b id="writerLabel">Write a blog…</b>
+        </div>
+        <div id="writerBody" style="display:none;margin-top:1rem;">
+          <input id="bTitle" placeholder="Title" maxlength="160">
+          <textarea id="bBody" placeholder="Share your thoughts with the Republic…" maxlength="20000"></textarea>
+          <button onclick="publish()" id="bPub"><i class="fas fa-paper-plane"></i> Publish</button>
+          <p id="bMsg" class="small" style="text-align:center;margin-top:.5rem;min-height:1em;"></p>
+        </div>
+      </div>
+
+      <div class="bfeed" id="feed"><p class="empty">Loading…</p></div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null;
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const enc=encodeURIComponent;
+    const OPEN=(new URLSearchParams(location.search).get("b")||"");
+
+    function toggleWriter(){
+      const b=document.getElementById("writerBody");
+      const open=b.style.display!=="none";
+      b.style.display=open?"none":"block";
+      document.getElementById("writerLabel").textContent=open?"Write a blog…":"New blog";
+      if(!open) document.getElementById("bTitle").focus();
+    }
+
+    function post(p){
+      const n=esc(p.username||"?");
+      const liked=p.liked?"liked":"";
+      const heart=p.liked?"fas":"far";
+      return `<div class="bpost" id="bp${p.id}">
+        <div class="bhead">
+          <div class="av" ${avatarStyle(p.avatar)}>${p.avatar?'':n[0].toUpperCase()}</div>
+          <div><div class="nm"><a href="/profile?user=${enc(p.username)}">${n}</a></div>
+          <div class="dt">${new Date(p.created_at).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})}</div></div>
+        </div>
+        <div class="btitle">${esc(p.title)}</div>
+        <div class="bexcerpt" id="ex${p.id}">${esc(p.excerpt||"")}</div>
+        <div class="bfull" id="fl${p.id}"></div>
+        ${(p.excerpt||"").endsWith("…")?`<span class="readmore" id="rm${p.id}" onclick="expand(${p.id})">Read more →</span>`:''}
+        <div class="brow">
+          <button class="bbtn ${liked}" id="lk${p.id}" onclick="like(${p.id})"><i class="${heart} fa-heart"></i> <span id="lc${p.id}">${p.likes||0}</span></button>
+          <button class="bbtn" onclick="toggleC(${p.id})"><i class="far fa-comment"></i> <span id="cc${p.id}">${p.comments||0}</span></button>
+        </div>
+        <div class="comments" id="cm${p.id}"></div>
+      </div>`;
+    }
+
+    async function load(){
+      try{
+        const d=await api("/blogs_list"); ME=d.me;
+        const list=d.posts||[];
+        document.getElementById("feed").innerHTML = list.length
+          ? list.map(post).join("")
+          : `<p class="empty">No blogs yet — write the Republic's first! ✍️</p>`;
+        if(OPEN){ const el=document.getElementById("bp"+OPEN); if(el){ el.scrollIntoView({behavior:"smooth"}); expand(+OPEN); toggleC(+OPEN); } }
+      }catch(e){ document.getElementById("feed").innerHTML=`<p class="empty">${esc(e.message)}</p>`; }
+    }
+
+    async function expand(id){
+      try{
+        const d=await api("/blog/"+id);
+        const fl=document.getElementById("fl"+id);
+        fl.textContent=d.post.body||"";
+        fl.style.display="block";
+        document.getElementById("ex"+id).style.display="none";
+        const rm=document.getElementById("rm"+id); if(rm) rm.style.display="none";
+      }catch(e){}
+    }
+
+    async function publish(){
+      const title=document.getElementById("bTitle").value.trim();
+      const body=document.getElementById("bBody").value.trim();
+      const msg=document.getElementById("bMsg");
+      if(!title||!body){ msg.style.color="var(--red)"; msg.textContent="Add a title and some text."; return; }
+      document.getElementById("bPub").disabled=true;
+      try{
+        await api("/blogs",{method:"POST",body:JSON.stringify({title,body})});
+        document.getElementById("bTitle").value=""; document.getElementById("bBody").value="";
+        msg.style.color="var(--green)"; msg.textContent="Published!";
+        toggleWriter(); load();
+      }catch(e){ msg.style.color="var(--red)"; msg.textContent=e.message; }
+      finally{ document.getElementById("bPub").disabled=false; }
+    }
+
+    async function like(id){
+      try{
+        const d=await api("/blog/"+id+"/like",{method:"POST",body:"{}"});
+        const btn=document.getElementById("lk"+id);
+        btn.classList.toggle("liked", d.liked);
+        btn.querySelector("i").className=(d.liked?"fas":"far")+" fa-heart";
+        document.getElementById("lc"+id).textContent=d.likes;
+      }catch(e){ alert(e.message); }
+    }
+
+    async function toggleC(id){
+      const box=document.getElementById("cm"+id);
+      if(box.style.display==="flex"){ box.style.display="none"; return; }
+      box.style.display="flex"; box.innerHTML=`<p class="small muted">Loading…</p>`;
+      try{ const d=await api("/blog/"+id); renderComments(id, d.comments||[]); }
+      catch(e){ box.innerHTML=`<p class="small muted">${esc(e.message)}</p>`; }
+    }
+    function renderComments(id, list){
+      const box=document.getElementById("cm"+id);
+      const items=list.map(c=>{
+        const n=esc(c.username||"?");
+        return `<div class="cmt"><div class="av" ${avatarStyle(c.avatar)}>${c.avatar?'':n[0].toUpperCase()}</div>
+          <div class="cb"><div class="cn"><a href="/profile?user=${enc(c.username)}">${n}</a></div>
+          <div class="ct">${esc(c.body)}</div></div></div>`;
+      }).join("") || `<p class="small muted">No comments yet.</p>`;
+      box.innerHTML = items + `<div class="cbox"><input id="ci${id}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')sendC(${id})">
+        <button onclick="sendC(${id})">Send</button></div>`;
+      document.getElementById("cc"+id).textContent=list.length;
+    }
+    async function sendC(id){
+      const inp=document.getElementById("ci"+id); const body=inp.value.trim(); if(!body) return;
+      inp.disabled=true;
+      try{ await api("/blog/"+id+"/comment",{method:"POST",body:JSON.stringify({body})});
+        const d=await api("/blog/"+id); renderComments(id, d.comments||[]);
+      }catch(e){ alert(e.message); } finally{ inp.disabled=false; }
+    }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      ME=user.username; renderNav("/blogs", user);
+      load();
+    })();
+  </script>
+</body>
+</html>

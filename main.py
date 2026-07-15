@@ -251,11 +251,14 @@ def _security_headers(resp):
     resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     resp.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
         "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
         "img-src 'self' data: https:; "
-        "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'")
+        "media-src 'self' https:; "
+        "frame-src https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com; "
+        "connect-src 'self' https://challenges.cloudflare.com; "
+        "frame-ancestors 'none'; base-uri 'self'; object-src 'none'")
     return resp
 
 
@@ -614,7 +617,136 @@ def public_user(user):
         "email":       user.get("email"),
         "bio":         user.get("bio"),
         "company_id":  user.get("company_id"),
+        "interests":   _parse_interests(user.get("interests")),
     }
+
+
+# ============================================================
+#  INTERESTS  — powers signup, dashboard recs & interest group chats
+# ============================================================
+INTEREST_CHANNEL_PREFIX = "Interest — "
+INTERESTS = [
+    {"key": "business",  "label": "Business & Trading", "icon": "fa-briefcase",       "color": "#1fd6a6", "chat": "Entrepreneurs",
+     "recs": [["/company", "fa-briefcase", "Found a Company", "Start your own business"],
+              ["/marketplace", "fa-store", "Import & Export", "Trade goods nationwide"]]},
+    {"key": "investing", "label": "Investing & Stocks", "icon": "fa-chart-line",      "color": "#22d3ee", "chat": "Investors",
+     "recs": [["/exchange", "fa-chart-line", "Stock Exchange", "Trade company shares"],
+              ["/portfolio", "fa-chart-pie", "Portfolio", "Track your investments"]]},
+    {"key": "writing",   "label": "Writing & Blogging", "icon": "fa-feather-pointed", "color": "#a78bfa", "chat": "Writers",
+     "recs": [["/blogs", "fa-feather-pointed", "Blogs", "Write posts & get followers"]]},
+    {"key": "video",     "label": "Video & Content",    "icon": "fa-video",           "color": "#ff5d6c", "chat": "Creators",
+     "recs": [["/videos", "fa-video", "Videos", "Share & watch videos"]]},
+    {"key": "gaming",    "label": "Gaming & Luck",       "icon": "fa-dice",            "color": "#ff8fb0", "chat": "Gamers",
+     "recs": [["/casino", "fa-dice", "Casino", "Test your luck vs the House"]]},
+    {"key": "politics",  "label": "Politics & Law",      "icon": "fa-landmark",        "color": "#ffce56", "chat": "Politics Hall",
+     "recs": [["/voting", "fa-check-to-slot", "Elections", "Vote & run for office"],
+              ["/legislature", "fa-scale-balanced", "Legislature", "Debate & pass bills"]]},
+    {"key": "social",    "label": "Socializing",         "icon": "fa-comments",        "color": "#58c4ff", "chat": "Social Lounge",
+     "recs": [["/chat", "fa-comments", "Chat", "Meet the community"],
+              ["/citizens", "fa-users", "Citizens", "Find & DM people"]]},
+    {"key": "tech",      "label": "Coding & Tech",       "icon": "fa-code",            "color": "#8b5cf6", "chat": "Techies",
+     "recs": [["/ai", "fa-robot", "Cyvathon AI", "Explore & learn how it works"],
+              ["/exchange", "fa-chart-line", "Stock Exchange", "Trade the market"]]},
+]
+INTEREST_KEYS = {i["key"] for i in INTERESTS}
+INTEREST_BY_KEY = {i["key"]: i for i in INTERESTS}
+
+
+def _parse_interests(val):
+    """Accepts a list or comma-separated string; returns known keys only."""
+    if isinstance(val, list):
+        seq = val
+    elif isinstance(val, str):
+        seq = [p.strip() for p in val.split(",")]
+    else:
+        return []
+    out = []
+    for k in seq:
+        if k in INTEREST_KEYS and k not in out:
+            out.append(k)
+    return out
+
+
+def _interest_group_id(interest, create=True):
+    """The shared chat channel for an interest. Created on demand."""
+    name = INTEREST_CHANNEL_PREFIX + interest["chat"]
+    g = supabase.table("chat_groups").select("id").eq("name", name).execute().data
+    if g:
+        return g[0]["id"]
+    if not create:
+        return None
+    try:
+        return supabase.table("chat_groups").insert(
+            {"name": name, "owner": "Cyvathon"}).execute().data[0]["id"]
+    except Exception:
+        return None
+
+
+def _join_interest_channels(username, keys):
+    for k in keys:
+        it = INTEREST_BY_KEY.get(k)
+        if not it:
+            continue
+        try:
+            gid = _interest_group_id(it)
+            if gid and not _group_member(gid, username):
+                supabase.table("chat_group_members").insert(
+                    {"group_id": gid, "username": username}).execute()
+        except Exception:
+            pass
+
+
+def _set_interests(username, keys):
+    """Persist a citizen's interests (fail-open) and auto-join the matching group chats."""
+    keys = _parse_interests(keys)[:8]
+    try:
+        supabase.table("cybucks").update({"interests": ",".join(keys)}) \
+            .eq("username", username).execute()
+    except Exception:
+        return keys      # column not migrated yet — best effort
+    _join_interest_channels(username, keys)
+    return keys
+
+
+@app.route("/interests_catalog")
+def interests_catalog():
+    return jsonify(success=True, interests=[
+        {"key": i["key"], "label": i["label"], "icon": i["icon"],
+         "color": i["color"], "chat": i["chat"]} for i in INTERESTS])
+
+
+@app.route("/recommended")
+def recommended():
+    """Big personalized feature cards for the dashboard, from the citizen's interests."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    keys = _parse_interests(user.get("interests"))
+    cards, seen = [], set()
+    for k in keys:
+        it = INTEREST_BY_KEY.get(k)
+        if not it:
+            continue
+        for (href, icon, title, desc) in it["recs"]:
+            if href in seen:
+                continue
+            seen.add(href)
+            cards.append({"href": href, "icon": icon, "title": title,
+                          "desc": desc, "color": it["color"]})
+    return jsonify(success=True, interests=keys, recommended=cards[:6])
+
+
+@limiter.limit("30/min")
+@app.route("/interests", methods=["POST"])
+def set_interests_endpoint():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    keys = _parse_interests((request.get_json() or {}).get("interests"))
+    if not keys:
+        return jsonify(success=False, error="Pick at least one thing you love."), 400
+    saved = _set_interests(user["username"], keys)
+    return jsonify(success=True, interests=saved)
 
 
 def _gov_role(username):
@@ -778,6 +910,14 @@ def citizens_page():
 @app.route("/leaderboard")
 def leaderboard_page():
     return app.send_static_file("leaderboard.html")
+
+@app.route("/videos")
+def videos_page():
+    return app.send_static_file("videos.html")
+
+@app.route("/blogs")
+def blogs_page():
+    return app.send_static_file("blogs.html")
 
 @app.route("/court")
 def court_page():
@@ -962,6 +1102,9 @@ def register():
             supabase.table("cybucks").update({"email": email}).eq("username", username).execute()
         except Exception:
             pass
+    picks = _parse_interests(data.get("interests"))      # favorite things, from signup
+    if picks:
+        _set_interests(username, picks)
     ref = (data.get("ref") or "").strip()[:32]      # who invited them
     if ref and ref != username and \
             supabase.table("cybucks").select("id").eq("username", ref).execute().data:
@@ -4776,6 +4919,238 @@ def leaderboard_data():
 
     return jsonify(success=True, me=user["username"],
                    richest=richest, founders=founders, recruiters=recruiters)
+
+
+# ============================================================
+#  VIDEOS  — citizens share videos (by link) and comment
+# ============================================================
+def _avatars_for(names):
+    names = list({n for n in names if n})
+    if not names:
+        return {}
+    try:
+        rows = supabase.table("cybucks").select("username,avatar") \
+            .in_("username", names).execute().data or []
+        return {r["username"]: r.get("avatar") for r in rows}
+    except Exception:
+        return {}
+
+
+def _video_embed(url):
+    """Turn a pasted URL into an embeddable source. Supports YouTube links and
+    direct video files (.mp4/.webm/.ogg). Returns {kind, url} or None."""
+    url = (url or "").strip()
+    if not url or len(url) > 500:
+        return None
+    m = re.search(r'(?:youtube\.com/(?:watch\?v=|embed/|shorts/)|youtu\.be/)([A-Za-z0-9_-]{6,20})', url)
+    if m:
+        return {"kind": "youtube", "url": f"https://www.youtube.com/embed/{m.group(1)}"}
+    if re.match(r'^https?://', url) and re.search(r'\.(mp4|webm|ogg)(\?|$)', url, re.I):
+        return {"kind": "file", "url": url}
+    return None
+
+
+@app.route("/videos_list")
+def videos_list():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        vids = supabase.table("videos").select("*").order("id", desc=True).limit(60).execute().data or []
+    except Exception:
+        return jsonify(success=True, videos=[], me=user["username"])
+    av = _avatars_for([v.get("username") for v in vids])
+    counts = {}
+    try:
+        for c in (supabase.table("video_comments").select("video_id").execute().data or []):
+            counts[c["video_id"]] = counts.get(c["video_id"], 0) + 1
+    except Exception:
+        pass
+    for v in vids:
+        v["avatar"] = av.get(v.get("username"))
+        v["comments"] = counts.get(v.get("id"), 0)
+    return jsonify(success=True, videos=vids, me=user["username"])
+
+
+@limiter.limit("20/min")
+@app.route("/videos", methods=["POST"])
+def videos_post():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json() or {}
+    title = (d.get("title") or "").strip()[:140]
+    desc = (d.get("description") or "").strip()[:1000]
+    emb = _video_embed(d.get("url"))
+    if not title:
+        return jsonify(success=False, error="Give your video a title."), 400
+    if not emb:
+        return jsonify(success=False, error="Paste a YouTube link or a direct .mp4/.webm video URL."), 400
+    try:
+        row = supabase.table("videos").insert({
+            "username": user["username"], "title": title,
+            "url": emb["url"], "kind": emb["kind"], "description": desc,
+        }).execute().data[0]
+    except Exception:
+        return jsonify(success=False, error="Video board isn't set up yet — run the migration."), 500
+    add_record(user["username"], f"Posted a video: {title}")
+    return jsonify(success=True, video=row)
+
+
+@app.route("/video/<int:vid>")
+def video_get(vid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    v = supabase.table("videos").select("*").eq("id", vid).execute().data
+    if not v:
+        return jsonify(success=False, error="Video not found"), 404
+    v = v[0]
+    cmts = supabase.table("video_comments").select("*").eq("video_id", vid) \
+        .order("id").limit(300).execute().data or []
+    av = _avatars_for([v.get("username")] + [c.get("username") for c in cmts])
+    v["avatar"] = av.get(v.get("username"))
+    for c in cmts:
+        c["avatar"] = av.get(c.get("username"))
+    return jsonify(success=True, video=v, comments=cmts, me=user["username"])
+
+
+@limiter.limit("40/min")
+@app.route("/video/<int:vid>/comment", methods=["POST"])
+def video_comment(vid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    body = ((request.get_json() or {}).get("body") or "").strip()[:1000]
+    if not body:
+        return jsonify(success=False, error="Empty comment"), 400
+    if not supabase.table("videos").select("id,username,title").eq("id", vid).execute().data:
+        return jsonify(success=False, error="Video not found"), 404
+    row = supabase.table("video_comments").insert(
+        {"video_id": vid, "username": user["username"], "body": body}).execute().data[0]
+    owner = supabase.table("videos").select("username,title").eq("id", vid).execute().data
+    if owner and owner[0]["username"] != user["username"]:
+        notify(owner[0]["username"], f"💬 {user['username']} commented on your video", f"/videos?v={vid}")
+    return jsonify(success=True, comment=row)
+
+
+# ============================================================
+#  BLOGS  — citizens write posts, get likes & comments
+# ============================================================
+@app.route("/blogs_list")
+def blogs_list():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        posts = supabase.table("blogs").select("*").order("id", desc=True).limit(50).execute().data or []
+    except Exception:
+        return jsonify(success=True, posts=[], me=user["username"])
+    ids = [p["id"] for p in posts]
+    likes, mine, comments = {}, set(), {}
+    try:
+        for l in (supabase.table("blog_likes").select("blog_id,username").execute().data or []):
+            likes[l["blog_id"]] = likes.get(l["blog_id"], 0) + 1
+            if l["username"] == user["username"]:
+                mine.add(l["blog_id"])
+    except Exception:
+        pass
+    try:
+        for c in (supabase.table("blog_comments").select("blog_id").execute().data or []):
+            comments[c["blog_id"]] = comments.get(c["blog_id"], 0) + 1
+    except Exception:
+        pass
+    av = _avatars_for([p.get("username") for p in posts])
+    for p in posts:
+        p["avatar"] = av.get(p.get("username"))
+        p["likes"] = likes.get(p["id"], 0)
+        p["liked"] = p["id"] in mine
+        p["comments"] = comments.get(p["id"], 0)
+        body = p.get("body") or ""
+        p["excerpt"] = body[:280] + ("…" if len(body) > 280 else "")
+    return jsonify(success=True, posts=posts, me=user["username"])
+
+
+@limiter.limit("15/min")
+@app.route("/blogs", methods=["POST"])
+def blogs_post():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json() or {}
+    title = (d.get("title") or "").strip()[:160]
+    body = (d.get("body") or "").strip()[:20000]
+    if not title or not body:
+        return jsonify(success=False, error="A blog needs a title and some body."), 400
+    try:
+        row = supabase.table("blogs").insert(
+            {"username": user["username"], "title": title, "body": body}).execute().data[0]
+    except Exception:
+        return jsonify(success=False, error="Blog platform isn't set up yet — run the migration."), 500
+    add_record(user["username"], f"Published a blog: {title}")
+    return jsonify(success=True, post=row)
+
+
+@app.route("/blog/<int:bid>")
+def blog_get(bid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    p = supabase.table("blogs").select("*").eq("id", bid).execute().data
+    if not p:
+        return jsonify(success=False, error="Post not found"), 404
+    p = p[0]
+    cmts = supabase.table("blog_comments").select("*").eq("blog_id", bid) \
+        .order("id").limit(300).execute().data or []
+    likes = supabase.table("blog_likes").select("username").eq("blog_id", bid).execute().data or []
+    av = _avatars_for([p.get("username")] + [c.get("username") for c in cmts])
+    p["avatar"] = av.get(p.get("username"))
+    for c in cmts:
+        c["avatar"] = av.get(c.get("username"))
+    return jsonify(success=True, post=p, comments=cmts, me=user["username"],
+                   likes=len(likes), liked=any(l["username"] == user["username"] for l in likes))
+
+
+@limiter.limit("60/min")
+@app.route("/blog/<int:bid>/like", methods=["POST"])
+def blog_like(bid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    post = supabase.table("blogs").select("username,title").eq("id", bid).execute().data
+    if not post:
+        return jsonify(success=False, error="Post not found"), 404
+    existing = supabase.table("blog_likes").select("id").eq("blog_id", bid).eq("username", me).execute().data
+    if existing:
+        supabase.table("blog_likes").delete().eq("blog_id", bid).eq("username", me).execute()
+        liked = False
+    else:
+        supabase.table("blog_likes").insert({"blog_id": bid, "username": me}).execute()
+        liked = True
+        if post[0]["username"] != me:
+            notify(post[0]["username"], f"❤️ {me} liked your blog", f"/blogs?b={bid}")
+    total = supabase.table("blog_likes").select("id", count="exact").eq("blog_id", bid).execute().count or 0
+    return jsonify(success=True, liked=liked, likes=total)
+
+
+@limiter.limit("40/min")
+@app.route("/blog/<int:bid>/comment", methods=["POST"])
+def blog_comment(bid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    body = ((request.get_json() or {}).get("body") or "").strip()[:2000]
+    if not body:
+        return jsonify(success=False, error="Empty comment"), 400
+    post = supabase.table("blogs").select("username,title").eq("id", bid).execute().data
+    if not post:
+        return jsonify(success=False, error="Post not found"), 404
+    row = supabase.table("blog_comments").insert(
+        {"blog_id": bid, "username": user["username"], "body": body}).execute().data[0]
+    if post[0]["username"] != user["username"]:
+        notify(post[0]["username"], f"💬 {user['username']} commented on your blog", f"/blogs?b={bid}")
+    return jsonify(success=True, comment=row)
 
 
 @limiter.limit("90 per minute")

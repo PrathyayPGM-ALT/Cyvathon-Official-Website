@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Videos · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .vfeed{ max-width:680px; margin:0 auto; display:flex; flex-direction:column; gap:1.4rem; }
+    .poster{ max-width:680px; margin:0 auto 1.6rem; }
+    .poster textarea{ min-height:60px; resize:vertical; }
+    .vcard{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; overflow:hidden; }
+    .vwrap{ position:relative; width:100%; padding-top:56.25%; background:#000; }
+    .vwrap iframe,.vwrap video{ position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
+    .vbody{ padding:1rem 1.15rem 1.15rem; }
+    .vtitle{ font-size:1.15rem; font-weight:700; margin-bottom:.5rem; }
+    .vmeta{ display:flex; align-items:center; gap:.6rem; font-size:.85rem; color:var(--muted); }
+    .av{ width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:.9rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .vmeta a{ color:var(--text); text-decoration:none; font-weight:600; } .vmeta a:hover{ color:var(--accent); }
+    .vdesc{ color:#cdd6e0; font-size:.92rem; margin-top:.6rem; white-space:pre-wrap; line-height:1.5; }
+    .vactions{ margin-top:.8rem; border-top:1px solid var(--panel-border); padding-top:.7rem; }
+    .cbtn{ background:none; border:none; color:var(--muted); cursor:pointer; font-size:.88rem; padding:.2rem .3rem; margin:0; box-shadow:none; }
+    .cbtn:hover{ color:var(--accent); transform:none; }
+    .comments{ margin-top:.7rem; display:none; flex-direction:column; gap:.6rem; }
+    .cmt{ display:flex; gap:.6rem; align-items:flex-start; }
+    .cmt .av{ width:30px; height:30px; font-size:.78rem; }
+    .cmt .cb{ background:var(--panel-2); border:1px solid var(--panel-border); border-radius:10px; padding:.45rem .7rem; flex:1; }
+    .cmt .cn{ font-weight:700; font-size:.82rem; } .cmt .cn a{ color:var(--text); text-decoration:none; }
+    .cmt .ct{ font-size:.9rem; color:#cdd6e0; white-space:pre-wrap; }
+    .cbox{ display:flex; gap:.5rem; margin-top:.5rem; }
+    .cbox input{ margin:0; }
+    .cbox button{ margin:0; width:auto; padding:.55rem 1rem; white-space:nowrap; }
+    .empty{ text-align:center; color:var(--muted); padding:2.5rem 1rem; }
+    .hint{ font-size:.78rem; color:var(--muted); margin:.1rem 0 .6rem .2rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <h2 class="section-title"><i class="fas fa-video" style="color:#ff5d6c"></i> Cyvathon Videos</h2>
+    <p class="section-sub">Share what you're watching or making. Paste a YouTube link or a direct video URL.</p>
+
+    <div class="panel poster">
+      <input id="vTitle" placeholder="Video title" maxlength="140">
+      <input id="vUrl" placeholder="YouTube link or .mp4 / .webm URL">
+      <div class="hint">e.g. https://youtube.com/watch?v=… &nbsp;·&nbsp; or a direct https://….mp4 link</div>
+      <textarea id="vDesc" placeholder="Say something about it (optional)" maxlength="1000"></textarea>
+      <button onclick="post()" id="vPostBtn"><i class="fas fa-paper-plane"></i> Post video</button>
+      <p id="vMsg" class="small" style="text-align:center;margin-top:.5rem;min-height:1em;"></p>
+    </div>
+
+    <div class="vfeed" id="feed"><p class="empty">Loading…</p></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null;
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const enc=encodeURIComponent;
+    const OPEN=(new URLSearchParams(location.search).get("v")||"");
+
+    function player(v){
+      if(v.kind==="file") return `<div class="vwrap"><video src="${esc(v.url)}" controls preload="metadata"></video></div>`;
+      return `<div class="vwrap"><iframe src="${esc(v.url)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+    }
+    function card(v){
+      const name=esc(v.username||"Someone");
+      return `<div class="vcard" id="vc${v.id}">
+        ${player(v)}
+        <div class="vbody">
+          <div class="vtitle">${esc(v.title)}</div>
+          <div class="vmeta">
+            <div class="av" ${avatarStyle(v.avatar)}>${v.avatar?'':name[0].toUpperCase()}</div>
+            <a href="/profile?user=${enc(v.username)}">${name}</a>
+            <span>· ${new Date(v.created_at).toLocaleDateString()}</span>
+          </div>
+          ${v.description?`<div class="vdesc">${esc(v.description)}</div>`:''}
+          <div class="vactions">
+            <button class="cbtn" onclick="toggleC(${v.id})"><i class="far fa-comment"></i> <span id="cc${v.id}">${v.comments||0}</span> comments</button>
+            <div class="comments" id="cm${v.id}"></div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    async function load(){
+      try{
+        const d=await api("/videos_list"); ME=d.me;
+        const list=d.videos||[];
+        document.getElementById("feed").innerHTML = list.length
+          ? list.map(card).join("")
+          : `<p class="empty">No videos yet — be the first to post one! 🎬</p>`;
+        if(OPEN){ const el=document.getElementById("vc"+OPEN); if(el){ el.scrollIntoView({behavior:"smooth"}); toggleC(+OPEN); } }
+      }catch(e){ document.getElementById("feed").innerHTML=`<p class="empty">${esc(e.message)}</p>`; }
+    }
+
+    async function post(){
+      const title=document.getElementById("vTitle").value.trim();
+      const url=document.getElementById("vUrl").value.trim();
+      const description=document.getElementById("vDesc").value.trim();
+      const msg=document.getElementById("vMsg");
+      if(!title||!url){ msg.style.color="var(--red)"; msg.textContent="Add a title and a video link."; return; }
+      document.getElementById("vPostBtn").disabled=true;
+      try{
+        await api("/videos",{method:"POST",body:JSON.stringify({title,url,description})});
+        document.getElementById("vTitle").value=""; document.getElementById("vUrl").value=""; document.getElementById("vDesc").value="";
+        msg.style.color="var(--green)"; msg.textContent="Posted!";
+        load();
+      }catch(e){ msg.style.color="var(--red)"; msg.textContent=e.message; }
+      finally{ document.getElementById("vPostBtn").disabled=false; }
+    }
+
+    async function toggleC(id){
+      const box=document.getElementById("cm"+id);
+      if(box.style.display==="flex"){ box.style.display="none"; return; }
+      box.style.display="flex";
+      box.innerHTML=`<p class="small muted">Loading…</p>`;
+      try{
+        const d=await api("/video/"+id);
+        renderComments(id, d.comments||[]);
+      }catch(e){ box.innerHTML=`<p class="small muted">${esc(e.message)}</p>`; }
+    }
+    function renderComments(id, list){
+      const box=document.getElementById("cm"+id);
+      const items=list.map(c=>{
+        const n=esc(c.username||"?");
+        return `<div class="cmt"><div class="av" ${avatarStyle(c.avatar)}>${c.avatar?'':n[0].toUpperCase()}</div>
+          <div class="cb"><div class="cn"><a href="/profile?user=${enc(c.username)}">${n}</a></div>
+          <div class="ct">${esc(c.body)}</div></div></div>`;
+      }).join("") || `<p class="small muted">No comments yet.</p>`;
+      box.innerHTML = items + `<div class="cbox"><input id="ci${id}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')sendC(${id})">
+        <button onclick="sendC(${id})">Send</button></div>`;
+      document.getElementById("cc"+id).textContent = list.length;
+    }
+    async function sendC(id){
+      const inp=document.getElementById("ci"+id); const body=inp.value.trim(); if(!body) return;
+      inp.disabled=true;
+      try{ await api("/video/"+id+"/comment",{method:"POST",body:JSON.stringify({body})});
+        const d=await api("/video/"+id); renderComments(id, d.comments||[]);
+      }catch(e){ alert(e.message); }
+      finally{ inp.disabled=false; }
+    }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      ME=user.username; renderNav("/videos", user);
+      load();
+    })();
+  </script>
+</body>
+</html>
