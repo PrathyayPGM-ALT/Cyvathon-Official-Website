@@ -85,11 +85,20 @@
       catch{ $("captchaQ").textContent = "Human check unavailable — try reloading."; }
     }
 
-    // Cloudflare Turnstile — render only if the server has it configured.
-    window.cfTurnstileReady = function(){
-      try{ window.__tsWidgetId = turnstile.render("#tsBox", { sitekey: window.__tsSiteKey, theme:"dark" }); }
-      catch(e){}
-    };
+    // Cloudflare Turnstile — render only if the server has it configured, and
+    // only once the signup panel is VISIBLE (Turnstile renders blank into a
+    // display:none container, which is why the widget wasn't showing).
+    let tsApiReady = false, tsRendered = false;
+    window.cfTurnstileReady = function(){ tsApiReady = true; renderTurnstile(); };
+    function renderTurnstile(){
+      if(!TS_ON || !tsApiReady || tsRendered) return;
+      const box = $("tsBox");
+      if(!box || box.style.display === "none") return;   // wait until it's on-screen
+      try{
+        window.__tsWidgetId = turnstile.render("#tsBox", { sitekey: window.__tsSiteKey, theme:"dark" });
+        tsRendered = true;
+      }catch(e){}
+    }
     async function initTurnstile(){
       try{
         const c = await api("/public_config");
@@ -100,11 +109,11 @@
           s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=cfTurnstileReady";
           s.async = true; s.defer = true;
           document.head.appendChild(s);
-          if(mode === "signup"){ $("tsBox").style.display = "block"; $("captchaBox").style.display = "none"; }
+          if(mode === "signup"){ $("tsBox").style.display = "block"; $("captchaBox").style.display = "none"; renderTurnstile(); }
         }
       }catch{}
     }
-    function tsReset(){ try{ if(TS_ON && window.turnstile) turnstile.reset(window.__tsWidgetId); }catch(e){} }
+    function tsReset(){ try{ if(TS_ON && window.turnstile && tsRendered) turnstile.reset(window.__tsWidgetId); }catch(e){} }
 
     function setMode(m){
       mode = m;
@@ -123,6 +132,7 @@
       $("password").autocomplete = m==="login" ? "current-password" : "new-password";
       $("msg").textContent = "";
       if(m==="signup" && !TS_ON) loadCaptcha();
+      if(m==="signup" && TS_ON) renderTurnstile();
     }
 
     async function doAuth(){
