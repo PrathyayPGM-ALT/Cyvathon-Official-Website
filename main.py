@@ -881,7 +881,7 @@ def _ip_account_count(ip):
         return 0
 
 
-@limiter.limit("5/min")
+@limiter.limit("25/min")
 @app.route("/register", methods=["POST"])
 def register():
     ip = client_ip()
@@ -922,8 +922,6 @@ def register():
         return jsonify(success=False,
                        error="Too many accounts have been created from your network."), 429
 
-    recent_registrations[ip] = now
-
     if not username or not password:
         return jsonify(success=False, error="Missing credentials"), 400
     if len(username) > 32 or len(password) > 200:
@@ -937,6 +935,8 @@ def register():
     exists = supabase.table("cybucks").select("id").eq("username", username).execute()
     if exists.data:
         return jsonify(success=False, error="Username exists"), 400
+
+    recent_registrations[ip] = now      # start the per-IP cooldown only on a real signup
 
     hashed = generate_password_hash(password)
     is_admin = username in TREASURY_ADMINS
