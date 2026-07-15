@@ -7,9 +7,15 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
   <style>
+    .vtop{ max-width:680px; margin:0 auto 1.7rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; }
+    .vtop h2{ font-size:1.65rem; margin:0; display:flex; align-items:center; gap:.6rem; }
+    .vtop p{ color:var(--muted); margin:.28rem 0 0; font-size:.92rem; }
+    .create-btn{ width:auto; margin:0; white-space:nowrap; padding:.72rem 1.35rem; flex-shrink:0;
+      background:linear-gradient(135deg,#ff7a8a,#ff5d6c); color:#2a0410; box-shadow:0 8px 22px rgba(255,93,108,.35); }
+    .create-btn:hover{ box-shadow:0 12px 30px rgba(255,93,108,.5); }
+    @media(max-width:560px){ .vtop{ flex-direction:column; align-items:stretch; } .create-btn{ width:100%; justify-content:center; } }
+
     .vfeed{ max-width:680px; margin:0 auto; display:flex; flex-direction:column; gap:1.4rem; }
-    .poster{ max-width:680px; margin:0 auto 1.6rem; }
-    .poster textarea{ min-height:60px; resize:vertical; }
     .vcard{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; overflow:hidden; }
     .vwrap{ position:relative; width:100%; padding-top:56.25%; background:#000; }
     .vwrap iframe,.vwrap video{ position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
@@ -33,34 +39,101 @@
     .cbox input{ margin:0; }
     .cbox button{ margin:0; width:auto; padding:.55rem 1rem; white-space:nowrap; }
     .empty{ text-align:center; color:var(--muted); padding:2.5rem 1rem; }
-    .hint{ font-size:.78rem; color:var(--muted); margin:.1rem 0 .6rem .2rem; }
+
+    /* create modal */
+    .modal-bg{ position:fixed; inset:0; background:rgba(2,8,18,.72); backdrop-filter:blur(4px);
+      display:none; align-items:center; justify-content:center; z-index:1000; padding:1rem; }
+    .modal-bg.on{ display:flex; }
+    .modal{ background:var(--panel); border:1px solid var(--panel-border); border-radius:18px; padding:1.4rem 1.5rem;
+      width:100%; max-width:480px; box-shadow:0 24px 60px rgba(0,0,0,.55); animation:mpop .2s ease; }
+    @keyframes mpop{ from{ transform:translateY(12px) scale(.98); opacity:0; } to{ transform:none; opacity:1; } }
+    .mhead{ display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+    .mhead b{ font-size:1.2rem; }
+    .mx{ cursor:pointer; color:var(--muted); font-size:1.6rem; line-height:1; }
+    .mx:hover{ color:var(--text); }
+    .mtabs{ display:flex; gap:.4rem; background:var(--panel-2); border:1px solid var(--panel-border); border-radius:12px; padding:.3rem; margin-bottom:1rem; }
+    .mtabs button{ flex:1; margin:0; padding:.55rem; border:none; background:transparent; color:var(--muted); box-shadow:none; font-weight:600; border-radius:9px; font-size:.88rem; }
+    .mtabs button:hover{ transform:none; color:var(--text); }
+    .mtabs button.on{ background:linear-gradient(135deg,#ff7a8a,#ff5d6c); color:#2a0410; }
+    .drop{ border:2px dashed var(--panel-border); border-radius:14px; padding:1.7rem 1rem; text-align:center; cursor:pointer;
+      color:var(--muted); transition:.15s; margin-bottom:.4rem; }
+    .drop:hover{ border-color:var(--accent); color:var(--text); }
+    .drop.has{ border-color:var(--green); color:var(--text); }
+    .drop i{ font-size:1.9rem; display:block; margin-bottom:.55rem; color:var(--accent); }
+    .hint{ font-size:.78rem; color:var(--muted); margin:.1rem 0 .5rem .2rem; }
   </style>
 </head>
 <body>
   <div id="nav"></div>
 
   <div class="wrap">
-    <h2 class="section-title"><i class="fas fa-video" style="color:#ff5d6c"></i> Cyvathon Videos</h2>
-    <p class="section-sub">Share what you're watching or making. Paste a YouTube link or a direct video URL.</p>
-
-    <div class="panel poster">
-      <input id="vTitle" placeholder="Video title" maxlength="140">
-      <input id="vUrl" placeholder="YouTube link or .mp4 / .webm URL">
-      <div class="hint">e.g. https://youtube.com/watch?v=… &nbsp;·&nbsp; or a direct https://….mp4 link</div>
-      <textarea id="vDesc" placeholder="Say something about it (optional)" maxlength="1000"></textarea>
-      <button onclick="post()" id="vPostBtn"><i class="fas fa-paper-plane"></i> Post video</button>
-      <p id="vMsg" class="small" style="text-align:center;margin-top:.5rem;min-height:1em;"></p>
+    <div class="vtop">
+      <div>
+        <h2><i class="fas fa-video" style="color:#ff5d6c"></i> Cyvathon Videos</h2>
+        <p>Watch what citizens are sharing.</p>
+      </div>
+      <button class="create-btn" onclick="openModal()"><i class="fas fa-plus"></i> Post a video</button>
     </div>
 
     <div class="vfeed" id="feed"><p class="empty">Loading…</p></div>
   </div>
 
+  <!-- create modal -->
+  <div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="mhead"><b>Post a video</b><span class="mx" onclick="closeModal()">&times;</span></div>
+      <div class="mtabs">
+        <button id="tabUpload" class="on" onclick="setTab('upload')"><i class="fas fa-upload"></i> From your computer</button>
+        <button id="tabLink" onclick="setTab('link')"><i class="fas fa-link"></i> Paste a link</button>
+      </div>
+      <input id="vTitle" placeholder="Video title" maxlength="140">
+      <div id="paneUpload">
+        <div class="drop" id="drop" onclick="document.getElementById('vFile').click()">
+          <i class="fas fa-cloud-arrow-up"></i>
+          <div id="dropLabel">Click to choose a video<br><span style="font-size:.8rem;">mp4 or webm · up to 48 MB</span></div>
+        </div>
+        <input type="file" id="vFile" accept="video/mp4,video/webm,video/ogg" style="display:none" onchange="fileChosen()">
+      </div>
+      <div id="paneLink" style="display:none;">
+        <input id="vUrl" placeholder="YouTube link or .mp4 / .webm URL">
+        <div class="hint">e.g. https://youtube.com/watch?v=… &nbsp;·&nbsp; or a direct https://….mp4 link</div>
+      </div>
+      <textarea id="vDesc" placeholder="Say something about it (optional)" maxlength="1000" style="min-height:64px;resize:vertical;"></textarea>
+      <button onclick="submitVideo()" id="vPostBtn"><i class="fas fa-paper-plane"></i> Post video</button>
+      <p id="vMsg" class="small" style="text-align:center;margin-top:.5rem;min-height:1em;"></p>
+    </div>
+  </div>
+
   <script src="/static/app.js"></script>
   <script>
-    let ME=null;
+    let ME=null, MODE="upload";
+    const $=(id)=>document.getElementById(id);
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const enc=encodeURIComponent;
     const OPEN=(new URLSearchParams(location.search).get("v")||"");
+
+    function openModal(){ $("modal").classList.add("on"); $("vTitle").focus(); }
+    function closeModal(){ $("modal").classList.remove("on"); }
+    function setTab(m){
+      MODE=m;
+      $("tabUpload").classList.toggle("on", m==="upload");
+      $("tabLink").classList.toggle("on", m==="link");
+      $("paneUpload").style.display = m==="upload" ? "block" : "none";
+      $("paneLink").style.display = m==="link" ? "block" : "none";
+    }
+    function fileChosen(){
+      const f=$("vFile").files[0]; if(!f) return;
+      const mb=(f.size/1048576).toFixed(1);
+      $("drop").classList.add("has");
+      $("dropLabel").innerHTML = `<b>${esc(f.name)}</b><br><span style="font-size:.8rem;">${mb} MB — ready to post</span>`;
+      if(!$("vTitle").value.trim()) $("vTitle").value = f.name.replace(/\.[^.]+$/,"");
+    }
+    function resetForm(){
+      $("vTitle").value=""; $("vUrl").value=""; $("vDesc").value=""; $("vFile").value="";
+      $("drop").classList.remove("has");
+      $("dropLabel").innerHTML = `Click to choose a video<br><span style="font-size:.8rem;">mp4 or webm · up to 48 MB</span>`;
+      $("vMsg").textContent="";
+    }
 
     function player(v){
       if(v.kind==="file") return `<div class="vwrap"><video src="${esc(v.url)}" controls preload="metadata"></video></div>`;
@@ -90,41 +163,48 @@
       try{
         const d=await api("/videos_list"); ME=d.me;
         const list=d.videos||[];
-        document.getElementById("feed").innerHTML = list.length
+        $("feed").innerHTML = list.length
           ? list.map(card).join("")
-          : `<p class="empty">No videos yet — be the first to post one! 🎬</p>`;
-        if(OPEN){ const el=document.getElementById("vc"+OPEN); if(el){ el.scrollIntoView({behavior:"smooth"}); toggleC(+OPEN); } }
-      }catch(e){ document.getElementById("feed").innerHTML=`<p class="empty">${esc(e.message)}</p>`; }
+          : `<p class="empty">No videos yet — hit <b>Post a video</b> to share the first! 🎬</p>`;
+        if(OPEN){ const el=$("vc"+OPEN); if(el){ el.scrollIntoView({behavior:"smooth"}); toggleC(+OPEN); } }
+      }catch(e){ $("feed").innerHTML=`<p class="empty">${esc(e.message)}</p>`; }
     }
 
-    async function post(){
-      const title=document.getElementById("vTitle").value.trim();
-      const url=document.getElementById("vUrl").value.trim();
-      const description=document.getElementById("vDesc").value.trim();
-      const msg=document.getElementById("vMsg");
-      if(!title||!url){ msg.style.color="var(--red)"; msg.textContent="Add a title and a video link."; return; }
-      document.getElementById("vPostBtn").disabled=true;
+    async function submitVideo(){
+      const title=$("vTitle").value.trim();
+      const description=$("vDesc").value.trim();
+      const msg=$("vMsg");
+      const fail=(m)=>{ msg.style.color="var(--red)"; msg.textContent=m; };
+      if(!title){ fail("Add a title."); return; }
+      $("vPostBtn").disabled=true;
       try{
-        await api("/videos",{method:"POST",body:JSON.stringify({title,url,description})});
-        document.getElementById("vTitle").value=""; document.getElementById("vUrl").value=""; document.getElementById("vDesc").value="";
-        msg.style.color="var(--green)"; msg.textContent="Posted!";
-        load();
-      }catch(e){ msg.style.color="var(--red)"; msg.textContent=e.message; }
-      finally{ document.getElementById("vPostBtn").disabled=false; }
+        if(MODE==="upload"){
+          const f=$("vFile").files[0];
+          if(!f){ fail("Choose a video file."); $("vPostBtn").disabled=false; return; }
+          msg.style.color="var(--muted)"; msg.textContent="Uploading… this can take a moment.";
+          const fd=new FormData(); fd.append("file",f); fd.append("title",title); fd.append("description",description);
+          const r=await fetch("/video/upload",{method:"POST",credentials:"include",body:fd});
+          let d; try{ d=await r.json(); }catch{ throw new Error(r.status===413?"That file is too large (max 48 MB).":"Upload failed ("+r.status+")."); }
+          if(!r.ok||d.success===false) throw new Error(d.error||"Upload failed");
+        }else{
+          const url=$("vUrl").value.trim();
+          if(!url){ fail("Paste a video link."); $("vPostBtn").disabled=false; return; }
+          await api("/videos",{method:"POST",body:JSON.stringify({title,url,description})});
+        }
+        closeModal(); resetForm(); load();
+      }catch(e){ fail(e.message); }
+      finally{ $("vPostBtn").disabled=false; }
     }
 
     async function toggleC(id){
-      const box=document.getElementById("cm"+id);
+      const box=$("cm"+id);
       if(box.style.display==="flex"){ box.style.display="none"; return; }
-      box.style.display="flex";
-      box.innerHTML=`<p class="small muted">Loading…</p>`;
-      try{
-        const d=await api("/video/"+id);
-        renderComments(id, d.comments||[]);
-      }catch(e){ box.innerHTML=`<p class="small muted">${esc(e.message)}</p>`; }
+      box.style.display="flex"; box.innerHTML=`<p class="small muted">Loading…</p>`;
+      try{ const d=await api("/video/"+id); renderComments(id, d.comments||[]); }
+      catch(e){ box.innerHTML=`<p class="small muted">${esc(e.message)}</p>`; }
     }
     function renderComments(id, list){
-      const box=document.getElementById("cm"+id);
+      const box=$("cm"+id);
       const items=list.map(c=>{
         const n=esc(c.username||"?");
         return `<div class="cmt"><div class="av" ${avatarStyle(c.avatar)}>${c.avatar?'':n[0].toUpperCase()}</div>
@@ -133,10 +213,10 @@
       }).join("") || `<p class="small muted">No comments yet.</p>`;
       box.innerHTML = items + `<div class="cbox"><input id="ci${id}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')sendC(${id})">
         <button onclick="sendC(${id})">Send</button></div>`;
-      document.getElementById("cc"+id).textContent = list.length;
+      $("cc"+id).textContent = list.length;
     }
     async function sendC(id){
-      const inp=document.getElementById("ci"+id); const body=inp.value.trim(); if(!body) return;
+      const inp=$("ci"+id); const body=inp.value.trim(); if(!body) return;
       inp.disabled=true;
       try{ await api("/video/"+id+"/comment",{method:"POST",body:JSON.stringify({body})});
         const d=await api("/video/"+id); renderComments(id, d.comments||[]);
@@ -144,10 +224,13 @@
       finally{ inp.disabled=false; }
     }
 
+    document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeModal(); });
+
     (async function(){
       const user=await requireAuth(); if(!user) return;
       ME=user.username; renderNav("/videos", user);
       load();
+      if(OPEN==="new") openModal();
     })();
   </script>
 </body>

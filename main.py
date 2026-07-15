@@ -115,7 +115,7 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=6)
-app.config["MAX_CONTENT_LENGTH"] = 6 * 1024 * 1024   # 6 MB — allows chat image uploads (JSON bodies stay small)
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024   # 50 MB — allows short video uploads (images/JSON stay small)
 
 CORS(app, supports_credentials=True)
 logging.basicConfig(level=logging.INFO)
@@ -4991,6 +4991,81 @@ def videos_post():
             "username": user["username"], "title": title,
             "url": emb["url"], "kind": emb["kind"], "description": desc,
         }).execute().data[0]
+    except Exception:
+        return jsonify(success=False, error="Video board isn't set up yet — run the migration."), 500
+    add_record(user["username"], f"Posted a video: {title}")
+    return jsonify(success=True, video=row)
+
+
+# ----- Direct video upload from the user's device -----
+_VIDEO_BUCKET = "videos"
+_video_bucket_ready = False
+VIDEO_MAX = 48 * 1024 * 1024      # 48 MB — keep under MAX_CONTENT_LENGTH
+
+
+def _ensure_video_bucket():
+    global _video_bucket_ready
+    if _video_bucket_ready:
+        return
+    try:
+        supabase.storage.create_bucket(_VIDEO_BUCKET, options={"public": True})
+    except Exception:
+        pass          # already exists (or not permitted) — upload will report
+    _video_bucket_ready = True
+
+
+def _store_video(f, folder):
+    """Validate + upload a short video to the public 'videos' bucket. Returns (url, error)."""
+    data = f.read()
+    if not data:
+        return None, "Empty file"
+    if len(data) > VIDEO_MAX:
+        return None, "Video too large (max 48 MB). Trim the clip or paste a YouTube link instead."
+    mime = (f.mimetype or "").lower()
+    ext = {"video/mp4": "mp4", "video/webm": "webm",
+           "video/ogg": "ogg", "application/ogg": "ogg"}.get(mime)
+    if not ext:                                   # fall back to the filename extension
+        fn = (f.filename or "").lower()
+        for e in ("mp4", "webm", "ogg"):
+            if fn.endswith("." + e):
+                ext = e
+                mime = mime or ("video/" + e)
+                break
+    if not ext:
+        return None, "Videos only (mp4, webm, ogg)"
+    path = f"{folder}/{secrets.token_hex(10)}.{ext}"
+    try:
+        _ensure_video_bucket()
+        supabase.storage.from_(_VIDEO_BUCKET).upload(
+            path, data, {"content-type": mime or ("video/" + ext), "upsert": "true"})
+        url = supabase.storage.from_(_VIDEO_BUCKET).get_public_url(path)
+    except Exception as ex:
+        logging.warning("video store failed: %s", ex)
+        return None, "Upload failed — create a public Storage bucket named 'videos' in Supabase."
+    return url.rstrip("?"), None
+
+
+@limiter.limit("8/min")
+@app.route("/video/upload", methods=["POST"])
+def video_upload():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    title = (request.form.get("title") or "").strip()[:140]
+    desc = (request.form.get("description") or "").strip()[:1000]
+    if not title:
+        return jsonify(success=False, error="Give your video a title."), 400
+    f = request.files.get("file")
+    if not f:
+        return jsonify(success=False, error="No file"), 400
+    url, err = _store_video(f, user["username"])
+    if err:
+        soft = any(s in err for s in ("Videos only", "Empty", "too large"))
+        return jsonify(success=False, error=err), 400 if soft else 500
+    try:
+        row = supabase.table("videos").insert({
+            "username": user["username"], "title": title,
+            "url": url, "kind": "file", "description": desc}).execute().data[0]
     except Exception:
         return jsonify(success=False, error="Video board isn't set up yet — run the migration."), 500
     add_record(user["username"], f"Posted a video: {title}")

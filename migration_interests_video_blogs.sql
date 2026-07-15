@@ -1,6 +1,10 @@
 -- ============================================================
 --  Cyvathon — Interests + Videos + Blogs migration
 --  Safe & idempotent. Paste into the Supabase SQL editor and run.
+--
+--  ALSO (for uploading videos from your computer):
+--    Supabase → Storage → New bucket → name it "videos" → make it PUBLIC.
+--    (The app tries to create it automatically, but making it manually is safest.)
 -- ============================================================
 
 -- 1) Interests: a comma-separated list of interest keys on each citizen
