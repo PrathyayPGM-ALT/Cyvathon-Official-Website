@@ -39,6 +39,20 @@
       transition:.15s; user-select:none; }
     .chip:hover{ color:var(--text); border-color:var(--accent); }
     .chip.on{ color:#06223a; background:linear-gradient(135deg,#5ec5ff,#3aa0ee); border-color:transparent; }
+    .tcards{ display:flex; gap:.6rem; margin-bottom:1rem; }
+    .tcard{ flex:1; text-align:center; padding:1rem .6rem; border-radius:14px; cursor:pointer; user-select:none;
+      border:1px solid var(--panel-border); background:var(--panel-2); transition:.16s; }
+    .tcard:hover{ border-color:var(--accent); transform:translateY(-2px); }
+    .tcard i{ font-size:1.4rem; color:var(--muted); display:block; margin-bottom:.45rem; transition:.16s; }
+    .tcard b{ display:block; font-size:.9rem; color:var(--text); }
+    .tcard span{ font-size:.72rem; color:var(--muted); }
+    .tcard.on{ border-color:var(--accent); background:rgba(88,196,255,.12); box-shadow:0 0 0 1px var(--accent) inset; }
+    .tcard.on i{ color:var(--accent); }
+    .ally-row{ display:flex; gap:.65rem; align-items:flex-start; cursor:pointer; padding:.85rem 1rem; border-radius:12px;
+      background:rgba(31,214,166,.09); border:1px solid rgba(31,214,166,.4); margin-bottom:.8rem; }
+    .ally-row input{ width:auto; margin:.15rem 0 0; accent-color:var(--green); flex-shrink:0; }
+    .ally-row b{ font-size:.87rem; color:var(--text); }
+    .ally-sub{ font-size:.75rem; color:var(--muted); }
   </style>
 </head>
 <body>
@@ -54,14 +68,34 @@
       </div>
 
       <form id="authForm" onsubmit="doAuth();return false;">
-        <div class="field"><i class="fas fa-user"></i>
+        <div id="typeBox" style="display:none;">
+          <label class="captcha-q">Who's signing up?</label>
+          <div class="tcards">
+            <div class="tcard" id="tcCitizen" onclick="pickType('citizen')">
+              <i class="fas fa-user"></i><b>I'm a citizen</b><span>Join as a person</span>
+            </div>
+            <div class="tcard" id="tcNation" onclick="pickType('micronation')">
+              <i class="fas fa-flag"></i><b>We're a micronation</b><span>Another nation</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" id="fUser"><i class="fas fa-user"></i>
           <input id="username" placeholder="Username" autocomplete="username" autofocus></div>
 
         <div class="field" id="emailField" style="display:none;"><i class="fas fa-envelope"></i>
           <input id="email" type="email" placeholder="Email (shown on your ID card)" autocomplete="email"></div>
 
-        <div class="field"><i class="fas fa-lock"></i>
+        <div class="field" id="fPass"><i class="fas fa-lock"></i>
           <input id="password" type="password" placeholder="Password" autocomplete="current-password"></div>
+
+        <div id="allyBox" style="display:none;">
+          <label class="ally-row">
+            <input type="checkbox" id="allyChk">
+            <span><b>We're interested in an alliance with Cyvathon</b><br>
+              <span class="ally-sub">The President will reach out about a treaty.</span></span>
+          </label>
+        </div>
 
         <div id="interestBox" style="display:none;">
           <label class="captcha-q">What do you love to do? <span style="opacity:.7">(pick a few — we'll tailor Cyvathon to you)</span></label>
@@ -142,26 +176,62 @@
     }
     function tsReset(){ try{ if(TS_ON && window.turnstile && tsRendered) turnstile.reset(window.__tsWidgetId); }catch(e){} }
 
+    let ACCT = null;      // 'citizen' | 'micronation' — chosen first, gates the rest
+
     function setMode(m){
       mode = m;
+      if(m === "login") ACCT = null;
       $("tabLogin").classList.toggle("active", m==="login");
       $("tabSignup").classList.toggle("active", m==="signup");
-      $("title").textContent = m==="login" ? "Welcome Back" : "Become a Citizen";
-      $("sub").innerHTML = m==="login"
-        ? "Log in to your citizen account."
-        : "Join the Republic — new citizens get <b>100 of each currency</b>. Signups are reviewed by the President.";
       $("submitBtn").innerHTML = m==="login"
         ? '<i class="fas fa-right-to-bracket"></i> Login'
         : '<i class="fas fa-user-plus"></i> Sign Up';
-      $("emailField").style.display = m==="signup" ? "block" : "none";
-      $("interestBox").style.display = m==="signup" ? "block" : "none";
-      if(m==="signup") loadInterests();
-      $("captchaBox").style.display = (m==="signup" && !TS_ON) ? "block" : "none";
-      $("tsBox").style.display = (m==="signup" && TS_ON) ? "block" : "none";
       $("password").autocomplete = m==="login" ? "current-password" : "new-password";
       $("msg").textContent = "";
-      if(m==="signup" && !TS_ON) loadCaptcha();
-      if(m==="signup" && TS_ON) renderTurnstile();
+      applyVis();
+    }
+
+    function pickType(t){
+      ACCT = t;
+      $("tcCitizen").classList.toggle("on", t==="citizen");
+      $("tcNation").classList.toggle("on", t==="micronation");
+      applyVis();
+      $("username").focus();
+    }
+
+    function applyVis(){
+      const signup = mode === "signup";
+      const ready  = signup && !!ACCT;        // signup fields appear once a type is picked
+      const fields = !signup || ready;        // login always shows username/password
+
+      $("typeBox").style.display   = signup ? "block" : "none";
+      $("fUser").style.display     = fields ? "" : "none";
+      $("fPass").style.display     = fields ? "" : "none";
+      $("submitBtn").style.display = fields ? "" : "none";
+      $("emailField").style.display  = ready ? "block" : "none";
+      $("interestBox").style.display = ready ? "block" : "none";
+      $("allyBox").style.display     = (ready && ACCT==="micronation") ? "block" : "none";
+      $("captchaBox").style.display  = (ready && !TS_ON) ? "block" : "none";
+      $("tsBox").style.display       = (ready && TS_ON) ? "block" : "none";
+
+      const invitedBy = REF ? `<i class="fas fa-gift" style="color:var(--accent)"></i> Invited by <b>${REF.replace(/</g,"&lt;")}</b> — ` : "";
+      if(!signup){
+        $("title").textContent = "Welcome Back";
+        $("sub").innerHTML = "Log in to your citizen account.";
+      } else if(!ACCT){
+        $("title").textContent = "Join Cyvathon";
+        $("sub").innerHTML = invitedBy + "first, are you joining as a person or as a micronation?";
+      } else if(ACCT === "micronation"){
+        $("title").textContent = "Register your Micronation";
+        $("sub").innerHTML = "Welcome, neighbour 🌐 Register your nation — you get <b>100 of each currency</b>. Reviewed by the President.";
+      } else {
+        $("title").textContent = "Become a Citizen";
+        $("sub").innerHTML = invitedBy + "join the Republic — new citizens get <b>100 of each currency</b>. Reviewed by the President.";
+      }
+
+      if(ready) loadInterests();
+      if(ready && !TS_ON) loadCaptcha();
+      if(ready && TS_ON) renderTurnstile();
     }
 
     async function doAuth(){
@@ -171,6 +241,9 @@
       const path = mode==="login" ? "/login" : "/register";
       const body = {username, password};
       if(mode==="signup"){
+        if(!ACCT){ $("msg").style.color="var(--red)"; $("msg").textContent = "Pick whether you're a citizen or a micronation."; return; }
+        body.account_type = ACCT;
+        if(ACCT==="micronation") body.ally = $("allyChk").checked;
         if(TS_ON){
           const tok = (window.turnstile && window.__tsWidgetId!=null) ? turnstile.getResponse(window.__tsWidgetId) : "";
           if(!tok){ $("msg").style.color="var(--red)"; $("msg").textContent = "Please complete the human check."; return; }
@@ -207,10 +280,7 @@
     (async function(){
       if(await currentUser()){ window.location.href = "/"; return; }
       await initTurnstile();
-      if(REF){
-        setMode("signup");
-        $("sub").innerHTML = `<i class="fas fa-gift" style="color:var(--accent)"></i> Invited by <b>${REF.replace(/</g,"&lt;")}</b> — join the Republic! New citizens get <b>100 of each currency</b>.`;
-      }
+      if(REF) setMode("signup");      // applyVis() shows the "Invited by …" line
     })();
   </script>
 </body>

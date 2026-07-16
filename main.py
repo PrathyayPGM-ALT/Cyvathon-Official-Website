@@ -635,6 +635,8 @@ def public_user(user):
         "bio":         user.get("bio"),
         "company_id":  user.get("company_id"),
         "interests":   _parse_interests(user.get("interests")),
+        "account_type": user.get("account_type") or "citizen",
+        "ally_interest": bool(user.get("ally_interest")),
     }
 
 
@@ -1119,6 +1121,17 @@ def register():
             supabase.table("cybucks").update({"email": email}).eq("username", username).execute()
         except Exception:
             pass
+    # Account type: an individual citizen, or a fellow micronation (diplomacy).
+    acct = (data.get("account_type") or "citizen").strip().lower()
+    if acct not in ("citizen", "micronation"):
+        acct = "citizen"
+    ally = bool(data.get("ally")) and acct == "micronation"
+    try:      # fail-open if the columns aren't migrated yet
+        supabase.table("cybucks").update(
+            {"account_type": acct, "ally_interest": ally}).eq("username", username).execute()
+    except Exception:
+        pass
+
     picks = _parse_interests(data.get("interests"))      # favorite things, from signup
     if picks:
         _set_interests(username, picks)
@@ -1135,12 +1148,22 @@ def register():
             supabase.table("cybucks").update({"approved": False}).eq("username", username).execute()
         except Exception:
             pending = False        # column missing → approval not enforced yet
+    if acct == "micronation":
+        add_record(username, "Registered as a foreign micronation"
+                   + (" — seeking an alliance with Cyvathon." if ally else "."))
     add_record(username, "Applied for citizenship of Cyvathon — awaiting Presidential approval."
                if pending else
                f"Granted citizenship of Cyvathon with {STARTING_GRANT} of each currency.")
 
     if pending:
-        notify("Cyvathon", f"New citizenship application: {username}", "/admin")
+        if acct == "micronation":
+            msg = f"🌐 Micronation application: {username}" + (" — wants an ALLIANCE 🤝" if ally else "")
+        else:
+            msg = f"New citizenship application: {username}"
+        notify("Cyvathon", msg, "/admin")
+        for _adm in TREASURY_ADMINS:      # make sure the President actually sees nations
+            if acct == "micronation" and _adm != username:
+                notify(_adm, msg, "/admin")
         return jsonify(success=True, pending=True,
                        message="Application submitted. You'll be able to log in once the President approves your citizenship.")
 
