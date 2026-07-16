@@ -25,6 +25,8 @@
     .cz .view:hover{ border-color:var(--accent); color:var(--accent); }
     .cz .dm{ background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; border:none; display:flex; align-items:center; justify-content:center; gap:.4rem; cursor:pointer; }
     .badge-you{ font-size:.68rem; color:var(--accent); font-weight:600; }
+    .natflag{ font-size:.64rem; font-weight:800; text-transform:uppercase; letter-spacing:.5px; color:#032018;
+      background:linear-gradient(135deg,#26e0a8,#12a37c); padding:.08rem .4rem; border-radius:5px; margin-left:.35rem; vertical-align:middle; }
   </style>
 </head>
 <body>
@@ -57,6 +59,7 @@
         <div class="head">
           <div class="av" ${avatarStyle(c.avatar)}>${c.avatar?'':esc(c.username[0].toUpperCase())}</div>
           <div><div class="nm"><a href="${you?'/profile':'/profile?user='+enc(c.username)}">${esc(c.username)}</a>
+            ${c.account_type==='micronation'?' <span class="natflag">🏳️ Nation</span>':''}
             ${you?' <span class="badge-you">(you)</span>':''}</div>
             <div class="role">${role}</div></div>
         </div>

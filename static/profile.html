@@ -111,6 +111,8 @@
           <div class="id-top">
             <div class="id-avatar" ${avatarStyle(p.avatar)}>${p.avatar?'':esc(p.username[0].toUpperCase())}</div>
             <div><h2>${esc(p.username)}</h2><span class="pill">${esc(p.designation)}</span>
+              ${p.account_type==='micronation'?`<span class="pill" style="background:linear-gradient(135deg,#26e0a8,#12a37c);color:#032018;">🏳️ Micronation</span>`:''}
+              ${p.allied?`<span class="pill" style="background:rgba(31,214,166,.18);color:#4be3b6;">🤝 Allied with Cyvathon</span>`:(p.ally_interest?`<span class="pill" style="background:rgba(255,206,86,.16);color:#ffce56;">Seeking alliance</span>`:'')}
               <div style="margin-top:.5rem;">
                 <button class="ghost" style="width:auto;margin:0;padding:.3rem .8rem;font-size:.78rem;" onclick="changeAvatar()"><i class="fas fa-camera"></i> ${p.avatar?'Change':'Add'} photo</button>
                 ${p.avatar?`<button class="ghost" style="width:auto;margin:0 0 0 .3rem;padding:.3rem .7rem;font-size:.78rem;" onclick="removeAvatar()">Remove</button>`:''}
@@ -194,7 +196,10 @@
         <div class="id-card">
           <div class="id-top">
             <div class="id-avatar" ${avatarStyle(p.avatar)}>${p.avatar?'':esc(p.username[0].toUpperCase())}</div>
-            <div><h2>${esc(p.username)}</h2><span class="pill">${esc(p.designation)}</span></div>
+            <div><h2>${esc(p.username)}</h2><span class="pill">${esc(p.designation)}</span>
+              ${p.account_type==='micronation'?`<span class="pill" style="background:linear-gradient(135deg,#26e0a8,#12a37c);color:#032018;">🏳️ Micronation</span>`:''}
+              ${p.allied?`<span class="pill" style="background:rgba(31,214,166,.18);color:#4be3b6;">🤝 Allied</span>`:(p.ally_interest?`<span class="pill" style="background:rgba(255,206,86,.16);color:#ffce56;">Seeking alliance</span>`:'')}
+            </div>
           </div>
           <div class="id-body">
             <div class="id-row"><span class="l">Net Worth</span><b style="color:var(--accent)">${fmt(p.net_worth)} CB</b></div>

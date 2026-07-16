@@ -13,6 +13,7 @@ alter table cybucks add column if not exists interests text default '';
 -- 1b) Account type: 'citizen' or 'micronation' (+ whether a nation wants an alliance)
 alter table cybucks add column if not exists account_type  text default 'citizen';
 alter table cybucks add column if not exists ally_interest boolean default false;
+alter table cybucks add column if not exists allied        boolean default false;  -- President-confirmed alliance
 
 -- 2) Videos platform
 create table if not exists videos (

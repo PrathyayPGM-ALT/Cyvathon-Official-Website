@@ -637,6 +637,7 @@ def public_user(user):
         "interests":   _parse_interests(user.get("interests")),
         "account_type": user.get("account_type") or "citizen",
         "ally_interest": bool(user.get("ally_interest")),
+        "allied": bool(user.get("allied")),
     }
 
 
@@ -766,6 +767,56 @@ def set_interests_endpoint():
         return jsonify(success=False, error="Pick at least one thing you love."), 400
     saved = _set_interests(user["username"], keys)
     return jsonify(success=True, interests=saved)
+
+
+# ============================================================
+#  FOREIGN AFFAIRS  — micronations & alliances
+# ============================================================
+@app.route("/foreign_data")
+def foreign_data():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        rows = supabase.table("cybucks") \
+            .select("username,avatar,account_type,ally_interest,allied,banned,created_at") \
+            .eq("account_type", "micronation").execute().data or []
+    except Exception:      # columns not migrated yet
+        rows = []
+    nations = [{
+        "username": r["username"], "avatar": r.get("avatar"),
+        "ally_interest": bool(r.get("ally_interest")), "allied": bool(r.get("allied")),
+        "member_since": r.get("created_at"),
+    } for r in rows if not r.get("banned")]
+    nations.sort(key=lambda n: (not n["allied"], not n["ally_interest"], n["username"].lower()))
+    return jsonify(success=True, nations=nations, is_president=is_treasury_admin(user))
+
+
+@limiter.limit("30/min")
+@app.route("/foreign/set_ally", methods=["POST"])
+def foreign_set_ally():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json() or {}
+    target = (d.get("username") or "").strip()
+    allied = bool(d.get("allied"))
+    row = supabase.table("cybucks").select("account_type").eq("username", target).execute().data
+    if not row:
+        return jsonify(success=False, error="No such nation"), 404
+    if (row[0].get("account_type") or "citizen") != "micronation":
+        return jsonify(success=False, error="That account isn't a micronation"), 400
+    try:
+        supabase.table("cybucks").update({"allied": allied}).eq("username", target).execute()
+    except Exception:
+        return jsonify(success=False, error="Alliance column not migrated yet."), 503
+    if allied:
+        add_record(target, "Signed a formal alliance with Cyvathon. 🤝")
+        notify(target, "🤝 Cyvathon has formally allied with your nation!", "/foreign")
+    else:
+        add_record(target, "Alliance with Cyvathon was dissolved.")
+        notify(target, "Your alliance with Cyvathon has been dissolved.", "/foreign")
+    return jsonify(success=True, allied=allied)
 
 
 def _gov_role(username):
@@ -937,6 +988,10 @@ def videos_page():
 @app.route("/blogs")
 def blogs_page():
     return app.send_static_file("blogs.html")
+
+@app.route("/foreign")
+def foreign_page():
+    return app.send_static_file("foreign.html")
 
 @app.route("/court")
 def court_page():
@@ -1257,6 +1312,9 @@ def public_profile(username):
         "cabinet_role": _gov_role(username),
         "member_since": u.get("created_at"),
         "net_worth": user_net_worth(username),
+        "account_type": u.get("account_type") or "citizen",
+        "ally_interest": bool(u.get("ally_interest")),
+        "allied": bool(u.get("allied")),
         "companies": founded, "jobs": job_list, "records": records,
         "is_self": viewer["username"] == username,
     })
@@ -4886,9 +4944,9 @@ def citizens_directory():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     try:
-        rows = supabase.table("cybucks").select("username,designation,avatar,banned") \
+        rows = supabase.table("cybucks").select("username,designation,avatar,banned,account_type") \
             .order("username").execute().data or []
-    except Exception:      # avatar column not migrated yet
+    except Exception:      # avatar / account_type column not migrated yet
         rows = supabase.table("cybucks").select("username,designation,banned") \
             .order("username").execute().data or []
     rows = [r for r in rows if not r.get("banned")]      # hide banned citizens
