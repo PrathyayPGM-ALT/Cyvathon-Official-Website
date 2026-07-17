@@ -7,52 +7,104 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
   <style>
-    .fgrid{ display:grid; gap:1.1rem; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); max-width:900px; margin:0 auto 2rem; }
-    .nation{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; padding:1.2rem 1.3rem;
-      display:flex; flex-direction:column; gap:.7rem; transition:.18s; }
-    .nation:hover{ transform:translateY(-3px); box-shadow:0 12px 30px rgba(0,0,0,.3); }
-    .nation.ally{ border-color:rgba(31,214,166,.5); }
-    .nation.rival{ border-color:rgba(255,93,108,.5); }
-    .nhead{ display:flex; align-items:center; gap:.8rem; }
-    .flag{ width:48px; height:48px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
-      font-size:1.4rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
-    .nname{ font-weight:800; font-size:1.1rem; } .nname a{ color:var(--text); text-decoration:none; } .nname a:hover{ color:var(--accent); }
-    .status{ font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
-    .chip{ display:inline-flex; align-items:center; gap:.35rem; font-size:.72rem; font-weight:700; padding:.25rem .6rem; border-radius:999px; }
-    .c-ally{ background:rgba(31,214,166,.16); color:#4be3b6; } .c-rival{ background:rgba(255,93,108,.16); color:#ff8a96; }
-    .c-seek{ background:rgba(255,206,86,.16); color:#ffce56; } .c-reg{ background:var(--panel-2); color:var(--muted); }
-    .ndesc{ font-size:.86rem; color:var(--muted); line-height:1.5; flex:1; }
-    .nactions{ display:flex; gap:.5rem; }
-    .nactions a,.nactions button{ flex:1; margin:0; padding:.5rem; font-size:.82rem; text-align:center; text-decoration:none; border-radius:10px; }
-    .view{ background:var(--panel-2); color:var(--text); border:1px solid var(--panel-border); }
-    .ally-btn{ background:linear-gradient(135deg,#26e0a8,#12a37c); color:#032018; border:none; cursor:pointer; }
-    .revoke-btn{ background:var(--panel-2); color:var(--red); border:1px solid rgba(255,93,108,.4); cursor:pointer; }
-    .empty{ text-align:center; color:var(--muted); padding:2rem; }
+    .fpage{ max-width:1000px; margin:0 auto; }
+
+    /* hero */
+    .fhero{ position:relative; overflow:hidden; border-radius:22px; padding:2.2rem 2.2rem;
+      background:linear-gradient(140deg, rgba(88,196,255,.18), rgba(167,139,250,.08) 55%, transparent);
+      border:1px solid var(--panel-border); margin-bottom:2.2rem; }
+    .fh-grid{ position:absolute; inset:0; pointer-events:none;
+      background-image:linear-gradient(rgba(88,196,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(88,196,255,.07) 1px,transparent 1px);
+      background-size:40px 40px;
+      -webkit-mask-image:radial-gradient(ellipse 70% 80% at 20% 30%, #000 25%, transparent 75%);
+      mask-image:radial-gradient(ellipse 70% 80% at 20% 30%, #000 25%, transparent 75%); }
+    .fh-inner{ position:relative; z-index:1; display:flex; align-items:center; gap:1.3rem; flex-wrap:wrap; }
+    .fh-icon{ width:66px; height:66px; border-radius:19px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-size:1.9rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2));
+      box-shadow:0 10px 26px rgba(88,196,255,.35); }
+    .fh-txt{ flex:1; min-width:200px; }
+    .fh-txt h2{ margin:0; font-size:1.9rem; font-weight:900; letter-spacing:-.8px; }
+    .fh-txt p{ margin:.3rem 0 0; color:var(--muted); font-size:.94rem; }
+    .fh-stats{ display:flex; gap:.5rem; flex-wrap:wrap; }
+    .fstat{ padding:.55rem 1rem; border-radius:14px; background:rgba(255,255,255,.05);
+      border:1px solid var(--panel-border); text-align:center; min-width:74px; }
+    .fstat b{ display:block; font-size:1.3rem; font-weight:800; line-height:1.1; }
+    .fstat span{ font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; }
+
+    .sec-label{ font-size:.75rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); font-weight:700;
+      margin:0 0 1rem .2rem; display:flex; align-items:center; gap:.7rem; }
+    .sec-label::after{ content:""; flex:1; height:1px; background:var(--panel-border); }
+
+    /* nation cards */
+    .fgrid{ display:grid; gap:1.2rem; grid-template-columns:repeat(auto-fill,minmax(min(290px,100%),1fr)); margin-bottom:2.4rem; }
+    .nation{ position:relative; overflow:hidden; display:flex; flex-direction:column; gap:.9rem;
+      background:var(--panel); border:1px solid var(--panel-border); border-radius:18px; padding:1.5rem 1.4rem 1.3rem;
+      transition:transform .2s, box-shadow .2s, border-color .2s; }
+    .nation::before{ content:""; position:absolute; top:0; left:0; right:0; height:4px; background:var(--nc,#58c4ff); }
+    .nation::after{ content:""; position:absolute; top:-70px; right:-50px; width:170px; height:170px; border-radius:50%;
+      background:var(--nc,#58c4ff); opacity:.09; pointer-events:none; }
+    .nation:hover{ transform:translateY(-5px); border-color:var(--nc,var(--accent)); box-shadow:0 18px 42px rgba(0,0,0,.45); }
+    .nhead{ display:flex; align-items:center; gap:.9rem; position:relative; z-index:1; }
+    .flag{ width:54px; height:54px; border-radius:15px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-size:1.6rem; background:rgba(255,255,255,.06); border:1px solid var(--panel-border);
+      background-size:cover; background-position:center; }
+    .nname{ font-weight:800; font-size:1.15rem; letter-spacing:-.2px; overflow-wrap:anywhere; }
+    .nname a{ color:var(--text); text-decoration:none; } .nname a:hover{ color:var(--accent); }
+    .chip{ display:inline-flex; align-items:center; gap:.35rem; font-size:.7rem; font-weight:800; padding:.22rem .6rem;
+      border-radius:999px; margin-top:.3rem; text-transform:uppercase; letter-spacing:.5px; }
+    .c-ally{ background:rgba(31,214,166,.18); color:#4be3b6; }
+    .c-rival{ background:rgba(255,93,108,.18); color:#ff8a96; }
+    .c-seek{ background:rgba(255,206,86,.18); color:#ffce56; }
+    .c-reg{ background:rgba(255,255,255,.07); color:var(--muted); }
+    .ndesc{ font-size:.87rem; color:var(--muted); line-height:1.55; flex:1; position:relative; z-index:1; }
+    .nactions{ display:flex; gap:.5rem; position:relative; z-index:1; }
+    .nactions a,.nactions button{ flex:1; margin:0; padding:.55rem; font-size:.82rem; text-align:center; text-decoration:none;
+      border-radius:10px; display:flex; align-items:center; justify-content:center; gap:.4rem; }
+    .view{ background:var(--panel-2); color:var(--text); border:1px solid var(--panel-border); cursor:pointer; }
+    .view:hover{ border-color:var(--accent); color:var(--accent); }
+    .ally-btn{ background:linear-gradient(135deg,#26e0a8,#12a37c); color:#032018; border:none; cursor:pointer; font-weight:700; }
+    .revoke-btn{ background:transparent; color:#ff8a96; border:1px solid rgba(255,93,108,.4); cursor:pointer; }
+    .empty{ text-align:center; color:var(--muted); padding:2.5rem 1rem; grid-column:1/-1; }
   </style>
 </head>
 <body>
   <div id="nav"></div>
 
   <div class="wrap">
-    <h2 class="section-title"><i class="fas fa-globe" style="color:#58c4ff"></i> Foreign Affairs</h2>
-    <p class="section-sub">Cyvathon's standing with the nations of the cyber-world.</p>
+    <div class="fpage">
+      <div class="fhero">
+        <div class="fh-grid"></div>
+        <div class="fh-inner">
+          <div class="fh-icon"><i class="fas fa-globe"></i></div>
+          <div class="fh-txt">
+            <h2>Foreign Affairs</h2>
+            <p>Cyvathon's standing with the nations of the cyber-world.</p>
+          </div>
+          <div class="fh-stats" id="fstats"></div>
+        </div>
+      </div>
 
-    <h3 class="section-title" style="font-size:1.25rem;"><i class="fas fa-handshake"></i> Known Nations</h3>
-    <div class="fgrid">
-      <div class="nation ally">
-        <div class="nhead"><div class="flag" style="background:linear-gradient(135deg,#26e0a8,#12a37c);">🟢</div>
-          <div><div class="nname">Crystonia</div><div class="status" style="color:#4be3b6;">Allied</div></div></div>
-        <div class="ndesc">A trusted ally of the Republic. Open borders, shared intelligence, and a standing mutual-defence understanding.</div>
+      <div class="sec-label"><i class="fas fa-handshake"></i> Known Nations</div>
+      <div class="fgrid">
+        <div class="nation" style="--nc:#1fd6a6">
+          <div class="nhead">
+            <div class="flag">🟢</div>
+            <div><div class="nname">Crystonia</div><span class="chip c-ally"><i class="fas fa-handshake"></i> Allied</span></div>
+          </div>
+          <div class="ndesc">A trusted ally of the Republic. Open borders, shared intelligence and a standing mutual-defence understanding.</div>
+        </div>
+        <div class="nation" style="--nc:#ff5d6c">
+          <div class="nhead">
+            <div class="flag">🔴</div>
+            <div><div class="nname">Aquilithia</div><span class="chip c-rival"><i class="fas fa-triangle-exclamation"></i> Hostile · Rival</span></div>
+          </div>
+          <div class="ndesc">A rival state with a history of aggression toward Cyvathon. Under continuous observation by the Athena intelligence agency.</div>
+        </div>
       </div>
-      <div class="nation rival">
-        <div class="nhead"><div class="flag" style="background:linear-gradient(135deg,#ff7a8a,#ff5d6c);">🔴</div>
-          <div><div class="nname">Aquilithia</div><div class="status" style="color:#ff8a96;">Hostile · Rival</div></div></div>
-        <div class="ndesc">A rival state with a history of aggression toward Cyvathon. Under continuous observation by the Athena intelligence agency.</div>
-      </div>
+
+      <div class="sec-label"><i class="fas fa-flag"></i> Registered Micronations</div>
+      <div class="fgrid" id="nations"><p class="empty">Loading…</p></div>
     </div>
-
-    <h3 class="section-title" style="font-size:1.25rem;"><i class="fas fa-flag"></i> Registered Micronations</h3>
-    <div class="fgrid" id="nations"><p class="empty">Loading…</p></div>
   </div>
 
   <script src="/static/app.js"></script>
@@ -61,40 +113,55 @@
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const enc=encodeURIComponent;
 
-    function statusChip(n){
-      if(n.allied)        return `<span class="chip c-ally"><i class="fas fa-handshake"></i> Allied</span>`;
-      if(n.ally_interest) return `<span class="chip c-seek"><i class="fas fa-hourglass-half"></i> Seeking alliance</span>`;
-      return `<span class="chip c-reg"><i class="fas fa-flag"></i> Registered</span>`;
+    function statusOf(n){
+      if(n.allied)        return {chip:`<span class="chip c-ally"><i class="fas fa-handshake"></i> Allied</span>`, col:"#1fd6a6"};
+      if(n.ally_interest) return {chip:`<span class="chip c-seek"><i class="fas fa-hourglass-half"></i> Seeking alliance</span>`, col:"#ffce56"};
+      return {chip:`<span class="chip c-reg"><i class="fas fa-flag"></i> Registered</span>`, col:"#58c4ff"};
     }
     function card(n){
-      const name=esc(n.username||"?");
-      const prezBtns = PREZ
+      const name=esc(n.username||"?"), s=statusOf(n);
+      const prez = PREZ
         ? (n.allied
             ? `<button class="revoke-btn" onclick="setAlly('${enc(n.username)}',false)">Dissolve</button>`
             : `<button class="ally-btn" onclick="setAlly('${enc(n.username)}',true)"><i class="fas fa-handshake"></i> Ally</button>`)
         : "";
-      return `<div class="nation ${n.allied?'ally':''}">
+      return `<div class="nation" style="--nc:${s.col}">
         <div class="nhead">
           <div class="flag" ${avatarStyle(n.avatar)}>${n.avatar?'':'🏳️'}</div>
-          <div><div class="nname"><a href="/profile?user=${enc(n.username)}">${name}</a></div>${statusChip(n)}</div>
+          <div><div class="nname"><a href="/profile?user=${enc(n.username)}">${name}</a></div>${s.chip}</div>
         </div>
-        <div class="ndesc">${n.member_since?('Registered '+new Date(n.member_since).toLocaleDateString()):'A fellow micronation.'}</div>
+        <div class="ndesc">${n.allied
+          ? 'A formal ally of the Republic.'
+          : n.ally_interest ? 'Has requested an alliance with Cyvathon — awaiting the President.'
+                            : 'A fellow micronation registered with Cyvathon.'}
+          ${n.member_since?`<br><span style="opacity:.75;font-size:.8rem;">Registered ${new Date(n.member_since).toLocaleDateString()}</span>`:''}</div>
         <div class="nactions">
           <a class="view" href="/profile?user=${enc(n.username)}"><i class="fas fa-id-card"></i> View</a>
           <button class="view" onclick="location.href='/chat?dm=${enc(n.username)}'"><i class="fas fa-comment"></i> Message</button>
-          ${prezBtns}
+          ${prez}
         </div>
       </div>`;
+    }
+
+    function stats(list){
+      const allies = list.filter(n=>n.allied).length + 1;   // +1 for Crystonia
+      document.getElementById("fstats").innerHTML = `
+        <div class="fstat"><b style="color:#4be3b6">${allies}</b><span>Allies</span></div>
+        <div class="fstat"><b style="color:#ff8a96">1</b><span>Rivals</span></div>
+        <div class="fstat"><b style="color:var(--accent)">${list.length}</b><span>Nations</span></div>`;
     }
 
     async function load(){
       try{
         const d=await api("/foreign_data"); PREZ=d.is_president;
         const list=d.nations||[];
+        stats(list);
         document.getElementById("nations").innerHTML = list.length
           ? list.map(card).join("")
-          : `<p class="empty">No micronations have registered yet. When one signs up, it'll appear here.</p>`;
-      }catch(e){ document.getElementById("nations").innerHTML=`<p class="empty">${esc(e.message)}</p>`; }
+          : `<p class="empty">No micronations have registered yet.<br><span class="small">When one signs up, it'll appear here.</span></p>`;
+      }catch(e){
+        document.getElementById("nations").innerHTML=`<p class="empty">${esc(e.message)}</p>`;
+      }
     }
     async function setAlly(u, allied){
       try{ await api("/foreign/set_ally",{method:"POST",body:JSON.stringify({username:decodeURIComponent(u),allied})}); load(); }

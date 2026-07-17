@@ -11,22 +11,27 @@
       border-radius:16px; padding:1.6rem 1.8rem; margin-bottom:1.6rem; }
     .tpanel h3{ font-size:1.3rem; margin-bottom:.2rem; }
     .tpanel .desc{ color:var(--muted); font-size:.9rem; margin-bottom:1rem; }
-    .cur-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+    /* min() keeps the track from ever exceeding its container on narrow screens */
+    .cur-grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr)); }
     .cur{ background:rgba(255,255,255,0.03); border:1px solid var(--panel-border);
-      border-left:4px solid var(--accent); border-radius:10px; padding:1rem 1.2rem; }
+      border-left:4px solid var(--accent); border-radius:10px; padding:1rem 1.2rem;
+      min-width:0; overflow:hidden; }
     .cur.pufb{ border-left-color:var(--gold); }
     .cur.cybucks{ border-left-color:var(--accent); }
     .cur.aquilines{ border-left-color:var(--green); }
     .cur.cybit{ border-left-color:#a78bfa; }
     .cur .l{ font-size:.72rem; letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
-    .cur .v{ font-size:1.9rem; font-weight:800; margin-top:.2rem; }
-    .cur .sub{ font-size:.75rem; color:var(--muted); margin-top:.3rem; }
+    /* big figures scale with width and wrap instead of spilling out of the card */
+    .cur .v{ font-size:clamp(1.15rem, 3.4vw, 1.75rem); font-weight:800; margin-top:.2rem;
+      line-height:1.15; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+    .cur .sub{ font-size:.75rem; color:var(--muted); margin-top:.3rem; overflow-wrap:anywhere; }
     .pos{ color:var(--green); } .neg{ color:var(--red); }
     .summary{ display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.6rem; }
-    .scard{ flex:1; min-width:170px; padding:1.1rem 1.3rem; border-radius:14px;
+    .scard{ flex:1 1 170px; min-width:0; overflow:hidden; padding:1.1rem 1.3rem; border-radius:14px;
       background:linear-gradient(135deg,rgba(88,196,255,.08),var(--panel)); border:1px solid var(--panel-border); }
     .scard .l{ color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:1px; }
-    .scard .v{ font-size:1.7rem; font-weight:800; color:var(--accent); }
+    .scard .v{ font-size:clamp(1.1rem, 3.2vw, 1.6rem); font-weight:800; color:var(--accent);
+      line-height:1.2; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
     table{ width:100%; border-collapse:collapse; margin-top:.4rem; }
     th,td{ text-align:left; padding:.6rem .5rem; border-bottom:1px solid rgba(255,255,255,.06); font-size:.9rem; }
     th{ color:var(--muted); font-weight:600; text-transform:uppercase; font-size:.72rem; letter-spacing:1px; }
