@@ -8,17 +8,61 @@
   <link rel="stylesheet" href="/static/theme.css">
   <style>
     body{ display:flex; flex-direction:column; min-height:100vh; }
-    .auth-wrap{ flex:1; display:flex; align-items:center; justify-content:center; padding:2rem 1rem; }
-    .auth-card{ width:100%; max-width:430px; padding:2.4rem 2.2rem 2rem; position:relative; overflow:hidden;
-      animation:fadeUp .5s ease both; }
-    .auth-card::before{ content:""; position:absolute; top:-45%; left:-20%; width:140%; height:70%;
-      background:radial-gradient(circle, rgba(88,196,255,.16), transparent 62%); pointer-events:none; }
-    .brand{ display:flex; align-items:center; justify-content:center; gap:.55rem; position:relative; }
-    .brand i{ font-size:1.55rem; color:var(--accent); filter:drop-shadow(0 0 10px rgba(88,196,255,.5)); }
-    .brand h1{ font-size:1.5rem; font-weight:800; letter-spacing:.5px;
+
+    /* ambient blue aura — carries the homepage feel through to auth */
+    .page-aura{ position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
+    .page-aura .pb{ position:absolute; border-radius:50%; filter:blur(95px); animation:floatb 26s ease-in-out infinite; }
+    .page-aura .pb1{ width:520px; height:520px; background:#58c4ff; top:-10%; left:-8%;   opacity:.28; }
+    .page-aura .pb2{ width:460px; height:460px; background:#a78bfa; bottom:-14%; right:-8%; opacity:.20; animation-delay:-8s; }
+    .page-aura .pb3{ width:380px; height:380px; background:#3aa0ee; top:48%; left:44%;    opacity:.15; animation-delay:-14s; }
+    @keyframes floatb{ 0%,100%{ transform:translate(0,0) scale(1); } 33%{ transform:translate(30px,40px) scale(1.1); } 66%{ transform:translate(-24px,20px) scale(.95); } }
+
+    .auth-wrap{ flex:1; display:flex; align-items:center; justify-content:center; padding:2.5rem 1rem; }
+    .auth-shell{ width:100%; max-width:1000px; display:grid; grid-template-columns:1.05fr .95fr;
+      background:var(--panel); border:1px solid var(--panel-border); border-radius:24px; overflow:hidden;
+      box-shadow:0 30px 80px rgba(0,0,0,.55); animation:fadeUp .5s ease both; }
+
+    /* left: brand panel */
+    .auth-brand{ position:relative; overflow:hidden; padding:3rem 2.6rem; display:flex; flex-direction:column; justify-content:center;
+      background:linear-gradient(165deg, rgba(88,196,255,.18), rgba(167,139,250,.08) 60%, transparent);
+      border-right:1px solid var(--panel-border); }
+    .ab-grid{ position:absolute; inset:0; pointer-events:none;
+      background-image:linear-gradient(rgba(88,196,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(88,196,255,.08) 1px,transparent 1px);
+      background-size:38px 38px;
+      -webkit-mask-image:radial-gradient(ellipse 80% 70% at 30% 30%, #000 30%, transparent 78%);
+      mask-image:radial-gradient(ellipse 80% 70% at 30% 30%, #000 30%, transparent 78%); }
+    .ab-inner{ position:relative; z-index:1; display:flex; flex-direction:column; gap:1.5rem; }
+    .ab-tag{ font-size:2rem; font-weight:900; letter-spacing:-1.2px; line-height:1.08; color:#eef4fb; margin:0; }
+    .ab-tag .ydiy{ background:linear-gradient(100deg,#58c4ff,#a78bfa 65%,#ff9ec4); -webkit-background-clip:text; background-clip:text;
+      color:transparent; background-size:220% auto; animation:shine 7s linear infinite; }
+    @keyframes shine{ to{ background-position:220% center; } }
+    .ab-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:.75rem; }
+    .ab-list li{ display:flex; align-items:center; gap:.75rem; color:var(--muted); font-size:.92rem; }
+    .ab-list i{ width:1.5rem; text-align:center; color:var(--accent); }
+    .ab-stats{ display:flex; flex-wrap:wrap; gap:.5rem; }
+    .ab-stat{ padding:.4rem .85rem; border-radius:30px; background:rgba(255,255,255,.05);
+      border:1px solid var(--panel-border); font-size:.78rem; color:var(--muted); }
+    .ab-stat b{ color:var(--accent); }
+
+    /* right: form panel */
+    .auth-form{ padding:2.8rem 2.5rem; display:flex; flex-direction:column; justify-content:center; }
+    .brand{ display:flex; align-items:center; gap:.55rem; text-decoration:none; }
+    .brand i{ font-size:1.5rem; color:var(--accent); filter:drop-shadow(0 0 10px rgba(88,196,255,.5)); }
+    .brand h1{ font-size:1.45rem; font-weight:800; letter-spacing:.5px;
       background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
-    .auth-card h2{ text-align:center; font-size:1.55rem; margin:.9rem 0 .25rem; }
-    .sub{ text-align:center; color:var(--muted); font-size:.87rem; margin-bottom:1.35rem; line-height:1.5; }
+    .brand-m{ display:none; justify-content:center; margin-bottom:1.1rem; }
+    .auth-form h2{ font-size:1.6rem; margin:0 0 .3rem; }
+    .sub{ color:var(--muted); font-size:.88rem; margin-bottom:1.4rem; line-height:1.5; }
+
+    @media(max-width:880px){
+      .auth-shell{ grid-template-columns:1fr; max-width:470px; }
+      .auth-brand{ display:none; }
+      .brand-m{ display:flex; }
+      .auth-form{ padding:2.2rem 1.8rem; }
+      .auth-form h2, .sub{ text-align:center; }
+    }
+    @media(prefers-reduced-motion:reduce){ .page-aura .pb, .ab-tag .ydiy{ animation:none; } }
+
     .tabs{ display:flex; background:var(--panel-2); border:1px solid var(--panel-border); border-radius:13px;
       padding:.3rem; margin-bottom:1.25rem; gap:.3rem; }
     .tabs button{ flex:1; margin:0; padding:.6rem; border:none; background:transparent; color:var(--muted);
@@ -56,11 +100,30 @@
   </style>
 </head>
 <body>
+  <div class="page-aura"><span class="pb pb1"></span><span class="pb pb2"></span><span class="pb pb3"></span></div>
+
   <div class="auth-wrap">
-    <div class="panel auth-card">
-      <div class="brand"><i class="fas fa-code"></i><h1>CYVATHON</h1></div>
-      <h2 id="title">Welcome Back</h2>
-      <p class="sub" id="sub">Log in to your citizen account.</p>
+    <div class="auth-shell">
+
+      <aside class="auth-brand">
+        <div class="ab-grid"></div>
+        <div class="ab-inner">
+          <a href="/" class="brand"><i class="fas fa-code"></i><h1>CYVATHON</h1></a>
+          <h2 class="ab-tag">A micronation,<br>where <span class="ydiy">you do you</span>.</h2>
+          <ul class="ab-list">
+            <li><i class="fas fa-coins"></i> Your own money — four currencies</li>
+            <li><i class="fas fa-chart-line"></i> Found companies, trade real stocks</li>
+            <li><i class="fas fa-landmark"></i> Run for office, vote, pass laws</li>
+            <li><i class="fas fa-video"></i> Videos, blogs &amp; group chats</li>
+          </ul>
+          <div class="ab-stats" id="statStrip"></div>
+        </div>
+      </aside>
+
+      <main class="auth-form">
+        <a href="/" class="brand brand-m"><i class="fas fa-code"></i><h1>CYVATHON</h1></a>
+        <h2 id="title">Welcome Back</h2>
+        <p class="sub" id="sub">Log in to your citizen account.</p>
 
       <div class="tabs">
         <button id="tabLogin" class="active" type="button" onclick="setMode('login')">Login</button>
@@ -116,6 +179,8 @@
 
       <p id="msg" class="msg" style="color:var(--red);"></p>
       <p class="back"><a class="link" href="/"><i class="fas fa-arrow-left"></i> Back to home</a></p>
+      </main>
+
     </div>
   </div>
 
@@ -128,6 +193,17 @@
     async function loadCaptcha(){
       try{ const d = await api("/captcha"); captchaToken = d.token; $("captchaQ").textContent = d.question; }
       catch{ $("captchaQ").textContent = "Human check unavailable — try reloading."; }
+    }
+
+    // Live national stats in the brand panel (social proof — /economy is public).
+    async function loadStats(){
+      try{
+        const e = await api("/economy");
+        const el = $("statStrip"); if(!el) return;
+        el.innerHTML = `<span class="ab-stat">GDP <b>${fmt(e.gdp)} CB</b></span>
+          <span class="ab-stat">Citizens <b>${e.citizens}</b></span>
+          <span class="ab-stat">Companies <b>${e.companies}</b></span>`;
+      }catch{}
     }
 
     // Interest chips shown on signup.
@@ -279,6 +355,7 @@
 
     (async function(){
       if(await currentUser()){ window.location.href = "/"; return; }
+      loadStats();
       await initTurnstile();
       if(REF) setMode("signup");      // applyVis() shows the "Invited by …" line
     })();
