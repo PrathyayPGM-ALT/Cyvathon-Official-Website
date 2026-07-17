@@ -153,9 +153,35 @@ limiter = Limiter(
 # message instead of failing to parse an HTML error page ("Bad server response").
 from werkzeug.exceptions import HTTPException
 
+# Route-enumeration detection: a burst of 404s from one IP = someone probing
+# for hidden endpoints. We surface it in Athena and auto-ban on a flood.
+_recon_404 = {}                 # ip -> (count, window_start)
+_RECON_404_LIMIT = 15
+_RECON_404_WINDOW = 300
+_BENIGN_404 = ("/favicon.ico", "/robots.txt", "/sitemap.xml", "/apple-touch-icon",
+               "/.well-known", "/service-worker.js", "/manifest.json")
+
+
+def _note_404(ip, path, ua):
+    if not path or any(b in path for b in _BENIGN_404):
+        return
+    _log_threat(ip, "404 " + path, ua)      # shows route-enumeration in the Athena feed
+    now = time()
+    cnt, start = _recon_404.get(ip, (0, now))
+    if now - start > _RECON_404_WINDOW:
+        cnt, start = 0, now
+    cnt += 1
+    _recon_404[ip] = (cnt, start)
+    if cnt >= _RECON_404_LIMIT:
+        _strike(ip)                          # enumeration flood → strike toward auto-ban
+        _recon_404.pop(ip, None)
+
+
 @app.errorhandler(Exception)
 def handle_any_error(e):
     if isinstance(e, HTTPException):
+        if e.code == 404:
+            _note_404(client_ip(), request.path, request.headers.get("User-Agent", ""))
         # Let real static-page routes keep their normal HTML responses.
         if request.path == "/" or request.path.endswith((".html", ".css", ".js", ".pdf", ".ico")):
             return e
@@ -1239,15 +1265,16 @@ def login():
     password = data.get("password", "").strip()
 
     res = supabase.table("cybucks").select("*").eq("username", username).execute()
-    if not res.data:
-        return jsonify(success=False, error="User not found"), 404
-
-    user = res.data[0]
+    user = res.data[0] if res.data else None
+    # One generic answer for both unknown-user and wrong-password: no username
+    # enumeration. Both strike the IP and surface in the Athena threat feed.
+    if not user or not check_password_hash(user["password"], password):
+        _strike(client_ip())
+        _log_threat(client_ip(), "login-fail:" + username[:40],
+                    request.headers.get("User-Agent", ""))
+        return jsonify(success=False, error="Incorrect username or password"), 401
     if user.get("banned"):
         return jsonify(success=False, error="This account has been banned from Cyvathon."), 403
-    if not check_password_hash(user["password"], password):
-        _strike(client_ip())          # brute-force protection: too many → auto-ban
-        return jsonify(success=False, error="Incorrect password"), 401
     if user.get("approved", True) is False:
         return jsonify(success=False,
                        error="Your citizenship application is awaiting Presidential approval. Please check back later."), 403
@@ -5671,4 +5698,6 @@ def health():
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
-    app.run(debug=True, host="0.0.0.0", port=port)
+    # Debugger is OFF unless FLASK_DEBUG is explicitly set — an exposed Werkzeug
+    # debugger is remote code execution. (Production runs gunicorn, not this.)
+    app.run(debug=bool(os.getenv("FLASK_DEBUG")), host="0.0.0.0", port=port)
