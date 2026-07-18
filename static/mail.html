@@ -9,10 +9,9 @@
   <style>
     html,body{ height:100%; }
     body{ display:flex; flex-direction:column; height:100dvh; overflow:hidden; }
-    .mode-tabs{ display:flex; justify-content:center; gap:.35rem; padding:.5rem; background:var(--bg-soft);
-      border-bottom:1px solid var(--panel-border); flex-shrink:0; }
-    .mode-tabs a{ display:inline-flex; align-items:center; gap:.45rem; text-decoration:none; padding:.4rem 1.15rem;
-      border-radius:999px; color:var(--muted); font-weight:600; font-size:.9rem; transition:.15s; }
+    .mode-tabs{ display:flex; gap:.35rem; margin-bottom:.7rem; }
+    .mode-tabs a{ flex:1; display:inline-flex; align-items:center; justify-content:center; gap:.45rem; text-decoration:none;
+      padding:.45rem .6rem; border-radius:10px; color:var(--muted); font-weight:600; font-size:.9rem; transition:.15s; background:var(--panel-2); }
     .mode-tabs a:hover{ color:var(--text); }
     .mode-tabs a.on{ background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; }
 
@@ -91,13 +90,12 @@
 <body>
   <div id="nav"></div>
 
-  <div class="mode-tabs">
-    <a href="/chat"><i class="fas fa-comments"></i> Chat</a>
-    <a href="/mail" class="on"><i class="fas fa-envelope"></i> Mail</a>
-  </div>
-
   <div class="mshell">
     <div class="mside">
+      <div class="mode-tabs">
+        <a href="/chat"><i class="fas fa-comments"></i> Chat</a>
+        <a href="/mail" class="on"><i class="fas fa-envelope"></i> Mail</a>
+      </div>
       <button class="compose-btn" onclick="openCompose()"><i class="fas fa-pen"></i> Compose</button>
       <div class="fold on" data-f="inbox" onclick="setFolder('inbox')"><i class="fas fa-inbox"></i> Inbox <span class="fb" id="fbInbox" style="display:none"></span></div>
       <div class="fold" data-f="starred" onclick="setFolder('starred')"><i class="fas fa-star"></i> Starred</div>
