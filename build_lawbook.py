@@ -91,6 +91,10 @@ def build():
              "regardless of origin, rank, or office."),
             ("§3. Records", "Every citizen shall hold an official Identity Card recording their designation, "
              "holdings, and permanent record. No record may be falsified."),
+            ("§4. Oath of Allegiance", "Any citizen may swear the Oath of Allegiance to the Republic. Upon "
+             "swearing the Oath, the citizen is recognised as a full Cyvathonian citizen, and this citizenship "
+             "is binding and irrevocable. It may not be renounced, withdrawn, or taken back except by a formal "
+             "written revocation of the Oath, submitted on paper to the President and accepted by the same."),
         ]),
         ("ARTICLE II — CURRENCY &amp; THE EXCHEQUER", [
             ("§1. Legal Tender", "The lawful currencies of the Republic are the Cybuck (CB), the Pufferbuck "
@@ -135,6 +139,8 @@ def build():
             ("§1. Convening", "Only the President may convene a vote and set its candidates."),
             ("§2. Suffrage", "Every citizen is entitled to one ballot per vote. No citizen may vote twice in the "
              "same matter, and votes once cast are final."),
+            ("§3. The Presidential Vote", "A national presidential vote shall be convened once every six (6) "
+             "years, whereby the citizens shall elect or confirm the Head of State of the Republic."),
         ]),
         ("ARTICLE VIII — CONDUCT &amp; CRIMINAL LAW", [
             ("§1. Respect", "Citizens shall respect all nations, communities, and one another. Inappropriate "
