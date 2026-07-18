@@ -273,7 +273,7 @@ def _security_headers(resp):
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["X-Frame-Options"] = "DENY"
     resp.headers["Referrer-Policy"] = "no-referrer"
-    resp.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    resp.headers["Permissions-Policy"] = "geolocation=(), microphone=(self), camera=()"
     resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     resp.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
@@ -4820,6 +4820,53 @@ def chat_upload():
     url, err = _store_image(f, user["username"])
     if err:
         return jsonify(success=False, error=err), 400 if "Images only" in err or "Empty" in err or "too large" in err else 500
+    return jsonify(success=True, url=url)
+
+
+def _store_voice(f, folder):
+    """Validate + upload a short voice clip to the public 'chat' bucket. Returns (url, error)."""
+    data = f.read()
+    if not data:
+        return None, "Empty file"
+    if len(data) > 6 * 1024 * 1024:
+        return None, "Voice note too long (max ~6 MB)"
+    mime = (f.mimetype or "").split(";")[0].lower()
+    ext = {"audio/webm": "webm", "audio/ogg": "ogg", "audio/mpeg": "mp3",
+           "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/wav": "wav",
+           "audio/x-wav": "wav", "audio/webm;codecs=opus": "webm"}.get(mime)
+    if not ext:
+        fn = (f.filename or "").lower()
+        for e in ("webm", "ogg", "mp3", "m4a", "wav"):
+            if fn.endswith("." + e):
+                ext = e
+                break
+    if not ext:
+        return None, "Audio only (webm, ogg, mp3)"
+    path = f"voice/{folder}/{secrets.token_hex(10)}.{ext}"
+    try:
+        _ensure_chat_bucket()
+        supabase.storage.from_(_CHAT_BUCKET).upload(
+            path, data, {"content-type": mime or ("audio/" + ext), "upsert": "true"})
+        url = supabase.storage.from_(_CHAT_BUCKET).get_public_url(path)
+    except Exception as ex:
+        logging.warning("voice store failed: %s", ex)
+        return None, "Upload failed — the public 'chat' Storage bucket may be missing."
+    return url.rstrip("?"), None
+
+
+@limiter.limit("30/min")
+@app.route("/voice/upload", methods=["POST"])
+def voice_upload():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    f = request.files.get("file")
+    if not f:
+        return jsonify(success=False, error="No file"), 400
+    url, err = _store_voice(f, user["username"])
+    if err:
+        soft = any(s in err for s in ("Audio only", "Empty", "too long"))
+        return jsonify(success=False, error=err), 400 if soft else 500
     return jsonify(success=True, url=url)
 
 

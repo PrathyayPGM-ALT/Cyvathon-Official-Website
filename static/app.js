@@ -186,6 +186,8 @@ function renderRich(text) {
   let s = (text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const imgs = [];
   s = s.replace(/(https?:\/\/[^\s]+?\.(?:gif|png|jpe?g|webp))/gi, function (m) { imgs.push(m); return "@@IMG" + (imgs.length - 1) + "@@"; });
+  const auds = [];
+  s = s.replace(/(https?:\/\/[^\s]+?\.(?:webm|ogg|mp3|m4a|wav))/gi, function (m) { auds.push(m); return "@@AUD" + (auds.length - 1) + "@@"; });
   s = s.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" class="link">$1</a>');
   s = s.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
        .replace(/__([^_]+)__/g, "<u>$1</u>")
@@ -196,6 +198,7 @@ function renderRich(text) {
     return '<span class="mention' + (me ? ' me' : '') + '">@' + name + '</span>';
   });
   s = s.replace(/@@IMG(\d+)@@/g, function (m, i) { return '<br><img src="' + imgs[+i] + '" class="chat-img" loading="lazy" decoding="async"><br>'; });
+  s = s.replace(/@@AUD(\d+)@@/g, function (m, i) { return '<audio class="voice-msg" controls preload="metadata" src="' + auds[+i] + '"></audio>'; });
   return s;
 }
 

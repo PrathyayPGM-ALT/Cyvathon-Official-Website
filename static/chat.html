@@ -115,9 +115,24 @@
     /* presence + typing */
     .pdot{ width:9px; height:9px; border-radius:50%; background:transparent; margin-left:auto; flex-shrink:0; }
     .pdot.on{ background:var(--green); box-shadow:0 0 6px rgba(31,214,166,.7); }
+    .hdot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--muted); margin-right:.4rem; vertical-align:middle; }
+    .hdot.on{ background:var(--green); box-shadow:0 0 6px rgba(31,214,166,.7); }
     .typing-row{ height:0; overflow:hidden; transition:height .12s; font-size:.78rem; color:var(--muted);
       font-style:italic; padding:0 1.2rem; }
     .typing-row.show{ height:20px; padding:.05rem 1.2rem; }
+
+    /* voice messages */
+    .voice-msg{ height:40px; max-width:min(260px,100%); vertical-align:middle; margin:.15rem 0; }
+    .rec-bar{ display:none; align-items:center; gap:.7rem; padding:.55rem 1rem; }
+    .rec-bar.show{ display:flex; }
+    .rec-dot{ width:11px; height:11px; border-radius:50%; background:var(--red); animation:recPulse 1s infinite; flex-shrink:0; }
+    @keyframes recPulse{ 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.35; transform:scale(.85); } }
+    #recTime{ font-variant-numeric:tabular-nums; color:var(--text); font-weight:700; }
+    .rec-hint{ font-size:.78rem; color:var(--muted); }
+    .rec-bar button{ margin:0; width:auto; padding:.42rem .8rem; border-radius:10px; }
+    .rec-cancel{ background:var(--panel-2); color:var(--red); border:1px solid var(--panel-border); }
+    .rec-send{ background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; border:none; margin-left:auto; }
+    #micBtn.recording{ color:var(--red); }
 
     /* reactions */
     .reactbtn{ position:absolute; top:-9px; right:22px; width:24px; height:24px; border-radius:50%; display:none;
@@ -197,8 +212,15 @@
           <button title="Emoji" onclick="togglePanel('emojiPop')">😀</button>
           <button title="GIF" onclick="togglePanel('gifPop')"><b style="font-size:.7rem">GIF</b></button>
           <button title="Upload image" onclick="document.getElementById('fileIn').click()"><i class="fas fa-image"></i></button>
+          <button title="Voice message" id="micBtn" onclick="toggleRecord()"><i class="fas fa-microphone"></i></button>
           <span class="uploading" id="upStatus"></span>
           <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="onFile(this)">
+        </div>
+        <div class="rec-bar" id="recBar">
+          <span class="rec-dot"></span><span id="recTime">0:00</span>
+          <span class="rec-hint">Recording…</span>
+          <button class="rec-cancel" onclick="cancelRecord()" title="Discard"><i class="fas fa-trash"></i></button>
+          <button class="rec-send" onclick="stopAndSend()" title="Send"><i class="fas fa-paper-plane"></i> Send</button>
         </div>
         <div class="composer">
           <textarea id="msg" rows="1" placeholder="Write a message…  (Shift+Enter for new line)"></textarea>
@@ -260,6 +282,13 @@
     }
     function applyPresence(){
       document.querySelectorAll(".pdot").forEach(d=>d.classList.toggle("on", onlineSet.has(d.dataset.u)));
+      updateHeaderPresence();
+    }
+    function updateHeaderPresence(){
+      if(!channel || channel.type!=="dm") return;
+      const on=onlineSet.has(channel.name);
+      const sub=document.getElementById("cSub");
+      if(sub) sub.innerHTML=`<span class="hdot ${on?'on':''}"></span>${on?'Online':'Offline'}`;
     }
 
     /* ---------------- CHANNEL SWITCHING ---------------- */
@@ -296,6 +325,7 @@
       setHeader(esc(name[0].toUpperCase()), false, name, "Direct message",
         `<a class="link act" href="/profile?user=${encodeURIComponent(name)}"><i class="fas fa-id-card"></i> View profile</a>`);
       switchTo({type:"dm",name});
+      updateHeaderPresence();
     }
 
     /* ---------------- FEED ---------------- */
@@ -541,6 +571,57 @@
       const inp=document.getElementById("gifUrl"); const u=(inp.value||"").trim();
       if(!/^https?:\/\//i.test(u)) return alert("Paste a valid image or GIF URL (https://…)");
       inp.value=""; closePanels(); doSend(u);
+    }
+
+    /* ---- Voice messages (record → upload → send URL) ---- */
+    let mediaRec=null, recChunks=[], recStream=null, recTimer=null, recStart=0, recCancelled=false;
+    async function toggleRecord(){
+      if(mediaRec && mediaRec.state==="recording"){ stopAndSend(); return; }
+      if(!navigator.mediaDevices || !window.MediaRecorder){ alert("Voice messages aren't supported on this browser."); return; }
+      let stream;
+      try{ stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+      catch(e){ alert("Microphone access was blocked. Allow the mic to send a voice message."); return; }
+      recStream=stream; recChunks=[]; recCancelled=false;
+      const mime = window.MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+      try{ mediaRec = mime ? new MediaRecorder(stream,{mimeType:mime}) : new MediaRecorder(stream); }
+      catch(e){ mediaRec = new MediaRecorder(stream); }
+      mediaRec.ondataavailable=e=>{ if(e.data && e.data.size) recChunks.push(e.data); };
+      mediaRec.onstop=onRecStop;
+      mediaRec.start();
+      recStart=Date.now();
+      document.getElementById("recBar").classList.add("show");
+      document.getElementById("micBtn").classList.add("recording");
+      recTimer=setInterval(updateRecTime,250);
+    }
+    function updateRecTime(){
+      const s=Math.floor((Date.now()-recStart)/1000);
+      document.getElementById("recTime").textContent = Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+      if(s>=120) stopAndSend();   // hard cap: 2 minutes
+    }
+    function stopAndSend(){ recCancelled=false; finishRec(); }
+    function cancelRecord(){ recCancelled=true; finishRec(); }
+    function finishRec(){
+      if(recTimer){ clearInterval(recTimer); recTimer=null; }
+      document.getElementById("recBar").classList.remove("show");
+      document.getElementById("micBtn").classList.remove("recording");
+      if(mediaRec && mediaRec.state!=="inactive"){ try{ mediaRec.stop(); }catch(e){} }
+    }
+    async function onRecStop(){
+      if(recStream){ recStream.getTracks().forEach(t=>t.stop()); recStream=null; }
+      const type=(mediaRec && mediaRec.mimeType) || "audio/webm";
+      const blob=new Blob(recChunks,{type});
+      mediaRec=null;
+      if(recCancelled){ recCancelled=false; return; }
+      if(blob.size<800){ return; }   // too short / empty
+      const up=document.getElementById("upStatus"); up.textContent="Sending voice…";
+      try{
+        const ext = type.indexOf("ogg")>=0 ? "ogg" : "webm";
+        const fd=new FormData(); fd.append("file", blob, "voice."+ext);
+        const res=await fetch("/voice/upload",{method:"POST",credentials:"include",body:fd});
+        const d=await res.json();
+        if(!res.ok||d.success===false) throw new Error(d.error||"Upload failed");
+        up.textContent=""; doSend(d.url);
+      }catch(e){ up.textContent=""; alert(e.message); }
     }
 
     /* ---- Image upload from device ---- */
