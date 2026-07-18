@@ -46,7 +46,7 @@
     .empty{ text-align:center; color:var(--muted); padding:3rem 1rem; }
 
     /* reading view */
-    .reader{ position:fixed; inset:0; background:var(--bg); z-index:60; display:none; flex-direction:column; }
+    .reader{ position:fixed; inset:0; background:var(--bg); z-index:250; display:none; flex-direction:column; }
     .reader.show{ display:flex; }
     .rhead{ display:flex; align-items:center; gap:.8rem; padding:1rem 1.2rem; border-bottom:1px solid var(--panel-border); }
     .rhead .back{ background:none; border:none; color:var(--text); font-size:1.1rem; cursor:pointer; width:auto; margin:0; padding:.3rem .5rem; }
@@ -65,7 +65,7 @@
 
     /* compose modal */
     .modal-bg{ position:fixed; inset:0; background:rgba(2,8,18,.72); backdrop-filter:blur(4px); display:none;
-      align-items:center; justify-content:center; z-index:80; padding:1rem; }
+      align-items:center; justify-content:center; z-index:260; padding:1rem; }
     .modal-bg.on{ display:flex; }
     .modal{ background:var(--panel); border:1px solid var(--panel-border); border-radius:18px; padding:1.4rem 1.5rem;
       width:100%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.55); }
