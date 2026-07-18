@@ -4759,20 +4759,56 @@ def mail_get(mid):
     if not m:
         return jsonify(success=False, error="Mail not found"), 404
     m = m[0]
-    recs = supabase.table("mail_recipients").select("*").eq("mail_id", mid).execute().data or []
-    rec_names = [r["username"] for r in recs]
-    if me != m["sender"] and me not in rec_names:
+    tid = m.get("thread_id") or m["id"]
+
+    # Pull the whole conversation (all messages sharing this thread).
+    try:
+        thread = supabase.table("mail").select("*") \
+            .or_(f"thread_id.eq.{tid},id.eq.{tid}").order("created_at").execute().data or []
+    except Exception:
+        thread = [m]      # thread_id column not migrated — single message
+    if not thread:
+        thread = [m]
+    ids = [x["id"] for x in thread]
+    recs = supabase.table("mail_recipients").select("*").in_("mail_id", ids or [0]).execute().data or []
+    rec_by_mail = {}
+    for r in recs:
+        rec_by_mail.setdefault(r["mail_id"], []).append(r)
+
+    # Only messages I'm a party to (sender or recipient).
+    def party(x):
+        return x["sender"] == me or any(r["username"] == me for r in rec_by_mail.get(x["id"], []))
+    visible = [x for x in thread if party(x)]
+    if not visible:
         return jsonify(success=False, error="This mail isn't addressed to you"), 403
-    mine = next((r for r in recs if r["username"] == me), None)
-    if mine and not mine.get("read"):
-        supabase.table("mail_recipients").update({"read": True}).eq("id", mine["id"]).execute()
-    av = _mail_avatars([m["sender"]] + rec_names)
-    return jsonify(success=True, me=me, mail={
-        **m, "avatar": av.get(m["sender"]),
-        "recipients": [{"username": n, "avatar": av.get(n)} for n in rec_names],
-        "starred": bool(mine.get("starred")) if mine else False,
-        "rid": mine["id"] if mine else None,
-    })
+
+    # Mark my unread rows in this thread as read.
+    for r in recs:
+        if r["username"] == me and not r.get("read"):
+            supabase.table("mail_recipients").update({"read": True}).eq("id", r["id"]).execute()
+
+    everyone = [x["sender"] for x in visible]
+    for x in visible:
+        everyone += [r["username"] for r in rec_by_mail.get(x["id"], [])]
+    av = _mail_avatars(everyone)
+    messages = [{
+        "id": x["id"], "sender": x["sender"], "subject": x.get("subject"),
+        "body": x.get("body"), "created_at": x.get("created_at"),
+        "avatar": av.get(x["sender"]),
+        "recipients": [{"username": r["username"], "avatar": av.get(r["username"])}
+                       for r in rec_by_mail.get(x["id"], [])],
+    } for x in visible]
+
+    opened = next((x for x in visible if x["id"] == mid), visible[-1])
+    mine = next((r for r in rec_by_mail.get(opened["id"], []) if r["username"] == me), None)
+    # who to reply to: everyone in the thread except me
+    participants = [p for p in dict.fromkeys(everyone) if p != me]
+    return jsonify(success=True, me=me, subject=messages[0]["subject"],
+                   messages=messages, last_id=messages[-1]["id"],
+                   participants=participants,
+                   mail={"id": opened["id"],
+                         "starred": bool(mine.get("starred")) if mine else False,
+                         "rid": mine["id"] if mine else None})
 
 
 @limiter.limit("20/min")
@@ -4807,9 +4843,35 @@ def mail_send():
         to = [t for t in to if t in valid]
     if not to:
         return jsonify(success=False, error="No valid recipients."), 400
+
+    # Threading: a reply inherits its parent's thread so the conversation stays together.
+    thread_id = None
+    reply_to = d.get("reply_to")
+    if reply_to:
+        try:
+            p = supabase.table("mail").select("id,thread_id").eq("id", reply_to).execute().data
+            if p:
+                thread_id = p[0].get("thread_id") or p[0]["id"]
+        except Exception:
+            thread_id = None
+
+    row = {"sender": me, "subject": subject, "body": body}
+    if thread_id:
+        row["thread_id"] = thread_id
     try:
-        m = supabase.table("mail").insert(
-            {"sender": me, "subject": subject, "body": body}).execute().data[0]
+        m = supabase.table("mail").insert(row).execute().data[0]
+    except Exception:
+        row.pop("thread_id", None)      # thread_id column not migrated — send unthreaded
+        try:
+            m = supabase.table("mail").insert(row).execute().data[0]
+        except Exception:
+            return jsonify(success=False, error="Mail isn't set up yet — run the migration."), 500
+    if not thread_id:      # a brand-new thread points at itself (best effort)
+        try:
+            supabase.table("mail").update({"thread_id": m["id"]}).eq("id", m["id"]).execute()
+        except Exception:
+            pass
+    try:
         supabase.table("mail_recipients").insert(
             [{"mail_id": m["id"], "username": t} for t in to]).execute()
     except Exception:

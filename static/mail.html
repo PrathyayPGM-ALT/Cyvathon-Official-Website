@@ -50,6 +50,11 @@
     .reader.show{ display:flex; }
     .rhead{ display:flex; align-items:center; gap:.8rem; padding:1rem 1.2rem; border-bottom:1px solid var(--panel-border); }
     .rhead .back{ background:none; border:none; color:var(--text); font-size:1.1rem; cursor:pointer; width:auto; margin:0; padding:.3rem .5rem; }
+    .back-btn{ display:inline-flex; align-items:center; gap:.5rem; background:var(--panel-2); border:1px solid var(--panel-border);
+      color:var(--text); font-weight:600; font-size:.9rem; cursor:pointer; width:auto; margin:0; padding:.5rem 1rem; border-radius:10px; }
+    .back-btn:hover{ border-color:var(--accent); color:var(--accent); }
+    .rmsg{ padding:1.1rem 0; border-bottom:1px solid var(--panel-border); }
+    .rmsg:last-of-type{ border-bottom:none; }
     .rbody{ overflow-y:auto; padding:1.4rem 1.6rem; max-width:820px; width:100%; margin:0 auto; }
     .rsubject{ font-size:1.5rem; font-weight:800; margin-bottom:1rem; }
     .rmeta{ display:flex; align-items:center; gap:.8rem; padding-bottom:1rem; border-bottom:1px solid var(--panel-border); margin-bottom:1.2rem; }
@@ -109,8 +114,8 @@
   <!-- reading view -->
   <div class="reader" id="reader">
     <div class="rhead">
-      <button class="back" onclick="closeReader()"><i class="fas fa-arrow-left"></i></button>
-      <b style="flex:1">Message</b>
+      <button class="back-btn" onclick="closeReader()"><i class="fas fa-arrow-left"></i> Inbox</button>
+      <span style="flex:1"></span>
       <button class="back" id="rStar" title="Star" onclick="toggleStar()"><i class="far fa-star"></i></button>
       <button class="back" title="Archive" onclick="archiveOpen()"><i class="fas fa-box-archive"></i></button>
     </div>
@@ -143,7 +148,7 @@
 
   <script src="/static/app.js"></script>
   <script>
-    let ME=null, FOLDER="inbox", CITIZENS=[], SEL=new Set(), OPEN=null;
+    let ME=null, FOLDER="inbox", CITIZENS=[], SEL=new Set(), OPEN=null, THREAD=null, REPLY_PARENT=null;
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const enc=encodeURIComponent;
     const when=(t)=>{ const d=new Date(t); const now=new Date();
@@ -182,23 +187,35 @@
 
     async function openMail(id){
       try{
-        const d=await api("/mail/"+id); OPEN=d.mail;
-        const m=d.mail;
-        document.getElementById("rStar").innerHTML=`<i class="fa${m.starred?'s':'r'} fa-star" style="color:${m.starred?'var(--gold)':'inherit'}"></i>`;
-        document.getElementById("rbody").innerHTML=`
-          <div class="rsubject">${esc(m.subject)}</div>
-          <div class="rmeta">
-            <div class="mav" ${avatarStyle(m.avatar)}>${m.avatar?'':esc((m.sender||'?')[0].toUpperCase())}</div>
-            <div class="who"><b>${esc(m.sender)}</b> <span>· ${new Date(m.created_at).toLocaleString()}</span>
-              <div class="chips">${(m.recipients||[]).map(r=>`<span class="rchip">to ${esc(r.username)}</span>`).join("")}</div></div>
-          </div>
-          <div class="rtext">${renderRich(m.body)}</div>
-          <div style="margin-top:1.6rem;"><button style="width:auto;padding:.6rem 1.2rem;" onclick="replyTo('${enc(m.sender)}','${esc(m.subject).replace(/'/g,"\\'")}')"><i class="fas fa-reply"></i> Reply</button></div>`;
+        const d=await api("/mail/"+id); OPEN=d.mail; THREAD=d;
+        document.getElementById("rStar").innerHTML=`<i class="fa${d.mail.starred?'s':'r'} fa-star" style="color:${d.mail.starred?'var(--gold)':'inherit'}"></i>`;
+        const msgs=(d.messages||[]).map(m=>`
+          <div class="rmsg">
+            <div class="rmeta">
+              <div class="mav" ${avatarStyle(m.avatar)}>${m.avatar?'':esc((m.sender||'?')[0].toUpperCase())}</div>
+              <div class="who"><b>${esc(m.sender)}${m.sender===ME?' (you)':''}</b> <span>· ${new Date(m.created_at).toLocaleString()}</span>
+                <div class="chips">${(m.recipients||[]).map(r=>`<span class="rchip">to ${esc(r.username)}</span>`).join("")}</div></div>
+            </div>
+            <div class="rtext">${renderRich(m.body)}</div>
+          </div>`).join("");
+        document.getElementById("rbody").innerHTML=
+          `<div class="rsubject">${esc(d.subject||"(no subject)")}</div>${msgs}
+          <div style="margin-top:1.4rem;"><button style="width:auto;padding:.65rem 1.3rem;" onclick="replyThread()"><i class="fas fa-reply"></i> Reply</button></div>`;
         document.getElementById("reader").classList.add("show");
+        document.getElementById("rbody").scrollTop=document.getElementById("rbody").scrollHeight;
         load();   // refresh read state behind it
       }catch(e){ alert(e.message); }
     }
-    function closeReader(){ document.getElementById("reader").classList.remove("show"); OPEN=null; }
+    function replyThread(){
+      if(!THREAD) return;
+      closeReader(); openCompose();
+      SEL=new Set(THREAD.participants||[]);
+      REPLY_PARENT=THREAD.last_id;
+      const subj=THREAD.subject||"";
+      document.getElementById("cSubject").value = /^re:/i.test(subj)?subj:("Re: "+subj);
+      renderTags(); renderPicker(); document.getElementById("cBody").focus();
+    }
+    function closeReader(){ document.getElementById("reader").classList.remove("show"); OPEN=null; THREAD=null; }
     async function toggleStar(){ if(!OPEN) return; await star(OPEN.id); const s=await api("/mail/"+OPEN.id); OPEN=s.mail;
       document.getElementById("rStar").innerHTML=`<i class="fa${OPEN.starred?'s':'r'} fa-star" style="color:${OPEN.starred?'var(--gold)':'inherit'}"></i>`; }
     async function archiveOpen(){ if(!OPEN) return; try{ await api("/mail/"+OPEN.id+"/archive",{method:"POST",body:"{}"}); closeReader(); load(); }catch(e){ alert(e.message); } }
@@ -209,7 +226,7 @@
     }
 
     /* ---- compose ---- */
-    function openCompose(){ SEL=new Set(); document.getElementById("cSubject").value=""; document.getElementById("cBody").value="";
+    function openCompose(){ SEL=new Set(); REPLY_PARENT=null; document.getElementById("cSubject").value=""; document.getElementById("cBody").value="";
       document.getElementById("pSearch").value=""; document.getElementById("cMsg").textContent="";
       document.getElementById("everyoneChk").checked=false; toggleEveryone();
       renderTags(); renderPicker(); document.getElementById("compose").classList.add("on"); }
@@ -247,6 +264,7 @@
       document.getElementById("sendBtn").disabled=true;
       try{
         const payload = everyone ? {everyone:true,subject,body} : {to:[...SEL],subject,body};
+        if(REPLY_PARENT) payload.reply_to=REPLY_PARENT;
         await api("/mail/send",{method:"POST",body:JSON.stringify(payload)});
         closeCompose(); if(FOLDER!=="inbox") setFolder("sent"); else load();
       }catch(e){ msg.style.color="var(--red)"; msg.textContent=e.message; }
