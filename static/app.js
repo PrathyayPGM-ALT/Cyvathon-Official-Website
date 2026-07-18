@@ -24,20 +24,66 @@ function syncThemeBtn() {
   }
 }
 
+/* ---- Global first-load loader ----
+   Every page fetches through api(). We show a fun full-page loader while the
+   initial data load is in flight, then fade it out. Only for the FIRST load of
+   a page (subsequent api() calls — polls, actions — never re-trigger it), and
+   only if the load is slow enough to notice (no flash on fast loads). */
+let _inflight = 0, _initDone = false, _gEl = null, _gShowT = null, _gHideT = null, _gMaxT = null;
+function _gShow() {
+  if (_initDone || _gEl) return;
+  _gEl = document.createElement("div");
+  _gEl.id = "cyGlobalLoad";
+  _gEl.style.cssText = "position:fixed;inset:0;z-index:5000;display:flex;align-items:center;"
+    + "justify-content:center;background:var(--bg,#0a0d14);opacity:0;transition:opacity .25s;";
+  _gEl.innerHTML = spinner();
+  (document.body || document.documentElement).appendChild(_gEl);
+  requestAnimationFrame(() => { if (_gEl) _gEl.style.opacity = "1"; });
+}
+function _gHide() {
+  if (_gEl) { const el = _gEl; _gEl = null; el.style.opacity = "0"; setTimeout(() => el.remove(), 320); }
+}
+function _gSettle() {          // the initial data load has finished
+  _initDone = true;
+  if (_gShowT) { clearTimeout(_gShowT); _gShowT = null; }
+  if (_gMaxT) { clearTimeout(_gMaxT); _gMaxT = null; }
+  _gHide();
+}
+function _apiStart() {
+  _inflight++;
+  if (_initDone) return;
+  if (_gHideT) { clearTimeout(_gHideT); _gHideT = null; }   // a new request — don't settle yet
+  // Only actually show if something is still loading when the delay elapses
+  // (this is what stops a flash on fast loads).
+  if (!_gShowT && !_gEl) _gShowT = setTimeout(() => { _gShowT = null; if (_inflight > 0 && !_initDone) _gShow(); }, 180);
+  if (!_gMaxT) _gMaxT = setTimeout(_gSettle, 12000);        // safety: never stay stuck
+}
+function _apiEnd() {
+  _inflight = Math.max(0, _inflight - 1);
+  if (_initDone || _inflight > 0) return;
+  if (_gHideT) clearTimeout(_gHideT);
+  _gHideT = setTimeout(_gSettle, 300);   // idle for 300ms => initial load done (coalesces auth->data)
+}
+
 async function api(path, options = {}) {
-  const res = await fetch(path, {
-    credentials: "include",
-    ...options,
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-  });
-  const text = await res.text();
-  let data;
-  try { data = text ? JSON.parse(text) : {}; }
-  catch (e) {
-    throw new Error("Server error (HTTP " + res.status + "). The database may not be set up yet — run schema.sql in Supabase.");
+  _apiStart();
+  try {
+    const res = await fetch(path, {
+      credentials: "include",
+      ...options,
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    });
+    const text = await res.text();
+    let data;
+    try { data = text ? JSON.parse(text) : {}; }
+    catch (e) {
+      throw new Error("Server error (HTTP " + res.status + "). The database may not be set up yet — run schema.sql in Supabase.");
+    }
+    if (!res.ok || data.success === false) throw new Error(data.error || ("HTTP " + res.status));
+    return data;
+  } finally {
+    _apiEnd();
   }
-  if (!res.ok || data.success === false) throw new Error(data.error || ("HTTP " + res.status));
-  return data;
 }
 
 /* Cache /me for a few seconds so a single page-load doesn't fetch it
