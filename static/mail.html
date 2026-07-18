@@ -81,6 +81,11 @@
       border:1px solid rgba(88,196,255,.3); color:var(--accent); border-radius:999px; padding:.2rem .6rem; }
     .seltag i{ cursor:pointer; }
     .modal textarea{ min-height:150px; resize:vertical; }
+    .everyone-row{ display:flex; gap:.7rem; align-items:flex-start; cursor:pointer; padding:.8rem 1rem; border-radius:12px;
+      background:rgba(255,206,86,.09); border:1px solid rgba(255,206,86,.4); margin-bottom:1rem; }
+    .everyone-row input{ width:auto; margin:.15rem 0 0; accent-color:var(--gold); flex-shrink:0; }
+    .everyone-row b{ font-size:.9rem; color:var(--text); }
+    .picker-wrap.off{ opacity:.4; pointer-events:none; }
   </style>
 </head>
 <body>
@@ -118,10 +123,17 @@
   <div class="modal-bg" id="compose" onclick="if(event.target===this)closeCompose()">
     <div class="modal">
       <div class="mhead"><b>New message</b><span class="mx" onclick="closeCompose()">&times;</span></div>
-      <div class="lbl">To — pick recipients</div>
-      <div class="seltags" id="seltags"></div>
-      <input class="psearch" id="pSearch" placeholder="Search citizens…" oninput="renderPicker()">
-      <div class="picker" id="picker"></div>
+      <label class="everyone-row">
+        <input type="checkbox" id="everyoneChk" onchange="toggleEveryone()">
+        <span><i class="fas fa-bullhorn" style="color:var(--gold)"></i> <b>Send to everyone in Cyvathon</b><br>
+          <span class="small muted">Broadcast to the whole micronation — no need to pick people.</span></span>
+      </label>
+      <div class="picker-wrap" id="pickerWrap">
+        <div class="lbl">To — pick recipients</div>
+        <div class="seltags" id="seltags"></div>
+        <input class="psearch" id="pSearch" placeholder="Search citizens…" oninput="renderPicker()">
+        <div class="picker" id="picker"></div>
+      </div>
       <div class="lbl">Subject</div>
       <input id="cSubject" placeholder="Subject" maxlength="200">
       <div class="lbl">Message</div>
@@ -201,7 +213,11 @@
     /* ---- compose ---- */
     function openCompose(){ SEL=new Set(); document.getElementById("cSubject").value=""; document.getElementById("cBody").value="";
       document.getElementById("pSearch").value=""; document.getElementById("cMsg").textContent="";
+      document.getElementById("everyoneChk").checked=false; toggleEveryone();
       renderTags(); renderPicker(); document.getElementById("compose").classList.add("on"); }
+    function toggleEveryone(){
+      document.getElementById("pickerWrap").classList.toggle("off", document.getElementById("everyoneChk").checked);
+    }
     function closeCompose(){ document.getElementById("compose").classList.remove("on"); }
     function replyTo(u, subj){ closeReader(); openCompose(); SEL=new Set([decodeURIComponent(u)]);
       document.getElementById("cSubject").value = /^re:/i.test(subj)?subj:("Re: "+subj); renderTags(); renderPicker(); document.getElementById("cBody").focus(); }
@@ -225,13 +241,15 @@
     }
     async function sendMail(){
       const msg=document.getElementById("cMsg");
-      if(!SEL.size){ msg.style.color="var(--red)"; msg.textContent="Pick at least one recipient."; return; }
+      const everyone=document.getElementById("everyoneChk").checked;
+      if(!everyone && !SEL.size){ msg.style.color="var(--red)"; msg.textContent="Pick recipients, or choose 'everyone'."; return; }
       const subject=document.getElementById("cSubject").value.trim();
       const body=document.getElementById("cBody").value.trim();
       if(!body){ msg.style.color="var(--red)"; msg.textContent="Write a message."; return; }
       document.getElementById("sendBtn").disabled=true;
       try{
-        await api("/mail/send",{method:"POST",body:JSON.stringify({to:[...SEL],subject,body})});
+        const payload = everyone ? {everyone:true,subject,body} : {to:[...SEL],subject,body};
+        await api("/mail/send",{method:"POST",body:JSON.stringify(payload)});
         closeCompose(); if(FOLDER!=="inbox") setFolder("sent"); else load();
       }catch(e){ msg.style.color="var(--red)"; msg.textContent=e.message; }
       finally{ document.getElementById("sendBtn").disabled=false; }

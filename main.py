@@ -4783,23 +4783,30 @@ def mail_send():
         return jsonify(success=False, error="Not logged in"), 401
     me = user["username"]
     d = request.get_json() or {}
-    to = d.get("to") or []
-    if not isinstance(to, list):
-        to = [to]
-    to = [str(t).strip() for t in to if str(t).strip() and str(t).strip() != me]
-    to = list(dict.fromkeys(to))[:25]
     subject = (d.get("subject") or "").strip()[:200] or "(no subject)"
     body = (d.get("body") or "").strip()[:20000]
-    if not to:
-        return jsonify(success=False, error="Pick at least one recipient."), 400
     if not body:
         return jsonify(success=False, error="Write something in the message."), 400
-    # keep only real citizens
-    valid = {r["username"] for r in (supabase.table("cybucks").select("username")
-             .in_("username", to).execute().data or [])}
-    to = [t for t in to if t in valid]
+
+    broadcast = bool(d.get("everyone"))
+    if broadcast:
+        # Send to the whole micronation (every non-banned citizen except me).
+        rows = supabase.table("cybucks").select("username,banned").execute().data or []
+        to = [r["username"] for r in rows if not r.get("banned") and r["username"] != me]
+    else:
+        to = d.get("to") or []
+        if not isinstance(to, list):
+            to = [to]
+        to = [str(t).strip() for t in to if str(t).strip() and str(t).strip() != me]
+        to = list(dict.fromkeys(to))[:25]
+        if not to:
+            return jsonify(success=False, error="Pick at least one recipient."), 400
+        # keep only real citizens
+        valid = {r["username"] for r in (supabase.table("cybucks").select("username")
+                 .in_("username", to).execute().data or [])}
+        to = [t for t in to if t in valid]
     if not to:
-        return jsonify(success=False, error="None of those recipients exist."), 400
+        return jsonify(success=False, error="No valid recipients."), 400
     try:
         m = supabase.table("mail").insert(
             {"sender": me, "subject": subject, "body": body}).execute().data[0]
