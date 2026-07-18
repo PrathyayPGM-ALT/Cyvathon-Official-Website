@@ -208,10 +208,11 @@
     }
     function replyThread(){
       if(!THREAD) return;
+      const t=THREAD;                 // capture before closeReader() nulls THREAD
       closeReader(); openCompose();
-      SEL=new Set(THREAD.participants||[]);
-      REPLY_PARENT=THREAD.last_id;
-      const subj=THREAD.subject||"";
+      SEL=new Set(t.participants||[]);
+      REPLY_PARENT=t.last_id;
+      const subj=t.subject||"";
       document.getElementById("cSubject").value = /^re:/i.test(subj)?subj:("Re: "+subj);
       renderTags(); renderPicker(); document.getElementById("cBody").focus();
     }
