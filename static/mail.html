@@ -107,7 +107,7 @@
       <div class="fold" data-f="sent" onclick="setFolder('sent')"><i class="fas fa-paper-plane"></i> Sent</div>
     </div>
     <div class="mlist-wrap">
-      <div class="mlist" id="mlist"><p class="empty">Loading…</p></div>
+      <div class="mlist" id="mlist"><div class="cyload"><div class="cyload-dots"><span></span><span></span><span></span></div><div class="cyload-msg">Sorting the mail…</div></div></div>
     </div>
   </div>
 
@@ -162,7 +162,7 @@
 
     async function load(){
       const box=document.getElementById("mlist");
-      box.innerHTML=`<p class="empty">Loading…</p>`;
+      box.innerHTML=spinner("Sorting the mail…");
       try{
         const d=await api("/mail/list?folder="+FOLDER); ME=d.me;
         const list=d.mails||[];

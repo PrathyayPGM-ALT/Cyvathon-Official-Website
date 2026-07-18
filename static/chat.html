@@ -570,7 +570,7 @@
     let gifTimer=null;
     function gifSearchDebounced(){ clearTimeout(gifTimer); gifTimer=setTimeout(()=>loadGifs(document.getElementById("gifSearch").value.trim()),350); }
     async function loadGifs(q){
-      const grid=document.getElementById("gifGrid"); grid.innerHTML=`<p class="small muted" style="grid-column:1/-1">Loading…</p>`;
+      const grid=document.getElementById("gifGrid"); grid.innerHTML=`<div style="grid-column:1/-1">${spinner("Finding GIFs…","sm")}</div>`;
       try{
         const d=await api("/gif/search"+(q?`?q=${encodeURIComponent(q)}`:""));
         if(!d.gifs.length){

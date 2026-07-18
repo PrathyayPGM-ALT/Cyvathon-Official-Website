@@ -41,7 +41,7 @@
     <p class="section-sub">The richest, the busiest founders, and the citizens who built the Republic by bringing others in.</p>
 
     <div class="lb-tabs" id="tabs"></div>
-    <div class="board" id="board"><p class="empty">Loading…</p></div>
+    <div class="board" id="board"><div class="cyload"><div class="cyload-dots"><span></span><span></span><span></span></div><div class="cyload-msg">Tallying the rankings…</div></div></div>
   </div>
 
   <script src="/static/app.js"></script>
@@ -91,6 +91,7 @@
       const user=await requireAuth(); if(!user) return;
       ME=user.username; renderNav("/leaderboard", user);
       renderTabs();
+      document.getElementById("board").innerHTML=spinner("Tallying the rankings…");
       try{
         const d=await api("/leaderboard_data");
         ME=d.me||ME;

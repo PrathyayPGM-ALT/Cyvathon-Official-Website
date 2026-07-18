@@ -75,7 +75,7 @@
       <button class="create-btn" onclick="openModal()"><i class="fas fa-plus"></i> Post a video</button>
     </div>
 
-    <div class="vfeed" id="feed"><p class="empty">Loading…</p></div>
+    <div class="vfeed" id="feed"><div class="cyload"><div class="cyload-dots"><span></span><span></span><span></span></div><div class="cyload-msg">Loading videos…</div></div></div>
   </div>
 
   <!-- create modal -->
@@ -160,6 +160,7 @@
     }
 
     async function load(){
+      document.getElementById("feed").innerHTML=spinner("Cueing up the reels…");
       try{
         const d=await api("/videos_list"); ME=d.me;
         const list=d.videos||[];
@@ -199,7 +200,7 @@
     async function toggleC(id){
       const box=$("cm"+id);
       if(box.style.display==="flex"){ box.style.display="none"; return; }
-      box.style.display="flex"; box.innerHTML=`<p class="small muted">Loading…</p>`;
+      box.style.display="flex"; box.innerHTML=spinner("Loading comments…","sm");
       try{ const d=await api("/video/"+id); renderComments(id, d.comments||[]); }
       catch(e){ box.innerHTML=`<p class="small muted">${esc(e.message)}</p>`; }
     }

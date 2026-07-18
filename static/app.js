@@ -202,6 +202,21 @@ function renderRich(text) {
   return s;
 }
 
+/* A fun on-brand loading animation — bouncing brand dots + a witty message.
+   Usage: box.innerHTML = spinner();  or  spinner("Sorting the mail…", "sm") */
+const LOAD_MSGS = [
+  "Minting Cybucks…", "Consulting the Chair…", "Waking the Treasury…",
+  "Summoning citizens…", "Counting the Aquilines…", "Booting the micronation…",
+  "Polishing the passports…", "Herding the bots…", "Bribing the servers…",
+  "Rallying the Republic…", "Dusting off the ledger…", "Warming up the exchange…",
+];
+function spinner(msg, size) {
+  const m = msg || LOAD_MSGS[Math.floor(Math.random() * LOAD_MSGS.length)];
+  const cls = "cyload" + (size === "sm" ? " sm" : "");
+  return `<div class="${cls}"><div class="cyload-dots"><span></span><span></span><span></span></div>`
+       + `<div class="cyload-msg">${(m + "").replace(/</g, "&lt;")}</div></div>`;
+}
+
 /* A clickable link to a citizen's public profile. */
 function userLink(name) {
   if (!name) return "—";

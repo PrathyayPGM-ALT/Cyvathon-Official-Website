@@ -103,7 +103,7 @@
       </div>
 
       <div class="sec-label"><i class="fas fa-flag"></i> Registered Micronations</div>
-      <div class="fgrid" id="nations"><p class="empty">Loading…</p></div>
+      <div class="fgrid" id="nations"><div class="cyload"><div class="cyload-dots"><span></span><span></span><span></span></div><div class="cyload-msg">Contacting the nations…</div></div></div>
     </div>
   </div>
 
@@ -152,6 +152,7 @@
     }
 
     async function load(){
+      document.getElementById("nations").innerHTML=spinner("Contacting the nations…");
       try{
         const d=await api("/foreign_data"); PREZ=d.is_president;
         const list=d.nations||[];

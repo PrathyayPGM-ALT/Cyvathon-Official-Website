@@ -77,6 +77,7 @@
     (async function(){
       const user=await requireAuth(); if(!user) return;
       ME=user.username; renderNav("/citizens", user);
+      document.getElementById("grid").innerHTML=spinner("Gathering the citizens…");
       try{ const d=await api("/citizens/list"); ME=d.me; ALL=d.citizens||[]; render(); }
       catch(e){ document.getElementById("grid").innerHTML=`<p class="muted">${e.message}</p>`; }
     })();
