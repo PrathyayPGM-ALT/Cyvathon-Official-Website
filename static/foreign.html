@@ -65,6 +65,47 @@
     .ally-btn{ background:linear-gradient(135deg,#26e0a8,#12a37c); color:#032018; border:none; cursor:pointer; font-weight:700; }
     .revoke-btn{ background:transparent; color:#ff8a96; border:1px solid rgba(255,93,108,.4); cursor:pointer; }
     .empty{ text-align:center; color:var(--muted); padding:2.5rem 1rem; grid-column:1/-1; }
+    .known{ cursor:pointer; }
+    .readmore{ font-size:.82rem; color:var(--nc,var(--accent)); font-weight:700; display:inline-flex; align-items:center; gap:.4rem; }
+
+    /* ---- dossier modal ---- */
+    .modal-bg{ position:fixed; inset:0; background:rgba(2,8,18,.75); backdrop-filter:blur(5px);
+      display:none; align-items:center; justify-content:center; z-index:250; padding:1rem; }
+    .modal-bg.on{ display:flex; }
+    .dmodal{ width:100%; max-width:600px; max-height:92vh; overflow-y:auto; border-radius:20px; background:var(--panel);
+      border:1px solid var(--panel-border); box-shadow:0 30px 80px rgba(0,0,0,.65); animation:dpop .22s ease; }
+    @keyframes dpop{ from{ transform:translateY(14px) scale(.98); opacity:0; } to{ transform:none; opacity:1; } }
+    .dbanner{ position:relative; overflow:hidden; padding:1.9rem 1.9rem 1.7rem;
+      background:var(--dc); background-image:linear-gradient(135deg, rgba(255,255,255,.14), rgba(0,0,0,.4)); }
+    .dbanner .dgrid{ position:absolute; inset:0; pointer-events:none;
+      background-image:linear-gradient(rgba(255,255,255,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.10) 1px,transparent 1px);
+      background-size:34px 34px; -webkit-mask-image:radial-gradient(ellipse 70% 90% at 15% 20%, #000, transparent 75%);
+      mask-image:radial-gradient(ellipse 70% 90% at 15% 20%, #000, transparent 75%); }
+    .dclose{ position:absolute; top:.9rem; right:1.1rem; z-index:2; color:#fff; opacity:.85; font-size:1.7rem; cursor:pointer; line-height:1; }
+    .dclose:hover{ opacity:1; }
+    .dflag{ font-size:2.4rem; line-height:1; flex-shrink:0; }
+    .dtitle{ font-size:1.7rem; font-weight:900; letter-spacing:-.5px; color:#fff; }
+    .dtag{ color:rgba(255,255,255,.9); font-size:.9rem; font-style:italic; margin-top:.4rem; }
+    .dbody{ padding:1.5rem 1.8rem 1.9rem; }
+    .dstats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:.6rem; margin-bottom:1.2rem; }
+    .dstat{ background:var(--panel-2); border:1px solid var(--panel-border); border-radius:12px; padding:.65rem .85rem; min-width:0; }
+    .dstat b{ display:block; font-size:.98rem; font-weight:800; overflow-wrap:anywhere; }
+    .dstat span{ font-size:.66rem; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; }
+    .dsec-title{ font-weight:800; font-size:1.05rem; margin:1.4rem 0 .7rem; display:flex; align-items:center; gap:.55rem; }
+    .dsec-title i{ color:var(--dc); }
+    .dstory p{ color:#cdd6e0; line-height:1.7; margin:0 0 .8rem; }
+    .dstory b{ color:var(--text); }
+    .timeline{ position:relative; padding-left:1.7rem; margin-top:.2rem; }
+    .timeline::before{ content:""; position:absolute; left:5px; top:5px; bottom:5px; width:2px; background:var(--panel-border); }
+    .tevent{ position:relative; margin-bottom:1.05rem; }
+    .tevent:last-child{ margin-bottom:0; }
+    .tevent::before{ content:""; position:absolute; left:-1.7rem; top:3px; width:12px; height:12px; border-radius:50%;
+      background:var(--dc); box-shadow:0 0 0 3px var(--panel); }
+    .tevent b{ display:block; margin-bottom:.15rem; font-size:.95rem; }
+    .tevent span{ color:var(--muted); font-size:.88rem; line-height:1.5; }
+    .dfooter{ margin-top:1.4rem; padding:.9rem 1.1rem; border-radius:12px; display:flex; gap:.75rem; align-items:flex-start; }
+    .dfooter i{ margin-top:.15rem; font-size:1.05rem; }
+    .dfooter div{ font-size:.9rem; color:#cdd6e0; line-height:1.55; }
   </style>
 </head>
 <body>
@@ -85,26 +126,16 @@
       </div>
 
       <div class="sec-label"><i class="fas fa-handshake"></i> Known Nations</div>
-      <div class="fgrid">
-        <div class="nation" style="--nc:#1fd6a6">
-          <div class="nhead">
-            <div class="flag">🟢</div>
-            <div><div class="nname">Crystonia</div><span class="chip c-ally"><i class="fas fa-handshake"></i> Allied</span></div>
-          </div>
-          <div class="ndesc">A trusted ally of the Republic. Open borders, shared intelligence and a standing mutual-defence understanding.</div>
-        </div>
-        <div class="nation" style="--nc:#ff5d6c">
-          <div class="nhead">
-            <div class="flag">🔴</div>
-            <div><div class="nname">Aquilithia</div><span class="chip c-rival"><i class="fas fa-triangle-exclamation"></i> Hostile · Rival</span></div>
-          </div>
-          <div class="ndesc">A rival state with a history of aggression toward Cyvathon. Under continuous observation by the Athena intelligence agency.</div>
-        </div>
-      </div>
+      <div class="fgrid" id="knownGrid"></div>
 
       <div class="sec-label"><i class="fas fa-flag"></i> Registered Micronations</div>
       <div class="fgrid" id="nations"><div class="cyload"><div class="cyload-dots"><span></span><span></span><span></span></div><div class="cyload-msg">Contacting the nations…</div></div></div>
     </div>
+  </div>
+
+  <!-- dossier modal -->
+  <div class="modal-bg" id="dossier" onclick="if(event.target===this)closeDossier()">
+    <div class="dmodal" id="dmodal"></div>
   </div>
 
   <script src="/static/app.js"></script>
@@ -112,6 +143,90 @@
     let ME=null, PREZ=false;
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const enc=encodeURIComponent;
+    const hexA=(hex,a)=>{ const n=parseInt(hex.replace('#',''),16); return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; };
+
+    /* ---- Diplomatic dossiers (the lore) ---- */
+    const DOSSIERS = {
+      crystonia: {
+        name:"Crystonia", flag:"🟢", col:"#1fd6a6", rel:"Allied", chipCls:"c-ally", chipIcon:"fa-handshake",
+        tagline:"Sister republic. Sworn ally.",
+        short:"A trusted ally — open borders, shared intelligence, and a standing mutual-defence pact.",
+        stats:[["Status","Allied"],["Relations since","2025"],["Treaty","Concord of the Chair"],["Threat","None"]],
+        story:[
+          "Crystonia and Cyvathon were forged in the same season, by builders who believed a nation should be <b>coded into existence</b>, not inherited. From the very first handshake, the two republics recognised one another as equals and kindred spirits — same faith in creation, same distaste for tyranny.",
+          "When Aquiline aggression first tested the Republic's borders, Crystonia did not hesitate. It was the first foreign power to stand openly beside Cyvathon, and that loyalty was soon sealed in writing."
+        ],
+        timeline:[
+          ["Mutual recognition","Crystonia formally recognised Cyvathon's sovereignty and the Office of the President."],
+          ["The Concord of the Chair","A treaty of open borders, shared intelligence, and mutual defence — signed by both heads of state."],
+          ["Shared vigilance","Crystonia and Athena now trade intelligence on Aquiline movements."]
+        ],
+        footer:{icon:"fa-handshake", text:"Bound by the Concord of the Chair — open borders, shared intelligence, and mutual defence. An attack on one is answered by both."}
+      },
+      aquilithia: {
+        name:"Aquilithia", flag:"🔴", col:"#ff5d6c", rel:"Hostile · Rival", chipCls:"c-rival", chipIcon:"fa-triangle-exclamation",
+        tagline:"The rival that would not recognise us.",
+        short:"A hostile state with a history of aggression. Every probe it throws is logged by Athena.",
+        stats:[["Status","Hostile"],["Relations","No treaty"],["Trade","Embargoed"],["Threat","Elevated"]],
+        story:[
+          "Aquilithia has never accepted Cyvathon as an equal. What began as border provocations hardened into open hostility when Aquilithia <b>declared war</b> upon the Republic — a declaration Cyvathon met not with panic, but with preparation.",
+          "Its intelligence service, the AIA, runs a relentless campaign of probes against the Republic's systems. Every scan and every intrusion attempt is caught and logged by <b>Athena</b>, Cyvathon's own agency. Aquilithia even published a mock exchange rate valuing a single Pufferbuck at an absurd sum — a public taunt dressed up as economics.",
+          "The Republic's answer is doctrine, not aggression: watch every move, bar every hostile address at the border, and out-build them citizen by citizen. Cyvathon does not strike first. It simply refuses to fall."
+        ],
+        timeline:[
+          ["Border provocations","Early incursions and posturing against the Republic's frontier."],
+          ["Declaration of war","Aquilithia formally declared war upon Cyvathon."],
+          ["The AIA campaign","Continuous intrusion attempts against Cyvathon's systems — each one logged by Athena."],
+          ["The spite rate","A mock exchange rate published to belittle the Pufferbuck; economics wielded as an insult."]
+        ],
+        footer:{icon:"fa-eye", col:"#ff8a96", text:"Under continuous surveillance by Athena. Hostile addresses are logged and barred at the border. Defence, never offence."}
+      }
+    };
+    const KNOWN_ORDER = ["crystonia","aquilithia"];
+
+    function knownCard(key){
+      const d=DOSSIERS[key];
+      return `<div class="nation known" style="--nc:${d.col}" onclick="openDossier('${key}')">
+        <div class="nhead">
+          <div class="flag">${d.flag}</div>
+          <div><div class="nname">${esc(d.name)}</div>
+            <span class="chip ${d.chipCls}"><i class="fas ${d.chipIcon}"></i> ${esc(d.rel)}</span></div>
+        </div>
+        <div class="ndesc">${esc(d.short)}</div>
+        <div class="nactions"><span class="readmore" style="--nc:${d.col}"><i class="fas fa-book-open"></i> Read the dossier →</span></div>
+      </div>`;
+    }
+    function renderKnown(){
+      document.getElementById("knownGrid").innerHTML = KNOWN_ORDER.map(knownCard).join("");
+    }
+    function openDossier(key){
+      const d=DOSSIERS[key]; if(!d) return;
+      document.getElementById("dmodal").innerHTML = `
+        <div class="dbanner" style="--dc:${d.col}">
+          <div class="dgrid"></div>
+          <span class="dclose" onclick="closeDossier()">&times;</span>
+          <div style="position:relative;z-index:1;display:flex;align-items:center;gap:1.1rem;">
+            <div class="dflag">${d.flag}</div>
+            <div><div class="dtitle">${esc(d.name)}</div>
+              <span class="chip ${d.chipCls}" style="margin-top:.35rem;"><i class="fas ${d.chipIcon}"></i> ${esc(d.rel)}</span>
+              <div class="dtag">${esc(d.tagline)}</div></div>
+          </div>
+        </div>
+        <div class="dbody" style="--dc:${d.col}">
+          <div class="dstats">${d.stats.map(([s,v])=>`<div class="dstat"><b>${esc(v)}</b><span>${esc(s)}</span></div>`).join("")}</div>
+          <div class="dsec-title"><i class="fas fa-book"></i> The Story</div>
+          <div class="dstory">${d.story.map(p=>`<p>${p}</p>`).join("")}</div>
+          <div class="dsec-title"><i class="fas fa-clock-rotate-left"></i> Key Moments</div>
+          <div class="timeline" style="--dc:${d.col}">${d.timeline.map(([t,x])=>`<div class="tevent"><b>${esc(t)}</b><span>${esc(x)}</span></div>`).join("")}</div>
+          <div class="dfooter" style="background:${hexA(d.col,.12)};border:1px solid ${hexA(d.col,.35)};">
+            <i class="fas ${d.footer.icon}" style="color:${d.footer.col||d.col};"></i>
+            <div>${esc(d.footer.text)}</div>
+          </div>
+        </div>`;
+      document.getElementById("dossier").classList.add("on");
+    }
+    function closeDossier(){ document.getElementById("dossier").classList.remove("on"); }
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDossier(); });
 
     function statusOf(n){
       if(n.allied)        return {chip:`<span class="chip c-ally"><i class="fas fa-handshake"></i> Allied</span>`, col:"#1fd6a6"};
@@ -172,6 +287,7 @@
     (async function(){
       const user=await requireAuth(); if(!user) return;
       ME=user.username; renderNav("/foreign", user);
+      renderKnown();
       load();
     })();
   </script>
