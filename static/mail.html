@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mail · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    html,body{ height:100%; }
+    body{ display:flex; flex-direction:column; height:100dvh; overflow:hidden; }
+    .mode-tabs{ display:flex; justify-content:center; gap:.35rem; padding:.5rem; background:var(--bg-soft);
+      border-bottom:1px solid var(--panel-border); flex-shrink:0; }
+    .mode-tabs a{ display:inline-flex; align-items:center; gap:.45rem; text-decoration:none; padding:.4rem 1.15rem;
+      border-radius:999px; color:var(--muted); font-weight:600; font-size:.9rem; transition:.15s; }
+    .mode-tabs a:hover{ color:var(--text); }
+    .mode-tabs a.on{ background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; }
+
+    .mshell{ flex:1; display:grid; grid-template-columns:220px 1fr; min-height:0; }
+    @media(max-width:760px){ .mshell{ grid-template-columns:1fr; } .mside{ display:none; } .mside.show{ display:flex; } }
+
+    .mside{ border-right:1px solid var(--panel-border); background:var(--bg-soft); display:flex; flex-direction:column; padding:1rem .8rem; gap:.3rem; min-height:0; }
+    .compose-btn{ margin:0 0 1rem; width:100%; padding:.8rem; display:flex; align-items:center; justify-content:center; gap:.5rem;
+      background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; border:none; font-weight:700; }
+    .fold{ display:flex; align-items:center; gap:.7rem; padding:.6rem .8rem; border-radius:10px; cursor:pointer; color:var(--muted); font-weight:600; }
+    .fold:hover{ background:var(--panel-2); color:var(--text); }
+    .fold.on{ background:rgba(88,196,255,.14); color:var(--accent); }
+    .fold i{ width:1.2rem; text-align:center; }
+    .fold .fb{ margin-left:auto; font-size:.7rem; background:var(--red); color:#fff; border-radius:9px; padding:0 .4rem; font-weight:800; }
+
+    .mlist-wrap{ display:flex; flex-direction:column; min-height:0; }
+    .mlist{ overflow-y:auto; min-height:0; }
+    .mrow{ display:flex; align-items:center; gap:.9rem; padding:.85rem 1.1rem; border-bottom:1px solid var(--panel-border);
+      cursor:pointer; transition:.12s; }
+    .mrow:hover{ background:var(--panel-2); }
+    .mrow.unread{ background:rgba(88,196,255,.05); }
+    .mrow.unread .mfrom,.mrow.unread .msub{ color:var(--text); font-weight:700; }
+    .star{ color:var(--muted); cursor:pointer; width:1.1rem; text-align:center; flex-shrink:0; }
+    .star.on{ color:var(--gold); }
+    .mav{ width:40px; height:40px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .mmeta{ flex:1; min-width:0; }
+    .mfrom{ font-size:.92rem; color:var(--text); font-weight:600; }
+    .msub{ font-size:.9rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .msub b{ color:var(--text); }
+    .mtime{ font-size:.72rem; color:var(--muted); flex-shrink:0; }
+    .empty{ text-align:center; color:var(--muted); padding:3rem 1rem; }
+
+    /* reading view */
+    .reader{ position:fixed; inset:0; background:var(--bg); z-index:60; display:none; flex-direction:column; }
+    .reader.show{ display:flex; }
+    .rhead{ display:flex; align-items:center; gap:.8rem; padding:1rem 1.2rem; border-bottom:1px solid var(--panel-border); }
+    .rhead .back{ background:none; border:none; color:var(--text); font-size:1.1rem; cursor:pointer; width:auto; margin:0; padding:.3rem .5rem; }
+    .rbody{ overflow-y:auto; padding:1.4rem 1.6rem; max-width:820px; width:100%; margin:0 auto; }
+    .rsubject{ font-size:1.5rem; font-weight:800; margin-bottom:1rem; }
+    .rmeta{ display:flex; align-items:center; gap:.8rem; padding-bottom:1rem; border-bottom:1px solid var(--panel-border); margin-bottom:1.2rem; }
+    .rmeta .who b{ color:var(--text); } .rmeta .who span{ color:var(--muted); font-size:.85rem; }
+    .rtext{ white-space:pre-wrap; line-height:1.7; color:#dfe7f0; }
+    .chips{ display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.3rem; }
+    .rchip{ font-size:.75rem; background:var(--panel-2); border:1px solid var(--panel-border); border-radius:999px; padding:.15rem .6rem; color:var(--muted); }
+
+    /* compose modal */
+    .modal-bg{ position:fixed; inset:0; background:rgba(2,8,18,.72); backdrop-filter:blur(4px); display:none;
+      align-items:center; justify-content:center; z-index:80; padding:1rem; }
+    .modal-bg.on{ display:flex; }
+    .modal{ background:var(--panel); border:1px solid var(--panel-border); border-radius:18px; padding:1.4rem 1.5rem;
+      width:100%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.55); }
+    .mhead{ display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+    .mhead b{ font-size:1.2rem; } .mx{ cursor:pointer; color:var(--muted); font-size:1.6rem; }
+    .lbl{ font-size:.78rem; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); font-weight:700; margin:.3rem 0 .4rem; }
+    .picker{ max-height:180px; overflow-y:auto; border:1px solid var(--panel-border); border-radius:12px; padding:.4rem; margin-bottom:.9rem; }
+    .psearch{ margin:0 0 .5rem; }
+    .prow{ display:flex; align-items:center; gap:.7rem; padding:.45rem .6rem; border-radius:9px; cursor:pointer; }
+    .prow:hover{ background:var(--panel-2); }
+    .prow.sel{ background:rgba(88,196,255,.14); }
+    .prow .pav{ width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:.78rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .prow .pnm{ flex:1; font-size:.9rem; } .prow .pck{ color:var(--accent); opacity:0; } .prow.sel .pck{ opacity:1; }
+    .seltags{ display:flex; flex-wrap:wrap; gap:.35rem; margin-bottom:.7rem; }
+    .seltag{ display:inline-flex; align-items:center; gap:.35rem; font-size:.8rem; background:rgba(88,196,255,.14);
+      border:1px solid rgba(88,196,255,.3); color:var(--accent); border-radius:999px; padding:.2rem .6rem; }
+    .seltag i{ cursor:pointer; }
+    .modal textarea{ min-height:150px; resize:vertical; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="mode-tabs">
+    <a href="/chat"><i class="fas fa-comments"></i> Chat</a>
+    <a href="/mail" class="on"><i class="fas fa-envelope"></i> Mail</a>
+  </div>
+
+  <div class="mshell">
+    <div class="mside">
+      <button class="compose-btn" onclick="openCompose()"><i class="fas fa-pen"></i> Compose</button>
+      <div class="fold on" data-f="inbox" onclick="setFolder('inbox')"><i class="fas fa-inbox"></i> Inbox <span class="fb" id="fbInbox" style="display:none"></span></div>
+      <div class="fold" data-f="starred" onclick="setFolder('starred')"><i class="fas fa-star"></i> Starred</div>
+      <div class="fold" data-f="sent" onclick="setFolder('sent')"><i class="fas fa-paper-plane"></i> Sent</div>
+    </div>
+    <div class="mlist-wrap">
+      <div class="mlist" id="mlist"><p class="empty">Loading…</p></div>
+    </div>
+  </div>
+
+  <!-- reading view -->
+  <div class="reader" id="reader">
+    <div class="rhead">
+      <button class="back" onclick="closeReader()"><i class="fas fa-arrow-left"></i></button>
+      <b style="flex:1">Message</b>
+      <button class="back" id="rStar" title="Star" onclick="toggleStar()"><i class="far fa-star"></i></button>
+      <button class="back" title="Archive" onclick="archiveOpen()"><i class="fas fa-box-archive"></i></button>
+    </div>
+    <div class="rbody" id="rbody"></div>
+  </div>
+
+  <!-- compose modal -->
+  <div class="modal-bg" id="compose" onclick="if(event.target===this)closeCompose()">
+    <div class="modal">
+      <div class="mhead"><b>New message</b><span class="mx" onclick="closeCompose()">&times;</span></div>
+      <div class="lbl">To — pick recipients</div>
+      <div class="seltags" id="seltags"></div>
+      <input class="psearch" id="pSearch" placeholder="Search citizens…" oninput="renderPicker()">
+      <div class="picker" id="picker"></div>
+      <div class="lbl">Subject</div>
+      <input id="cSubject" placeholder="Subject" maxlength="200">
+      <div class="lbl">Message</div>
+      <textarea id="cBody" placeholder="Write your message…" maxlength="20000"></textarea>
+      <button onclick="sendMail()" id="sendBtn"><i class="fas fa-paper-plane"></i> Send</button>
+      <p id="cMsg" class="small" style="text-align:center;margin-top:.5rem;min-height:1em;"></p>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, FOLDER="inbox", CITIZENS=[], SEL=new Set(), OPEN=null;
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const enc=encodeURIComponent;
+    const when=(t)=>{ const d=new Date(t); const now=new Date();
+      return d.toDateString()===now.toDateString() ? d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}) : d.toLocaleDateString([],{month:"short",day:"numeric"}); };
+
+    function setFolder(f){
+      FOLDER=f;
+      document.querySelectorAll(".fold").forEach(el=>el.classList.toggle("on", el.dataset.f===f));
+      load();
+    }
+
+    async function load(){
+      const box=document.getElementById("mlist");
+      box.innerHTML=`<p class="empty">Loading…</p>`;
+      try{
+        const d=await api("/mail/list?folder="+FOLDER); ME=d.me;
+        const list=d.mails||[];
+        if(!list.length){ box.innerHTML=`<p class="empty">${FOLDER==='sent'?'No sent mail.':FOLDER==='starred'?'No starred mail.':'Inbox zero. ✨'}</p>`; return; }
+        box.innerHTML=list.map(m=>row(m)).join("");
+      }catch(e){ box.innerHTML=`<p class="empty">${esc(e.message)}</p>`; }
+      loadBadge();
+    }
+    function row(m){
+      const who = FOLDER==="sent" ? "To: "+(m.recipients||[]).map(esc).join(", ") : esc(m.sender);
+      const initial = (FOLDER==="sent" ? (m.recipients&&m.recipients[0]||"?") : m.sender||"?")[0].toUpperCase();
+      return `<div class="mrow ${m.read?'':'unread'}" onclick="openMail(${m.id})">
+        <i class="fa${m.starred?'s':'r'} fa-star star ${m.starred?'on':''}" onclick="event.stopPropagation();star(${m.id},this)"></i>
+        <div class="mav" ${FOLDER==='sent'?'':avatarStyle(m.avatar)}>${(FOLDER==='sent'||!m.avatar)?esc(initial):''}</div>
+        <div class="mmeta">
+          <div class="mfrom">${who}</div>
+          <div class="msub"><b>${esc(m.subject)}</b> — ${esc(m.preview)}</div>
+        </div>
+        <div class="mtime">${when(m.created_at)}</div>
+      </div>`;
+    }
+
+    async function openMail(id){
+      try{
+        const d=await api("/mail/"+id); OPEN=d.mail;
+        const m=d.mail;
+        document.getElementById("rStar").innerHTML=`<i class="fa${m.starred?'s':'r'} fa-star" style="color:${m.starred?'var(--gold)':'inherit'}"></i>`;
+        document.getElementById("rbody").innerHTML=`
+          <div class="rsubject">${esc(m.subject)}</div>
+          <div class="rmeta">
+            <div class="mav" ${avatarStyle(m.avatar)}>${m.avatar?'':esc((m.sender||'?')[0].toUpperCase())}</div>
+            <div class="who"><b>${esc(m.sender)}</b> <span>· ${new Date(m.created_at).toLocaleString()}</span>
+              <div class="chips">${(m.recipients||[]).map(r=>`<span class="rchip">to ${esc(r.username)}</span>`).join("")}</div></div>
+          </div>
+          <div class="rtext">${renderRich(m.body)}</div>
+          <div style="margin-top:1.6rem;"><button style="width:auto;padding:.6rem 1.2rem;" onclick="replyTo('${enc(m.sender)}','${esc(m.subject).replace(/'/g,"\\'")}')"><i class="fas fa-reply"></i> Reply</button></div>`;
+        document.getElementById("reader").classList.add("show");
+        load();   // refresh read state behind it
+      }catch(e){ alert(e.message); }
+    }
+    function closeReader(){ document.getElementById("reader").classList.remove("show"); OPEN=null; }
+    async function toggleStar(){ if(!OPEN) return; await star(OPEN.id); const s=await api("/mail/"+OPEN.id); OPEN=s.mail;
+      document.getElementById("rStar").innerHTML=`<i class="fa${OPEN.starred?'s':'r'} fa-star" style="color:${OPEN.starred?'var(--gold)':'inherit'}"></i>`; }
+    async function archiveOpen(){ if(!OPEN) return; try{ await api("/mail/"+OPEN.id+"/archive",{method:"POST",body:"{}"}); closeReader(); load(); }catch(e){ alert(e.message); } }
+    async function star(id, el){
+      try{ const d=await api("/mail/"+id+"/star",{method:"POST",body:"{}"});
+        if(el){ el.className=`fa${d.starred?'s':'r'} fa-star star ${d.starred?'on':''}`; }
+      }catch(e){}
+    }
+
+    /* ---- compose ---- */
+    function openCompose(){ SEL=new Set(); document.getElementById("cSubject").value=""; document.getElementById("cBody").value="";
+      document.getElementById("pSearch").value=""; document.getElementById("cMsg").textContent="";
+      renderTags(); renderPicker(); document.getElementById("compose").classList.add("on"); }
+    function closeCompose(){ document.getElementById("compose").classList.remove("on"); }
+    function replyTo(u, subj){ closeReader(); openCompose(); SEL=new Set([decodeURIComponent(u)]);
+      document.getElementById("cSubject").value = /^re:/i.test(subj)?subj:("Re: "+subj); renderTags(); renderPicker(); document.getElementById("cBody").focus(); }
+
+    function renderPicker(){
+      const q=(document.getElementById("pSearch").value||"").toLowerCase();
+      const list=CITIZENS.filter(c=>c.username!==ME && c.username.toLowerCase().includes(q));
+      document.getElementById("picker").innerHTML = list.length ? list.map(c=>{
+        const on=SEL.has(c.username);
+        return `<div class="prow ${on?'sel':''}" onclick="toggleSel('${enc(c.username)}')">
+          <div class="pav" ${avatarStyle(c.avatar)}>${c.avatar?'':esc(c.username[0].toUpperCase())}</div>
+          <span class="pnm">${esc(c.username)} <span style="color:var(--muted);font-size:.78rem">· ${esc(c.designation||'Citizen')}</span></span>
+          <i class="fas fa-check pck"></i></div>`;
+      }).join("") : `<p class="small muted" style="padding:.5rem;">No citizens found.</p>`;
+    }
+    function toggleSel(u){ u=decodeURIComponent(u); if(SEL.has(u))SEL.delete(u); else SEL.add(u); renderTags(); renderPicker(); }
+    function renderTags(){
+      const box=document.getElementById("seltags");
+      box.innerHTML = SEL.size ? [...SEL].map(u=>`<span class="seltag">${esc(u)} <i class="fas fa-xmark" onclick="toggleSel('${enc(u)}')"></i></span>`).join("")
+        : `<span class="small muted">No recipients picked yet.</span>`;
+    }
+    async function sendMail(){
+      const msg=document.getElementById("cMsg");
+      if(!SEL.size){ msg.style.color="var(--red)"; msg.textContent="Pick at least one recipient."; return; }
+      const subject=document.getElementById("cSubject").value.trim();
+      const body=document.getElementById("cBody").value.trim();
+      if(!body){ msg.style.color="var(--red)"; msg.textContent="Write a message."; return; }
+      document.getElementById("sendBtn").disabled=true;
+      try{
+        await api("/mail/send",{method:"POST",body:JSON.stringify({to:[...SEL],subject,body})});
+        closeCompose(); if(FOLDER!=="inbox") setFolder("sent"); else load();
+      }catch(e){ msg.style.color="var(--red)"; msg.textContent=e.message; }
+      finally{ document.getElementById("sendBtn").disabled=false; }
+    }
+
+    async function loadBadge(){
+      try{ const d=await api("/mail/unread"); const b=document.getElementById("fbInbox");
+        if(d.unread>0){ b.textContent=d.unread>9?"9+":d.unread; b.style.display="inline-block"; } else b.style.display="none";
+      }catch{}
+    }
+
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeReader(); closeCompose(); } });
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      ME=user.username; renderNav("/chat", user);
+      try{ const d=await api("/citizens/list"); CITIZENS=d.citizens||[]; }catch{}
+      const to=new URLSearchParams(location.search).get("to");
+      load();
+      if(to){ openCompose(); SEL=new Set([to]); renderTags(); renderPicker(); }
+    })();
+  </script>
+</body>
+</html>

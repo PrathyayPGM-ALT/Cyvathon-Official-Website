@@ -919,6 +919,10 @@ def bank_page():
 def chat_page():
     return app.send_static_file("chat.html")
 
+@app.route("/mail")
+def mail_page():
+    return app.send_static_file("mail.html")
+
 @app.route("/ai")
 def ai_page():
     return app.send_static_file("ai.html")
@@ -4682,6 +4686,162 @@ def casino_play():
 # ============================================================
 #  CHAT  (now gated behind the single national account)
 # ============================================================
+#  MAIL  — Gmail-style inbox (subject + body, multiple recipients)
+# ============================================================
+def _mail_avatars(names):
+    return _avatars_for(names)
+
+
+@app.route("/mail/unread")
+def mail_unread():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=True, unread=0)
+    try:
+        n = supabase.table("mail_recipients").select("id", count="exact") \
+            .eq("username", user["username"]).eq("read", False).eq("archived", False) \
+            .execute().count or 0
+    except Exception:
+        n = 0
+    return jsonify(success=True, unread=n)
+
+
+@app.route("/mail/list")
+def mail_list():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    folder = (request.args.get("folder") or "inbox").lower()
+    try:
+        if folder == "sent":
+            mails = supabase.table("mail").select("*").eq("sender", me) \
+                .order("id", desc=True).limit(80).execute().data or []
+            rec_map = {}
+            for r in (supabase.table("mail_recipients").select("mail_id,username")
+                      .in_("mail_id", [m["id"] for m in mails] or [0]).execute().data or []):
+                rec_map.setdefault(r["mail_id"], []).append(r["username"])
+            out = []
+            for m in mails:
+                out.append({**m, "recipients": rec_map.get(m["id"], []),
+                            "read": True, "starred": False})
+        else:
+            q = supabase.table("mail_recipients").select("*").eq("username", me)
+            q = q.eq("starred", True) if folder == "starred" else q.eq("archived", False)
+            recs = q.order("id", desc=True).limit(80).execute().data or []
+            mids = [r["mail_id"] for r in recs]
+            mails = {m["id"]: m for m in (supabase.table("mail").select("*")
+                     .in_("id", mids or [0]).execute().data or [])}
+            out = []
+            for r in recs:
+                m = mails.get(r["mail_id"])
+                if not m:
+                    continue
+                out.append({**m, "read": bool(r.get("read")), "starred": bool(r.get("starred")),
+                            "rid": r["id"], "recipients": []})
+    except Exception:
+        return jsonify(success=True, mails=[], me=me, folder=folder)
+    av = _mail_avatars([m.get("sender") for m in out])
+    for m in out:
+        m["avatar"] = av.get(m.get("sender"))
+        b = (m.get("body") or "")
+        m["preview"] = b[:120] + ("…" if len(b) > 120 else "")
+    return jsonify(success=True, mails=out, me=me, folder=folder)
+
+
+@app.route("/mail/<int:mid>")
+def mail_get(mid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    m = supabase.table("mail").select("*").eq("id", mid).execute().data
+    if not m:
+        return jsonify(success=False, error="Mail not found"), 404
+    m = m[0]
+    recs = supabase.table("mail_recipients").select("*").eq("mail_id", mid).execute().data or []
+    rec_names = [r["username"] for r in recs]
+    if me != m["sender"] and me not in rec_names:
+        return jsonify(success=False, error="This mail isn't addressed to you"), 403
+    mine = next((r for r in recs if r["username"] == me), None)
+    if mine and not mine.get("read"):
+        supabase.table("mail_recipients").update({"read": True}).eq("id", mine["id"]).execute()
+    av = _mail_avatars([m["sender"]] + rec_names)
+    return jsonify(success=True, me=me, mail={
+        **m, "avatar": av.get(m["sender"]),
+        "recipients": [{"username": n, "avatar": av.get(n)} for n in rec_names],
+        "starred": bool(mine.get("starred")) if mine else False,
+        "rid": mine["id"] if mine else None,
+    })
+
+
+@limiter.limit("20/min")
+@app.route("/mail/send", methods=["POST"])
+def mail_send():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    d = request.get_json() or {}
+    to = d.get("to") or []
+    if not isinstance(to, list):
+        to = [to]
+    to = [str(t).strip() for t in to if str(t).strip() and str(t).strip() != me]
+    to = list(dict.fromkeys(to))[:25]
+    subject = (d.get("subject") or "").strip()[:200] or "(no subject)"
+    body = (d.get("body") or "").strip()[:20000]
+    if not to:
+        return jsonify(success=False, error="Pick at least one recipient."), 400
+    if not body:
+        return jsonify(success=False, error="Write something in the message."), 400
+    # keep only real citizens
+    valid = {r["username"] for r in (supabase.table("cybucks").select("username")
+             .in_("username", to).execute().data or [])}
+    to = [t for t in to if t in valid]
+    if not to:
+        return jsonify(success=False, error="None of those recipients exist."), 400
+    try:
+        m = supabase.table("mail").insert(
+            {"sender": me, "subject": subject, "body": body}).execute().data[0]
+        supabase.table("mail_recipients").insert(
+            [{"mail_id": m["id"], "username": t} for t in to]).execute()
+    except Exception:
+        return jsonify(success=False, error="Mail isn't set up yet — run the migration."), 500
+    for t in to:
+        notify(t, f"📧 New mail from {me}: {subject}", "/mail")
+    return jsonify(success=True, mail=m)
+
+
+@limiter.limit("60/min")
+@app.route("/mail/<int:mid>/star", methods=["POST"])
+def mail_star(mid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    r = supabase.table("mail_recipients").select("id,starred") \
+        .eq("mail_id", mid).eq("username", user["username"]).execute().data
+    if not r:
+        return jsonify(success=False, error="Not your mail"), 404
+    new = not bool(r[0].get("starred"))
+    supabase.table("mail_recipients").update({"starred": new}).eq("id", r[0]["id"]).execute()
+    return jsonify(success=True, starred=new)
+
+
+@limiter.limit("60/min")
+@app.route("/mail/<int:mid>/archive", methods=["POST"])
+def mail_archive(mid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    r = supabase.table("mail_recipients").select("id") \
+        .eq("mail_id", mid).eq("username", user["username"]).execute().data
+    if not r:
+        return jsonify(success=False, error="Not your mail"), 404
+    supabase.table("mail_recipients").update({"archived": True, "read": True}) \
+        .eq("id", r[0]["id"]).execute()
+    return jsonify(success=True)
+
+
 def _insert_message(row, data):
     """Insert a message, attaching reply-to metadata when present.
     Fails open if the reply_* columns haven't been migrated yet."""

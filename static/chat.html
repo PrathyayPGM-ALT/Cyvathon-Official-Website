@@ -9,6 +9,15 @@
   <style>
     html,body{ height:100%; }
     body{ display:flex; flex-direction:column; height:100dvh; overflow:hidden; }
+    .mode-tabs{ display:flex; justify-content:center; gap:.35rem; padding:.5rem; background:var(--bg-soft);
+      border-bottom:1px solid var(--panel-border); flex-shrink:0; }
+    .mode-tabs a{ display:inline-flex; align-items:center; gap:.45rem; text-decoration:none; padding:.4rem 1.15rem;
+      border-radius:999px; color:var(--muted); font-weight:600; font-size:.9rem; transition:.15s; }
+    .mode-tabs a:hover{ color:var(--text); }
+    .mode-tabs a.on{ background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; }
+    .mail-badge{ min-width:17px; height:17px; padding:0 4px; border-radius:9px; background:var(--red); color:#fff;
+      font-size:.66rem; font-weight:800; display:none; align-items:center; justify-content:center; }
+    .mail-badge.show{ display:inline-flex; }
     .shell{ flex:1; display:grid; grid-template-columns:290px 1fr; min-height:0; }
 
     /* sidebar */
@@ -174,6 +183,11 @@
 </head>
 <body>
   <div id="nav"></div>
+
+  <div class="mode-tabs">
+    <a href="/chat" class="on"><i class="fas fa-comments"></i> Chat</a>
+    <a href="/mail"><i class="fas fa-envelope"></i> Mail <span class="mail-badge" id="mailBadge"></span></a>
+  </div>
 
   <div class="shell" id="shell">
     <div class="side">
@@ -731,7 +745,17 @@
       document.getElementById("gifSearch").addEventListener("keydown",e=>e.stopPropagation());
 
       refreshPresence(); setInterval(refreshPresence, 12000);   // online dots
+      loadMailBadge(); setInterval(loadMailBadge, 30000);
     })();
+
+    async function loadMailBadge(){
+      try{
+        const d=await api("/mail/unread");
+        const b=document.getElementById("mailBadge");
+        if(d.unread>0){ b.textContent=d.unread>9?"9+":d.unread; b.classList.add("show"); }
+        else b.classList.remove("show");
+      }catch{}
+    }
   </script>
 </body>
 </html>
