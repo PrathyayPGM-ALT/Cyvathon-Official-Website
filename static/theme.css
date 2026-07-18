@@ -201,21 +201,24 @@ html[data-theme="light"] textarea::placeholder{ color:#9aa7b8; }
 html[data-theme="light"] *::-webkit-scrollbar-thumb{ background:rgba(15,40,80,.20); background-clip:content-box; }
 html[data-theme="light"] ::selection{ background:rgba(23,105,201,.22); color:#0a1626; }
 
-/* ---- FUN LOADER (shared) ---- */
-.cyload{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.1rem; padding:2.6rem 1rem; color:var(--muted); }
-.cyload-dots{ display:flex; gap:.55rem; }
-.cyload-dots span{ width:14px; height:14px; border-radius:50%; display:inline-block; flex:0 0 14px; aspect-ratio:1/1;
-  animation:cyBounce 1s infinite ease-in-out both; }
-.cyload-dots span:nth-child(1){ background:#58c4ff; animation-delay:-.32s; }
-.cyload-dots span:nth-child(2){ background:#a78bfa; animation-delay:-.16s; }
-.cyload-dots span:nth-child(3){ background:#1fd6a6; }
-@keyframes cyBounce{ 0%,80%,100%{ transform:scale(.45); opacity:.45; } 40%{ transform:scale(1); opacity:1; } }
+/* ---- FUN LOADER (shared) — a flipping Cyvathon coin ---- */
+.cyload{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; padding:2.6rem 1rem; color:var(--muted); }
+.cy-coinwrap{ perspective:360px; }
+.cy-coin{ width:56px; height:56px; position:relative; transform-style:preserve-3d;
+  animation:cyFlip 1.5s cubic-bezier(.5,.05,.5,.95) infinite; }
+.cy-coin > div{ position:absolute; inset:0; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  backface-visibility:hidden; -webkit-backface-visibility:hidden; font-size:1.35rem; font-weight:900; color:#06223a;
+  box-shadow:0 8px 22px rgba(88,196,255,.4), inset 0 0 0 2px rgba(255,255,255,.25); }
+.cy-coin .f1{ background:linear-gradient(135deg,#5ec5ff,#a78bfa); }
+.cy-coin .f2{ background:linear-gradient(135deg,#1fd6a6,#3aa0ee); transform:rotateY(180deg); }
+@keyframes cyFlip{ 0%{ transform:rotateY(0); } 100%{ transform:rotateY(360deg); } }
 .cyload-msg{ font-size:.9rem; letter-spacing:.2px; animation:cyFade 1.6s ease-in-out infinite; }
 @keyframes cyFade{ 0%,100%{ opacity:.55; } 50%{ opacity:1; } }
-.cyload.sm{ padding:1.1rem 1rem; gap:.7rem; }
-.cyload.sm .cyload-dots span{ width:10px; height:10px; flex-basis:10px; }
+.cyload.sm{ padding:1.1rem 1rem; gap:.75rem; }
+.cyload.sm .cy-coin{ width:38px; height:38px; }
+.cyload.sm .cy-coin > div{ font-size:.95rem; }
 .cyload.sm .cyload-msg{ font-size:.82rem; }
-@media(prefers-reduced-motion:reduce){ .cyload-dots span, .cyload-msg{ animation:none; opacity:.8; } }
+@media(prefers-reduced-motion:reduce){ .cy-coin, .cyload-msg{ animation:none; opacity:.85; } }
 
 /* ---- NOTIFICATION TOASTS ---- */
 .toast-wrap{ position:fixed; bottom:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:.6rem; max-width:340px; }

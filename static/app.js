@@ -259,7 +259,8 @@ const LOAD_MSGS = [
 function spinner(msg, size) {
   const m = msg || LOAD_MSGS[Math.floor(Math.random() * LOAD_MSGS.length)];
   const cls = "cyload" + (size === "sm" ? " sm" : "");
-  return `<div class="${cls}"><div class="cyload-dots"><span></span><span></span><span></span></div>`
+  return `<div class="${cls}"><div class="cy-coinwrap"><div class="cy-coin">`
+       + `<div class="f1"><i class="fas fa-code"></i></div><div class="f2">&#9650;</div></div></div>`
        + `<div class="cyload-msg">${(m + "").replace(/</g, "&lt;")}</div></div>`;
 }
 
