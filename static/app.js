@@ -256,11 +256,36 @@ const LOAD_MSGS = [
   "Polishing the passports…", "Herding the bots…", "Bribing the servers…",
   "Rallying the Republic…", "Dusting off the ledger…", "Warming up the exchange…",
 ];
-function spinner(msg, size) {
+/* Pick a themed loader animation based on the page you're on. */
+function _pageVariant() {
+  const p = (typeof location !== "undefined" ? location.pathname : "/") || "/";
+  if (p.indexOf("/casino") === 0) return "dice";
+  if (p.indexOf("/exchange") === 0 || p.indexOf("/portfolio") === 0) return "bars";
+  if (p.indexOf("/videos") === 0) return "play";
+  if (p.indexOf("/blogs") === 0) return "pen";
+  if (p.indexOf("/passport") === 0 || p.indexOf("/profile") === 0) return "stamp";
+  if (p.indexOf("/chat") === 0 || p.indexOf("/mail") === 0 || p.indexOf("/citizens") === 0 || p.indexOf("/ai") === 0) return "bubbles";
+  if (/^\/(government|voting|legislature|court|gazette|ministries|foreign|fir|treasury|admin|athena|warroom)/.test(p)) return "seal";
+  return "coin";   // bank, loans, company, jobs, states, marketplace, leaderboard, invite, home…
+}
+function _animMarkup(v) {
+  let inner;
+  switch (v) {
+    case "bars":    inner = '<div class="cy-bars"><span></span><span></span><span></span><span></span></div>'; break;
+    case "dice":    inner = '<div class="cy-die"><span class="pip"></span></div>'; break;
+    case "bubbles": inner = '<div class="cy-bubble"><span></span><span></span><span></span></div>'; break;
+    case "seal":    inner = '<div class="cy-seal"><span class="tri">&#9650;</span></div>'; break;
+    case "play":    inner = '<div class="cy-play"></div>'; break;
+    case "pen":     inner = '<div class="cy-pen"><i class="fas fa-pen-nib"></i><span class="line"></span></div>'; break;
+    case "stamp":   inner = '<div class="cy-stamp"><i class="fas fa-stamp"></i></div>'; break;
+    default:        inner = '<div class="cy-coinwrap"><div class="cy-coin"><div class="f1"><i class="fas fa-code"></i></div><div class="f2">&#9650;</div></div></div>';
+  }
+  return '<div class="cy-anim">' + inner + '</div>';
+}
+function spinner(msg, size, variant) {
   const m = msg || LOAD_MSGS[Math.floor(Math.random() * LOAD_MSGS.length)];
   const cls = "cyload" + (size === "sm" ? " sm" : "");
-  return `<div class="${cls}"><div class="cy-coinwrap"><div class="cy-coin">`
-       + `<div class="f1"><i class="fas fa-code"></i></div><div class="f2">&#9650;</div></div></div>`
+  return `<div class="${cls}">${_animMarkup(variant || _pageVariant())}`
        + `<div class="cyload-msg">${(m + "").replace(/</g, "&lt;")}</div></div>`;
 }
 
