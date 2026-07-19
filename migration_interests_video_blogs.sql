@@ -11,6 +11,10 @@
 alter table cybucks add column if not exists interests text default '';
 
 -- 1b) Account type: 'citizen' or 'micronation' (+ whether a nation wants an alliance)
+-- 1c) Flight Sim: best score + last daily-bonus date
+alter table cybucks add column if not exists flight_best      numeric default 0;
+alter table cybucks add column if not exists flight_bonus_day text default '';
+
 alter table cybucks add column if not exists account_type  text default 'citizen';
 alter table cybucks add column if not exists ally_interest boolean default false;
 alter table cybucks add column if not exists allied        boolean default false;  -- President-confirmed alliance

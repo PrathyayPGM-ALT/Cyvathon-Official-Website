@@ -845,6 +845,73 @@ def foreign_set_ally():
     return jsonify(success=True, allied=allied)
 
 
+# ============================================================
+#  FLIGHT SIM  — Cyvathon Airways mini-game
+# ============================================================
+def _flight_board(limit=10):
+    try:
+        rows = supabase.table("cybucks").select("username,flight_best,avatar,banned") \
+            .order("flight_best", desc=True).limit(limit).execute().data or []
+    except Exception:
+        return []
+    return [{"username": r["username"], "score": int(r.get("flight_best") or 0),
+             "avatar": r.get("avatar")}
+            for r in rows if not r.get("banned") and (r.get("flight_best") or 0) > 0]
+
+
+@app.route("/flight/board")
+def flight_board():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    best = 0
+    try:
+        r = supabase.table("cybucks").select("flight_best").eq("username", user["username"]).execute().data
+        best = int((r[0].get("flight_best") if r else 0) or 0)
+    except Exception:
+        pass
+    return jsonify(success=True, board=_flight_board(), best=best, me=user["username"])
+
+
+@limiter.limit("40/min")
+@app.route("/flight/score", methods=["POST"])
+def flight_score():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        score = int((request.get_json() or {}).get("score") or 0)
+    except (TypeError, ValueError):
+        score = 0
+    score = max(0, min(score, 1_000_000))
+
+    awarded, best = 0, score
+    try:
+        row = supabase.table("cybucks").select("flight_best,flight_bonus_day") \
+            .eq("username", me).execute().data
+        prev = row[0] if row else {}
+        prev_best = int(prev.get("flight_best") or 0)
+        best = max(prev_best, score)
+        upd = {}
+        if score > prev_best:
+            upd["flight_best"] = score
+        # A once-a-day fixed bonus for completing a real flight — safe to grant even
+        # if a score were faked (capped, once per day), and it drives the daily habit.
+        today = _now().date().isoformat()
+        if score >= 50 and (prev.get("flight_bonus_day") or "") != today:
+            awarded = 25
+            upd["flight_bonus_day"] = today
+        if upd:
+            supabase.table("cybucks").update(upd).eq("username", me).execute()
+        if awarded:
+            cas_adjust(me, "balance", awarded, allow_negative=True)
+            add_record(me, f"Flew a Cyvathon Airways test flight (score {score}) — earned {awarded} CB pilot bonus.")
+    except Exception:
+        pass
+    return jsonify(success=True, best=best, awarded=awarded, board=_flight_board())
+
+
 def _gov_role(username):
     """The government office(s) this citizen holds, if any (cabinet + ministries)."""
     roles = []
@@ -1022,6 +1089,10 @@ def blogs_page():
 @app.route("/foreign")
 def foreign_page():
     return app.send_static_file("foreign.html")
+
+@app.route("/flightsim")
+def flightsim_page():
+    return app.send_static_file("flightsim.html")
 
 @app.route("/court")
 def court_page():

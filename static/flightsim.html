@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvathon Airways · Flight Sim</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .fs-wrap{ max-width:900px; margin:0 auto; }
+    .fs-head{ display:flex; align-items:center; gap:.7rem; margin-bottom:1rem; flex-wrap:wrap; }
+    .fs-head h2{ margin:0; font-size:1.6rem; display:flex; align-items:center; gap:.6rem; }
+    .fs-head .best{ margin-left:auto; font-size:.9rem; color:var(--muted); }
+    .fs-head .best b{ color:var(--gold); }
+    .stage{ position:relative; width:100%; aspect-ratio:16/9; border-radius:18px; overflow:hidden;
+      border:1px solid var(--panel-border); box-shadow:0 18px 50px rgba(0,0,0,.5); background:#0a1424; touch-action:none; }
+    #game{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+    .overlay{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:.9rem; text-align:center; padding:1.5rem; background:rgba(6,12,24,.55); backdrop-filter:blur(3px); z-index:2; }
+    .overlay.hide{ display:none; }
+    .overlay h3{ font-size:1.9rem; margin:0; font-weight:900; letter-spacing:-.5px; }
+    .overlay p{ color:#cbd6e6; margin:0; font-size:.95rem; max-width:420px; line-height:1.5; }
+    .overlay .big{ width:auto; padding:.85rem 2rem; font-size:1.05rem; margin:.3rem 0 0; }
+    .scoreline{ display:flex; gap:1.3rem; justify-content:center; margin:.2rem 0; }
+    .scoreline div{ text-align:center; } .scoreline b{ display:block; font-size:1.7rem; font-weight:800; } .scoreline span{ font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+    .reward{ color:#4be3b6; font-weight:700; }
+    .kbd{ background:var(--panel-2); border:1px solid var(--panel-border); border-radius:6px; padding:.1rem .5rem; font-size:.82rem; }
+    .fs-cols{ display:grid; grid-template-columns:1fr; gap:1.4rem; margin-top:1.4rem; }
+    @media(min-width:720px){ .fs-cols{ grid-template-columns:1fr; } }
+    .board{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; padding:1.2rem 1.3rem; }
+    .board h3{ margin:0 0 .8rem; font-size:1.1rem; display:flex; align-items:center; gap:.5rem; }
+    .prow{ display:flex; align-items:center; gap:.8rem; padding:.5rem 0; border-bottom:1px solid var(--panel-border); }
+    .prow:last-child{ border-bottom:none; }
+    .prank{ width:1.7rem; text-align:center; font-weight:800; color:var(--muted); }
+    .prow.top1 .prank{ color:#ffce56; } .prow.top2 .prank{ color:#cdd6e0; } .prow.top3 .prank{ color:#e8a06a; }
+    .pav{ width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:.85rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .pnm{ flex:1; font-weight:600; } .pnm a{ color:var(--text); text-decoration:none; } .pnm a:hover{ color:var(--accent); }
+    .psc{ font-weight:800; color:var(--accent); }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <div class="fs-wrap">
+      <div class="fs-head">
+        <h2><i class="fas fa-plane-up" style="color:#58c4ff"></i> Cyvathon Airways</h2>
+        <div class="best">Your best: <b id="best">—</b></div>
+      </div>
+
+      <div class="stage" id="stage">
+        <canvas id="game"></canvas>
+        <div class="overlay" id="startScreen">
+          <h3>✈️ Test Flight</h3>
+          <p>Keep the plane in the air, thread the storm gaps, and grab Cybucks for score.
+             <br><span class="kbd">Space</span> / <span class="kbd">Click</span> / <span class="kbd">Tap</span> to climb — let go to descend.</p>
+          <button class="big" onclick="startGame()"><i class="fas fa-play"></i> Take off</button>
+        </div>
+        <div class="overlay hide" id="overScreen">
+          <h3>Flight ended</h3>
+          <div class="scoreline">
+            <div><b id="finalScore">0</b><span>Score</span></div>
+            <div><b id="finalCoins">0</b><span>Cybucks</span></div>
+            <div><b id="finalBest">0</b><span>Best</span></div>
+          </div>
+          <p id="rewardMsg" class="reward" style="min-height:1.2em;"></p>
+          <button class="big" onclick="startGame()"><i class="fas fa-rotate-right"></i> Fly again</button>
+        </div>
+      </div>
+
+      <div class="fs-cols">
+        <div class="board">
+          <h3><i class="fas fa-trophy" style="color:var(--gold)"></i> Top Pilots</h3>
+          <div id="board"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, BEST=0;
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const enc=encodeURIComponent;
+
+    const cvs=document.getElementById("game"), ctx=cvs.getContext("2d");
+    let W=0, H=0, DPR=1;
+    function resize(){
+      const r=document.getElementById("stage").getBoundingClientRect();
+      DPR=Math.min(2, window.devicePixelRatio||1);
+      W=r.width; H=r.height;
+      cvs.width=Math.round(W*DPR); cvs.height=Math.round(H*DPR);
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+    }
+    window.addEventListener("resize", resize);
+
+    // ---- game state ----
+    let state="ready", raf=null, last=0;
+    let plane, obstacles, coins, clouds, speed, spawnX, distance, coinCount, thrusting;
+
+    function reset(){
+      plane={ x:0, y:0, vy:0, r:15 };
+      obstacles=[]; coins=[]; clouds=[];
+      speed=210; spawnX=0; distance=0; coinCount=0; thrusting=false;
+      plane.x=Math.max(70, W*0.24); plane.y=H*0.42;
+      for(let i=0;i<6;i++) clouds.push({ x:Math.random()*W, y:Math.random()*H*0.8, s:0.3+Math.random()*0.7, r:20+Math.random()*40 });
+    }
+
+    function startGame(){
+      resize(); reset();
+      document.getElementById("startScreen").classList.add("hide");
+      document.getElementById("overScreen").classList.add("hide");
+      state="playing"; last=performance.now();
+      if(raf) cancelAnimationFrame(raf);
+      raf=requestAnimationFrame(loop);
+    }
+
+    function spawnObstacle(){
+      const gap=Math.max(135, 210 - distance*0.03);      // gap shrinks with distance
+      const margin=40;
+      const gy=margin + Math.random()*(H - gap - margin*2);
+      obstacles.push({ x:W+40, w:56, gapY:gy, gapH:gap, passed:false });
+      // a coin in the gap
+      if(Math.random()<0.85) coins.push({ x:W+40+28, y:gy+gap/2, taken:false });
+    }
+
+    function loop(t){
+      let dt=(t-last)/1000; last=t; if(dt>0.033) dt=0.033;
+      update(dt); draw();
+      if(state==="playing") raf=requestAnimationFrame(loop);
+    }
+
+    function update(dt){
+      // physics
+      const grav=1500, thrust=3050;
+      plane.vy += grav*dt;
+      if(thrusting) plane.vy -= thrust*dt;
+      plane.vy=Math.max(-430, Math.min(560, plane.vy));
+      plane.y += plane.vy*dt;
+
+      speed += dt*4;                       // gradual difficulty
+      distance += speed*dt/9;
+
+      // spawn obstacles by distance
+      spawnX -= speed*dt;
+      if(spawnX<=0){ spawnObstacle(); spawnX=Math.max(215, 330 - distance*0.05); }
+
+      // move + collide obstacles
+      const px=plane.x, py=plane.y, pr=plane.r;
+      for(const o of obstacles){
+        o.x -= speed*dt;
+        if(!o.passed && o.x+o.w<px){ o.passed=true; }
+        // collide top or bottom column
+        if(px+pr>o.x && px-pr<o.x+o.w){
+          if(py-pr<o.gapY || py+pr>o.gapY+o.gapH){ return gameOver(); }
+        }
+      }
+      obstacles=obstacles.filter(o=>o.x+o.w>-10);
+
+      // coins
+      for(const c of coins){
+        c.x -= speed*dt;
+        if(!c.taken && Math.hypot(c.x-px, c.y-py)<pr+13){ c.taken=true; coinCount++; }
+      }
+      coins=coins.filter(c=>c.x>-20 && !c.taken);
+
+      // clouds parallax
+      for(const cl of clouds){ cl.x -= speed*dt*cl.s*0.4; if(cl.x<-cl.r*2){ cl.x=W+cl.r; cl.y=Math.random()*H*0.8; } }
+
+      // ground / ceiling
+      if(plane.y+pr>H || plane.y-pr<0) return gameOver();
+    }
+
+    function draw(){
+      // sky
+      const g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,"#0d2748"); g.addColorStop(.55,"#123a63"); g.addColorStop(1,"#0a1424");
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      // clouds
+      ctx.fillStyle="rgba(200,225,255,.10)";
+      for(const cl of clouds){ blob(cl.x,cl.y,cl.r); }
+      // obstacles (storm columns)
+      for(const o of obstacles){
+        stormCol(o.x, 0, o.w, o.gapY);
+        stormCol(o.x, o.gapY+o.gapH, o.w, H-(o.gapY+o.gapH));
+      }
+      // coins
+      for(const c of coins){ if(c.taken) continue; coin(c.x,c.y); }
+      // plane
+      drawPlane(plane.x, plane.y, plane.vy);
+      // HUD
+      ctx.fillStyle="#eaf2ff"; ctx.font="700 22px system-ui,Arial"; ctx.textAlign="left";
+      ctx.fillText(Math.floor(distance)+" m", 16, 30);
+      ctx.textAlign="right";
+      ctx.fillStyle="#ffce56"; ctx.fillText("₵ "+coinCount, W-16, 30);
+      ctx.textAlign="left";
+    }
+
+    function blob(x,y,r){ ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.arc(x+r*0.9,y+4,r*0.7,0,7); ctx.arc(x-r*0.8,y+3,r*0.6,0,7); ctx.fill(); }
+    function stormCol(x,y,w,h){
+      const grd=ctx.createLinearGradient(x,0,x+w,0);
+      grd.addColorStop(0,"#2b3f63"); grd.addColorStop(.5,"#3a5686"); grd.addColorStop(1,"#2b3f63");
+      ctx.fillStyle=grd;
+      const r=12; roundRect(x,y-2,w,h+4,r); ctx.fill();
+      ctx.fillStyle="rgba(120,160,220,.35)"; ctx.fillRect(x+w*0.3,y,3,h);   // rivet line
+    }
+    function coin(x,y){
+      ctx.save(); ctx.translate(x,y);
+      const grd=ctx.createLinearGradient(-11,-11,11,11); grd.addColorStop(0,"#ffe58a"); grd.addColorStop(1,"#f0a92c");
+      ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(0,0,11,0,7); ctx.fill();
+      ctx.fillStyle="#8a5a00"; ctx.font="800 13px system-ui,Arial"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("₵",0,1);
+      ctx.textBaseline="alphabetic"; ctx.restore();
+    }
+    function drawPlane(x,y,vy){
+      ctx.save(); ctx.translate(x,y); ctx.rotate(Math.max(-0.5,Math.min(0.7, vy/700)));
+      // body
+      const grd=ctx.createLinearGradient(-18,-8,18,10); grd.addColorStop(0,"#8fd4ff"); grd.addColorStop(1,"#3aa0ee");
+      ctx.fillStyle=grd; ctx.beginPath();
+      ctx.moveTo(20,0); ctx.quadraticCurveTo(6,-11,-16,-8); ctx.quadraticCurveTo(-22,0,-16,8); ctx.quadraticCurveTo(6,11,20,0); ctx.fill();
+      // tail fin
+      ctx.beginPath(); ctx.moveTo(-14,-6); ctx.lineTo(-22,-16); ctx.lineTo(-10,-6); ctx.fill();
+      // wing
+      ctx.fillStyle="#2b7fc4"; ctx.beginPath(); ctx.moveTo(2,2); ctx.lineTo(-6,15); ctx.lineTo(6,4); ctx.fill();
+      // window
+      ctx.fillStyle="#0a2540"; ctx.beginPath(); ctx.arc(8,-2,3.2,0,7); ctx.fill();
+      ctx.restore();
+    }
+    function roundRect(x,y,w,h,r){ r=Math.min(r,w/2,Math.abs(h)/2); ctx.beginPath();
+      ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+    // ---- input ----
+    function down(e){ if(state==="playing"){ thrusting=true; if(e.cancelable) e.preventDefault(); } }
+    function up(){ thrusting=false; }
+    const stage=document.getElementById("stage");
+    stage.addEventListener("mousedown",down); window.addEventListener("mouseup",up);
+    stage.addEventListener("touchstart",down,{passive:false}); window.addEventListener("touchend",up);
+    window.addEventListener("keydown",e=>{ if(e.code==="Space"||e.key===" "){ if(state==="playing"){thrusting=true;e.preventDefault();} else if(state!=="playing"){ startGame(); } } });
+    window.addEventListener("keyup",e=>{ if(e.code==="Space"||e.key===" ") thrusting=false; });
+
+    // ---- game over / submit ----
+    async function gameOver(){
+      if(state!=="playing") return;
+      state="over"; thrusting=false;
+      const score=Math.floor(distance)+coinCount*15;
+      document.getElementById("finalScore").textContent=score;
+      document.getElementById("finalCoins").textContent=coinCount;
+      const rew=document.getElementById("rewardMsg"); rew.textContent="";
+      try{
+        const d=await api("/flight/score",{method:"POST",body:JSON.stringify({score})});
+        BEST=d.best||BEST;
+        document.getElementById("finalBest").textContent=BEST;
+        document.getElementById("best").textContent=BEST;
+        if(d.awarded>0) rew.textContent=`🪙 +${d.awarded} CB daily pilot bonus!`;
+        else if(score>=BEST && score>0) rew.textContent="🏆 New personal best!";
+        renderBoard(d.board||[]);
+      }catch(e){ document.getElementById("finalBest").textContent=BEST; }
+      document.getElementById("overScreen").classList.remove("hide");
+    }
+
+    function renderBoard(board){
+      const el=document.getElementById("board");
+      if(!board.length){ el.innerHTML=`<p class="small muted">No flights logged yet — be the first ace!</p>`; return; }
+      el.innerHTML=board.map((p,i)=>{
+        const you=p.username===ME;
+        return `<div class="prow ${i<3?'top'+(i+1):''}">
+          <div class="prank">${i<3?["🥇","🥈","🥉"][i]:(i+1)}</div>
+          <div class="pav" ${avatarStyle(p.avatar)}>${p.avatar?'':esc((p.username||'?')[0].toUpperCase())}</div>
+          <div class="pnm"><a href="/profile?user=${enc(p.username)}">${esc(p.username)}</a>${you?' <span style="color:var(--accent);font-size:.7rem;font-weight:800">YOU</span>':''}</div>
+          <div class="psc">${p.score}</div>
+        </div>`;
+      }).join("");
+    }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      ME=user.username; renderNav("/flightsim", user);
+      resize();
+      try{ const d=await api("/flight/board"); BEST=d.best||0; ME=d.me||ME;
+        document.getElementById("best").textContent=BEST||"—"; renderBoard(d.board||[]);
+      }catch(e){}
+    })();
+  </script>
+</body>
+</html>
