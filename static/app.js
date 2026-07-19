@@ -252,12 +252,25 @@ function renderRich(text) {
 
 /* A fun on-brand loading animation — bouncing brand dots + a witty message.
    Usage: box.innerHTML = spinner();  or  spinner("Sorting the mail…", "sm") */
-const LOAD_MSGS = [
-  "Minting Cybucks…", "Consulting the Chair…", "Waking the Treasury…",
-  "Summoning citizens…", "Counting the Aquilines…", "Booting the micronation…",
-  "Polishing the passports…", "Herding the bots…", "Bribing the servers…",
-  "Rallying the Republic…", "Dusting off the ledger…", "Warming up the exchange…",
+const LOAD_MSGS = [   // generic fallback
+  "Booting the micronation…", "Rallying the Republic…", "Herding the bots…",
+  "Bribing the servers…", "Waking things up…",
 ];
+// Messages themed to match each page's loader animation.
+const LOAD_MSGS_BY_VARIANT = {
+  coin:    ["Minting Cybucks…", "Counting the Aquilines…", "Balancing the ledger…", "Cracking open the vault…"],
+  bars:    ["Loading the markets…", "Fetching share prices…", "Reading the ticker…", "Checking the order book…"],
+  dice:    ["Rolling the dice…", "Shuffling the deck…", "Testing your luck…", "Spinning it up…"],
+  bubbles: ["Warming up the chat…", "Delivering the mail…", "Rounding up citizens…", "Loading the conversation…"],
+  seal:    ["Convening the council…", "Sealing the decrees…", "Consulting the Chair…", "Reading the lawbook…"],
+  play:    ["Cueing up the reels…", "Buffering the feed…", "Rolling the tape…"],
+  pen:     ["Fetching the latest posts…", "Sharpening the quill…", "Turning the page…"],
+  stamp:   ["Polishing the passports…", "Stamping the documents…", "Checking your papers…"],
+};
+function _randMsg(v) {
+  const pool = LOAD_MSGS_BY_VARIANT[v] || LOAD_MSGS;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 /* Pick a themed loader animation based on the page you're on. */
 function _pageVariant() {
   const p = (typeof location !== "undefined" ? location.pathname : "/") || "/";
@@ -285,9 +298,10 @@ function _animMarkup(v) {
   return '<div class="cy-anim">' + inner + '</div>';
 }
 function spinner(msg, size, variant) {
-  const m = msg || LOAD_MSGS[Math.floor(Math.random() * LOAD_MSGS.length)];
+  const v = variant || _pageVariant();
+  const m = msg || _randMsg(v);
   const cls = "cyload" + (size === "sm" ? " sm" : "");
-  return `<div class="${cls}">${_animMarkup(variant || _pageVariant())}`
+  return `<div class="${cls}">${_animMarkup(v)}`
        + `<div class="cyload-msg">${(m + "").replace(/</g, "&lt;")}</div></div>`;
 }
 
