@@ -34,7 +34,9 @@ function _gShow() {
   if (_initDone || _gEl) return;
   _gEl = document.createElement("div");
   _gEl.id = "cyGlobalLoad";
-  _gEl.style.cssText = "position:fixed;inset:0;z-index:5000;display:flex;align-items:center;"
+  // z-index 150 sits below the sticky nav (z-index 200) so the nav stays visible
+  // and clickable while the page's content loads underneath the loader.
+  _gEl.style.cssText = "position:fixed;inset:0;z-index:150;display:flex;align-items:center;"
     + "justify-content:center;background:var(--bg,#0a0d14);opacity:0;transition:opacity .25s;";
   _gEl.innerHTML = spinner();
   (document.body || document.documentElement).appendChild(_gEl);
