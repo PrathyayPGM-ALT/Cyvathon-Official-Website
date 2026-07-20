@@ -19,7 +19,8 @@
     /* cockpit + HUD */
     .hud{ position:absolute; inset:0; pointer-events:none; z-index:2; font-variant-numeric:tabular-nums; display:none; }
     /* window pillars for a cockpit feel */
-    .hud .frame{ position:absolute; inset:0; }
+    .hud .frame{ position:absolute; inset:0; display:none; }
+    .hud.cockpitview .frame{ display:block; }
     .hud .frame::before,.hud .frame::after{ content:""; position:absolute; top:0; bottom:22%; width:7%;
       background:linear-gradient(90deg, rgba(10,16,26,.85), rgba(10,16,26,0)); }
     .hud .frame::before{ left:0; } .hud .frame::after{ right:0; transform:scaleX(-1); }
@@ -97,7 +98,7 @@
              Fly through rings for score — but keep your speed up or you'll <b>stall</b>. Don't hit the ground.</p>
           <div class="keys">
             <span class="kbd">W / S — throttle</span><span class="kbd">↑ / ↓ — pitch</span>
-            <span class="kbd">← / → — roll</span><span class="kbd">A / D — rudder</span>
+            <span class="kbd">← / → — roll</span><span class="kbd">A / D — rudder</span><span class="kbd">C — cockpit / chase view</span>
           </div>
           <button class="big" onclick="startGame()"><i class="fas fa-play"></i> Start engines</button>
           <p id="loadNote" class="small" style="opacity:.7"></p>
@@ -122,6 +123,13 @@
   </div>
 
   <script src="/static/three.min.js"></script>
+  <script src="/static/three/EffectComposer.js"></script>
+  <script src="/static/three/ShaderPass.js"></script>
+  <script src="/static/three/MaskPass.js"></script>
+  <script src="/static/three/RenderPass.js"></script>
+  <script src="/static/three/CopyShader.js"></script>
+  <script src="/static/three/LuminosityHighPassShader.js"></script>
+  <script src="/static/three/UnrealBloomPass.js"></script>
   <script src="/static/app.js"></script>
   <script>
     let ME=null, BEST=0;
@@ -130,18 +138,21 @@
     const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 
     let renderer, scene, camera, sky, sun, ready=false;
+    let water, aircraft, prop, composer=null, bloomPass=null, viewMode="chase", simTime=0;
     let rings=[], coins=[];
     const stage=document.getElementById("stage"), cvs=document.getElementById("view");
 
     // ---- terrain height (used for the mesh AND for collision) ----
+    // An island: flat airfield near the centre, hills around it, ocean beyond the coast.
     function terrainH(x,z){
       const d=Math.hypot(x,z);
-      const flat=clamp((d-380)/900, 0, 1);           // flat around the airport, hills far out
-      let h=52*Math.sin(x*0.0016)*Math.cos(z*0.0016)
-          +26*Math.sin(x*0.0041+2.1)*Math.cos(z*0.0037-1.2)
-          +11*Math.sin(x*0.011-0.7)*Math.cos(z*0.0094+0.5);
-      h=Math.max(0, h+30);
-      return h*flat;
+      const flat=clamp((d-760)/620, 0, 1);            // flat airfield near the centre (covers the runway)
+      const land=clamp(1-(d-1700)/1500, 0, 1);        // 1 inland, 0 out at sea
+      let hills=52*Math.sin(x*0.0016)*Math.cos(z*0.0016)
+              +26*Math.sin(x*0.0041+2.1)*Math.cos(z*0.0037-1.2)
+              +11*Math.sin(x*0.011-0.7)*Math.cos(z*0.0094+0.5);
+      hills=(Math.max(0,hills)+22)*flat;
+      return hills*land - (1-land)*45;                // dips below sea level offshore
     }
 
     // ---- flight state ----
@@ -190,6 +201,19 @@
       geo.computeVertexNormals();
       scene.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({vertexColors:true})));
 
+      // animated ocean (custom water shader)
+      const wU={ t:{value:0}, sunDir:{value:new THREE.Vector3(-0.4,0.75,0.5).normalize()},
+        deep:{value:new THREE.Color(0x0c3350)}, shallow:{value:new THREE.Color(0x2f88b0)}, sky:{value:new THREE.Color(0xcfe6f5)} };
+      water=new THREE.Mesh(new THREE.PlaneGeometry(18000,18000,1,1), new THREE.ShaderMaterial({ uniforms:wU, fog:false,
+        vertexShader:"varying vec3 wp; void main(){ wp=(modelMatrix*vec4(position,1.0)).xyz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+        fragmentShader:"varying vec3 wp; uniform float t; uniform vec3 sunDir,deep,shallow,sky;"
+          +"void main(){ float w1=sin(wp.x*0.05+t*1.6)+cos(wp.z*0.045-t*1.3); float w2=sin((wp.x+wp.z)*0.02+t*0.9);"
+          +" vec3 n=normalize(vec3(w1*0.08+w2*0.05,1.0,w2*0.08-w1*0.05)); vec3 v=normalize(cameraPosition-wp);"
+          +" float fres=pow(1.0-max(dot(v,n),0.0),3.0); vec3 base=mix(deep,shallow,clamp(v.y*1.3,0.0,1.0));"
+          +" float spec=pow(max(dot(reflect(-sunDir,n),v),0.0),60.0); vec3 c=mix(base,sky,fres*0.65)+spec*vec3(1.0,0.96,0.85);"
+          +" gl_FragColor=vec4(c,1.0); }" }));
+      water.rotation.x=-Math.PI/2; water.position.y=-1.5; scene.add(water); plane._waterU=wU;
+
       // runway + a couple of hangars (airport is flat at y≈0)
       const rw=new THREE.Mesh(new THREE.BoxGeometry(46,1,900), new THREE.MeshLambertMaterial({color:0x2b2f38}));
       rw.position.set(0,0.6,-260); scene.add(rw);
@@ -205,9 +229,33 @@
         g.position.set((Math.random()-0.5)*3400, 190+Math.random()*260, (Math.random()-0.5)*3400); scene.add(g);
       }
 
-      // rings + coins
+      // rings + coins (bright — the bloom pass makes them glow)
       for(let i=0;i<5;i++){ const m=new THREE.Mesh(new THREE.TorusGeometry(14,1.4,10,28), new THREE.MeshBasicMaterial({color:0x58f0ff})); scene.add(m); rings.push(m); }
       for(let i=0;i<10;i++){ const m=new THREE.Mesh(new THREE.CylinderGeometry(3,3,0.5,16), new THREE.MeshBasicMaterial({color:0xffce56})); m.rotation.x=Math.PI/2; scene.add(m); coins.push(m); }
+
+      // the aircraft (visible in chase view)
+      aircraft=new THREE.Group();
+      const blue=new THREE.MeshLambertMaterial({color:0x2f7fc4}), white=new THREE.MeshLambertMaterial({color:0xe8eef5});
+      const body=new THREE.Mesh(new THREE.CylinderGeometry(1.1,0.85,8,14), white); body.rotation.x=Math.PI/2; aircraft.add(body);
+      const nose=new THREE.Mesh(new THREE.ConeGeometry(1.1,3,14), blue); nose.rotation.x=-Math.PI/2; nose.position.z=-5.5; aircraft.add(nose);
+      const tailc=new THREE.Mesh(new THREE.ConeGeometry(0.85,2,12), white); tailc.rotation.x=Math.PI/2; tailc.position.z=4.9; aircraft.add(tailc);
+      const wing=new THREE.Mesh(new THREE.BoxGeometry(15,0.35,2.6), blue); wing.position.set(0,0.1,0.3); aircraft.add(wing);
+      const tailH=new THREE.Mesh(new THREE.BoxGeometry(5.6,0.3,1.4), blue); tailH.position.set(0,0.35,4.4); aircraft.add(tailH);
+      const fin=new THREE.Mesh(new THREE.BoxGeometry(0.3,2.4,1.6), blue); fin.position.set(0,1.3,4.6); aircraft.add(fin);
+      const canopy=new THREE.Mesh(new THREE.SphereGeometry(0.95,12,10), new THREE.MeshPhongMaterial({color:0x0a2540, shininess:90}));
+      canopy.position.set(0,0.85,-1.4); canopy.scale.set(1,0.7,1.9); aircraft.add(canopy);
+      prop=new THREE.Mesh(new THREE.BoxGeometry(6,0.4,0.15), new THREE.MeshBasicMaterial({color:0x222222})); prop.position.z=-7; aircraft.add(prop);
+      aircraft.visible=false; scene.add(aircraft);
+
+      // bloom post-processing (guarded — falls back to plain render if unavailable)
+      try{
+        if(THREE.EffectComposer && THREE.UnrealBloomPass && THREE.RenderPass){
+          composer=new THREE.EffectComposer(renderer);
+          composer.addPass(new THREE.RenderPass(scene,camera));
+          bloomPass=new THREE.UnrealBloomPass(new THREE.Vector2(1,1), 0.75, 0.55, 0.72);  // strength, radius, threshold
+          composer.addPass(bloomPass);
+        }
+      }catch(e){ composer=null; }
 
       window.addEventListener("resize", resize); resize();
       ready=true; return true;
@@ -216,7 +264,25 @@
       const r=stage.getBoundingClientRect();
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
       renderer.setSize(r.width, r.height, false);
+      if(composer) composer.setSize(r.width, r.height);
       camera.aspect=r.width/r.height; camera.updateProjectionMatrix();
+    }
+    function updateCamera(dt){
+      _fwd.set(0,0,-1).applyQuaternion(plane.quat);
+      _up.set(0,1,0).applyQuaternion(plane.quat);
+      if(aircraft){ aircraft.position.copy(plane.pos); aircraft.quaternion.copy(plane.quat); }
+      if(viewMode==="cockpit"){
+        if(aircraft) aircraft.visible=false;
+        camera.quaternion.copy(plane.quat);
+        camera.position.copy(plane.pos).addScaledVector(_up,0.5);
+      } else {
+        if(aircraft) aircraft.visible=true;
+        const desired=plane.pos.clone().addScaledVector(_fwd,-24); desired.y+=7;
+        camera.up.set(0,1,0);
+        camera.position.lerp(desired, Math.min(1, dt*4.5));
+        _v3.copy(plane.pos).addScaledVector(_fwd,14); _v3.y+=1.5;
+        camera.lookAt(_v3);
+      }
     }
 
     function aheadPos(minD,maxD,spread,loY,hiY){
@@ -245,10 +311,14 @@
 
     function loop(t){
       let dt=(t-last)/1000; last=t; if(dt>0.05) dt=0.05;
+      simTime+=dt;
       if(state==="playing") step(dt);
+      updateCamera(dt);
+      if(prop) prop.rotation.z += dt*(20+plane.throttle*45);
+      if(plane._waterU) plane._waterU.t.value=simTime;
       if(sky) sky.position.copy(camera.position);
       if(plane._sun){ _v3.set(-0.4,0.75,0.5).normalize().multiplyScalar(2600).add(camera.position); plane._sun.position.copy(_v3); }
-      renderer.render(scene,camera);
+      if(composer) composer.render(); else renderer.render(scene,camera);
       if(state==="playing") raf=requestAnimationFrame(loop);
     }
 
@@ -303,23 +373,21 @@
       plane.pos.addScaledVector(plane.vel, dt);
       plane.dist+=speed*dt;
 
-      // ---- ground / terrain ----
+      // ---- ground / water / terrain ----
       const gh=terrainH(plane.pos.x, plane.pos.z);
-      if(plane.pos.y <= gh+2){
-        const airport=Math.hypot(plane.pos.x,plane.pos.z-(-260))<520 && gh<1.5;
-        if(!plane.onGround && (plane.vel.y<-24 || (!airport && speed>28))) { crashReason="crash"; return gameOver(); }
-        plane.onGround=true; plane.pos.y=gh+2;
+      const overWater=gh<0.5;
+      const contactY=Math.max(gh,0);                     // stand on land, or on the sea surface
+      if(plane.pos.y <= contactY+2){
+        const landable = !overWater && gh<3;             // flat ground OK; hills or water = crash
+        if(!plane.onGround && (!landable || plane.vel.y<-24)){ crashReason="crash"; return gameOver(); }
+        plane.onGround=true; plane.pos.y=contactY+2;
         if(plane.vel.y<0) plane.vel.y=0;
-        const fr=plane.throttle>0.03?0.28:1.1;              // light rolling friction; brakes when throttle cut
+        const fr=plane.throttle>0.03?0.28:1.1;            // light rolling friction; brakes when throttle cut
         plane.vel.x*=(1-fr*dt); plane.vel.z*=(1-fr*dt);
-        // keep it upright on the ground
         _euler.setFromQuaternion(plane.quat,"YXZ"); _euler.z*=0.85; _euler.x=Math.max(_euler.x,-0.02);
         plane.quat.setFromEuler(_euler);
       } else plane.onGround=false;
       if(plane.pos.y>1200) plane.pos.y=1200;
-
-      // camera = cockpit
-      camera.quaternion.copy(plane.quat); camera.position.copy(plane.pos);
 
       // ---- rings & coins ----
       _fwd.set(0,0,-1).applyQuaternion(plane.quat);
@@ -354,6 +422,7 @@
     // ---- input ----
     window.addEventListener("keydown",e=>{ keys[e.code]=true;
       if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
+      if(e.code==="KeyC"){ viewMode = viewMode==="chase" ? "cockpit" : "chase"; document.getElementById("hud").classList.toggle("cockpitview", viewMode==="cockpit"); }
       if(e.code==="Space" && state!=="playing") startGame();
     });
     window.addEventListener("keyup",e=>{ keys[e.code]=false; });
