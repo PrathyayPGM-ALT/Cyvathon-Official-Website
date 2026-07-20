@@ -30,7 +30,11 @@
     .cross i:nth-child(3){ left:50%; width:6px; height:6px; margin:-3px 0 0 -3px; background:#ffd24a; border-radius:50%; }
     .stallw{ position:absolute; top:8%; left:50%; transform:translateX(-50%); background:#c0182b; color:#fff;
       font-weight:900; letter-spacing:2px; padding:.25rem .8rem; border-radius:6px; display:none; animation:blink .6s steps(1) infinite; }
+    .warnp{ position:absolute; top:15%; left:50%; transform:translateX(-50%); background:#c47a10; color:#fff;
+      font-weight:900; letter-spacing:2px; padding:.25rem .8rem; border-radius:6px; display:none; animation:blink .45s steps(1) infinite; }
     @keyframes blink{ 50%{ opacity:.35; } }
+    .mini{ position:absolute; top:12px; right:12px; width:118px; height:118px; border-radius:50%;
+      border:2px solid rgba(140,190,255,.5); background:rgba(6,14,26,.5); }
     .panel{ position:absolute; left:0; right:0; bottom:0; height:22%; display:flex; align-items:center; justify-content:center; gap:.55rem;
       padding:.5rem .8rem; background:linear-gradient(180deg, transparent, rgba(6,12,22,.6) 35%, rgba(6,12,22,.9));
       border-top:1px solid rgba(140,190,255,.18); }
@@ -80,7 +84,9 @@
         <div class="hud" id="hud">
           <div class="frame"></div>
           <div class="cross"><i></i><i></i><i></i></div>
+          <canvas class="mini" id="mini" width="150" height="150"></canvas>
           <div class="stallw" id="stallw">STALL</div>
+          <div class="warnp" id="warnp">PULL UP</div>
           <div class="panel">
             <div class="adi"><div class="horizon" id="adiH"></div></div>
             <div class="g"><b id="gSpd">0</b><span>km/h</span></div>
@@ -98,7 +104,8 @@
              Fly through rings for score — but keep your speed up or you'll <b>stall</b>. Don't hit the ground.</p>
           <div class="keys">
             <span class="kbd">W / S — throttle</span><span class="kbd">↑ / ↓ — pitch</span>
-            <span class="kbd">← / → — roll</span><span class="kbd">A / D — rudder</span><span class="kbd">C — cockpit / chase view</span>
+            <span class="kbd">← / → — roll</span><span class="kbd">A / D — rudder</span>
+            <span class="kbd">Shift — boost</span><span class="kbd">C — cockpit / chase view</span>
           </div>
           <button class="big" onclick="startGame()"><i class="fas fa-play"></i> Start engines</button>
           <p id="loadNote" class="small" style="opacity:.7"></p>
@@ -171,25 +178,25 @@
       renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.08;
       renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
       scene=new THREE.Scene();
-      scene.fog=new THREE.Fog(0xbcd8ee, 900, 3000);
+      scene.fog=new THREE.Fog(0xe7c39a, 800, 2900);            // warm golden-hour haze
       camera=new THREE.PerspectiveCamera(74, 16/9, 0.6, 6000);
 
-      // sky dome (gradient)
+      // sky dome (gradient) — deep blue up top, warm at the horizon
       sky=new THREE.Mesh(new THREE.SphereGeometry(3000,32,16), new THREE.ShaderMaterial({
         side:THREE.BackSide, depthWrite:false,
-        uniforms:{ top:{value:new THREE.Color(0x2f74b8)}, bot:{value:new THREE.Color(0xcfe6f5)} },
+        uniforms:{ top:{value:new THREE.Color(0x18406e)}, bot:{value:new THREE.Color(0xf4b06a)} },
         vertexShader:"varying vec3 vp; void main(){ vp=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
         fragmentShader:"varying vec3 vp; uniform vec3 top; uniform vec3 bot; void main(){ float h=clamp(normalize(vp).y*0.6+0.35,0.0,1.0); gl_FragColor=vec4(mix(bot,top,h),1.0); }"
       }));
       scene.add(sky);
 
-      scene.add(new THREE.HemisphereLight(0xdcefff, 0x415a44, 0.85));
-      plane._sunDir=new THREE.Vector3(-0.4,0.78,0.5).normalize();
-      sun=new THREE.DirectionalLight(0xfff4e0, 1.05); sun.position.copy(plane._sunDir).multiplyScalar(400); scene.add(sun);
+      scene.add(new THREE.HemisphereLight(0xffe6c4, 0x3d4a3a, 0.7));
+      plane._sunDir=new THREE.Vector3(-0.58,0.4,0.42).normalize();     // low sun = long shadows
+      sun=new THREE.DirectionalLight(0xffd49a, 1.2); sun.position.copy(plane._sunDir).multiplyScalar(400); scene.add(sun);
       sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
       const sc=sun.shadow.camera; sc.near=1; sc.far=1400; sc.left=-320; sc.right=320; sc.top=320; sc.bottom=-320; sun.shadow.bias=-0.0006;
       sun.target=new THREE.Object3D(); scene.add(sun.target);
-      const sunMesh=new THREE.Mesh(new THREE.SphereGeometry(80,16,16), new THREE.MeshBasicMaterial({color:0xfff6d0}));
+      const sunMesh=new THREE.Mesh(new THREE.SphereGeometry(115,16,16), new THREE.MeshBasicMaterial({color:0xffe0a0}));
       sunMesh.name="sun"; scene.add(sunMesh); plane._sun=sunMesh;
 
       // terrain with height + vertex colors
@@ -221,7 +228,7 @@
 
       // animated ocean (custom water shader)
       const wU={ t:{value:0}, sunDir:{value:new THREE.Vector3(-0.4,0.75,0.5).normalize()},
-        deep:{value:new THREE.Color(0x0c3350)}, shallow:{value:new THREE.Color(0x2f88b0)}, sky:{value:new THREE.Color(0xcfe6f5)} };
+        deep:{value:new THREE.Color(0x0c3350)}, shallow:{value:new THREE.Color(0x2f88b0)}, sky:{value:new THREE.Color(0xf3c48a)} };
       water=new THREE.Mesh(new THREE.PlaneGeometry(18000,18000,1,1), new THREE.ShaderMaterial({ uniforms:wU, fog:false,
         vertexShader:"varying vec3 wp; void main(){ wp=(modelMatrix*vec4(position,1.0)).xyz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
         fragmentShader:"varying vec3 wp; uniform float t; uniform vec3 sunDir,deep,shallow,sky;"
@@ -277,6 +284,21 @@
       for(let i=0;i<46;i++){ const m=new THREE.Mesh(new THREE.SphereGeometry(1.3,7,7),
           new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0, depthWrite:false})); m.visible=false; scene.add(m); trail.push({m,life:0}); }
       plane._trail=trail; plane._trailIdx=0; plane._trailT=0;
+
+      // AI air traffic — airliners cruising by with contrails
+      plane._traffic=[];
+      const alBody=new THREE.MeshLambertMaterial({color:0xeef2f6});
+      for(let i=0;i<3;i++){ const g=new THREE.Group();
+        const b=new THREE.Mesh(new THREE.CylinderGeometry(2,2,28,10), alBody); b.rotation.x=Math.PI/2; g.add(b);
+        const w=new THREE.Mesh(new THREE.BoxGeometry(36,0.7,5), alBody); g.add(w);
+        const fin=new THREE.Mesh(new THREE.BoxGeometry(0.7,6,4.5), new THREE.MeshLambertMaterial({color:0xc23b4a})); fin.position.set(0,3.2,13); g.add(fin);
+        const tr=new THREE.Mesh(new THREE.BoxGeometry(1.6,1.6,150), new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.2,depthWrite:false})); tr.position.z=90; g.add(tr);
+        g.traverse(o=>{ if(o.isMesh && o.material===alBody) o.castShadow=true; });
+        scene.add(g);
+        const dir=new THREE.Vector3(Math.random()-0.5,0,Math.random()-0.5).normalize();
+        const pos=new THREE.Vector3((Math.random()-0.5)*5000, 300+Math.random()*260, (Math.random()-0.5)*5000);
+        plane._traffic.push({g,dir,spd:110+Math.random()*45,pos});
+      }
 
       // bloom post-processing (guarded — falls back to plain render if unavailable)
       try{
@@ -362,8 +384,13 @@
         for(const s of plane._trail){ if(s.life>0){ s.life-=dt*0.55; if(s.life<=0){ s.m.visible=false; }
           else { s.m.material.opacity=s.life*0.42; s.m.scale.setScalar(0.6+(1-s.life)*3.2); } } }
       }
-      // speed gives a subtle FOV push
-      if(camera){ const tf=72+clamp((plane.vel.length()-70)/5.5,0,15); if(Math.abs(camera.fov-tf)>0.05){ camera.fov+=(tf-camera.fov)*Math.min(1,dt*3); camera.updateProjectionMatrix(); } }
+      // speed gives a subtle FOV push (boost pushes further)
+      if(camera){ const tf=72+clamp((plane.vel.length()-70)/5.5,0,15)+(plane._boost?6:0); if(Math.abs(camera.fov-tf)>0.05){ camera.fov+=(tf-camera.fov)*Math.min(1,dt*3); camera.updateProjectionMatrix(); } }
+      // AI air traffic
+      if(plane._traffic){ for(const a of plane._traffic){ a.pos.addScaledVector(a.dir, a.spd*dt);
+        if(a.pos.length()>4700){ a.dir.set(Math.random()-0.5,0,Math.random()-0.5).normalize(); a.pos.copy(a.dir).multiplyScalar(-4300); a.pos.y=300+Math.random()*260; }
+        a.g.position.copy(a.pos); a.g.lookAt(_v3.copy(a.pos).add(a.dir)); } }
+      if(state==="playing") drawMini();
       if(composer) composer.render(); else renderer.render(scene,camera);
       if(state==="playing") raf=requestAnimationFrame(loop);
     }
@@ -374,6 +401,7 @@
       const rollIn =(keys["ArrowRight"]?1:0)-(keys["ArrowLeft"]?1:0)+touchRoll;
       const yawIn  =(keys["KeyD"]?1:0)-(keys["KeyA"]?1:0);
       const thrIn  =(keys["KeyW"]?1:0)-(keys["KeyS"]?1:0);
+      const boost  =(keys["ShiftLeft"]||keys["ShiftRight"])?1:0; plane._boost=boost;
       plane.throttle=clamp(plane.throttle + thrIn*0.6*dt, 0, 1);
 
       // orientation vectors
@@ -410,7 +438,7 @@
       const drag=(kDrag + kInd*clEff*clEff)*speed*speed;
 
       const F=_v3.set(0,0,0);
-      F.addScaledVector(_fwd, plane.throttle*Tmax);          // thrust
+      F.addScaledVector(_fwd, plane.throttle*Tmax*(1+boost*0.8)); // thrust (+ boost)
       F.addScaledVector(_up, lift);                          // lift ⟂ wings
       if(speed>0.01) F.addScaledVector(plane.vel, -drag/speed); // drag opposes motion
       F.y-=g;                                                // gravity
@@ -433,6 +461,7 @@
         _euler.setFromQuaternion(plane.quat,"YXZ"); _euler.z*=0.85; _euler.x=Math.max(_euler.x,-0.02);
         plane.quat.setFromEuler(_euler);
       } else plane.onGround=false;
+      plane.gpws = !plane.onGround && (plane.pos.y-contactY)<55 && plane.vel.y<-5;   // ground-proximity warning
       if(plane.pos.y>1200) plane.pos.y=1200;
 
       // ---- rings & coins ----
@@ -451,6 +480,18 @@
       hud(airspd, speed);
     }
 
+    function drawMini(){
+      const c=document.getElementById("mini"); if(!c) return; const g=c.getContext("2d"); const S=150, R=S/2, sc=R/3600;
+      g.clearRect(0,0,S,S); g.save(); g.translate(R,R);
+      g.fillStyle="rgba(60,120,74,.5)"; g.beginPath(); g.arc(0,0,2400*sc,0,7); g.fill();
+      g.fillStyle="#58f0ff"; for(const m of rings){ const x=m.position.x*sc,y=m.position.z*sc; if(Math.hypot(x,y)<R-3){ g.beginPath(); g.arc(x,y,2.6,0,7); g.fill(); } }
+      g.fillStyle="rgba(255,206,86,.85)"; for(const m of coins){ const x=m.position.x*sc,y=m.position.z*sc; if(Math.hypot(x,y)<R-3){ g.beginPath(); g.arc(x,y,1.6,0,7); g.fill(); } }
+      _euler.setFromQuaternion(plane.quat,"YXZ");
+      const px=clamp(plane.pos.x*sc,-R+7,R-7), py=clamp(plane.pos.z*sc,-R+7,R-7);
+      g.translate(px,py); g.rotate(-_euler.y);
+      g.fillStyle="#fff"; g.beginPath(); g.moveTo(0,-8); g.lineTo(5.5,7); g.lineTo(0,4); g.lineTo(-5.5,7); g.closePath(); g.fill();
+      g.restore();
+    }
     function scoreNow(){ return plane.ringsHit*50 + plane.coinsHit*15 + Math.floor(plane.dist/16); }
     function hud(airspd, speed){
       document.getElementById("gSpd").textContent=Math.round(airspd*3.6);
@@ -463,6 +504,7 @@
       document.getElementById("gThr").style.width=Math.round(plane.throttle*100)+"%";
       document.getElementById("adiH").style.transform=`translateY(${_euler.x*70}px) rotate(${-_euler.z}rad)`;
       document.getElementById("stallw").style.display=plane.stall?"block":"none";
+      document.getElementById("warnp").style.display=plane.gpws?"block":"none";
     }
 
     // ---- input ----
