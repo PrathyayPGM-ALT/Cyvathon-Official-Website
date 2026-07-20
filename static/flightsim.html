@@ -7,44 +7,49 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
   <style>
-    .fs-wrap{ max-width:960px; margin:0 auto; }
+    .fs-wrap{ max-width:1000px; margin:0 auto; }
     .fs-head{ display:flex; align-items:center; gap:.7rem; margin-bottom:1rem; flex-wrap:wrap; }
     .fs-head h2{ margin:0; font-size:1.6rem; display:flex; align-items:center; gap:.6rem; }
     .fs-head .best{ margin-left:auto; font-size:.9rem; color:var(--muted); } .fs-head .best b{ color:var(--gold); }
 
     .stage{ position:relative; width:100%; aspect-ratio:16/9; border-radius:16px; overflow:hidden;
-      border:1px solid var(--panel-border); box-shadow:0 18px 50px rgba(0,0,0,.5); background:#0a1424; touch-action:none; }
+      border:1px solid var(--panel-border); box-shadow:0 18px 50px rgba(0,0,0,.5); background:#8fbfe0; touch-action:none; }
     #view{ position:absolute; inset:0; width:100%; height:100%; display:block; }
 
-    /* cockpit HUD overlay */
-    .hud{ position:absolute; inset:0; pointer-events:none; z-index:2; font-variant-numeric:tabular-nums; }
-    .cross{ position:absolute; top:44%; left:50%; width:46px; height:46px; margin:-23px 0 0 -23px; opacity:.8; }
-    .cross::before,.cross::after{ content:""; position:absolute; background:rgba(120,220,180,.85); }
-    .cross::before{ left:50%; top:0; width:2px; height:100%; margin-left:-1px; }
-    .cross::after{ top:50%; left:0; height:2px; width:100%; margin-top:-1px; }
-    .gauges{ position:absolute; left:0; right:0; bottom:0; height:26%; display:flex; align-items:flex-end; justify-content:space-between;
-      gap:.6rem; padding:.7rem 1rem 1rem; background:linear-gradient(180deg, transparent, rgba(4,10,20,.55) 40%, rgba(4,10,20,.85));
-      border-top:1px solid rgba(120,180,255,.15); }
-    .g{ background:rgba(6,14,26,.7); border:1px solid rgba(120,180,255,.25); border-radius:10px; padding:.4rem .7rem; min-width:78px; text-align:center; }
-    .g b{ display:block; font-size:1.25rem; font-weight:800; color:#bfe6ff; line-height:1.1; }
-    .g span{ font-size:.62rem; color:#7fa8cc; text-transform:uppercase; letter-spacing:1px; }
-    .adi{ width:78px; height:78px; border-radius:50%; overflow:hidden; border:2px solid rgba(120,180,255,.4); position:relative; flex-shrink:0; }
-    .adi .horizon{ position:absolute; left:-40%; top:-40%; width:180%; height:180%;
-      background:linear-gradient(180deg,#2f7fc4 0 50%, #6a4a2e 50% 100%); }
-    .adi::after{ content:""; position:absolute; top:50%; left:22%; right:22%; height:2px; background:#ffd24a; margin-top:-1px; }
-    .thr-wrap{ flex:1; max-width:220px; }
-    .thr{ height:9px; border-radius:6px; background:rgba(255,255,255,.12); overflow:hidden; }
-    .thr > i{ display:block; height:100%; width:40%; background:linear-gradient(90deg,#1fd6a6,#58c4ff); }
-    .thr-lbl{ font-size:.62rem; color:#7fa8cc; text-transform:uppercase; letter-spacing:1px; text-align:center; margin-bottom:.25rem; }
+    /* cockpit + HUD */
+    .hud{ position:absolute; inset:0; pointer-events:none; z-index:2; font-variant-numeric:tabular-nums; display:none; }
+    /* window pillars for a cockpit feel */
+    .hud .frame{ position:absolute; inset:0; }
+    .hud .frame::before,.hud .frame::after{ content:""; position:absolute; top:0; bottom:22%; width:7%;
+      background:linear-gradient(90deg, rgba(10,16,26,.85), rgba(10,16,26,0)); }
+    .hud .frame::before{ left:0; } .hud .frame::after{ right:0; transform:scaleX(-1); }
+    .cross{ position:absolute; top:42%; left:50%; width:60px; height:20px; margin:-10px 0 0 -30px; opacity:.85; }
+    .cross i{ position:absolute; top:50%; height:2px; background:#ffd24a; }
+    .cross i:nth-child(1){ left:0; width:20px; } .cross i:nth-child(2){ right:0; width:20px; }
+    .cross i:nth-child(3){ left:50%; width:6px; height:6px; margin:-3px 0 0 -3px; background:#ffd24a; border-radius:50%; }
+    .stallw{ position:absolute; top:8%; left:50%; transform:translateX(-50%); background:#c0182b; color:#fff;
+      font-weight:900; letter-spacing:2px; padding:.25rem .8rem; border-radius:6px; display:none; animation:blink .6s steps(1) infinite; }
+    @keyframes blink{ 50%{ opacity:.35; } }
+    .panel{ position:absolute; left:0; right:0; bottom:0; height:22%; display:flex; align-items:center; justify-content:center; gap:.55rem;
+      padding:.5rem .8rem; background:linear-gradient(180deg, transparent, rgba(6,12,22,.6) 35%, rgba(6,12,22,.9));
+      border-top:1px solid rgba(140,190,255,.18); }
+    .g{ background:rgba(6,14,26,.72); border:1px solid rgba(120,180,255,.25); border-radius:9px; padding:.35rem .65rem; min-width:68px; text-align:center; }
+    .g b{ display:block; font-size:1.15rem; font-weight:800; color:#bfe6ff; line-height:1.1; }
+    .g span{ font-size:.58rem; color:#7fa8cc; text-transform:uppercase; letter-spacing:1px; }
+    .adi{ width:74px; height:74px; border-radius:50%; overflow:hidden; border:2px solid rgba(140,190,255,.45); position:relative; flex-shrink:0; }
+    .adi .horizon{ position:absolute; left:-50%; top:-50%; width:200%; height:200%; background:linear-gradient(180deg,#3f8fd0 0 50%,#7a5330 50% 100%); }
+    .adi::after{ content:""; position:absolute; top:50%; left:20%; right:20%; height:2px; background:#ffd24a; margin-top:-1px; }
+    .thr-wrap{ width:120px; } .thr-lbl{ font-size:.58rem; color:#7fa8cc; text-transform:uppercase; letter-spacing:1px; text-align:center; margin-bottom:.2rem; }
+    .thr{ height:8px; border-radius:6px; background:rgba(255,255,255,.12); overflow:hidden; } .thr>i{ display:block; height:100%; width:0%; background:linear-gradient(90deg,#1fd6a6,#58c4ff); }
 
     .overlay{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:.9rem; text-align:center; padding:1.5rem; background:rgba(6,12,24,.62); backdrop-filter:blur(3px); z-index:3; }
+      gap:.85rem; text-align:center; padding:1.4rem; background:rgba(6,12,24,.66); backdrop-filter:blur(3px); z-index:3; }
     .overlay.hide{ display:none; }
-    .overlay h3{ font-size:1.9rem; margin:0; font-weight:900; letter-spacing:-.5px; }
-    .overlay p{ color:#cbd6e6; margin:0; font-size:.92rem; max-width:460px; line-height:1.6; }
-    .overlay .big{ width:auto; padding:.85rem 2rem; font-size:1.05rem; margin:.3rem 0 0; }
+    .overlay h3{ font-size:1.85rem; margin:0; font-weight:900; letter-spacing:-.5px; }
+    .overlay p{ color:#cbd6e6; margin:0; font-size:.9rem; max-width:500px; line-height:1.6; }
     .keys{ display:flex; gap:.5rem; flex-wrap:wrap; justify-content:center; }
-    .kbd{ background:var(--panel-2); border:1px solid var(--panel-border); border-radius:6px; padding:.15rem .55rem; font-size:.8rem; }
+    .kbd{ background:var(--panel-2); border:1px solid var(--panel-border); border-radius:6px; padding:.15rem .55rem; font-size:.78rem; }
+    .overlay .big{ width:auto; padding:.85rem 2rem; font-size:1.05rem; margin:.3rem 0 0; }
     .scoreline{ display:flex; gap:1.4rem; justify-content:center; margin:.2rem 0; }
     .scoreline div{ text-align:center; } .scoreline b{ display:block; font-size:1.7rem; font-weight:800; } .scoreline span{ font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
     .reward{ color:#4be3b6; font-weight:700; min-height:1.2em; }
@@ -52,8 +57,7 @@
     .board{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; padding:1.2rem 1.3rem; margin-top:1.4rem; }
     .board h3{ margin:0 0 .8rem; font-size:1.1rem; display:flex; align-items:center; gap:.5rem; }
     .prow{ display:flex; align-items:center; gap:.8rem; padding:.5rem 0; border-bottom:1px solid var(--panel-border); }
-    .prow:last-child{ border-bottom:none; }
-    .prank{ width:1.7rem; text-align:center; font-weight:800; color:var(--muted); }
+    .prow:last-child{ border-bottom:none; } .prank{ width:1.7rem; text-align:center; font-weight:800; color:var(--muted); }
     .pav{ width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
       font-weight:700; font-size:.85rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
     .pnm{ flex:1; font-weight:600; } .pnm a{ color:var(--text); text-decoration:none; } .pnm a:hover{ color:var(--accent); }
@@ -72,30 +76,34 @@
 
       <div class="stage" id="stage">
         <canvas id="view"></canvas>
-        <div class="hud" id="hud" style="display:none;">
-          <div class="cross"></div>
-          <div class="gauges">
+        <div class="hud" id="hud">
+          <div class="frame"></div>
+          <div class="cross"><i></i><i></i><i></i></div>
+          <div class="stallw" id="stallw">STALL</div>
+          <div class="panel">
             <div class="adi"><div class="horizon" id="adiH"></div></div>
             <div class="g"><b id="gSpd">0</b><span>km/h</span></div>
             <div class="g"><b id="gAlt">0</b><span>alt m</span></div>
+            <div class="g"><b id="gVs">0</b><span>v/s</span></div>
+            <div class="g"><b id="gHdg">0</b><span>hdg</span></div>
             <div class="thr-wrap"><div class="thr-lbl">Throttle</div><div class="thr"><i id="gThr"></i></div></div>
-            <div class="g"><b id="gRings">0</b><span>rings</span></div>
             <div class="g"><b id="gScore">0</b><span>score</span></div>
           </div>
         </div>
 
         <div class="overlay" id="startScreen">
-          <h3>✈️ Cockpit Flight</h3>
-          <p>Fly through the glowing rings and grab Cybucks. Don't hit the ground!</p>
+          <h3>✈️ Flight Simulator</h3>
+          <p>You're on the runway. <b>Throttle up</b>, build speed, then <b>ease back</b> to rotate and climb.
+             Fly through rings for score — but keep your speed up or you'll <b>stall</b>. Don't hit the ground.</p>
           <div class="keys">
-            <span class="kbd">↑ / ↓ pitch</span><span class="kbd">← / → bank &amp; turn</span>
-            <span class="kbd">W / S throttle</span><span class="kbd">or drag on touch</span>
+            <span class="kbd">W / S — throttle</span><span class="kbd">↑ / ↓ — pitch</span>
+            <span class="kbd">← / → — roll</span><span class="kbd">A / D — rudder</span>
           </div>
-          <button class="big" onclick="startGame()"><i class="fas fa-play"></i> Take off</button>
+          <button class="big" onclick="startGame()"><i class="fas fa-play"></i> Start engines</button>
           <p id="loadNote" class="small" style="opacity:.7"></p>
         </div>
         <div class="overlay hide" id="overScreen">
-          <h3>Flight ended</h3>
+          <h3 id="overTitle">Flight ended</h3>
           <div class="scoreline">
             <div><b id="finalScore">0</b><span>Score</span></div>
             <div><b id="finalRings">0</b><span>Rings</span></div>
@@ -119,55 +127,87 @@
     let ME=null, BEST=0;
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const enc=encodeURIComponent;
+    const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 
-    let renderer, scene, camera, ready=false;
+    let renderer, scene, camera, sky, sun, ready=false;
     let rings=[], coins=[];
     const stage=document.getElementById("stage"), cvs=document.getElementById("view");
 
-    // flight state (pos + math vectors created in init, once THREE is loaded)
-    const plane={ pos:null, yaw:0, pitch:0, roll:0, speed:80, dist:0, ringsHit:0, coinsHit:0 };
-    let _fwd, _side, _up;
+    // ---- terrain height (used for the mesh AND for collision) ----
+    function terrainH(x,z){
+      const d=Math.hypot(x,z);
+      const flat=clamp((d-380)/900, 0, 1);           // flat around the airport, hills far out
+      let h=52*Math.sin(x*0.0016)*Math.cos(z*0.0016)
+          +26*Math.sin(x*0.0041+2.1)*Math.cos(z*0.0037-1.2)
+          +11*Math.sin(x*0.011-0.7)*Math.cos(z*0.0094+0.5);
+      h=Math.max(0, h+30);
+      return h*flat;
+    }
+
+    // ---- flight state ----
+    const plane={ pos:null, vel:null, quat:null, throttle:0, onGround:true, dist:0, ringsHit:0, coinsHit:0, stall:false };
+    let _fwd, _up, _side, _v3, _euler;
     const keys={};
-    let state="ready", last=0, raf=null, touchPitch=0, touchRoll=0, touching=false;
+    let state="ready", last=0, raf=null, touchPitch=0, touchRoll=0, touching=false, crashReason="";
 
     function init(){
       if(!window.THREE){ document.getElementById("loadNote").textContent="3D engine failed to load — check your connection and refresh."; return false; }
-      plane.pos=new THREE.Vector3(0,120,0);
-      _fwd=new THREE.Vector3(); _side=new THREE.Vector3(); _up=new THREE.Vector3(0,1,0);
+      plane.pos=new THREE.Vector3(); plane.vel=new THREE.Vector3(); plane.quat=new THREE.Quaternion();
+      _fwd=new THREE.Vector3(); _up=new THREE.Vector3(); _side=new THREE.Vector3(); _v3=new THREE.Vector3(); _euler=new THREE.Euler(0,0,0,"YXZ");
+
       renderer=new THREE.WebGLRenderer({canvas:cvs, antialias:true});
       scene=new THREE.Scene();
-      scene.background=new THREE.Color(0x2a5b8c);
-      scene.fog=new THREE.Fog(0x2a5b8c, 300, 1400);
-      camera=new THREE.PerspectiveCamera(72, 16/9, 0.5, 3000);
+      scene.fog=new THREE.Fog(0xbcd8ee, 900, 3000);
+      camera=new THREE.PerspectiveCamera(74, 16/9, 0.6, 6000);
 
-      scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x35507a, 1.05));
-      const sun=new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(300,500,120); scene.add(sun);
+      // sky dome (gradient)
+      sky=new THREE.Mesh(new THREE.SphereGeometry(3000,32,16), new THREE.ShaderMaterial({
+        side:THREE.BackSide, depthWrite:false,
+        uniforms:{ top:{value:new THREE.Color(0x2f74b8)}, bot:{value:new THREE.Color(0xcfe6f5)} },
+        vertexShader:"varying vec3 vp; void main(){ vp=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+        fragmentShader:"varying vec3 vp; uniform vec3 top; uniform vec3 bot; void main(){ float h=clamp(normalize(vp).y*0.6+0.35,0.0,1.0); gl_FragColor=vec4(mix(bot,top,h),1.0); }"
+      }));
+      scene.add(sky);
 
-      // ground
-      const ground=new THREE.Mesh(new THREE.PlaneGeometry(6000,6000),
-        new THREE.MeshLambertMaterial({color:0x244a33}));
-      ground.rotation.x=-Math.PI/2; ground.position.y=0; scene.add(ground);
-      const grid=new THREE.GridHelper(6000, 120, 0x3f7a58, 0x2e5c42); grid.position.y=0.4; scene.add(grid);
+      scene.add(new THREE.HemisphereLight(0xdcefff, 0x415a44, 0.9));
+      sun=new THREE.DirectionalLight(0xfff4e0, 0.95); sun.position.set(-0.4,0.75,0.5); scene.add(sun);
+      const sunMesh=new THREE.Mesh(new THREE.SphereGeometry(80,16,16), new THREE.MeshBasicMaterial({color:0xfff6d0}));
+      sunMesh.name="sun"; scene.add(sunMesh); plane._sun=sunMesh;
 
-      // scenery: mountains (cones) + towers (boxes)
-      const coneMat=new THREE.MeshLambertMaterial({color:0x4a5b48});
-      const boxMat=new THREE.MeshLambertMaterial({color:0x3a4a63});
-      for(let i=0;i<60;i++){
-        const r=()=> (Math.random()-0.5)*3600;
-        if(Math.random()<0.6){ const h=60+Math.random()*260;
-          const m=new THREE.Mesh(new THREE.ConeGeometry(30+Math.random()*70, h, 6), coneMat);
-          m.position.set(r(), h/2, r()); scene.add(m);
-        } else { const h=30+Math.random()*160;
-          const m=new THREE.Mesh(new THREE.BoxGeometry(18+Math.random()*26, h, 18+Math.random()*26), boxMat);
-          m.position.set(r(), h/2, r()); scene.add(m);
-        }
+      // terrain with height + vertex colors
+      const geo=new THREE.PlaneGeometry(9000,9000,150,150); geo.rotateX(-Math.PI/2);
+      const p=geo.attributes.position, colors=[];
+      const cLow=new THREE.Color(0x3f7a4a), cMid=new THREE.Color(0x6a6a48), cHigh=new THREE.Color(0x8a8f96), cSnow=new THREE.Color(0xeef2f6);
+      for(let i=0;i<p.count;i++){
+        const x=p.getX(i), z=p.getZ(i), y=terrainH(x,z); p.setY(i,y);
+        let c; const t=clamp(y/140,0,1);
+        if(t<0.28) c=cLow.clone().lerp(cMid,t/0.28);
+        else if(t<0.62) c=cMid.clone().lerp(cHigh,(t-0.28)/0.34);
+        else c=cHigh.clone().lerp(cSnow,(t-0.62)/0.38);
+        colors.push(c.r,c.g,c.b);
+      }
+      geo.setAttribute("color", new THREE.Float32BufferAttribute(colors,3));
+      geo.computeVertexNormals();
+      scene.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({vertexColors:true})));
+
+      // runway + a couple of hangars (airport is flat at y≈0)
+      const rw=new THREE.Mesh(new THREE.BoxGeometry(46,1,900), new THREE.MeshLambertMaterial({color:0x2b2f38}));
+      rw.position.set(0,0.6,-260); scene.add(rw);
+      for(let s=-380;s<=140;s+=48){ const dash=new THREE.Mesh(new THREE.BoxGeometry(2.4,1.2,14), new THREE.MeshBasicMaterial({color:0xdfe7ee})); dash.position.set(0,1.2,s); scene.add(dash); }
+      const hMat=new THREE.MeshLambertMaterial({color:0x8a9299});
+      [[-55,-320],[-55,-200],[62,-260]].forEach(([hx,hz])=>{ const hg=new THREE.Mesh(new THREE.BoxGeometry(34,18,30),hMat); hg.position.set(hx,9,hz); scene.add(hg); });
+
+      // clouds
+      const cloudMat=new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.72});
+      for(let i=0;i<16;i++){ const g=new THREE.Group();
+        for(let j=0;j<4;j++){ const b=new THREE.Mesh(new THREE.SphereGeometry(26+Math.random()*22,10,8), cloudMat);
+          b.position.set((Math.random()-0.5)*70,(Math.random()-0.5)*10,(Math.random()-0.5)*70); b.scale.y=0.5; g.add(b); }
+        g.position.set((Math.random()-0.5)*3400, 190+Math.random()*260, (Math.random()-0.5)*3400); scene.add(g);
       }
 
       // rings + coins
-      const ringMat=new THREE.MeshBasicMaterial({color:0x58f0ff});
-      for(let i=0;i<5;i++){ const m=new THREE.Mesh(new THREE.TorusGeometry(13,1.3,10,28), ringMat.clone()); scene.add(m); rings.push(m); }
-      const coinMat=new THREE.MeshBasicMaterial({color:0xffce56});
-      for(let i=0;i<10;i++){ const m=new THREE.Mesh(new THREE.CylinderGeometry(3,3,0.5,16), coinMat); m.rotation.x=Math.PI/2; scene.add(m); coins.push(m); }
+      for(let i=0;i<5;i++){ const m=new THREE.Mesh(new THREE.TorusGeometry(14,1.4,10,28), new THREE.MeshBasicMaterial({color:0x58f0ff})); scene.add(m); rings.push(m); }
+      for(let i=0;i<10;i++){ const m=new THREE.Mesh(new THREE.CylinderGeometry(3,3,0.5,16), new THREE.MeshBasicMaterial({color:0xffce56})); m.rotation.x=Math.PI/2; scene.add(m); coins.push(m); }
 
       window.addEventListener("resize", resize); resize();
       ready=true; return true;
@@ -179,23 +219,22 @@
       camera.aspect=r.width/r.height; camera.updateProjectionMatrix();
     }
 
-    // place a ring/coin ahead of the plane along its heading
-    function aheadPos(minD, maxD, spread, loY, hiY){
-      camera.getWorldDirection(_fwd);
-      _side.crossVectors(_fwd,_up).normalize();
+    function aheadPos(minD,maxD,spread,loY,hiY){
+      _fwd.set(0,0,-1).applyQuaternion(plane.quat);
+      _side.crossVectors(_fwd, new THREE.Vector3(0,1,0)).normalize();
       const d=minD+Math.random()*(maxD-minD);
-      const p=plane.pos.clone().addScaledVector(_fwd, d);
-      p.addScaledVector(_side, (Math.random()-0.5)*spread);
-      p.y=loY+Math.random()*(hiY-loY);
-      return p;
+      const q=plane.pos.clone().addScaledVector(_fwd,d).addScaledVector(_side,(Math.random()-0.5)*spread);
+      q.y=Math.max(terrainH(q.x,q.z)+30, loY+Math.random()*(hiY-loY));
+      return q;
     }
-    function placeRing(m){ m.position.copy(aheadPos(260,520,260, 45,210)); m.lookAt(plane.pos); }
-    function placeCoin(m){ m.position.copy(aheadPos(120,520,340, 35,230)); }
+    function placeRing(m){ m.position.copy(aheadPos(300,650,300,70,240)); m.lookAt(plane.pos); }
+    function placeCoin(m){ m.position.copy(aheadPos(150,650,380,55,260)); }
 
     function startGame(){
       if(!ready && !init()) return;
-      plane.pos.set(0,120,0); plane.yaw=0; plane.pitch=0.02; plane.roll=0; plane.speed=85;
-      plane.dist=0; plane.ringsHit=0; plane.coinsHit=0; touchPitch=0; touchRoll=0;
+      plane.pos.set(0,2,-620); plane.vel.set(0,0,0);
+      plane.quat.identity(); plane.throttle=0; plane.onGround=true; plane.dist=0; plane.ringsHit=0; plane.coinsHit=0; plane.stall=false;
+      touchPitch=0; touchRoll=0; crashReason="";
       rings.forEach(placeRing); coins.forEach(placeCoin);
       document.getElementById("startScreen").classList.add("hide");
       document.getElementById("overScreen").classList.add("hide");
@@ -206,70 +245,110 @@
 
     function loop(t){
       let dt=(t-last)/1000; last=t; if(dt>0.05) dt=0.05;
-      if(state==="playing") update(dt);
+      if(state==="playing") step(dt);
+      if(sky) sky.position.copy(camera.position);
+      if(plane._sun){ _v3.set(-0.4,0.75,0.5).normalize().multiplyScalar(2600).add(camera.position); plane._sun.position.copy(_v3); }
       renderer.render(scene,camera);
       if(state==="playing") raf=requestAnimationFrame(loop);
     }
 
-    function update(dt){
-      // --- inputs ---
-      const pitchIn=(keys["ArrowUp"]||keys["KeyI"]?1:0) - (keys["ArrowDown"]||keys["KeyK"]?1:0) + touchPitch;
-      const rollIn =(keys["ArrowRight"]||keys["KeyL"]?1:0) - (keys["ArrowLeft"]||keys["KeyJ"]?1:0) + touchRoll;
-      const thrIn  =(keys["KeyW"]?1:0) - (keys["KeyS"]?1:0);
+    function step(dt){
+      // ---- control inputs ----
+      const pitchIn=(keys["ArrowUp"]?1:0)-(keys["ArrowDown"]?1:0)+touchPitch;   // + = nose up
+      const rollIn =(keys["ArrowRight"]?1:0)-(keys["ArrowLeft"]?1:0)+touchRoll;
+      const yawIn  =(keys["KeyD"]?1:0)-(keys["KeyA"]?1:0);
+      const thrIn  =(keys["KeyW"]?1:0)-(keys["KeyS"]?1:0);
+      plane.throttle=clamp(plane.throttle + thrIn*0.6*dt, 0, 1);
 
-      plane.speed=Math.max(38, Math.min(190, plane.speed + thrIn*55*dt));
-      // auto-cruise drift toward 85 when no throttle input
-      if(!thrIn) plane.speed += (95-plane.speed)*0.25*dt;
+      // orientation vectors
+      _fwd.set(0,0,-1).applyQuaternion(plane.quat);
+      _up.set(0,1,0).applyQuaternion(plane.quat);
+      const speed=plane.vel.length();
+      const airspd=Math.max(0, plane.vel.dot(_fwd));
+      const authority=clamp(airspd/45, 0.15, 1.3);   // controls bite with airspeed
 
-      // pitch eases toward input; roll eases toward input
-      const tgtPitch=pitchIn*0.55, tgtRoll=rollIn*0.9;
-      plane.pitch += (tgtPitch-plane.pitch)*Math.min(1, dt*3.2);
-      plane.roll  += (tgtRoll -plane.roll )*Math.min(1, dt*4.5);
-      plane.pitch=Math.max(-0.7, Math.min(0.7, plane.pitch));
+      // current attitude (for auto-level + HUD)
+      _euler.setFromQuaternion(plane.quat, "YXZ");
+      const rollNow=_euler.z;
+      // rotation rates (rad/s), body frame
+      let pr=pitchIn*1.15*authority;
+      let rr=rollIn*2.1*authority - (rollIn===0? rollNow*0.9 : 0);   // mild self-leveling roll
+      let yr=yawIn*0.85*authority;
+      const dq=new THREE.Quaternion().setFromEuler(new THREE.Euler(pr*dt, yr*dt, rr*dt, "XYZ"));
+      plane.quat.multiply(dq);
 
-      // banking turns the heading
-      plane.yaw -= plane.roll * 0.7 * dt;
+      // ---- forces (mass = 1) ----
+      const g=9.8;
+      // angle of attack ≈ nose pitch minus velocity pitch
+      const nosePitch=Math.asin(clamp(_fwd.y,-1,1));
+      const velPitch=speed>0.6?Math.asin(clamp(plane.vel.y/speed,-1,1)):nosePitch;
+      const aoa=nosePitch-velPitch + 0.04;      // +rigging
+      const STALL=0.30, CLs=5.3;
+      let clEff;
+      if(Math.abs(aoa)<=STALL) clEff=CLs*aoa;
+      else clEff=CLs*Math.sign(aoa)*Math.max(0.05, STALL-(Math.abs(aoa)-STALL)*2.6);   // lift collapses past stall
+      plane.stall=(Math.abs(aoa)>STALL*0.92 || airspd<32) && !plane.onGround;
 
-      // orient camera, then fly forward along view direction
-      camera.rotation.set(plane.pitch, plane.yaw, plane.roll, "YXZ");
-      camera.getWorldDirection(_fwd);
-      plane.pos.addScaledVector(_fwd, plane.speed*dt);
-      plane.pos.y -= 7*dt;                    // gentle gravity — hold some nose-up to stay level
-      if(plane.pos.y>560) plane.pos.y=560;
-      camera.position.copy(plane.pos);
+      const kLift=0.0052, kDrag=0.0016, kInd=0.0022, Tmax=34;
+      const lift=kLift*airspd*airspd*clEff;
+      const drag=(kDrag + kInd*clEff*clEff)*speed*speed;
 
-      plane.dist += plane.speed*dt;
+      const F=_v3.set(0,0,0);
+      F.addScaledVector(_fwd, plane.throttle*Tmax);          // thrust
+      F.addScaledVector(_up, lift);                          // lift ⟂ wings
+      if(speed>0.01) F.addScaledVector(plane.vel, -drag/speed); // drag opposes motion
+      F.y-=g;                                                // gravity
 
-      // rings
-      for(const m of rings){
+      plane.vel.addScaledVector(F, dt);
+      plane.pos.addScaledVector(plane.vel, dt);
+      plane.dist+=speed*dt;
+
+      // ---- ground / terrain ----
+      const gh=terrainH(plane.pos.x, plane.pos.z);
+      if(plane.pos.y <= gh+2){
+        const airport=Math.hypot(plane.pos.x,plane.pos.z-(-260))<520 && gh<1.5;
+        if(!plane.onGround && (plane.vel.y<-24 || (!airport && speed>28))) { crashReason="crash"; return gameOver(); }
+        plane.onGround=true; plane.pos.y=gh+2;
+        if(plane.vel.y<0) plane.vel.y=0;
+        const fr=plane.throttle>0.03?0.28:1.1;              // light rolling friction; brakes when throttle cut
+        plane.vel.x*=(1-fr*dt); plane.vel.z*=(1-fr*dt);
+        // keep it upright on the ground
+        _euler.setFromQuaternion(plane.quat,"YXZ"); _euler.z*=0.85; _euler.x=Math.max(_euler.x,-0.02);
+        plane.quat.setFromEuler(_euler);
+      } else plane.onGround=false;
+      if(plane.pos.y>1200) plane.pos.y=1200;
+
+      // camera = cockpit
+      camera.quaternion.copy(plane.quat); camera.position.copy(plane.pos);
+
+      // ---- rings & coins ----
+      _fwd.set(0,0,-1).applyQuaternion(plane.quat);
+      for(const m of rings){ m.rotation.z+=dt*0.5;
         const d=plane.pos.distanceTo(m.position);
-        if(d<12){ plane.ringsHit++; placeRing(m); }
-        else if(_fwd.dot(m.position.clone().sub(plane.pos))< -30){ placeRing(m); }  // flew past
-        m.rotation.z += dt*0.6;
+        if(d<13){ plane.ringsHit++; placeRing(m); }
+        else if(_fwd.dot(_v3.copy(m.position).sub(plane.pos))<-40) placeRing(m);
       }
-      // coins
-      for(const m of coins){
-        m.rotation.z += dt*3;
+      for(const m of coins){ m.rotation.z+=dt*3;
         const d=plane.pos.distanceTo(m.position);
         if(d<6){ plane.coinsHit++; placeCoin(m); }
-        else if(_fwd.dot(m.position.clone().sub(plane.pos))< -30){ placeCoin(m); }
+        else if(_fwd.dot(_v3.copy(m.position).sub(plane.pos))<-40) placeCoin(m);
       }
 
-      // crash
-      if(plane.pos.y<3) return gameOver();
-
-      hud();
+      hud(airspd, speed);
     }
 
-    function scoreNow(){ return plane.ringsHit*50 + plane.coinsHit*15 + Math.floor(plane.dist/12); }
-    function hud(){
-      document.getElementById("gSpd").textContent=Math.round(plane.speed*3.6);
+    function scoreNow(){ return plane.ringsHit*50 + plane.coinsHit*15 + Math.floor(plane.dist/16); }
+    function hud(airspd, speed){
+      document.getElementById("gSpd").textContent=Math.round(airspd*3.6);
       document.getElementById("gAlt").textContent=Math.round(plane.pos.y);
-      document.getElementById("gRings").textContent=plane.ringsHit;
+      document.getElementById("gVs").textContent=(plane.vel.y>=0?"+":"")+Math.round(plane.vel.y);
+      _euler.setFromQuaternion(plane.quat,"YXZ");
+      let hdg=Math.round((-_euler.y*180/Math.PI)%360); if(hdg<0) hdg+=360;
+      document.getElementById("gHdg").textContent=(""+hdg).padStart(3,"0")+"°";
       document.getElementById("gScore").textContent=scoreNow();
-      document.getElementById("gThr").style.width=Math.round((plane.speed-38)/(190-38)*100)+"%";
-      const h=document.getElementById("adiH");
-      h.style.transform=`translateY(${plane.pitch*70}px) rotate(${-plane.roll}rad)`;
+      document.getElementById("gThr").style.width=Math.round(plane.throttle*100)+"%";
+      document.getElementById("adiH").style.transform=`translateY(${_euler.x*70}px) rotate(${-_euler.z}rad)`;
+      document.getElementById("stallw").style.display=plane.stall?"block":"none";
     }
 
     // ---- input ----
@@ -278,10 +357,10 @@
       if(e.code==="Space" && state!=="playing") startGame();
     });
     window.addEventListener("keyup",e=>{ keys[e.code]=false; });
-    // touch: drag to steer (relative to center)
-    function tmove(e){ if(!touching) return; const t=e.touches[0]; const r=stage.getBoundingClientRect();
-      touchRoll = Math.max(-1,Math.min(1, ((t.clientX-r.left)/r.width - 0.5)*2.4));
-      touchPitch= Math.max(-1,Math.min(1, (0.5-(t.clientY-r.top)/r.height)*2.4));
+    function tmove(e){ if(!touching) return; const t=e.touches[0], r=stage.getBoundingClientRect();
+      touchRoll=clamp(((t.clientX-r.left)/r.width-0.5)*2.4,-1,1);
+      touchPitch=clamp((0.5-(t.clientY-r.top)/r.height)*2.4,-1,1);
+      if(!keys["KeyW"]) plane.throttle=clamp(plane.throttle+0.4* (1/60),0,1);  // touch: creep throttle up
       if(e.cancelable) e.preventDefault();
     }
     stage.addEventListener("touchstart",e=>{ touching=true; tmove(e); },{passive:false});
@@ -292,6 +371,7 @@
       if(state!=="playing") return;
       state="over";
       const score=scoreNow();
+      document.getElementById("overTitle").textContent = crashReason==="crash" ? "💥 Crashed" : "Flight ended";
       document.getElementById("finalScore").textContent=score;
       document.getElementById("finalRings").textContent=plane.ringsHit;
       const rew=document.getElementById("rewardMsg"); rew.textContent="";
@@ -311,14 +391,12 @@
     function renderBoard(board){
       const el=document.getElementById("board");
       if(!board.length){ el.innerHTML=`<p class="small muted">No flights logged yet — be the first ace!</p>`; return; }
-      el.innerHTML=board.map((p,i)=>{
-        const you=p.username===ME;
+      el.innerHTML=board.map((p,i)=>{ const you=p.username===ME;
         return `<div class="prow ${i<3?'top'+(i+1):''}">
           <div class="prank">${i<3?["🥇","🥈","🥉"][i]:(i+1)}</div>
           <div class="pav" ${avatarStyle(p.avatar)}>${p.avatar?'':esc((p.username||'?')[0].toUpperCase())}</div>
           <div class="pnm"><a href="/profile?user=${enc(p.username)}">${esc(p.username)}</a>${you?' <span style="color:var(--accent);font-size:.7rem;font-weight:800">YOU</span>':''}</div>
-          <div class="psc">${p.score}</div>
-        </div>`;
+          <div class="psc">${p.score}</div></div>`;
       }).join("");
     }
 
