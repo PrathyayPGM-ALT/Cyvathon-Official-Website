@@ -167,6 +167,9 @@
       _fwd=new THREE.Vector3(); _up=new THREE.Vector3(); _side=new THREE.Vector3(); _v3=new THREE.Vector3(); _euler=new THREE.Euler(0,0,0,"YXZ");
 
       renderer=new THREE.WebGLRenderer({canvas:cvs, antialias:true});
+      renderer.outputEncoding=THREE.sRGBEncoding;
+      renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.08;
+      renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
       scene=new THREE.Scene();
       scene.fog=new THREE.Fog(0xbcd8ee, 900, 3000);
       camera=new THREE.PerspectiveCamera(74, 16/9, 0.6, 6000);
@@ -180,8 +183,12 @@
       }));
       scene.add(sky);
 
-      scene.add(new THREE.HemisphereLight(0xdcefff, 0x415a44, 0.9));
-      sun=new THREE.DirectionalLight(0xfff4e0, 0.95); sun.position.set(-0.4,0.75,0.5); scene.add(sun);
+      scene.add(new THREE.HemisphereLight(0xdcefff, 0x415a44, 0.85));
+      plane._sunDir=new THREE.Vector3(-0.4,0.78,0.5).normalize();
+      sun=new THREE.DirectionalLight(0xfff4e0, 1.05); sun.position.copy(plane._sunDir).multiplyScalar(400); scene.add(sun);
+      sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+      const sc=sun.shadow.camera; sc.near=1; sc.far=1400; sc.left=-320; sc.right=320; sc.top=320; sc.bottom=-320; sun.shadow.bias=-0.0006;
+      sun.target=new THREE.Object3D(); scene.add(sun.target);
       const sunMesh=new THREE.Mesh(new THREE.SphereGeometry(80,16,16), new THREE.MeshBasicMaterial({color:0xfff6d0}));
       sunMesh.name="sun"; scene.add(sunMesh); plane._sun=sunMesh;
 
@@ -199,7 +206,18 @@
       }
       geo.setAttribute("color", new THREE.Float32BufferAttribute(colors,3));
       geo.computeVertexNormals();
-      scene.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({vertexColors:true})));
+      const terrainMesh=new THREE.Mesh(geo, new THREE.MeshLambertMaterial({vertexColors:true}));
+      terrainMesh.receiveShadow=true; scene.add(terrainMesh);
+
+      // trees scattered on the island
+      const trunkMat=new THREE.MeshLambertMaterial({color:0x5a4028}), leafMat=new THREE.MeshLambertMaterial({color:0x2f6b39});
+      const trunkG=new THREE.CylinderGeometry(0.5,0.75,4,6), leafG=new THREE.ConeGeometry(2.5,6.5,7);
+      for(let i=0;i<170;i++){ const x=(Math.random()-0.5)*4400, z=(Math.random()-0.5)*4400, y=terrainH(x,z);
+        if(y<3||y>95) continue; const g=new THREE.Group();
+        const tr=new THREE.Mesh(trunkG,trunkMat); tr.position.y=2; tr.castShadow=true; g.add(tr);
+        const lf=new THREE.Mesh(leafG,leafMat); lf.position.y=6; lf.castShadow=true; g.add(lf);
+        g.position.set(x,y,z); g.scale.setScalar(0.8+Math.random()*1.5); scene.add(g);
+      }
 
       // animated ocean (custom water shader)
       const wU={ t:{value:0}, sunDir:{value:new THREE.Vector3(-0.4,0.75,0.5).normalize()},
@@ -219,7 +237,13 @@
       rw.position.set(0,0.6,-260); scene.add(rw);
       for(let s=-380;s<=140;s+=48){ const dash=new THREE.Mesh(new THREE.BoxGeometry(2.4,1.2,14), new THREE.MeshBasicMaterial({color:0xdfe7ee})); dash.position.set(0,1.2,s); scene.add(dash); }
       const hMat=new THREE.MeshLambertMaterial({color:0x8a9299});
-      [[-55,-320],[-55,-200],[62,-260]].forEach(([hx,hz])=>{ const hg=new THREE.Mesh(new THREE.BoxGeometry(34,18,30),hMat); hg.position.set(hx,9,hz); scene.add(hg); });
+      [[-55,-320],[-55,-200],[62,-260]].forEach(([hx,hz])=>{ const hg=new THREE.Mesh(new THREE.BoxGeometry(34,18,30),hMat); hg.position.set(hx,9,hz); hg.castShadow=true; hg.receiveShadow=true; scene.add(hg); });
+      // control tower
+      const towerBase=new THREE.Mesh(new THREE.CylinderGeometry(4,5,26,10), hMat); towerBase.position.set(70,13,-120); towerBase.castShadow=true; scene.add(towerBase);
+      const towerCab=new THREE.Mesh(new THREE.BoxGeometry(12,7,12), new THREE.MeshPhongMaterial({color:0x1a3a55, shininess:70})); towerCab.position.set(70,29,-120); towerCab.castShadow=true; scene.add(towerCab);
+      // glowing runway edge lights (bloom picks these up)
+      const lightMat=new THREE.MeshBasicMaterial({color:0xfff2a0});
+      for(let s=-700;s<=180;s+=60){ [-24,24].forEach(dx=>{ const b=new THREE.Mesh(new THREE.SphereGeometry(0.9,8,8), lightMat); b.position.set(dx,1.6,s); scene.add(b); }); }
 
       // clouds
       const cloudMat=new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.72});
@@ -245,7 +269,14 @@
       const canopy=new THREE.Mesh(new THREE.SphereGeometry(0.95,12,10), new THREE.MeshPhongMaterial({color:0x0a2540, shininess:90}));
       canopy.position.set(0,0.85,-1.4); canopy.scale.set(1,0.7,1.9); aircraft.add(canopy);
       prop=new THREE.Mesh(new THREE.BoxGeometry(6,0.4,0.15), new THREE.MeshBasicMaterial({color:0x222222})); prop.position.z=-7; aircraft.add(prop);
+      aircraft.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
       aircraft.visible=false; scene.add(aircraft);
+
+      // vapour contrail (pool of fading puffs)
+      const trail=[];
+      for(let i=0;i<46;i++){ const m=new THREE.Mesh(new THREE.SphereGeometry(1.3,7,7),
+          new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0, depthWrite:false})); m.visible=false; scene.add(m); trail.push({m,life:0}); }
+      plane._trail=trail; plane._trailIdx=0; plane._trailT=0;
 
       // bloom post-processing (guarded — falls back to plain render if unavailable)
       try{
@@ -316,8 +347,23 @@
       updateCamera(dt);
       if(prop) prop.rotation.z += dt*(20+plane.throttle*45);
       if(plane._waterU) plane._waterU.t.value=simTime;
+      // sun + shadow frustum follow the plane
+      if(sun){ sun.target.position.copy(plane.pos); sun.position.copy(plane.pos).addScaledVector(plane._sunDir,400); }
+      if(plane._sun){ _v3.copy(plane._sunDir).multiplyScalar(2600).add(camera.position); plane._sun.position.copy(_v3); }
       if(sky) sky.position.copy(camera.position);
-      if(plane._sun){ _v3.set(-0.4,0.75,0.5).normalize().multiplyScalar(2600).add(camera.position); plane._sun.position.copy(_v3); }
+      // contrail
+      if(plane._trail){
+        _fwd.set(0,0,-1).applyQuaternion(plane.quat);
+        plane._trailT-=dt;
+        if(state==="playing" && !plane.onGround && plane.throttle>0.15 && plane._trailT<=0){
+          plane._trailT=0.045; const s=plane._trail[plane._trailIdx=(plane._trailIdx+1)%plane._trail.length];
+          s.m.position.copy(plane.pos).addScaledVector(_fwd,7); s.m.visible=true; s.m.scale.setScalar(0.6); s.life=1;
+        }
+        for(const s of plane._trail){ if(s.life>0){ s.life-=dt*0.55; if(s.life<=0){ s.m.visible=false; }
+          else { s.m.material.opacity=s.life*0.42; s.m.scale.setScalar(0.6+(1-s.life)*3.2); } } }
+      }
+      // speed gives a subtle FOV push
+      if(camera){ const tf=72+clamp((plane.vel.length()-70)/5.5,0,15); if(Math.abs(camera.fov-tf)>0.05){ camera.fov+=(tf-camera.fov)*Math.min(1,dt*3); camera.updateProjectionMatrix(); } }
       if(composer) composer.render(); else renderer.render(scene,camera);
       if(state==="playing") raf=requestAnimationFrame(loop);
     }
