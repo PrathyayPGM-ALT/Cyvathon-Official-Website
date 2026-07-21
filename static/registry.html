@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Registry · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .reg{ max-width:1040px; margin:0 auto; }
+    .mono{ font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+
+    /* hero */
+    .reg-hero{ position:relative; overflow:hidden; border-radius:18px; padding:1.9rem 2rem; margin-bottom:1.3rem;
+      background:linear-gradient(135deg, rgba(201,176,106,.14), rgba(88,196,255,.06) 60%, transparent);
+      border:1px solid var(--panel-border); }
+    .reg-hero .grid{ position:absolute; inset:0; pointer-events:none;
+      background-image:linear-gradient(rgba(201,176,106,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(201,176,106,.08) 1px,transparent 1px);
+      background-size:34px 34px; -webkit-mask-image:radial-gradient(ellipse 70% 90% at 12% 20%, #000, transparent 72%); mask-image:radial-gradient(ellipse 70% 90% at 12% 20%, #000, transparent 72%); }
+    .reg-hin{ position:relative; z-index:1; display:flex; align-items:center; gap:1.1rem; flex-wrap:wrap; }
+    .reg-seal{ width:62px; height:62px; border-radius:16px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-size:1.9rem; background:linear-gradient(135deg,#c9b06a,#8a7431); color:#1a1405; box-shadow:0 10px 24px rgba(201,176,106,.3); }
+    .reg-htx{ flex:1; min-width:220px; }
+    .reg-kick{ font-size:.66rem; letter-spacing:2.5px; color:#c9b06a; text-transform:uppercase; font-weight:700; }
+    .reg-htx h2{ margin:.15rem 0 .1rem; font-size:1.55rem; font-weight:900; letter-spacing:-.4px; }
+    .reg-htx p{ margin:0; color:var(--muted); font-size:.88rem; }
+    .clr-badge{ text-align:center; padding:.6rem 1rem; border-radius:12px; border:1px solid var(--panel-border); background:rgba(6,12,22,.5); }
+    .clr-badge b{ display:block; font-size:1.2rem; font-weight:900; letter-spacing:1px; }
+    .clr-badge span{ font-size:.6rem; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px; }
+
+    .reg-stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:.7rem; margin-bottom:1.3rem; }
+    .rstat{ background:var(--panel); border:1px solid var(--panel-border); border-radius:12px; padding:.7rem .9rem; }
+    .rstat b{ display:block; font-size:1.35rem; font-weight:800; } .rstat span{ font-size:.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+
+    .reg-layout{ display:grid; grid-template-columns:210px 1fr; gap:1.3rem; }
+    @media(max-width:760px){ .reg-layout{ grid-template-columns:1fr; } }
+    .side{ display:flex; flex-direction:column; gap:.3rem; align-self:start; position:sticky; top:80px; }
+    .snav{ display:flex; align-items:center; gap:.6rem; padding:.6rem .8rem; border-radius:10px; cursor:pointer; color:var(--muted); font-weight:600; font-size:.92rem; background:none; border:none; width:100%; text-align:left; margin:0; box-shadow:none; }
+    .snav:hover{ background:var(--panel-2); color:var(--text); transform:none; }
+    .snav.on{ background:rgba(201,176,106,.14); color:#e0c887; }
+    .snav i{ width:1.2rem; text-align:center; }
+    .snav .c{ margin-left:auto; font-size:.7rem; color:var(--muted); }
+    .side hr{ border:none; border-top:1px solid var(--panel-border); margin:.4rem 0; }
+
+    .empty{ text-align:center; color:var(--muted); padding:2.5rem 1rem; }
+    .sec-h{ font-size:.72rem; text-transform:uppercase; letter-spacing:1.6px; color:var(--muted); font-weight:700; margin:0 0 1rem; display:flex; align-items:center; gap:.7rem; }
+    .sec-h::after{ content:""; flex:1; height:1px; background:var(--panel-border); }
+
+    /* file cards */
+    .filter{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .fchip{ font-size:.78rem; padding:.35rem .8rem; border-radius:999px; cursor:pointer; border:1px solid var(--panel-border); background:var(--panel-2); color:var(--muted); font-weight:600; }
+    .fchip.on{ background:rgba(201,176,106,.16); color:#e0c887; border-color:transparent; }
+    .files{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr)); }
+    .file{ position:relative; background:var(--panel); border:1px solid var(--panel-border); border-radius:12px; padding:1rem 1.1rem 1rem; cursor:pointer; transition:.16s; overflow:hidden; }
+    .file::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--cc,#c9b06a); }
+    .file:hover{ transform:translateY(-3px); border-color:var(--cc,var(--accent)); box-shadow:0 12px 28px rgba(0,0,0,.4); }
+    .file .cls{ display:inline-block; font-size:.6rem; font-weight:800; letter-spacing:1px; padding:.12rem .5rem; border-radius:4px; color:#0c0c0c; background:var(--cc,#c9b06a); }
+    .file .ft{ font-weight:800; font-size:1.02rem; margin:.5rem 0 .2rem; }
+    .file .fmeta{ font-size:.76rem; color:var(--muted); display:flex; gap:.6rem; flex-wrap:wrap; }
+    .file .subj{ color:#cdd6e0; }
+    .locked{ text-align:center; padding:1rem; border:1px dashed rgba(255,93,108,.4); border-radius:12px; color:#ff8a96; background:rgba(255,93,108,.05); margin-top:.4rem; font-size:.88rem; }
+
+    /* bulletins */
+    .bul{ background:var(--panel); border:1px solid var(--panel-border); border-left:4px solid var(--accent); border-radius:0 12px 12px 0; padding:1rem 1.2rem; margin-bottom:.8rem; }
+    .bul.IMMEDIATE{ border-left-color:var(--red); }
+    .bul .pr{ font-size:.62rem; font-weight:800; letter-spacing:1px; color:var(--accent); } .bul.IMMEDIATE .pr{ color:var(--red); }
+    .bul h4{ margin:.2rem 0 .3rem; } .bul p{ color:#cdd6e0; white-space:pre-wrap; line-height:1.55; font-size:.92rem; }
+    .bul .bm{ font-size:.72rem; color:var(--muted); margin-top:.4rem; }
+
+    /* officers / requests */
+    .orow{ display:flex; align-items:center; gap:.8rem; padding:.6rem 0; border-bottom:1px solid var(--panel-border); }
+    .orow:last-child{ border-bottom:none; }
+    .oav{ width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:700; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .ogr{ font-size:.62rem; font-weight:800; letter-spacing:1px; color:#e0c887; background:rgba(201,176,106,.16); padding:.1rem .45rem; border-radius:5px; }
+    .obtn{ width:auto; margin:0; padding:.35rem .8rem; font-size:.78rem; }
+
+    /* modal */
+    .modal-bg{ position:fixed; inset:0; background:rgba(2,8,18,.75); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; z-index:250; padding:1rem; }
+    .modal-bg.on{ display:flex; }
+    .modal{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; width:100%; max-width:620px; max-height:92vh; overflow-y:auto; box-shadow:0 30px 70px rgba(0,0,0,.6); }
+    .mhead{ display:flex; justify-content:space-between; align-items:center; padding:1.1rem 1.4rem; border-bottom:1px solid var(--panel-border); }
+    .mhead b{ font-size:1.15rem; } .mx{ cursor:pointer; color:var(--muted); font-size:1.6rem; line-height:1; }
+    .mbody{ padding:1.2rem 1.4rem 1.4rem; }
+    .lbl{ font-size:.72rem; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); font-weight:700; margin:.6rem 0 .35rem; }
+    .cbanner{ text-align:center; font-weight:900; letter-spacing:3px; padding:.4rem; border-radius:6px; color:#0c0c0c; }
+    .redact{ display:inline-block; height:.9em; background:#0c0c0c; border-radius:2px; vertical-align:middle; }
+    .dossier .subj{ color:#cdd6e0; } .dossier .body{ white-space:pre-wrap; line-height:1.7; color:#dfe7f0; margin-top:1rem; }
+    .picker{ max-height:170px; overflow-y:auto; border:1px solid var(--panel-border); border-radius:10px; padding:.4rem; }
+    .prow{ display:flex; align-items:center; gap:.6rem; padding:.4rem .55rem; border-radius:8px; cursor:pointer; }
+    .prow:hover{ background:var(--panel-2); } .prow.sel{ background:rgba(201,176,106,.15); }
+    .seg{ display:flex; gap:.35rem; } .seg button{ flex:1; margin:0; padding:.5rem; font-size:.82rem; background:var(--panel-2); color:var(--muted); border:1px solid var(--panel-border); box-shadow:none; }
+    .seg button.on{ background:linear-gradient(135deg,#c9b06a,#8a7431); color:#1a1405; border-color:transparent; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <div class="reg" id="reg"><p class="empty">Accessing the Registry…</p></div>
+  </div>
+
+  <!-- file reader -->
+  <div class="modal-bg" id="fileModal" onclick="if(event.target===this)closeFile()">
+    <div class="modal dossier" id="fileBox"></div>
+  </div>
+  <!-- create file / bulletin -->
+  <div class="modal-bg" id="editModal" onclick="if(event.target===this)closeEdit()">
+    <div class="modal" id="editBox"></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, D=null, CITIZENS=[], filterDir="all", section="desk";
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const enc=encodeURIComponent;
+    const CLASS_COLOR={ "UNCLASSIFIED":"#1fd6a6","RESTRICTED":"#58c4ff","CONFIDENTIAL":"#ffce56","SECRET":"#ff9d3c","EYES ONLY":"#ff5d6c" };
+    const cc=(c)=>CLASS_COLOR[c]||"#c9b06a";
+
+    async function boot(){
+      const user=await requireAuth(); if(!user) return;
+      ME=user.username; renderNav("/registry", user);
+      try{ CITIZENS=(await api("/citizens/list")).citizens||[]; }catch{}
+      await load();
+    }
+    async function load(){
+      try{ D=await api("/registry/data"); ME=D.me; render(); }
+      catch(e){ document.getElementById("reg").innerHTML=`<p class="empty">${esc(e.message)}</p>`; }
+    }
+
+    function render(){
+      const grade=D.grade||"UNCLEARED";
+      const sideItems=[
+        ["desk","fa-landmark","Front Desk",""],
+        ["files","fa-folder-open","Files", D.files.length],
+        ["bulletins","fa-bullhorn","Bulletins", D.bulletins.length],
+      ];
+      if(D.can_manage) sideItems.push(["officers","fa-user-shield","Officers", D.officers.length]);
+      if(!D.is_officer && !D.is_president) sideItems.push(["recruit","fa-id-badge","Recruitment",""]);
+
+      document.getElementById("reg").innerHTML=`
+        <div class="reg-hero"><div class="grid"></div><div class="reg-hin">
+          <div class="reg-seal">🦉</div>
+          <div class="reg-htx"><div class="reg-kick">Athena · Office of Records</div>
+            <h2>The Cyvathon Registry</h2><p>The Republic keeps what it knows. What you may read depends on your clearance.</p></div>
+          <div class="clr-badge"><b class="mono" style="color:${grade!=='UNCLEARED'?'#e0c887':'var(--muted)'}">${esc(grade)}</b><span>Your clearance</span></div>
+        </div></div>
+
+        <div class="reg-stats">
+          <div class="rstat"><b>${D.files.length}</b><span>Files on your desk</span></div>
+          <div class="rstat"><b>${D.hidden}</b><span>Above your clearance</span></div>
+          <div class="rstat"><b>${D.directorates.length}</b><span>Directorates</span></div>
+          <div class="rstat"><b>${D.officers.length||'—'}</b><span>Officers sworn</span></div>
+        </div>
+
+        <div class="reg-layout">
+          <div class="side">
+            ${sideItems.map(([k,i,t,c])=>`<button class="snav ${k===section?'on':''}" onclick="go('${k}')"><i class="fas ${i}"></i> ${t}${c!==''?`<span class="c">${c}</span>`:''}</button>`).join("")}
+            ${D.can_manage?`<hr><button class="snav" onclick="openEdit('file')"><i class="fas fa-plus"></i> New file</button>
+              <button class="snav" onclick="openEdit('bulletin')"><i class="fas fa-plus"></i> New bulletin</button>`:''}
+          </div>
+          <div id="main"></div>
+        </div>`;
+      go(section);
+    }
+
+    function go(s){ section=s; document.querySelectorAll(".snav").forEach(b=>b.classList.toggle("on", b.textContent.trim().startsWith({desk:"Front",files:"Files",bulletins:"Bulletins",officers:"Officers",recruit:"Recruitment"}[s]||"~")));
+      const m=document.getElementById("main");
+      if(s==="desk") m.innerHTML=viewDesk();
+      else if(s==="files") m.innerHTML=viewFiles();
+      else if(s==="bulletins") m.innerHTML=viewBulletins();
+      else if(s==="officers") m.innerHTML=viewOfficers();
+      else if(s==="recruit") m.innerHTML=viewRecruit();
+    }
+
+    function viewDesk(){
+      const latest=D.bulletins.slice(0,3);
+      return `<div class="sec-h"><i class="fas fa-file-lines"></i> Memorandum</div>
+        <div class="bul"><p>The Cyvathon Registry is the archive of the Athena intelligence directorate. It holds dossiers on citizens, foreign powers, and the affairs of state. This reading room shows only what your clearance permits — everything else remains sealed.</p></div>
+        ${D.hidden>0?`<div class="locked"><i class="fas fa-lock"></i> ${D.hidden} file${D.hidden===1?'':'s'} on the registry are classified above your clearance.</div>`:''}
+        <div class="sec-h" style="margin-top:1.4rem;"><i class="fas fa-bullhorn"></i> Latest bulletins</div>
+        ${latest.length?latest.map(bul).join(""):`<p class="empty">No bulletins at your grade.</p>`}`;
+    }
+    function viewFiles(){
+      const dirs=["all",...D.directorates];
+      const list=D.files.filter(f=>filterDir==="all"||f.directorate===filterDir);
+      return `<div class="sec-h"><i class="fas fa-folder-open"></i> Files</div>
+        <div class="filter">${dirs.map(dr=>`<span class="fchip ${dr===filterDir?'on':''}" onclick="setDir('${dr}')">${dr==='all'?'All':esc(dr)}</span>`).join("")}</div>
+        ${list.length?`<div class="files">${list.map(fileCard).join("")}</div>`:`<p class="empty">No files here you're cleared to read.</p>`}`;
+    }
+    function fileCard(f){
+      return `<div class="file" style="--cc:${cc(f.classification)}" onclick="openFile(${f.id})">
+        <span class="cls">${esc(f.classification||'')}</span>
+        <div class="ft">${esc(f.title)}</div>
+        <div class="fmeta">${f.subject?`<span class="subj"><i class="fas fa-crosshairs"></i> ${esc(f.subject)}</span>`:''}
+          <span><i class="fas fa-sitemap"></i> ${esc(f.directorate||'')}</span></div>
+      </div>`;
+    }
+    function viewBulletins(){
+      return `<div class="sec-h"><i class="fas fa-bullhorn"></i> Bulletins</div>
+        ${D.bulletins.length?D.bulletins.map(bul).join(""):`<p class="empty">No bulletins at your grade.</p>`}`;
+    }
+    function bul(b){
+      return `<div class="bul ${b.priority||'ROUTINE'}"><div class="pr">${esc(b.priority||'ROUTINE')}</div>
+        <h4>${esc(b.title)}</h4><p>${renderRich(b.body||'')}</p>
+        <div class="bm">— ${esc(b.author||'Registry')} · ${b.created_at?new Date(b.created_at).toLocaleString():''}</div></div>`;
+    }
+    function viewOfficers(){
+      const canP=D.is_president;
+      return `<div class="sec-h"><i class="fas fa-user-shield"></i> Cleared Officers</div>
+        ${canP?`<div style="background:var(--panel);border:1px solid var(--panel-border);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+          <div class="lbl">Grant clearance</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+            <input id="ofUser" placeholder="Citizen username" style="flex:1;min-width:140px;margin:0;">
+            <select id="ofGrade" style="width:auto;margin:0;">${D.grades.map(g=>`<option>${g}</option>`).join("")}</select>
+            <input id="ofRole" placeholder="Role (e.g. Analyst)" style="width:auto;margin:0;">
+            <button class="obtn" onclick="grantOfficer()">Grant</button>
+          </div></div>`:''}
+        ${D.officers.length?D.officers.map(o=>`<div class="orow">
+          <div class="oav">${esc((o.username||'?')[0].toUpperCase())}</div>
+          <div style="flex:1"><b>${esc(o.username)}</b> <span class="ogr">${esc(o.grade||'')}</span><div style="font-size:.76rem;color:var(--muted)">${esc(o.role||'Officer')}</div></div>
+          ${canP&&o.username!==ME?`<button class="obtn ghost" style="color:var(--red)" onclick="revokeOfficer('${enc(o.username)}')">Revoke</button>`:''}
+        </div>`).join(""):`<p class="empty">No officers sworn yet.</p>`}
+        ${canP&&D.requests.length?`<div class="sec-h" style="margin-top:1.4rem;"><i class="fas fa-id-badge"></i> Clearance requests</div>
+          ${D.requests.map(r=>`<div class="orow"><div class="oav">${esc((r.username||'?')[0].toUpperCase())}</div>
+            <div style="flex:1"><b>${esc(r.username)}</b><div style="font-size:.76rem;color:var(--muted)">${esc(r.note||'(no note)')}</div></div>
+            <button class="obtn" onclick="grantOfficer('${enc(r.username)}')">Approve</button>
+            <button class="obtn ghost" style="color:var(--red)" onclick="denyReq('${enc(r.username)}')">Deny</button></div>`).join("")}`:''}`;
+    }
+    function viewRecruit(){
+      const st=D.my_request;
+      return `<div class="sec-h"><i class="fas fa-id-badge"></i> Recruitment</div>
+        <div class="bul"><p>The Registry admits sworn officers only. Apply for clearance and the President will review your file. Cleared officers may read classified dossiers and file their own.</p></div>
+        ${st==='pending'?`<div class="locked" style="border-color:rgba(255,206,86,.4);color:#ffce56;"><i class="fas fa-hourglass-half"></i> Your clearance application is under review.</div>`
+          :st==='denied'?`<p class="empty">A previous application was declined. You may apply again.</p><button style="width:auto" onclick="apply()">Apply again</button>`
+          :`<textarea id="applyNote" placeholder="Why should you be cleared? (optional)" maxlength="400" style="min-height:80px;"></textarea>
+            <button style="width:auto" onclick="apply()"><i class="fas fa-id-badge"></i> Apply for clearance</button>`}
+        <p id="applyMsg" class="small" style="min-height:1em;margin-top:.5rem;"></p>`;
+    }
+
+    function setDir(d){ filterDir=d; go("files"); }
+
+    /* ---- file reader ---- */
+    async function openFile(id){
+      try{
+        const d=await api("/registry/file/"+id); const f=d.file; const col=cc(f.classification);
+        const manage=d.can_manage;
+        document.getElementById("fileBox").innerHTML=`
+          <div class="cbanner" style="background:${col}">${esc(f.classification||'CLASSIFIED')}</div>
+          <div class="mbody">
+            <div style="display:flex;justify-content:space-between;align-items:start;gap:1rem;">
+              <div><div class="lbl" style="margin:0">Dossier · ${esc(f.directorate||'')}</div>
+                <h2 style="margin:.2rem 0 .3rem;font-size:1.5rem;">${esc(f.title)}</h2>
+                ${f.subject?`<div class="subj"><i class="fas fa-crosshairs"></i> Subject: <b>${esc(f.subject)}</b></div>`:''}</div>
+              <span class="mx" onclick="closeFile()">&times;</span>
+            </div>
+            <div class="body">${renderRich(f.body||'')}</div>
+            <div class="lbl" style="margin-top:1.4rem;">Filed by ${esc(f.author||'Registry')} · ${f.created_at?new Date(f.created_at).toLocaleString():''}
+              ${manage?` · visibility: <b>${esc(f.visibility)}</b>${f.allowed&&f.allowed.length?' ('+f.allowed.map(esc).join(', ')+')':''}`:''}</div>
+            ${manage&&(f.author===ME||D.is_president)?`<button class="danger" style="width:auto;margin-top:1rem;" onclick="delFile(${f.id})"><i class="fas fa-trash"></i> Destroy file</button>`:''}
+          </div>
+          <div class="cbanner" style="background:${col}">${esc(f.classification||'CLASSIFIED')} · CYVATHON REGISTRY</div>`;
+        document.getElementById("fileModal").classList.add("on");
+      }catch(e){ alert(e.message); }
+    }
+    function closeFile(){ document.getElementById("fileModal").classList.remove("on"); }
+    async function delFile(id){ if(!confirm("Destroy this file permanently?")) return;
+      try{ await api("/registry/file/"+id+"/delete",{method:"POST",body:"{}"}); closeFile(); load(); }catch(e){ alert(e.message); } }
+
+    /* ---- create file / bulletin ---- */
+    let SEL=new Set(), EKIND="file";
+    function openEdit(kind){ EKIND=kind; SEL=new Set();
+      const box=document.getElementById("editBox");
+      if(kind==="bulletin"){
+        box.innerHTML=`<div class="mhead"><b>New bulletin</b><span class="mx" onclick="closeEdit()">&times;</span></div><div class="mbody">
+          <div class="lbl">Priority</div><div class="seg" id="segPr"><button class="on" data-v="ROUTINE" onclick="segp(this)">Routine</button><button data-v="IMMEDIATE" onclick="segp(this)">Immediate</button></div>
+          <div class="lbl">Visible to</div><div class="seg" id="segVis"><button class="on" data-v="cleared" onclick="segv(this)">Cleared officers</button><button data-v="public" onclick="segv(this)">Everyone</button></div>
+          <div class="lbl">Title</div><input id="eTitle" maxlength="160">
+          <div class="lbl">Body</div><textarea id="eBody" maxlength="6000" style="min-height:120px"></textarea>
+          <button onclick="submitEdit()" id="eBtn"><i class="fas fa-bullhorn"></i> Post bulletin</button>
+          <p id="eMsg" class="small" style="min-height:1em;text-align:center;margin-top:.4rem;"></p></div>`;
+      } else {
+        box.innerHTML=`<div class="mhead"><b>New file</b><span class="mx" onclick="closeEdit()">&times;</span></div><div class="mbody">
+          <div class="lbl">Title</div><input id="eTitle" maxlength="160" placeholder="e.g. Assessment: Aquilithia">
+          <div class="lbl">Subject</div><input id="eSubj" maxlength="120" placeholder="A citizen, a nation, a topic…">
+          <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+            <div style="flex:1;min-width:150px"><div class="lbl">Directorate</div><select id="eDir">${D.directorates.map(x=>`<option>${x}</option>`).join("")}</select></div>
+            <div style="flex:1;min-width:150px"><div class="lbl">Classification</div><select id="eCls">${D.classifications.map(x=>`<option ${x==='CONFIDENTIAL'?'selected':''}>${x}</option>`).join("")}</select></div>
+          </div>
+          <div class="lbl">Who may read it</div>
+          <div class="seg" id="segVis"><button data-v="public" onclick="segv(this)">Everyone</button><button class="on" data-v="cleared" onclick="segv(this)">Cleared officers</button><button data-v="named" onclick="segv(this)">Specific people</button></div>
+          <div id="namedWrap" style="display:none;margin-top:.6rem;">
+            <input id="pSearch" placeholder="Search citizens…" oninput="renderPicker()" style="margin:0 0 .4rem;">
+            <div class="picker" id="picker"></div>
+          </div>
+          <div class="lbl">Contents</div><textarea id="eBody" maxlength="20000" style="min-height:150px" placeholder="The dossier…"></textarea>
+          <button onclick="submitEdit()" id="eBtn"><i class="fas fa-folder-plus"></i> File it</button>
+          <p id="eMsg" class="small" style="min-height:1em;text-align:center;margin-top:.4rem;"></p></div>`;
+      }
+      window._pr="ROUTINE"; window._vis=(kind==="bulletin"?"cleared":"cleared");
+      document.getElementById("editModal").classList.add("on");
+    }
+    function closeEdit(){ document.getElementById("editModal").classList.remove("on"); }
+    function segp(b){ document.querySelectorAll("#segPr button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); window._pr=b.dataset.v; }
+    function segv(b){ document.querySelectorAll("#segVis button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); window._vis=b.dataset.v;
+      const nw=document.getElementById("namedWrap"); if(nw) nw.style.display=b.dataset.v==="named"?"block":"none"; }
+    function renderPicker(){ const q=(document.getElementById("pSearch").value||"").toLowerCase();
+      document.getElementById("picker").innerHTML=CITIZENS.filter(c=>c.username!==ME&&c.username.toLowerCase().includes(q)).map(c=>
+        `<div class="prow ${SEL.has(c.username)?'sel':''}" onclick="togP('${enc(c.username)}')"><div class="oav" style="width:26px;height:26px;font-size:.72rem">${esc(c.username[0].toUpperCase())}</div>${esc(c.username)}</div>`).join(""); }
+    function togP(u){ u=decodeURIComponent(u); SEL.has(u)?SEL.delete(u):SEL.add(u); renderPicker(); }
+
+    async function submitEdit(){
+      const msg=document.getElementById("eMsg"); const title=document.getElementById("eTitle").value.trim(); const body=document.getElementById("eBody").value.trim();
+      if(!title||!body){ msg.style.color="var(--red)"; msg.textContent="Title and body are required."; return; }
+      document.getElementById("eBtn").disabled=true;
+      try{
+        if(EKIND==="bulletin"){
+          await api("/registry/bulletin",{method:"POST",body:JSON.stringify({title,body,priority:window._pr,visibility:window._vis})});
+        } else {
+          const payload={title,body,subject:document.getElementById("eSubj").value.trim(),directorate:document.getElementById("eDir").value,classification:document.getElementById("eCls").value,visibility:window._vis};
+          if(window._vis==="named") payload.allowed=[...SEL];
+          await api("/registry/file",{method:"POST",body:JSON.stringify(payload)});
+        }
+        closeEdit(); load();
+      }catch(e){ msg.style.color="var(--red)"; msg.textContent=e.message; }
+      finally{ document.getElementById("eBtn").disabled=false; }
+    }
+
+    /* ---- officers / recruitment ---- */
+    async function grantOfficer(u){ const un=u?decodeURIComponent(u):document.getElementById("ofUser").value.trim();
+      if(!un) return; const grade=u?"C-2":document.getElementById("ofGrade").value; const role=u?"Officer":(document.getElementById("ofRole").value.trim()||"Officer");
+      try{ await api("/registry/officer",{method:"POST",body:JSON.stringify({username:un,grade,role,action:"grant"})}); load(); }catch(e){ alert(e.message); } }
+    async function revokeOfficer(u){ if(!confirm("Revoke clearance?")) return;
+      try{ await api("/registry/officer",{method:"POST",body:JSON.stringify({username:decodeURIComponent(u),action:"revoke"})}); load(); }catch(e){ alert(e.message); } }
+    async function denyReq(u){ try{ await api("/registry/request/deny",{method:"POST",body:JSON.stringify({username:decodeURIComponent(u)})}); load(); }catch(e){ alert(e.message); } }
+    async function apply(){ const note=(document.getElementById("applyNote")||{}).value||""; const msg=document.getElementById("applyMsg");
+      try{ await api("/registry/apply",{method:"POST",body:JSON.stringify({note})}); msg.style.color="var(--green)"; msg.textContent="Application submitted."; load(); }
+      catch(e){ msg.style.color="var(--red)"; msg.textContent=e.message; } }
+
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeFile(); closeEdit(); } });
+    boot();
+  </script>
+</body>
+</html>

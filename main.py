@@ -912,6 +912,314 @@ def flight_score():
     return jsonify(success=True, best=best, awarded=awarded, board=_flight_board())
 
 
+# ============================================================
+#  THE REGISTRY — Athena's classified dossier reading room
+# ============================================================
+REG_DIRECTORATES = ["Counter-Intelligence", "Economic", "Foreign Affairs",
+                    "Internal Security", "Cyber", "Archives"]
+REG_CLASS = ["UNCLASSIFIED", "RESTRICTED", "CONFIDENTIAL", "SECRET", "EYES ONLY"]
+REG_GRADES = ["C-1", "C-2", "C-3", "C-4", "C-5"]
+_reg_cache = {"officers": None, "officers_at": 0.0, "public": None, "public_at": 0.0}
+
+
+def _reg_officers():
+    now = time()
+    if _reg_cache["officers"] is None or now - _reg_cache["officers_at"] > 15:
+        try:
+            _reg_cache["officers"] = supabase.table("registry_officers").select("*").execute().data or []
+        except Exception:
+            _reg_cache["officers"] = []
+        _reg_cache["officers_at"] = now
+    return _reg_cache["officers"]
+
+
+def _reg_public_exists():
+    now = time()
+    if _reg_cache["public"] is None or now - _reg_cache["public_at"] > 15:
+        try:
+            c = supabase.table("registry_files").select("id", count="exact") \
+                .eq("visibility", "public").limit(1).execute().count or 0
+            _reg_cache["public"] = c > 0
+        except Exception:
+            _reg_cache["public"] = False
+        _reg_cache["public_at"] = now
+    return _reg_cache["public"]
+
+
+def _reg_is_officer(user):
+    if not user:
+        return False
+    if is_treasury_admin(user):
+        return True
+    return any(o["username"] == user["username"] for o in _reg_officers())
+
+
+def _reg_grade(user):
+    if is_treasury_admin(user):
+        return "C-5"
+    o = next((x for x in _reg_officers() if x["username"] == user["username"]), None)
+    return (o.get("grade") if o else None)
+
+
+def _reg_parse_allowed(val):
+    if isinstance(val, list):
+        return [a for a in val if a]
+    return [a.strip() for a in (val or "").split(",") if a.strip()]
+
+
+def _reg_can_read(user, f):
+    if is_treasury_admin(user):
+        return True
+    if user["username"] == (f.get("author") or ""):
+        return True
+    vis = f.get("visibility") or "named"
+    if vis == "public":
+        return True
+    if vis == "cleared":
+        return _reg_is_officer(user)
+    return user["username"] in _reg_parse_allowed(f.get("allowed"))
+
+
+def _reg_can_manage(user):
+    return _reg_is_officer(user)      # cleared officers + the President may file
+
+
+def _me_registry(user):
+    """Whether the citizen sees the Registry nav link at all."""
+    try:
+        return bool(is_treasury_admin(user) or _reg_is_officer(user) or _reg_public_exists())
+    except Exception:
+        return False
+
+
+@app.route("/registry")
+def registry_page():
+    return app.send_static_file("registry.html")
+
+
+@app.route("/registry/data")
+def registry_data():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    officer, prez = _reg_is_officer(user), is_treasury_admin(user)
+    can_manage = officer or prez
+
+    try:
+        files = supabase.table("registry_files").select("*").order("id", desc=True).limit(250).execute().data or []
+    except Exception:
+        files = []
+    readable, hidden = [], 0
+    for f in files:
+        if _reg_can_read(user, f):
+            readable.append({"id": f["id"], "title": f["title"], "subject": f.get("subject"),
+                             "directorate": f.get("directorate"), "classification": f.get("classification"),
+                             "visibility": f.get("visibility"), "author": f.get("author"),
+                             "created_at": f.get("created_at")})
+        else:
+            hidden += 1
+
+    try:
+        buls = supabase.table("registry_bulletins").select("*").order("id", desc=True).limit(40).execute().data or []
+    except Exception:
+        buls = []
+    bulletins = [{"id": b["id"], "title": b.get("title"), "body": b.get("body"),
+                  "priority": b.get("priority"), "author": b.get("author"), "created_at": b.get("created_at")}
+                 for b in buls if _reg_can_read(user, b)]
+
+    officers = []
+    if can_manage:
+        officers = [{"username": o["username"], "grade": o.get("grade"), "role": o.get("role")} for o in _reg_officers()]
+    requests = []
+    my_request = None
+    if prez:
+        try:
+            requests = supabase.table("registry_requests").select("*").eq("status", "pending") \
+                .order("id", desc=True).execute().data or []
+        except Exception:
+            requests = []
+    try:
+        r = supabase.table("registry_requests").select("status").eq("username", me) \
+            .order("id", desc=True).limit(1).execute().data
+        my_request = r[0]["status"] if r else None
+    except Exception:
+        pass
+
+    return jsonify(success=True, me=me, is_officer=officer, is_president=prez, can_manage=can_manage,
+                   grade=_reg_grade(user), directorates=REG_DIRECTORATES, classifications=REG_CLASS, grades=REG_GRADES,
+                   files=readable, hidden=hidden, bulletins=bulletins, officers=officers,
+                   requests=requests, my_request=my_request)
+
+
+@app.route("/registry/file/<int:fid>")
+def registry_file_get(fid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    f = supabase.table("registry_files").select("*").eq("id", fid).execute().data
+    if not f:
+        return jsonify(success=False, error="File not found"), 404
+    f = f[0]
+    if not _reg_can_read(user, f):
+        return jsonify(success=False, error="ACCESS DENIED — insufficient clearance for this file."), 403
+    out = {"id": f["id"], "title": f["title"], "subject": f.get("subject"), "directorate": f.get("directorate"),
+           "classification": f.get("classification"), "body": f.get("body"), "visibility": f.get("visibility"),
+           "author": f.get("author"), "created_at": f.get("created_at")}
+    if _reg_can_manage(user):
+        out["allowed"] = _reg_parse_allowed(f.get("allowed"))
+    return jsonify(success=True, file=out, can_manage=_reg_can_manage(user), me=user["username"])
+
+
+@limiter.limit("30/min")
+@app.route("/registry/file", methods=["POST"])
+def registry_file_create():
+    user = get_current_user(run_economics=False)
+    if not user or not _reg_can_manage(user):
+        return jsonify(success=False, error="Cleared officers only"), 403
+    d = request.get_json() or {}
+    title = (d.get("title") or "").strip()[:160]
+    subject = (d.get("subject") or "").strip()[:120]
+    body = (d.get("body") or "").strip()[:20000]
+    directorate = d.get("directorate") if d.get("directorate") in REG_DIRECTORATES else "Archives"
+    classification = d.get("classification") if d.get("classification") in REG_CLASS else "CONFIDENTIAL"
+    vis = d.get("visibility") if d.get("visibility") in ("public", "cleared", "named") else "named"
+    if not title or not body:
+        return jsonify(success=False, error="A file needs a title and a body."), 400
+    allowed = []
+    if vis == "named":
+        want = [str(x).strip() for x in (d.get("allowed") or []) if str(x).strip()]
+        want = list(dict.fromkeys(want))[:40]
+        if want:
+            valid = {r["username"] for r in (supabase.table("cybucks").select("username")
+                     .in_("username", want).execute().data or [])}
+            allowed = [w for w in want if w in valid]
+        if not allowed:
+            return jsonify(success=False, error="Pick who may read this file (or choose a wider visibility)."), 400
+    allowed_str = ("," + ",".join(allowed) + ",") if allowed else ""
+    try:
+        row = supabase.table("registry_files").insert({
+            "title": title, "subject": subject, "body": body, "directorate": directorate,
+            "classification": classification, "visibility": vis, "allowed": allowed_str,
+            "author": user["username"]}).execute().data[0]
+    except Exception:
+        return jsonify(success=False, error="The Registry isn't set up yet — run the migration."), 500
+    _reg_cache["public"] = None      # a new public file may now exist
+    for u in allowed:
+        notify(u, f"📁 A Registry file has been shared with you: {title}", "/registry")
+    return jsonify(success=True, file=row)
+
+
+@limiter.limit("30/min")
+@app.route("/registry/file/<int:fid>/delete", methods=["POST"])
+def registry_file_delete(fid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    f = supabase.table("registry_files").select("author").eq("id", fid).execute().data
+    if not f:
+        return jsonify(success=False, error="File not found"), 404
+    if not (is_treasury_admin(user) or f[0].get("author") == user["username"]):
+        return jsonify(success=False, error="Only the author or the President may delete a file"), 403
+    supabase.table("registry_files").delete().eq("id", fid).execute()
+    _reg_cache["public"] = None
+    return jsonify(success=True)
+
+
+@limiter.limit("20/min")
+@app.route("/registry/bulletin", methods=["POST"])
+def registry_bulletin_create():
+    user = get_current_user(run_economics=False)
+    if not user or not _reg_can_manage(user):
+        return jsonify(success=False, error="Cleared officers only"), 403
+    d = request.get_json() or {}
+    title = (d.get("title") or "").strip()[:160]
+    body = (d.get("body") or "").strip()[:6000]
+    priority = d.get("priority") if d.get("priority") in ("IMMEDIATE", "ROUTINE") else "ROUTINE"
+    vis = d.get("visibility") if d.get("visibility") in ("public", "cleared") else "cleared"
+    if not title or not body:
+        return jsonify(success=False, error="A bulletin needs a title and body."), 400
+    try:
+        row = supabase.table("registry_bulletins").insert({
+            "title": title, "body": body, "priority": priority, "visibility": vis,
+            "allowed": "", "author": user["username"]}).execute().data[0]
+    except Exception:
+        return jsonify(success=False, error="The Registry isn't set up yet — run the migration."), 500
+    return jsonify(success=True, bulletin=row)
+
+
+@limiter.limit("30/min")
+@app.route("/registry/officer", methods=["POST"])
+def registry_officer():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json() or {}
+    target = (d.get("username") or "").strip()
+    action = d.get("action") or "grant"
+    if not supabase.table("cybucks").select("id").eq("username", target).execute().data:
+        return jsonify(success=False, error="No such citizen"), 404
+    if action == "revoke":
+        supabase.table("registry_officers").delete().eq("username", target).execute()
+        notify(target, "Your Registry clearance has been revoked.", "/registry")
+    else:
+        grade = d.get("grade") if d.get("grade") in REG_GRADES else "C-2"
+        role = (d.get("role") or "Officer").strip()[:40]
+        try:
+            supabase.table("registry_officers").delete().eq("username", target).execute()
+            supabase.table("registry_officers").insert(
+                {"username": target, "grade": grade, "role": role}).execute()
+        except Exception:
+            return jsonify(success=False, error="The Registry isn't set up yet — run the migration."), 500
+        # if they had a pending clearance request, mark it approved
+        try:
+            supabase.table("registry_requests").update({"status": "approved"}) \
+                .eq("username", target).eq("status", "pending").execute()
+        except Exception:
+            pass
+        notify(target, f"🦉 You have been cleared into the Registry at grade {grade} ({role}).", "/registry")
+    _reg_cache["officers"] = None
+    return jsonify(success=True)
+
+
+@limiter.limit("6/min")
+@app.route("/registry/apply", methods=["POST"])
+def registry_apply():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if _reg_is_officer(user):
+        return jsonify(success=False, error="You already hold Registry clearance."), 400
+    note = ((request.get_json() or {}).get("note") or "").strip()[:400]
+    try:
+        ex = supabase.table("registry_requests").select("id").eq("username", user["username"]) \
+            .eq("status", "pending").execute().data
+        if ex:
+            return jsonify(success=False, error="Your clearance application is already pending."), 400
+        supabase.table("registry_requests").insert(
+            {"username": user["username"], "note": note, "status": "pending"}).execute()
+    except Exception:
+        return jsonify(success=False, error="The Registry isn't set up yet — run the migration."), 500
+    for adm in TREASURY_ADMINS:
+        notify(adm, f"🗂️ {user['username']} has applied for Registry clearance.", "/registry")
+    return jsonify(success=True)
+
+
+@limiter.limit("30/min")
+@app.route("/registry/request/deny", methods=["POST"])
+def registry_request_deny():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    target = ((request.get_json() or {}).get("username") or "").strip()
+    try:
+        supabase.table("registry_requests").update({"status": "denied"}) \
+            .eq("username", target).eq("status", "pending").execute()
+    except Exception:
+        pass
+    return jsonify(success=True)
+
+
 def _gov_role(username):
     """The government office(s) this citizen holds, if any (cabinet + ministries)."""
     roles = []
@@ -1372,7 +1680,7 @@ def me():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     return jsonify(success=True, user=public_user(user), admin=is_treasury_admin(user),
-                   cia=is_cia(user), war=_war_cleared(user))
+                   cia=is_cia(user), war=_war_cleared(user), registry=_me_registry(user))
 
 
 @app.route("/users")

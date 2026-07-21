@@ -108,7 +108,7 @@ function renderNav(active, user) {
   const host = document.getElementById("nav");
   if (host) host.outerHTML = html;
   syncThemeBtn();
-  if (user) { refreshNotifBadge(); revealAthena(); startToasts(); }
+  if (user) { refreshNotifBadge(); revealAthena(); revealRegistry(); startToasts(); }
 }
 
 /* Pop a toast when a new notification (DM, mention, approval, referral…) arrives. */
@@ -155,6 +155,21 @@ async function revealAthena() {
     a.id = "athenaNav"; a.href = "/athena"; a.title = "Athena (classified)";
     a.style.color = "var(--gold)"; a.innerHTML = "🦉 Athena";
     links.insertBefore(a, document.getElementById("navUser") || null);
+  } catch {}
+}
+
+/* Reveal the classified Registry link (to the left of Athena) to cleared citizens. */
+async function revealRegistry() {
+  try {
+    const me = await fetchMe();
+    if (!me || !me.registry || document.getElementById("registryNav")) return;
+    const links = document.querySelector(".nav-links");
+    if (!links) return;
+    const a = document.createElement("a");
+    a.id = "registryNav"; a.href = "/registry"; a.title = "The Registry (classified)";
+    a.style.color = "#c9b06a"; a.innerHTML = "🗄️ Registry";
+    const before = document.getElementById("athenaNav") || document.getElementById("navUser") || null;
+    links.insertBefore(a, before);
   } catch {}
 }
 
