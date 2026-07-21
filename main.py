@@ -992,6 +992,75 @@ def _me_registry(user):
         return False
 
 
+_reg_seeded = False
+
+
+def _reg_seed_if_empty():
+    """First-run starter content so every section is already populated (like a
+    real reading room). Runs once per process; only seeds when the tables exist
+    and are empty, so it never clobbers real files."""
+    global _reg_seeded
+    if _reg_seeded:
+        return
+    try:
+        fcount = supabase.table("registry_files").select("id", count="exact").limit(1).execute().count or 0
+    except Exception:
+        return  # tables not migrated yet — try again on a later load
+    _reg_seeded = True  # tables exist; never auto-seed again this process
+    if fcount > 0:
+        return
+    author = "Prathyay" if "Prathyay" in TREASURY_ADMINS else next(iter(TREASURY_ADMINS), "Registry")
+    files = [
+        {"title": "Reading Room Charter", "subject": "The Registry",
+         "directorate": "Archives", "classification": "UNCLASSIFIED", "visibility": "public", "allowed": "",
+         "author": author, "body":
+         "The Registry is the archive of the Republic of Cyvathon.\n\n"
+         "Every citizen may read the files circulated to them. What you see on your "
+         "desk is governed by your clearance; what you do not see is, by design, not "
+         "for you to know that you do not see.\n\n"
+         "Files are filed by cleared officers under one of six directorates and one "
+         "of five classifications, from UNCLASSIFIED to EYES ONLY. Bulletins carry the "
+         "day-to-day wire traffic of the service.\n\n"
+         "The Registry keeps what the Republic knows. Read carefully."},
+        {"title": "Foreign Assessment — The Aquilithian Republic", "subject": "Aquilithia",
+         "directorate": "Foreign Affairs", "classification": "CONFIDENTIAL", "visibility": "cleared", "allowed": "",
+         "author": author, "body":
+         "SUMMARY. Aquilithia is a neighbouring micronation of comparable ambition and "
+         "a rival tradition of statecraft. Relations are correct but cool.\n\n"
+         "POSTURE. Their intelligence apparatus presents a public reading room of its own. "
+         "The Republic's standing instruction is plain: we out-build them in record and in "
+         "lore, never on their servers. We do not probe, breach, or retaliate against foreign "
+         "systems. Our advantage is that we keep the better archive.\n\n"
+         "ASSESSMENT. No hostile action anticipated. Watch, record, and file."},
+        {"title": "Directorate Athena — Standing Orders", "subject": "Directorate Athena",
+         "directorate": "Counter-Intelligence", "classification": "SECRET", "visibility": "cleared", "allowed": "",
+         "author": author, "body":
+         "1. Officers file under their true grade. Over-classification is a fault, not a virtue.\n"
+         "2. A file names its subject plainly and states what is known, what is inferred, and "
+         "what is unknown.\n"
+         "3. Clearance is a trust. It is granted by the President and revoked without appeal.\n"
+         "4. The Registry does not act. It records. Action is a matter for the Cabinet."},
+    ]
+    bulletins = [
+        {"title": "The Registry is open", "priority": "ROUTINE", "visibility": "public", "allowed": "",
+         "author": author, "body":
+         "The Reading Room is now open to all citizens. Public files are available to everyone; "
+         "cleared officers may read classified dossiers and file their own. Petition the Office of "
+         "Records through Recruitment if you wish to be sworn in."},
+        {"title": "Standing posture toward foreign services", "priority": "IMMEDIATE", "visibility": "cleared", "allowed": "",
+         "author": author, "body":
+         "Officers are reminded that the Republic keeps records — it does not conduct offensive "
+         "operations against foreign systems. Report, assess, and file. All contact with foreign "
+         "officials is reportable to this directorate."},
+    ]
+    try:
+        supabase.table("registry_files").insert(files).execute()
+        supabase.table("registry_bulletins").insert(bulletins).execute()
+        _reg_cache["public"] = None
+    except Exception:
+        pass
+
+
 @app.route("/registry")
 def registry_page():
     return app.send_static_file("registry.html")
@@ -1003,6 +1072,7 @@ def registry_data():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     me = user["username"]
+    _reg_seed_if_empty()
     officer, prez = _reg_is_officer(user), is_treasury_admin(user)
     can_manage = officer or prez
 
