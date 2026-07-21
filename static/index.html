@@ -395,7 +395,7 @@
         if(w) w.style.display = "block";
       }catch{}
     }
-    function showHub(user, admin, cia){
+    function showHub(user, admin, cia, registry){
       document.getElementById("guestView").style.display = "none";
       document.getElementById("hubView").style.display = "block";
       document.getElementById("hubName").textContent = user.username;
@@ -411,6 +411,7 @@
       const groups = GROUPS.map(g=>[g[0], g[1], g[2].slice()]);
       const extra = [];
       if (cia) extra.push(["/athena","fa-eye","Athena","Intelligence Agency"]);
+      if (registry) extra.push(["/registry","fa-folder-open","The Registry","Classified files & dossiers"]);
       if (admin) extra.push(["/admin","fa-sliders","Admin Panel","National economic policy"]);
       if (extra.length) groups.push(["Classified & Admin", "#ff5d6c", extra]);
 
@@ -500,7 +501,7 @@
     (async function init(){
       const me = await fetchMe();
       renderNav("/", me ? me.user : null);
-      if(me) showHub(me.user, me.admin, me.cia); else showGuest();
+      if(me) showHub(me.user, me.admin, me.cia, me.registry); else showGuest();
     })();
   </script>
 </body>
