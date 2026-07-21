@@ -24,68 +24,20 @@ function syncThemeBtn() {
   }
 }
 
-/* ---- Global first-load loader ----
-   Every page fetches through api(). We show a fun full-page loader while the
-   initial data load is in flight, then fade it out. Only for the FIRST load of
-   a page (subsequent api() calls — polls, actions — never re-trigger it), and
-   only if the load is slow enough to notice (no flash on fast loads). */
-let _inflight = 0, _initDone = false, _gEl = null, _gShowT = null, _gHideT = null, _gMaxT = null;
-function _gShow() {
-  if (_initDone || _gEl) return;
-  _gEl = document.createElement("div");
-  _gEl.id = "cyGlobalLoad";
-  // z-index 150 sits below the sticky nav (z-index 200) so the nav stays visible
-  // and clickable while the page's content loads underneath the loader.
-  _gEl.style.cssText = "position:fixed;inset:0;z-index:150;display:flex;align-items:center;"
-    + "justify-content:center;background:var(--bg,#0a0d14);opacity:0;transition:opacity .25s;";
-  _gEl.innerHTML = spinner();
-  (document.body || document.documentElement).appendChild(_gEl);
-  requestAnimationFrame(() => { if (_gEl) _gEl.style.opacity = "1"; });
-}
-function _gHide() {
-  if (_gEl) { const el = _gEl; _gEl = null; el.style.opacity = "0"; setTimeout(() => el.remove(), 320); }
-}
-function _gSettle() {          // the initial data load has finished
-  _initDone = true;
-  if (_gShowT) { clearTimeout(_gShowT); _gShowT = null; }
-  if (_gMaxT) { clearTimeout(_gMaxT); _gMaxT = null; }
-  _gHide();
-}
-function _apiStart() {
-  _inflight++;
-  if (_initDone) return;
-  if (_gHideT) { clearTimeout(_gHideT); _gHideT = null; }   // a new request — don't settle yet
-  // Only actually show if something is still loading when the delay elapses
-  // (this is what stops a flash on fast loads).
-  if (!_gShowT && !_gEl) _gShowT = setTimeout(() => { _gShowT = null; if (_inflight > 0 && !_initDone) _gShow(); }, 180);
-  if (!_gMaxT) _gMaxT = setTimeout(_gSettle, 12000);        // safety: never stay stuck
-}
-function _apiEnd() {
-  _inflight = Math.max(0, _inflight - 1);
-  if (_initDone || _inflight > 0) return;
-  if (_gHideT) clearTimeout(_gHideT);
-  _gHideT = setTimeout(_gSettle, 300);   // idle for 300ms => initial load done (coalesces auth->data)
-}
-
 async function api(path, options = {}) {
-  _apiStart();
-  try {
-    const res = await fetch(path, {
-      credentials: "include",
-      ...options,
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    });
-    const text = await res.text();
-    let data;
-    try { data = text ? JSON.parse(text) : {}; }
-    catch (e) {
-      throw new Error("Server error (HTTP " + res.status + "). The database may not be set up yet — run schema.sql in Supabase.");
-    }
-    if (!res.ok || data.success === false) throw new Error(data.error || ("HTTP " + res.status));
-    return data;
-  } finally {
-    _apiEnd();
+  const res = await fetch(path, {
+    credentials: "include",
+    ...options,
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+  });
+  const text = await res.text();
+  let data;
+  try { data = text ? JSON.parse(text) : {}; }
+  catch (e) {
+    throw new Error("Server error (HTTP " + res.status + "). The database may not be set up yet — run schema.sql in Supabase.");
   }
+  if (!res.ok || data.success === false) throw new Error(data.error || ("HTTP " + res.status));
+  return data;
 }
 
 /* Cache /me for a few seconds so a single page-load doesn't fetch it
@@ -250,60 +202,8 @@ function renderRich(text) {
   return s;
 }
 
-/* A fun on-brand loading animation — bouncing brand dots + a witty message.
-   Usage: box.innerHTML = spinner();  or  spinner("Sorting the mail…", "sm") */
-const LOAD_MSGS = [   // generic fallback
-  "Booting the micronation…", "Rallying the Republic…", "Herding the bots…",
-  "Bribing the servers…", "Waking things up…",
-];
-// Messages themed to match each page's loader animation.
-const LOAD_MSGS_BY_VARIANT = {
-  coin:    ["Minting Cybucks…", "Counting the Aquilines…", "Balancing the ledger…", "Cracking open the vault…"],
-  bars:    ["Loading the markets…", "Fetching share prices…", "Reading the ticker…", "Checking the order book…"],
-  dice:    ["Rolling the dice…", "Shuffling the deck…", "Testing your luck…", "Spinning it up…"],
-  bubbles: ["Warming up the chat…", "Delivering the mail…", "Rounding up citizens…", "Loading the conversation…"],
-  seal:    ["Convening the council…", "Sealing the decrees…", "Consulting the Chair…", "Reading the lawbook…"],
-  play:    ["Cueing up the reels…", "Buffering the feed…", "Rolling the tape…"],
-  pen:     ["Fetching the latest posts…", "Sharpening the quill…", "Turning the page…"],
-  stamp:   ["Polishing the passports…", "Stamping the documents…", "Checking your papers…"],
-};
-function _randMsg(v) {
-  const pool = LOAD_MSGS_BY_VARIANT[v] || LOAD_MSGS;
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-/* Pick a themed loader animation based on the page you're on. */
-function _pageVariant() {
-  const p = (typeof location !== "undefined" ? location.pathname : "/") || "/";
-  if (p.indexOf("/casino") === 0) return "dice";
-  if (p.indexOf("/exchange") === 0 || p.indexOf("/portfolio") === 0) return "bars";
-  if (p.indexOf("/videos") === 0) return "play";
-  if (p.indexOf("/blogs") === 0) return "pen";
-  if (p.indexOf("/passport") === 0 || p.indexOf("/profile") === 0) return "stamp";
-  if (p.indexOf("/chat") === 0 || p.indexOf("/mail") === 0 || p.indexOf("/citizens") === 0 || p.indexOf("/ai") === 0) return "bubbles";
-  if (/^\/(government|voting|legislature|court|gazette|ministries|foreign|fir|treasury|admin|athena|warroom)/.test(p)) return "seal";
-  return "coin";   // bank, loans, company, jobs, states, marketplace, leaderboard, invite, home…
-}
-function _animMarkup(v) {
-  let inner;
-  switch (v) {
-    case "bars":    inner = '<div class="cy-bars"><span></span><span></span><span></span><span></span></div>'; break;
-    case "dice":    inner = '<div class="cy-die"><span class="pip"></span></div>'; break;
-    case "bubbles": inner = '<div class="cy-bubble"><span></span><span></span><span></span></div>'; break;
-    case "seal":    inner = '<div class="cy-seal"><span class="tri">&#9650;</span></div>'; break;
-    case "play":    inner = '<div class="cy-play"></div>'; break;
-    case "pen":     inner = '<div class="cy-pen"><i class="fas fa-pen-nib"></i><span class="line"></span></div>'; break;
-    case "stamp":   inner = '<div class="cy-stamp"><i class="fas fa-stamp"></i></div>'; break;
-    default:        inner = '<div class="cy-coinwrap"><div class="cy-coin"><div class="f1"><i class="fas fa-code"></i></div><div class="f2">&#9650;</div></div></div>';
-  }
-  return '<div class="cy-anim">' + inner + '</div>';
-}
-function spinner(msg, size, variant) {
-  const v = variant || _pageVariant();
-  const m = msg || _randMsg(v);
-  const cls = "cyload" + (size === "sm" ? " sm" : "");
-  return `<div class="${cls}">${_animMarkup(v)}`
-       + `<div class="cyload-msg">${(m + "").replace(/</g, "&lt;")}</div></div>`;
-}
+/* Loading animations were removed — kept as a no-op so existing callers don't break. */
+function spinner() { return ""; }
 
 /* A clickable link to a citizen's public profile. */
 function userLink(name) {
