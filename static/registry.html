@@ -13,9 +13,9 @@
         radial-gradient(ellipse 120% 80% at 50% -10%, rgba(255,255,255,.35), transparent 60%),
         repeating-linear-gradient(0deg, rgba(90,74,40,.035) 0 1px, transparent 1px 4px); }
 
-    .reg{ --pp-sheet:#f4efdf; --pp-sheet2:#ebe2c9; --pp-ink:#26221a; --pp-mut:#726a54; --pp-line:#c2b591;
-      --pp-tab:#d7cba8; --slab:'Rockwell','Roboto Slab',Georgia,'Times New Roman',serif; --type:'Courier New',ui-monospace,monospace;
-      max-width:980px; margin:2.4rem auto 4rem; color:var(--pp-ink); font-family:var(--type); font-size:15px; line-height:1.6; }
+    :root{ --pp-sheet:#f4efdf; --pp-sheet2:#ebe2c9; --pp-ink:#26221a; --pp-mut:#726a54; --pp-line:#c2b591; --pp-tab:#d7cba8;
+      --slab:'Rockwell','Roboto Slab',Georgia,'Times New Roman',serif; --type:'Courier New',ui-monospace,monospace; }
+    .reg{ max-width:980px; margin:2.4rem auto 4rem; color:var(--pp-ink); font-family:var(--type); font-size:15px; line-height:1.6; }
     .reg *{ box-sizing:border-box; }
 
     /* letterhead */
@@ -102,14 +102,34 @@
     .lbl{ font-family:var(--type); font-size:.66rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--pp-mut); font-weight:700; margin:.7rem 0 .3rem; }
 
     /* modal */
-    .modal-bg{ position:fixed; inset:0; background:rgba(40,32,16,.55); backdrop-filter:blur(2px); display:none; align-items:flex-start; justify-content:center; z-index:250; padding:2rem 1rem; overflow-y:auto; }
+    .modal-bg{ position:fixed; inset:0; background:rgba(22,16,6,.72); backdrop-filter:blur(3px); display:none; align-items:flex-start; justify-content:center; z-index:250; padding:3.2rem 1rem 3.5rem; overflow-y:auto; }
     .modal-bg.on{ display:flex; }
-    .modal{ background:var(--pp-sheet); color:var(--pp-ink); font-family:var(--type); border:1px solid var(--pp-ink); width:100%; max-width:640px; box-shadow:0 30px 70px rgba(20,14,4,.5); }
-    .cband{ text-align:center; font-family:var(--type); font-weight:700; letter-spacing:4px; padding:.4rem; color:#fff; background:var(--cc,#26221a); font-size:.85rem; }
+    .modal{ position:relative; background:var(--pp-sheet); color:var(--pp-ink); font-family:var(--type); border:1px solid var(--pp-ink); width:100%; max-width:640px; box-shadow:0 30px 70px rgba(20,14,4,.5); }
+    .cband{ text-align:center; font-family:var(--type); font-weight:700; letter-spacing:4px; padding:.5rem; color:#fff; background:var(--cc,#26221a); font-size:.85rem; }
     .mpad{ padding:1.9rem 2.2rem 2.1rem; position:relative; }
-    .mx{ position:absolute; top:.7rem; right:1rem; cursor:pointer; font-size:1.7rem; line-height:1; color:var(--pp-mut); }
+
+    /* ---- the dossier reader is a physical file lying on the desk ---- */
+    #fileBox{ background:none; border:none; box-shadow:none; max-width:664px; }
+    .folder{ position:relative; margin-top:18px; }
+    .folder::before, .folder::after{ content:""; position:absolute; inset:0; background:#ece2c8; border:1px solid #cbbf9c; border-radius:3px; z-index:-1; box-shadow:0 14px 30px rgba(15,10,2,.35); }
+    .folder::before{ transform:rotate(-1.5deg) translateY(6px); }
+    .folder::after{ transform:rotate(1.2deg) translateY(3px); background:#e6dbbf; }
+    .paper{ position:relative; background:#f8f3e5; border:1px solid #cbbf9c; border-radius:3px; padding:2.5rem 2.5rem 2.1rem;
+      box-shadow:0 26px 58px rgba(12,8,2,.5);
+      background-image:
+        radial-gradient(135% 75% at 50% 0%, rgba(255,255,255,.6), transparent 55%),
+        repeating-linear-gradient(0deg, rgba(120,100,50,.03) 0 1px, transparent 1px 5px); }
+    .clip{ position:absolute; top:-20px; left:52px; width:32px; height:86px; z-index:5; filter:drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
+    .ftab{ position:absolute; top:-17px; right:40px; z-index:4; font-family:var(--type); font-weight:700; letter-spacing:2.5px; font-size:.72rem;
+      color:#fff; background:var(--cc,#26221a); padding:.6rem 1.05rem .5rem; border-radius:6px 6px 0 0; box-shadow:0 -3px 8px rgba(0,0,0,.16); }
+    .rubber{ font-family:var(--slab); font-weight:800; letter-spacing:2.5px; font-size:1rem; color:var(--cc,#b3261e); background:rgba(255,255,255,.15);
+      border:3px double var(--cc,#b3261e); padding:.22rem .65rem; border-radius:4px; transform:rotate(-9deg); display:inline-block; opacity:.82; white-space:nowrap; }
+    .filed{ display:flex; justify-content:space-between; align-items:center; gap:1.2rem; flex-wrap:wrap; }
+    .mx{ position:absolute; cursor:pointer; font-size:1.75rem; line-height:1; z-index:6; }
+    #fileBox .mx{ top:-42px; right:0; color:#efe7d2; }
+    #editBox .mx{ top:.7rem; right:1rem; color:var(--pp-mut); }
     .watermark{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; overflow:hidden; }
-    .watermark span{ font-family:var(--slab); font-weight:800; font-size:3.6rem; letter-spacing:8px; color:var(--cc,#26221a); opacity:.06; transform:rotate(-16deg); white-space:nowrap; }
+    .watermark span{ font-family:var(--slab); font-weight:800; font-size:3.7rem; letter-spacing:8px; color:var(--cc,#26221a); opacity:.055; transform:rotate(-16deg); white-space:nowrap; }
     .dbody{ white-space:pre-wrap; line-height:1.95; text-align:justify; margin-top:1.4rem; font-size:.95rem; position:relative; z-index:1; }
     .seg{ display:flex; gap:.35rem; flex-wrap:wrap; }
     .seg button{ flex:1; min-width:90px; font-family:var(--type); text-transform:uppercase; letter-spacing:.8px; font-size:.7rem; font-weight:700; margin:0; padding:.5rem; background:var(--pp-sheet2); color:var(--pp-mut); border:1px solid var(--pp-line); box-shadow:none; border-radius:2px; }
@@ -275,25 +295,35 @@
 
     function setDir(d){ filterDir=decodeURIComponent(d); go("files"); }
 
-    /* ---- dossier reader ---- */
+    /* ---- dossier reader (a physical file on the desk) ---- */
+    const CLIP_SVG=`<svg class="clip" viewBox="0 0 40 96" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#d3d8dd"/><stop offset=".5" stop-color="#9aa0a8"/><stop offset="1" stop-color="#767c85"/></linearGradient></defs>
+      <path d="M8 17 V70 a12 12 0 0 0 24 0 V25 a8 8 0 0 0 -16 0 V64" fill="none" stroke="url(#cg)" stroke-width="4.5" stroke-linecap="round"/></svg>`;
     async function openFile(id){
       try{
         const d=await api("/registry/file/"+id); const f=d.file; const col=cc(f.classification); const manage=d.can_manage;
-        const box=document.getElementById("fileBox"); box.style.setProperty("--cc",col);
-        box.innerHTML=`
-          <div class="cband" style="--cc:${col}">${esc(f.classification||'CLASSIFIED')}</div>
-          <div class="mpad">
-            <span class="mx" onclick="closeFile()">&times;</span>
-            <div class="watermark" style="--cc:${col}"><span>${esc(f.classification||'CLASSIFIED')}</span></div>
-            <div class="lbl" style="margin:0">Dossier № ${String(f.id).padStart(3,'0')} · ${esc(f.directorate||'')}</div>
-            <h2 class="ptitle" style="margin:.2rem 0 .35rem;position:relative;z-index:1;">${esc(f.title)}</h2>
-            ${f.subject?`<div style="position:relative;z-index:1;"><b>Subject:</b> ${esc(f.subject)}</div>`:''}
-            <div class="dbody">${renderRich(f.body||'')}</div>
-            <hr class="prule" style="margin:1.3rem 0 .5rem;">
-            <div class="lbl" style="margin:0">Filed by ${esc(f.author||'Registry')} · ${f.created_at?new Date(f.created_at).toLocaleString():''}${manage?` · circulation: ${esc(f.visibility)}${f.allowed&&f.allowed.length?' ('+f.allowed.map(esc).join(', ')+')':''}`:''}</div>
-            ${manage&&(f.author===ME||D.is_president)?`<div style="margin-top:1rem;"><button class="btn danger" onclick="delFile(${f.id})">Destroy file</button></div>`:''}
-          </div>
-          <div class="cband" style="--cc:${col}">${esc(f.classification||'CLASSIFIED')} · CYVATHON REGISTRY</div>`;
+        const cls=esc(f.classification||'CLASSIFIED'); const num=String(f.id).padStart(3,'0');
+        const filed=`Filed by ${esc(f.author||'Registry')} · ${f.created_at?new Date(f.created_at).toLocaleString():''}${manage?` · circulation: ${esc(f.visibility)}${f.allowed&&f.allowed.length?' ('+f.allowed.map(esc).join(', ')+')':''}`:''}`;
+        document.getElementById("fileBox").innerHTML=`
+          <span class="mx" onclick="closeFile()" title="Close">&times;</span>
+          <div class="folder" style="--cc:${col}">
+            ${CLIP_SVG}
+            <div class="ftab">${cls}</div>
+            <div class="paper">
+              <div class="watermark"><span>${cls}</span></div>
+              <div class="lbl" style="margin:0">Dossier № ${num} · ${esc(f.directorate||'')}</div>
+              <h2 class="ptitle" style="margin:.3rem 0 .45rem;position:relative;z-index:1;">${esc(f.title)}</h2>
+              ${f.subject?`<div style="position:relative;z-index:1;"><b>Subject:</b> ${esc(f.subject)}</div>`:''}
+              <div class="dbody">${renderRich(f.body||'')}</div>
+              <hr class="prule" style="margin:1.7rem 0 1.1rem;">
+              <div class="filed">
+                <div class="lbl" style="margin:0;flex:1;min-width:180px;">${filed}</div>
+                <span class="rubber">${cls}</span>
+              </div>
+              ${manage&&(f.author===ME||D.is_president)?`<div style="margin-top:1.3rem;"><button class="btn danger" onclick="delFile(${f.id})">Destroy file</button></div>`:''}
+            </div>
+          </div>`;
         document.getElementById("fileModal").classList.add("on");
       }catch(e){ alert(e.message); }
     }
