@@ -86,6 +86,29 @@
     .dseal{ width:30px; text-align:center; font-size:1.15rem; } .dname{ font-family:var(--slab); font-weight:700; font-size:1.12rem; flex:1; }
     .dcount{ font-family:var(--type); font-size:.8rem; color:var(--pp-mut); }
 
+    /* ---- the Field Manual ---- */
+    .man{ --mc:#2f6fb0; font-size:.93rem; line-height:1.8; }
+    .man .mtop{ display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.4rem; }
+    .man .mtop .mt-lbl{ font-family:var(--type); font-size:.68rem; letter-spacing:2px; text-transform:uppercase; color:var(--pp-mut); }
+    .man .band{ background:var(--mc); color:#fff; text-align:center; font-family:var(--type); font-weight:700; letter-spacing:3px; font-size:.7rem; padding:.55rem; margin:0 -3rem 2rem; }
+    .man .band.bottom{ margin:2.4rem -3rem 0; }
+    .man .front{ text-align:center; padding:.6rem 0 1.9rem; border-bottom:2px solid var(--pp-ink); margin-bottom:2rem; }
+    .man .front .owl{ font-size:2.6rem; line-height:1; }
+    .man .front h1{ font-family:var(--slab); font-size:2rem; letter-spacing:2.5px; margin:.5rem 0 .3rem; }
+    .man .front .tag{ color:var(--pp-mut); font-size:.78rem; letter-spacing:1.5px; text-transform:uppercase; }
+    .man .epi{ font-style:italic; color:var(--pp-mut); text-align:center; margin:1.6rem auto; max-width:80%; line-height:1.7; }
+    .man .word{ background:var(--pp-sheet2); border-left:4px solid var(--mc); padding:1rem 1.2rem; margin:1.4rem 0; }
+    .man .word .wsign{ text-align:right; font-style:italic; color:var(--pp-mut); margin-top:.6rem; }
+    .man h3{ font-family:var(--slab); color:var(--mc); font-size:1.16rem; letter-spacing:1px; margin:2rem 0 .8rem; text-transform:uppercase; }
+    .man .clause{ display:flex; gap:.9rem; margin:.55rem 0; }
+    .man .clause .n{ color:var(--mc); font-weight:700; flex-shrink:0; font-family:var(--type); min-width:2.2rem; }
+    .man p{ margin:.8rem 0; text-align:justify; }
+    .man table{ width:100%; border-collapse:collapse; margin:1.2rem 0; font-size:.86rem; }
+    .man th{ text-align:left; text-transform:uppercase; letter-spacing:1px; font-size:.66rem; color:var(--mc); border-bottom:2px solid var(--pp-ink); padding:.5rem .6rem; }
+    .man td{ border-bottom:1px solid var(--pp-line); padding:.6rem .6rem; vertical-align:top; }
+    .man td:first-child{ font-weight:700; white-space:nowrap; }
+    .man .close{ text-align:center; font-family:var(--slab); font-weight:800; letter-spacing:2.5px; margin:2rem 0 .5rem; color:var(--pp-ink); }
+
     /* officers / requests */
     .orow{ display:flex; align-items:center; gap:1rem; padding:.9rem 0; border-bottom:1px dashed var(--pp-line); }
     .orow:last-child{ border-bottom:none; }
@@ -140,6 +163,14 @@
     .avm{ width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; color:var(--pp-sheet); background:var(--pp-ink); }
     .small{ font-size:.78rem; }
     @media(max-width:620px){ .rtitle{ font-size:1.6rem; } .sheet{ padding:1.1rem 1rem 1.5rem; } }
+
+    @media print{
+      body{ background:#fff !important; }
+      #nav, .rhead, .tabs, .phead-row, .mtop{ display:none !important; }
+      .sheet{ box-shadow:none !important; border:none !important; padding:0 2.4rem !important; }
+      .man .band{ margin-left:-2.4rem; margin-right:-2.4rem; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .man h3, .man th{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
   </style>
 </head>
 <body>
@@ -174,7 +205,7 @@
 
     function render(){
       const grade=D.grade||null;
-      const tabs=[["desk","Front Desk"],["files","Dossiers"],["bulletins","Bulletins"],["directorates","Directorates"]];
+      const tabs=[["desk","Front Desk"],["files","Dossiers"],["bulletins","Bulletins"],["directorates","Directorates"],["manual","Field Manual"]];
       if(D.can_manage) tabs.push(["officers","Officers"]);
       if(!D.is_officer && !D.is_president) tabs.push(["recruit","Recruitment"]);
 
@@ -206,6 +237,7 @@
     };
     function go(s){ section=s;
       document.querySelectorAll(".tab[data-k]").forEach(b=>b.classList.toggle("on", b.dataset.k===s));
+      if(s==="manual"){ document.getElementById("page").innerHTML=viewManual(); return; }
       const [t,sub]=HEAD[s]||["",""];
       const manage=D.can_manage, tools = s==="files"&&manage?`<button class="btn sm" onclick="openEdit('file')">+ New file</button>`
                  : s==="bulletins"&&manage?`<button class="btn sm" onclick="openEdit('bulletin')">+ New bulletin</button>`:"";
@@ -260,6 +292,112 @@
           <div class="dseal">🗂️</div><div class="dname">${esc(dr)}</div>
           <div class="dcount">${n} file${n===1?'':'s'} on your desk</div></div>`;
       }).join("") + `<p class="psub" style="margin-top:1rem;">Counts reflect only files at or below your clearance.</p>`;
+    }
+
+    function viewManual(){
+      const cl=(n,t)=>`<div class="clause"><span class="n">${n}</span><span>${t}</span></div>`;
+      return `<div class="man">
+        <div class="mtop"><span class="mt-lbl">Directorate Athena · Office of Records · issued to sworn officers</span>
+          <button class="btn sm" onclick="window.print()">🖨 Print</button></div>
+        <div class="band">RESTRICTED // ATHENA EYES // NO FOREIGN // RETENTION: FOR AS LONG AS YOU SERVE</div>
+
+        <div class="front">
+          <div class="owl">🦉</div>
+          <h1>THE OWL'S MANUAL</h1>
+          <div class="tag">Officer's Field Manual · Directorate Athena · Republic of Cyvathon</div>
+        </div>
+
+        <div class="epi">"The owl is not loud. It does not need to be. It sees the field the day-birds only fly over."</div>
+
+        <div class="word">You were watched, then asked, then sworn. Now you hold a grade and a key to the reading room.
+          This manual will not make you clever — cleverness is noise, and noise is how officers are found.
+          It will make you careful, and careful officers are the ones still working in ten years. Read it
+          slowly. Reading slowly is the first skill of the service.
+          <div class="wsign">— The Director of Records, for ATHENA</div></div>
+
+        <h3>Part I — Your Handle</h3>
+        ${cl("1.1","In the Registry you are your handle, not your name. The handle is public inside Athena and meaningless outside it. That is the whole point of it.")}
+        ${cl("1.2","Never pair your handle and your legal name in the open — not in the marketplace, not in chat, not in a message you believe is private. Especially not as a joke.")}
+        ${cl("1.3","If a citizen outside the service greets you by your handle, be pleasantly confused — then file it to Counter-Intelligence.")}
+
+        <h3>Part II — The Clearance Ladder</h3>
+        <p>Every officer holds a grade. The grade is earned, never requested; asking for C-4 is the surest way to prove you are still C-2.</p>
+        <table><tr><th>Grade</th><th>Who holds it</th><th>What it opens</th></tr>
+          <tr><td>C-1</td><td>Any sworn officer</td><td>The cleared shelf; routine dossiers</td></tr>
+          <tr><td>C-2</td><td>Officers in good standing</td><td>Most person &amp; nation files</td></tr>
+          <tr><td>C-3</td><td>Desk officers</td><td>Live casework; active assessments</td></tr>
+          <tr><td>C-4</td><td>Senior officers</td><td>Sources and methods; most redactions lift</td></tr>
+          <tr><td>C-5</td><td>The President &amp; the Director</td><td>The whole archive. If you are not C-5, you will know only if you need to.</td></tr>
+        </table>
+
+        <h3>Part III — Reading the Files</h3>
+        ${cl("3.1","Every file carries a classification, from UNCLASSIFIED to EYES ONLY. The colour is not decoration. It is a wall.")}
+        ${cl("3.2","A file you cannot open still tells you something: that it exists, and that its existence is not yours to discuss.")}
+        ${cl("3.3","Do not guess at file numbers to see what surfaces. The attempt is logged, and the Archivist reads the log with breakfast.")}
+        ${cl("3.4","What you learn at your grade stays at your grade — including from officers below you who ask kindly. Kindness is not clearance.")}
+
+        <h3>Part IV — The Directorates</h3>
+        <table><tr><th>Directorate</th><th>In one line</th></tr>
+          <tr><td>Counter-Intelligence</td><td>Guards the wall. Reads the log.</td></tr>
+          <tr><td>Foreign Affairs</td><td>Watches the neighbours — especially the polite ones.</td></tr>
+          <tr><td>Economic</td><td>Follows every coin to where it sleeps.</td></tr>
+          <tr><td>Internal Security</td><td>Keeps the Republic honest with itself.</td></tr>
+          <tr><td>Cyber</td><td>Answers the knock at the network door.</td></tr>
+          <tr><td>Archives</td><td>Remembers. The Republic's memory is long, and well-lit.</td></tr>
+        </table>
+
+        <h3>Part V — Communication &amp; Reporting</h3>
+        ${cl("5.1","Report what you saw, not what you concluded. \"They asked about the Treasury twice\" is a report. \"They are a spy\" is a headline.")}
+        ${cl("5.2","Report within the day. Stale intelligence is trivia.")}
+        ${cl("5.3","Report the things that are probably nothing. Most of them are nothing — that is the system working, not failing.")}
+        ${cl("5.4","Silence on your channel is itself a message. If you go quiet, go quiet on purpose.")}
+
+        <h3>Part VI — Conduct</h3>
+        ${cl("6.1","Be unremarkable in public life. Not invisible — unremarkable. The invisible get searched for; the unremarkable get looked past.")}
+        ${cl("6.2","Keep your finances boring. Sudden wealth, sudden debt, and sudden generosity are the three lamps a hostile service reads by.")}
+        ${cl("6.3","Hold no grudges inside the service. A grievance is leverage waiting for an owner.")}
+        ${cl("6.4","Loyalty is to the Republic. Athena is the instrument, not the object. Any order that asks you to forget this did not come from us — and is itself reportable.")}
+
+        <h3>Part VII — The Service Across the Water</h3>
+        ${cl("7.1","Aquilithia keeps an intelligence service, and it is a good one. Underestimating it is the last mistake of a short career.")}
+        ${cl("7.2","They are literate, patient, and fond of the record. So are we. Note the symmetry — and do not mistake it for friendship.")}
+        ${cl("7.3","We watch, we assess, and we file. We do not probe their systems, breach their reading room, or answer provocation in kind. We out-build them in the archive, never on their servers. An officer who freelances a \"duel\" with a foreign service is an officer who has already been noticed.")}
+        ${cl("7.4","In their own manual they will call us many things — the owl, the chair people, the patient ones. Take the compliment. Then file it.")}
+
+        <h3>Part VIII — Violations</h3>
+        <table><tr><th>Violation</th><th>Consequence</th></tr>
+          <tr><td>Late reporting</td><td>A note in your file. Two notes: a conversation.</td></tr>
+          <tr><td>Curiosity beyond your grade</td><td>The same curiosity, turned toward you.</td></tr>
+          <tr><td>Guessing at file numbers</td><td>Removal from active casework.</td></tr>
+          <tr><td>Careless disclosure</td><td>Removal from the service.</td></tr>
+          <tr><td>Deliberate disclosure</td><td>The National Court — and an archive that does not forget.</td></tr>
+          <tr><td>Duelling a foreign service</td><td>Do not.</td></tr>
+        </table>
+
+        <h3>Part IX — Everyday Tradecraft</h3>
+        <table><tr><th>Do</th><th>Do not</th></tr>
+          <tr><td>Read files slowly and fully</td><td>Skim and speculate</td></tr>
+          <tr><td>Keep your password long and yours</td><td>Reuse it anywhere else</td></tr>
+          <tr><td>Log off when you step away</td><td>Leave the reading room open in public</td></tr>
+          <tr><td>Ask through channels</td><td>Ask about things above your grade</td></tr>
+          <tr><td>Stay pleasant and dull</td><td>Hint that you know things</td></tr>
+        </table>
+
+        <h3>Part X — Advancement</h3>
+        ${cl("10.1","C-2 to C-3: months of clean reporting. Counter-Intelligence notices reliability the way the Economic desk notices money.")}
+        ${cl("10.2","C-3 to C-4: you will be invited. The invitation follows the work; it never follows a request.")}
+        ${cl("10.3","C-5 is not a promotion. It is a chair with the whole archive behind it, and only two of them exist.")}
+
+        <h3>Part XI — The Oath</h3>
+        <p>There is no written oath. You will be told it once, quietly, and you will not repeat it — not to another
+        officer, not to yourself in an empty room. Officers who understand why that is the procedure have already
+        begun to understand the work.</p>
+
+        <p style="margin-top:1.6rem;">Keep the files closed, keep the Republic's confidence, and keep your sense of humour. You will need all three, in roughly equal measure.</p>
+
+        <div class="close">— THE OWL SEES WHAT THE DAY MISSES —</div>
+        <div class="band bottom">RESTRICTED // ATHENA · OFFICE OF RECORDS · REPUBLIC OF CYVATHON</div>
+      </div>`;
     }
 
     function viewOfficers(){
