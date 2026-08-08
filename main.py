@@ -6033,9 +6033,18 @@ def blogs_list():
             comments[c["blog_id"]] = comments.get(c["blog_id"], 0) + 1
     except Exception:
         pass
-    av = _avatars_for([p.get("username") for p in posts])
+    authors = list({p.get("username") for p in posts if p.get("username")})
+    av = _avatars_for(authors)
+    desig = {}
+    try:
+        for r in (supabase.table("cybucks").select("username,designation")
+                  .in_("username", authors).execute().data or []):
+            desig[r["username"]] = r.get("designation") or "Citizen"
+    except Exception:
+        pass
     for p in posts:
         p["avatar"] = av.get(p.get("username"))
+        p["designation"] = desig.get(p.get("username"), "Citizen")
         p["likes"] = likes.get(p["id"], 0)
         p["liked"] = p["id"] in mine
         p["comments"] = comments.get(p["id"], 0)

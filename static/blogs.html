@@ -7,108 +7,229 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
   <style>
-    .bcol{ max-width:660px; margin:0 auto; }
-    .writer{ margin-bottom:1.6rem; }
-    .writer textarea{ min-height:150px; resize:vertical; line-height:1.55; }
-    .toggle-write{ display:flex; align-items:center; gap:.7rem; cursor:pointer; }
-    .bfeed{ display:flex; flex-direction:column; gap:1.1rem; }
-    .bpost{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; padding:1.3rem 1.4rem; }
-    .bhead{ display:flex; align-items:center; gap:.7rem; margin-bottom:.8rem; }
-    .av{ width:40px; height:40px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    .layout{ display:grid; grid-template-columns:250px minmax(0,1fr) 300px; gap:1.5rem; align-items:start;
+      max-width:1160px; margin:0 auto; }
+    .rail{ position:sticky; top:80px; display:flex; flex-direction:column; gap:1.1rem; }
+    .center{ min-width:0; display:flex; flex-direction:column; gap:1.1rem; }
+    .card{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; overflow:hidden; }
+
+    /* ---- left profile card ---- */
+    .me-card .cover{ height:58px; background:linear-gradient(120deg,var(--accent),var(--accent2)); }
+    .me-card .inner{ padding:0 1.1rem 1.2rem; text-align:center; }
+    .me-card .av{ width:70px; height:70px; border-radius:50%; margin:-35px auto .6rem; border:3px solid var(--panel);
+      display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.6rem; color:#06223a;
+      background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .me-card .nm{ font-weight:800; font-size:1.08rem; } .me-card .nm a{ color:var(--text); text-decoration:none; }
+    .me-card .role{ color:var(--muted); font-size:.85rem; margin-top:.15rem; }
+    .me-card .stat{ display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding-top:.9rem;
+      border-top:1px solid var(--panel-border); font-size:.85rem; }
+    .me-card .stat b{ color:var(--accent); } .me-card .stat span{ color:var(--muted); }
+    .me-card .idbtn{ display:block; margin-top:1rem; padding:.6rem; border-radius:10px; text-decoration:none; text-align:center;
+      font-weight:700; font-size:.9rem; color:var(--accent); border:1px solid rgba(88,196,255,.4); transition:.15s; }
+    .me-card .idbtn:hover{ background:rgba(88,196,255,.1); }
+
+    /* ---- right rail cards ---- */
+    .rc{ padding:1.1rem 1.2rem; }
+    .rc h4{ margin:0 0 .9rem; font-size:.95rem; display:flex; align-items:center; gap:.5rem; }
+    .voice{ display:flex; align-items:center; gap:.65rem; padding:.5rem 0; text-decoration:none; }
+    .voice:not(:last-child){ border-bottom:1px solid var(--panel-border); }
+    .voice .av{ width:38px; height:38px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:.9rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .voice .vn{ font-weight:700; color:var(--text); font-size:.9rem; } .voice:hover .vn{ color:var(--accent); }
+    .voice .vs{ font-size:.76rem; color:var(--muted); }
+    .prompt{ font-size:.86rem; color:#cdd6e0; line-height:1.5; }
+    .prompt li{ margin:.35rem 0; }
+
+    /* ---- composer ---- */
+    .composer{ padding:1rem 1.1rem; }
+    .composer .top{ display:flex; align-items:center; gap:.75rem; }
+    .composer .av{ width:44px; height:44px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
       font-weight:700; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
-    .bhead .nm{ font-weight:700; } .bhead .nm a{ color:var(--text); text-decoration:none; } .bhead .nm a:hover{ color:var(--accent); }
-    .bhead .dt{ font-size:.78rem; color:var(--muted); }
-    .btitle{ font-size:1.35rem; font-weight:800; letter-spacing:-.3px; margin-bottom:.5rem; }
-    .bexcerpt,.bfull{ color:#cdd6e0; line-height:1.65; white-space:pre-wrap; }
-    .bfull{ display:none; }
-    .readmore{ color:var(--accent); cursor:pointer; font-weight:600; font-size:.9rem; display:inline-block; margin-top:.5rem; }
-    .brow{ display:flex; gap:1.4rem; align-items:center; margin-top:1rem; padding-top:.8rem; border-top:1px solid var(--panel-border); }
-    .bbtn{ background:none; border:none; color:var(--muted); cursor:pointer; font-size:.92rem; padding:0; margin:0; box-shadow:none;
-      display:flex; align-items:center; gap:.45rem; transition:.15s; }
-    .bbtn:hover{ color:var(--text); transform:none; }
-    .bbtn.liked{ color:#ff5d6c; }
-    .comments{ margin-top:1rem; display:none; flex-direction:column; gap:.7rem; }
+    .composer .pill{ flex:1; text-align:left; background:var(--panel-2); border:1px solid var(--panel-border); color:var(--muted);
+      border-radius:999px; padding:.8rem 1.2rem; font-weight:600; font-size:.95rem; box-shadow:none; margin:0; width:auto; }
+    .composer .pill:hover{ background:rgba(88,196,255,.08); color:var(--text); transform:none; border-color:rgba(88,196,255,.35); }
+    .writer{ display:none; margin-top:1rem; }
+    .writer.on{ display:block; }
+    .writer input, .writer textarea{ margin-top:.7rem; }
+    .writer textarea{ min-height:160px; resize:vertical; line-height:1.6; }
+    .writer .actions{ display:flex; justify-content:flex-end; gap:.6rem; margin-top:.7rem; }
+    .writer .actions button{ width:auto; margin:0; padding:.6rem 1.3rem; }
+    .writer .ghost{ background:transparent; border:1px solid var(--panel-border); color:var(--muted); box-shadow:none; }
+
+    /* ---- post cards ---- */
+    .post{ padding:1.2rem 1.35rem 1rem; }
+    .phead{ display:flex; align-items:flex-start; gap:.7rem; }
+    .phead .av{ width:48px; height:48px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); text-decoration:none; }
+    .phead .pwho{ min-width:0; flex:1; }
+    .phead .nm{ font-weight:700; line-height:1.2; } .phead .nm a{ color:var(--text); text-decoration:none; } .phead .nm a:hover{ color:var(--accent); }
+    .phead .role{ font-size:.8rem; color:var(--muted); }
+    .phead .dt{ font-size:.76rem; color:var(--muted); margin-top:.1rem; }
+    .ptitle{ font-size:1.28rem; font-weight:800; letter-spacing:-.3px; margin:.9rem 0 .5rem; }
+    .pbody,.pfull{ color:#cdd6e0; line-height:1.7; white-space:pre-wrap; word-wrap:break-word; }
+    .pfull{ display:none; }
+    .seemore{ color:var(--accent); cursor:pointer; font-weight:600; font-size:.9rem; display:inline-block; margin-top:.4rem; }
+    .pcounts{ display:flex; align-items:center; gap:.4rem; font-size:.82rem; color:var(--muted); margin-top:1rem; min-height:1em; }
+    .pcounts .hearts{ color:#ff5d6c; }
+    .pbar{ display:flex; gap:.3rem; margin-top:.5rem; padding-top:.4rem; border-top:1px solid var(--panel-border); }
+    .pbtn{ flex:1; background:none; border:none; color:var(--muted); cursor:pointer; font-size:.9rem; font-weight:600; padding:.6rem;
+      margin:0; box-shadow:none; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:.5rem; transition:.13s; }
+    .pbtn:hover{ background:var(--panel-2); color:var(--text); transform:none; }
+    .pbtn.liked{ color:#ff5d6c; }
+
+    /* comments */
+    .comments{ margin-top:.9rem; display:none; flex-direction:column; gap:.7rem; }
+    .comments.on{ display:flex; }
+    .cbox{ display:flex; gap:.55rem; align-items:center; }
+    .cbox .av{ width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:.82rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .cbox input{ margin:0; border-radius:999px; }
+    .cbox button{ margin:0; width:auto; padding:.55rem 1.1rem; white-space:nowrap; }
     .cmt{ display:flex; gap:.6rem; align-items:flex-start; }
-    .cmt .av{ width:32px; height:32px; font-size:.8rem; }
-    .cmt .cb{ background:var(--panel-2); border:1px solid var(--panel-border); border-radius:10px; padding:.5rem .75rem; flex:1; }
-    .cmt .cn{ font-weight:700; font-size:.83rem; } .cmt .cn a{ color:var(--text); text-decoration:none; }
-    .cmt .ct{ font-size:.92rem; color:#cdd6e0; white-space:pre-wrap; }
-    .cbox{ display:flex; gap:.5rem; margin-top:.3rem; }
-    .cbox input{ margin:0; } .cbox button{ margin:0; width:auto; padding:.55rem 1rem; }
+    .cmt .av{ width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:.8rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .cmt .cb{ background:var(--panel-2); border:1px solid var(--panel-border); border-radius:12px; padding:.5rem .8rem; flex:1; min-width:0; }
+    .cmt .cn{ font-weight:700; font-size:.83rem; } .cmt .cn a{ color:var(--text); text-decoration:none; } .cmt .cn a:hover{ color:var(--accent); }
+    .cmt .cd{ color:var(--muted); font-weight:500; font-size:.74rem; margin-left:.4rem; }
+    .cmt .ct{ font-size:.92rem; color:#e6ecf3; white-space:pre-wrap; margin-top:.1rem; line-height:1.5; }
     .empty{ text-align:center; color:var(--muted); padding:2.5rem 1rem; }
+
+    @media(max-width:1000px){ .layout{ grid-template-columns:250px minmax(0,1fr); } .r-rail{ display:none; } }
+    @media(max-width:780px){ .layout{ grid-template-columns:1fr; } .l-rail{ display:none; } }
   </style>
 </head>
 <body>
   <div id="nav"></div>
 
   <div class="wrap">
-    <h2 class="section-title"><i class="fas fa-feather-pointed" style="color:#a78bfa"></i> Cyvathon Blogs</h2>
-    <p class="section-sub">Write what's on your mind. Get likes, comments and a following.</p>
+    <div class="layout">
+      <!-- left rail -->
+      <div class="rail l-rail" id="lrail"></div>
 
-    <div class="bcol">
-      <div class="panel writer">
-        <div class="toggle-write" onclick="toggleWriter()">
-          <i class="fas fa-pen-to-square" style="color:var(--accent)"></i>
-          <b id="writerLabel">Write a blog…</b>
+      <!-- center feed -->
+      <div class="center">
+        <div class="card composer">
+          <div class="top">
+            <div class="av" id="cAv">?</div>
+            <button class="pill" onclick="openWriter()">Share something with the Republic…</button>
+          </div>
+          <div class="writer" id="writer">
+            <input id="bTitle" placeholder="Headline" maxlength="160">
+            <textarea id="bBody" placeholder="What do you want to say?" maxlength="20000"></textarea>
+            <p id="bMsg" class="small" style="margin:.5rem 0 0;min-height:1em;"></p>
+            <div class="actions">
+              <button class="ghost" onclick="closeWriter()">Cancel</button>
+              <button onclick="publish()" id="bPub"><i class="fas fa-paper-plane"></i> Post</button>
+            </div>
+          </div>
         </div>
-        <div id="writerBody" style="display:none;margin-top:1rem;">
-          <input id="bTitle" placeholder="Title" maxlength="160">
-          <textarea id="bBody" placeholder="Share your thoughts with the Republic…" maxlength="20000"></textarea>
-          <button onclick="publish()" id="bPub"><i class="fas fa-paper-plane"></i> Publish</button>
-          <p id="bMsg" class="small" style="text-align:center;margin-top:.5rem;min-height:1em;"></p>
-        </div>
+
+        <div class="center" id="feed" style="gap:1.1rem"></div>
       </div>
 
-      <div class="bfeed" id="feed"></div>
+      <!-- right rail -->
+      <div class="rail r-rail" id="rrail"></div>
     </div>
   </div>
 
   <script src="/static/app.js"></script>
   <script>
-    let ME=null;
+    let ME=null, MEUSER=null, POSTS=[];
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const enc=encodeURIComponent;
     const OPEN=(new URLSearchParams(location.search).get("b")||"");
 
-    function toggleWriter(){
-      const b=document.getElementById("writerBody");
-      const open=b.style.display!=="none";
-      b.style.display=open?"none":"block";
-      document.getElementById("writerLabel").textContent=open?"Write a blog…":"New blog";
-      if(!open) document.getElementById("bTitle").focus();
+    function ago(d){ const s=(Date.now()-new Date(d).getTime())/1000;
+      if(s<60) return "just now";
+      const u=[["yr",31536000],["mo",2592000],["w",604800],["d",86400],["h",3600],["m",60]];
+      for(const [l,n] of u){ const k=Math.floor(s/n); if(k>=1) return k+l; }
+      return "now"; }
+
+    /* ---- composer ---- */
+    function openWriter(){ document.getElementById("writer").classList.add("on"); document.getElementById("bTitle").focus(); }
+    function closeWriter(){ document.getElementById("writer").classList.remove("on"); document.getElementById("bMsg").textContent=""; }
+
+    /* ---- rails ---- */
+    function renderRails(){
+      const u=MEUSER||{};
+      const n=esc(u.username||"?");
+      const myPosts=POSTS.filter(p=>p.username===u.username).length;
+      document.getElementById("lrail").innerHTML=`
+        <div class="card me-card">
+          <div class="cover"></div>
+          <div class="inner">
+            <div class="av" ${avatarStyle(u.avatar)}>${u.avatar?'':n[0].toUpperCase()}</div>
+            <div class="nm"><a href="/profile">${n}</a></div>
+            <div class="role">${esc(u.designation||"Citizen")} · Cyvathon</div>
+            <div class="stat"><span>Your posts</span><b>${myPosts}</b></div>
+            <a class="idbtn" href="/profile"><i class="fas fa-id-card"></i> View ID Card</a>
+          </div>
+        </div>`;
+
+      const tally={};
+      POSTS.forEach(p=>{ const k=p.username; if(!k) return;
+        (tally[k]=tally[k]||{username:k,avatar:p.avatar,designation:p.designation,n:0}).n++; });
+      const voices=Object.values(tally).sort((a,b)=>b.n-a.n).slice(0,5);
+      document.getElementById("rrail").innerHTML=`
+        <div class="card rc">
+          <h4>🏛️ Top voices</h4>
+          ${voices.length?voices.map(v=>{ const vn=esc(v.username);
+            return `<a class="voice" href="/profile?user=${enc(v.username)}">
+              <div class="av" ${avatarStyle(v.avatar)}>${v.avatar?'':vn[0].toUpperCase()}</div>
+              <div><div class="vn">${vn}</div><div class="vs">${esc(v.designation||"Citizen")} · ${v.n} post${v.n>1?'s':''}</div></div>
+            </a>`; }).join(""):`<div class="vs" style="color:var(--muted)">No writers yet.</div>`}
+        </div>
+        <div class="card rc">
+          <h4>✍️ Not sure what to write?</h4>
+          <ul class="prompt" style="margin:0;padding-left:1.1rem;">
+            <li>How you made your first 1,000 CB</li>
+            <li>A company you're building</li>
+            <li>What the Republic should do next</li>
+            <li>A lesson from the markets</li>
+          </ul>
+        </div>`;
     }
 
-    function post(p){
+    /* ---- posts ---- */
+    function postCard(p){
       const n=esc(p.username||"?");
       const liked=p.liked?"liked":"";
       const heart=p.liked?"fas":"far";
-      return `<div class="bpost" id="bp${p.id}">
-        <div class="bhead">
-          <div class="av" ${avatarStyle(p.avatar)}>${p.avatar?'':n[0].toUpperCase()}</div>
-          <div><div class="nm"><a href="/profile?user=${enc(p.username)}">${n}</a></div>
-          <div class="dt">${new Date(p.created_at).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})}</div></div>
+      const social=[];
+      if(p.likes) social.push(`<span class="hearts">❤</span> ${p.likes}`);
+      if(p.comments) social.push(`${p.comments} comment${p.comments>1?'s':''}`);
+      return `<div class="card post" id="bp${p.id}">
+        <div class="phead">
+          <a class="av" href="/profile?user=${enc(p.username)}" ${avatarStyle(p.avatar)}>${p.avatar?'':n[0].toUpperCase()}</a>
+          <div class="pwho">
+            <div class="nm"><a href="/profile?user=${enc(p.username)}">${n}</a></div>
+            <div class="role">${esc(p.designation||"Citizen")}</div>
+            <div class="dt">${ago(p.created_at)} · ${new Date(p.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</div>
+          </div>
         </div>
-        <div class="btitle">${esc(p.title)}</div>
-        <div class="bexcerpt" id="ex${p.id}">${esc(p.excerpt||"")}</div>
-        <div class="bfull" id="fl${p.id}"></div>
-        ${(p.excerpt||"").endsWith("…")?`<span class="readmore" id="rm${p.id}" onclick="expand(${p.id})">Read more →</span>`:''}
-        <div class="brow">
-          <button class="bbtn ${liked}" id="lk${p.id}" onclick="like(${p.id})"><i class="${heart} fa-heart"></i> <span id="lc${p.id}">${p.likes||0}</span></button>
-          <button class="bbtn" onclick="toggleC(${p.id})"><i class="far fa-comment"></i> <span id="cc${p.id}">${p.comments||0}</span></button>
+        <div class="ptitle">${esc(p.title)}</div>
+        <div class="pbody" id="ex${p.id}">${esc(p.excerpt||"")}</div>
+        <div class="pfull" id="fl${p.id}"></div>
+        ${(p.excerpt||"").endsWith("…")?`<span class="seemore" id="rm${p.id}" onclick="expand(${p.id})">…see more</span>`:''}
+        <div class="pcounts" id="pc${p.id}">${social.join(" · ")}</div>
+        <div class="pbar">
+          <button class="pbtn ${liked}" id="lk${p.id}" onclick="like(${p.id})"><i class="${heart} fa-heart"></i> Like</button>
+          <button class="pbtn" onclick="toggleC(${p.id})"><i class="far fa-comment"></i> Comment</button>
+          <button class="pbtn" id="sh${p.id}" onclick="share(${p.id})"><i class="fas fa-share"></i> Share</button>
         </div>
         <div class="comments" id="cm${p.id}"></div>
       </div>`;
     }
 
     async function load(){
-      document.getElementById("feed").innerHTML=spinner("Fetching the latest posts…");
+      document.getElementById("feed").innerHTML=`<p class="empty">Fetching the latest posts…</p>`;
       try{
-        const d=await api("/blogs_list"); ME=d.me;
-        const list=d.posts||[];
-        document.getElementById("feed").innerHTML = list.length
-          ? list.map(post).join("")
-          : `<p class="empty">No blogs yet — write the Republic's first! ✍️</p>`;
-        if(OPEN){ const el=document.getElementById("bp"+OPEN); if(el){ el.scrollIntoView({behavior:"smooth"}); expand(+OPEN); toggleC(+OPEN); } }
+        const d=await api("/blogs_list"); ME=d.me; POSTS=d.posts||[];
+        renderRails();
+        document.getElementById("feed").innerHTML = POSTS.length
+          ? POSTS.map(postCard).join("")
+          : `<p class="empty">No posts yet — share the Republic's first! ✍️</p>`;
+        if(OPEN){ const el=document.getElementById("bp"+OPEN); if(el){ el.scrollIntoView({behavior:"smooth",block:"center"}); expand(+OPEN); toggleC(+OPEN); } }
       }catch(e){ document.getElementById("feed").innerHTML=`<p class="empty">${esc(e.message)}</p>`; }
     }
 
@@ -127,13 +248,12 @@
       const title=document.getElementById("bTitle").value.trim();
       const body=document.getElementById("bBody").value.trim();
       const msg=document.getElementById("bMsg");
-      if(!title||!body){ msg.style.color="var(--red)"; msg.textContent="Add a title and some text."; return; }
+      if(!title||!body){ msg.style.color="var(--red)"; msg.textContent="Add a headline and some text."; return; }
       document.getElementById("bPub").disabled=true;
       try{
         await api("/blogs",{method:"POST",body:JSON.stringify({title,body})});
         document.getElementById("bTitle").value=""; document.getElementById("bBody").value="";
-        msg.style.color="var(--green)"; msg.textContent="Published!";
-        toggleWriter(); load();
+        closeWriter(); load();
       }catch(e){ msg.style.color="var(--red)"; msg.textContent=e.message; }
       finally{ document.getElementById("bPub").disabled=false; }
     }
@@ -144,40 +264,64 @@
         const btn=document.getElementById("lk"+id);
         btn.classList.toggle("liked", d.liked);
         btn.querySelector("i").className=(d.liked?"fas":"far")+" fa-heart";
-        document.getElementById("lc"+id).textContent=d.likes;
+        const p=POSTS.find(x=>x.id===id); if(p){ p.likes=d.likes; p.liked=d.liked; }
+        refreshCounts(id);
       }catch(e){ alert(e.message); }
+    }
+    function refreshCounts(id){
+      const p=POSTS.find(x=>x.id===id); if(!p) return;
+      const social=[];
+      if(p.likes) social.push(`<span class="hearts">❤</span> ${p.likes}`);
+      if(p.comments) social.push(`${p.comments} comment${p.comments>1?'s':''}`);
+      const el=document.getElementById("pc"+id); if(el) el.innerHTML=social.join(" · ");
+    }
+
+    async function share(id){
+      const url=location.origin+"/blogs?b="+id;
+      const btn=document.getElementById("sh"+id);
+      try{
+        if(navigator.share){ await navigator.share({title:"A Cyvathon blog", url}); }
+        else { await navigator.clipboard.writeText(url); if(btn){ const o=btn.innerHTML; btn.innerHTML='<i class="fas fa-check"></i> Copied!'; setTimeout(()=>btn.innerHTML=o,1500); } }
+      }catch{}
     }
 
     async function toggleC(id){
       const box=document.getElementById("cm"+id);
-      if(box.style.display==="flex"){ box.style.display="none"; return; }
-      box.style.display="flex"; box.innerHTML=spinner("Loading comments…","sm");
+      if(box.classList.contains("on")){ box.classList.remove("on"); return; }
+      box.classList.add("on"); box.innerHTML=`<p class="small muted">Loading comments…</p>`;
       try{ const d=await api("/blog/"+id); renderComments(id, d.comments||[]); }
       catch(e){ box.innerHTML=`<p class="small muted">${esc(e.message)}</p>`; }
     }
     function renderComments(id, list){
       const box=document.getElementById("cm"+id);
+      const u=MEUSER||{}; const mn=esc(u.username||"?");
       const items=list.map(c=>{
         const n=esc(c.username||"?");
         return `<div class="cmt"><div class="av" ${avatarStyle(c.avatar)}>${c.avatar?'':n[0].toUpperCase()}</div>
-          <div class="cb"><div class="cn"><a href="/profile?user=${enc(c.username)}">${n}</a></div>
+          <div class="cb"><div class="cn"><a href="/profile?user=${enc(c.username)}">${n}</a><span class="cd">${ago(c.created_at)}</span></div>
           <div class="ct">${esc(c.body)}</div></div></div>`;
-      }).join("") || `<p class="small muted">No comments yet.</p>`;
-      box.innerHTML = items + `<div class="cbox"><input id="ci${id}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')sendC(${id})">
-        <button onclick="sendC(${id})">Send</button></div>`;
-      document.getElementById("cc"+id).textContent=list.length;
+      }).join("") || `<p class="small muted" style="margin:0">No comments yet — start the conversation.</p>`;
+      box.innerHTML = `<div class="cbox"><div class="av" ${avatarStyle(u.avatar)}>${u.avatar?'':mn[0].toUpperCase()}</div>
+        <input id="ci${id}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')sendC(${id})">
+        <button onclick="sendC(${id})">Comment</button></div>` + items;
+      const p=POSTS.find(x=>x.id===id); if(p){ p.comments=list.length; refreshCounts(id); }
     }
     async function sendC(id){
       const inp=document.getElementById("ci"+id); const body=inp.value.trim(); if(!body) return;
       inp.disabled=true;
       try{ await api("/blog/"+id+"/comment",{method:"POST",body:JSON.stringify({body})});
-        const d=await api("/blog/"+id); renderComments(id, d.comments||[]);
-      }catch(e){ alert(e.message); } finally{ inp.disabled=false; }
+        const d=await api("/blog/"+id); renderComments(id, d.comments||[]); inp.value="";
+      }catch(e){ alert(e.message); } finally{ inp.disabled=false; inp.focus(); }
     }
+
+    document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeWriter(); });
 
     (async function(){
       const user=await requireAuth(); if(!user) return;
-      ME=user.username; renderNav("/blogs", user);
+      ME=user.username; MEUSER=user; renderNav("/blogs", user);
+      const av=document.getElementById("cAv");
+      if(user.avatar){ av.setAttribute("style", avatarStyle(user.avatar).replace(/^style="|"$/g,"")); av.textContent=""; }
+      else av.textContent=(user.username[0]||"?").toUpperCase();
       load();
     })();
   </script>
