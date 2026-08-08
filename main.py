@@ -5824,20 +5824,32 @@ def videos_list():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     try:
-        vids = supabase.table("videos").select("*").order("id", desc=True).limit(60).execute().data or []
+        vids = supabase.table("videos").select("*").order("id", desc=True).limit(120).execute().data or []
     except Exception:
-        return jsonify(success=True, videos=[], me=user["username"])
-    av = _avatars_for([v.get("username") for v in vids])
+        return jsonify(success=True, videos=[], top=[], me=user["username"])
+    # most-viewed (global) — fail-open if the 'views' column isn't migrated yet
+    try:
+        top = supabase.table("videos").select("*").order("views", desc=True).limit(3).execute().data or []
+        top = [t for t in top if (t.get("views") or 0) > 0]
+    except Exception:
+        top = []
+    everyone = [v.get("username") for v in vids] + [t.get("username") for t in top]
+    av = _avatars_for(everyone)
     counts = {}
     try:
         for c in (supabase.table("video_comments").select("video_id").execute().data or []):
             counts[c["video_id"]] = counts.get(c["video_id"], 0) + 1
     except Exception:
         pass
-    for v in vids:
+    def _decorate(v):
         v["avatar"] = av.get(v.get("username"))
         v["comments"] = counts.get(v.get("id"), 0)
-    return jsonify(success=True, videos=vids, me=user["username"])
+        v["views"] = v.get("views") or 0
+    for v in vids:
+        _decorate(v)
+    for t in top:
+        _decorate(t)
+    return jsonify(success=True, videos=vids, top=top, me=user["username"])
 
 
 @limiter.limit("20/min")
@@ -5953,9 +5965,27 @@ def video_get(vid):
         .order("id").limit(300).execute().data or []
     av = _avatars_for([v.get("username")] + [c.get("username") for c in cmts])
     v["avatar"] = av.get(v.get("username"))
+    v["views"] = v.get("views") or 0
     for c in cmts:
         c["avatar"] = av.get(c.get("username"))
     return jsonify(success=True, video=v, comments=cmts, me=user["username"])
+
+
+@limiter.limit("60/min")
+@app.route("/video/<int:vid>/view", methods=["POST"])
+def video_view(vid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        cur = supabase.table("videos").select("views").eq("id", vid).execute().data
+        if not cur:
+            return jsonify(success=False, error="Video not found"), 404
+        n = (cur[0].get("views") or 0) + 1
+        supabase.table("videos").update({"views": n}).eq("id", vid).execute()
+        return jsonify(success=True, views=n)
+    except Exception:
+        return jsonify(success=True, views=None)     # views column not migrated — degrade quietly
 
 
 @limiter.limit("40/min")
