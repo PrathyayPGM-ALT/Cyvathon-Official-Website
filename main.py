@@ -347,17 +347,28 @@ def is_court_judge(user):
     return bool(g and g[0].get("holder") == user["username"])
 
 
+# Short-TTL caches for rarely-changing per-request flags, so /me and every
+# access-gated endpoint don't re-query Supabase on every page load.
+FLAG_TTL = 30            # seconds
+_cia_cache = {}          # username -> (rank, ts)
+_war_cache = {"row": None, "at": 0.0}
+
+
 def cia_rank(user):
-    """Return the user's Athena rank, or None if not an agent."""
+    """Return the user's Athena rank, or None if not an agent (cached briefly)."""
     if not user:
         return None
+    u = user["username"]
+    hit = _cia_cache.get(u)
+    if hit and time() - hit[1] < FLAG_TTL:
+        return hit[0]
     try:
-        r = supabase.table("cia_agents").select("rank").eq("username", user["username"]).execute().data
-        if r:
-            return r[0]["rank"]
+        r = supabase.table("cia_agents").select("rank").eq("username", u).execute().data
+        rank = r[0]["rank"] if r else ("Director" if is_treasury_admin(user) else None)
     except Exception:
-        return "Director" if is_treasury_admin(user) else None
-    return "Director" if is_treasury_admin(user) else None
+        rank = "Director" if is_treasury_admin(user) else None
+    _cia_cache[u] = (rank, time())
+    return rank
 
 
 def is_cia(user):
@@ -4383,6 +4394,7 @@ def athena_recruit():
             "username": username, "rank": rank, "added_by": user["username"]
         }).execute()
         notify(username, "🦉 You have been recruited into Athena, the Cyvathon Intelligence Agency.", "/athena")
+    _cia_cache.pop(username, None)      # reflect the change immediately
     return jsonify(success=True)
 
 
@@ -4396,6 +4408,7 @@ def athena_dismiss():
     if username in TREASURY_ADMINS:
         return jsonify(success=False, error="The Director cannot be removed"), 400
     supabase.table("cia_agents").delete().eq("username", username).execute()
+    _cia_cache.pop(username, None)
     return jsonify(success=True)
 
 
@@ -4713,16 +4726,22 @@ def athena_surveil():
 #  WAR ROOM  (President-controlled, restricted access)
 # ============================================================
 def _war_room():
-    """The single war-room state row (id=1). Creates it on demand. Fail-open."""
+    """The single war-room state row (id=1). Creates it on demand. Fail-open.
+    Cached briefly so gating checks don't re-query on every page load."""
+    now = time()
+    if _war_cache["row"] is not None and now - _war_cache["at"] < FLAG_TTL:
+        return _war_cache["row"]
     try:
         r = supabase.table("war_room").select("*").eq("id", 1).execute().data
         if r:
+            _war_cache["row"] = r[0]; _war_cache["at"] = now
             return r[0]
         row = {"id": 1, "alert_level": "peace", "message": "", "members": []}
         try:
             supabase.table("war_room").insert(row).execute()
         except Exception:
             pass
+        _war_cache["row"] = row; _war_cache["at"] = now
         return row
     except Exception:
         return None      # table not migrated yet
@@ -4776,6 +4795,7 @@ def warroom_set():
     try:
         _war_room()
         supabase.table("war_room").update(upd).eq("id", 1).execute()
+        _war_cache["at"] = 0.0
     except Exception:
         return jsonify(success=False, error="War Room isn't enabled yet — the database needs a quick update."), 503
     return jsonify(success=True)
@@ -4794,6 +4814,7 @@ def warroom_grant():
     members = sorted(set(_war_members(wr)) | {target})
     try:
         supabase.table("war_room").update({"members": members}).eq("id", 1).execute()
+        _war_cache["at"] = 0.0
     except Exception:
         return jsonify(success=False, error="War Room isn't enabled yet."), 503
     notify(target, "⚔️ You have been granted access to the Cyvathon War Room.", "/warroom")
@@ -4810,6 +4831,7 @@ def warroom_revoke():
     wr = _war_room() or {}
     members = [m for m in _war_members(wr) if m != target]
     supabase.table("war_room").update({"members": members}).eq("id", 1).execute()
+    _war_cache["at"] = 0.0
     return jsonify(success=True)
 
 
