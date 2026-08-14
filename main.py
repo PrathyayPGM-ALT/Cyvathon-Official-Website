@@ -5870,6 +5870,7 @@ def videos_list():
         v["avatar"] = av.get(v.get("username"))
         v["comments"] = counts.get(v.get("id"), 0)
         v["views"] = v.get("views") or 0
+        v["shares"] = v.get("shares") or 0
     for v in vids:
         _decorate(v)
     for t in top:
@@ -5991,9 +5992,27 @@ def video_get(vid):
     av = _avatars_for([v.get("username")] + [c.get("username") for c in cmts])
     v["avatar"] = av.get(v.get("username"))
     v["views"] = v.get("views") or 0
+    v["shares"] = v.get("shares") or 0
     for c in cmts:
         c["avatar"] = av.get(c.get("username"))
     return jsonify(success=True, video=v, comments=cmts, me=user["username"])
+
+
+@limiter.limit("30/min")
+@app.route("/video/<int:vid>/share", methods=["POST"])
+def video_share(vid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        cur = supabase.table("videos").select("shares").eq("id", vid).execute().data
+        if not cur:
+            return jsonify(success=False, error="Video not found"), 404
+        n = (cur[0].get("shares") or 0) + 1
+        supabase.table("videos").update({"shares": n}).eq("id", vid).execute()
+        return jsonify(success=True, shares=n)
+    except Exception:
+        return jsonify(success=True, shares=None)     # shares column not migrated — degrade quietly
 
 
 @limiter.limit("60/min")
@@ -6073,6 +6092,7 @@ def blogs_list():
         p["likes"] = likes.get(p["id"], 0)
         p["liked"] = p["id"] in mine
         p["comments"] = comments.get(p["id"], 0)
+        p["shares"] = p.get("shares") or 0
         body = p.get("body") or ""
         p["excerpt"] = body[:280] + ("…" if len(body) > 280 else "")
     return jsonify(success=True, posts=posts, me=user["username"])
@@ -6112,10 +6132,33 @@ def blog_get(bid):
     likes = supabase.table("blog_likes").select("username").eq("blog_id", bid).execute().data or []
     av = _avatars_for([p.get("username")] + [c.get("username") for c in cmts])
     p["avatar"] = av.get(p.get("username"))
+    p["shares"] = p.get("shares") or 0
+    try:
+        d = supabase.table("cybucks").select("designation").eq("username", p.get("username")).execute().data
+        p["designation"] = (d[0].get("designation") if d else None) or "Citizen"
+    except Exception:
+        p["designation"] = "Citizen"
     for c in cmts:
         c["avatar"] = av.get(c.get("username"))
     return jsonify(success=True, post=p, comments=cmts, me=user["username"],
                    likes=len(likes), liked=any(l["username"] == user["username"] for l in likes))
+
+
+@limiter.limit("30/min")
+@app.route("/blog/<int:bid>/share", methods=["POST"])
+def blog_share(bid):
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        cur = supabase.table("blogs").select("shares").eq("id", bid).execute().data
+        if not cur:
+            return jsonify(success=False, error="Post not found"), 404
+        n = (cur[0].get("shares") or 0) + 1
+        supabase.table("blogs").update({"shares": n}).eq("id", bid).execute()
+        return jsonify(success=True, shares=n)
+    except Exception:
+        return jsonify(success=True, shares=None)     # shares column not migrated — degrade quietly
 
 
 @limiter.limit("60/min")

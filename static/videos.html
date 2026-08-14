@@ -52,6 +52,9 @@
     .wtitle{ font-size:1.4rem; font-weight:800; margin:1rem 0 .5rem; line-height:1.3; }
     .wsubrow{ display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
     .wviews{ color:var(--muted); font-size:.9rem; }
+    .vshare{ width:auto; margin:0; padding:.5rem 1rem; border-radius:999px; font-size:.86rem; font-weight:600;
+      background:var(--panel-2); color:var(--text); border:1px solid var(--panel-border); box-shadow:none; display:inline-flex; align-items:center; gap:.5rem; }
+    .vshare:hover{ border-color:var(--accent); color:var(--accent); transform:none; }
     .wchannel{ display:flex; align-items:center; gap:.7rem; margin:1rem 0; padding:.85rem 0; border-top:1px solid var(--panel-border); border-bottom:1px solid var(--panel-border); }
     .wchannel .av{ width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
     .wchannel a{ color:var(--text); text-decoration:none; font-weight:700; } .wchannel a:hover{ color:var(--accent); }
@@ -230,7 +233,8 @@
           <div class="main">
             <div class="player">${playerEmbed(v)}</div>
             <h1 class="wtitle">${esc(v.title)}</h1>
-            <div class="wsubrow"><div class="wviews">${fmtViews(v.views)} · ${ago(v.created_at)}</div></div>
+            <div class="wsubrow"><div class="wviews">${fmtViews(v.views)} · ${ago(v.created_at)}</div>
+              <button class="vshare" id="vShare" onclick="shareVideo(${v.id})"><i class="fas fa-share"></i> Share${v.shares?` · ${v.shares}`:''}</button></div>
             <div class="wchannel">
               <div class="av" ${avatarStyle(v.avatar)}>${v.avatar?'':name[0].toUpperCase()}</div>
               <div><a href="/profile?user=${enc(v.username)}">${name}</a></div>
@@ -273,6 +277,14 @@
       finally{ inp.disabled=false; inp.focus(); }
     }
 
+    async function shareVideo(id){
+      const url=location.origin+"/videos?v="+id;
+      const btn=$("vShare");
+      try{ if(navigator.share){ await navigator.share({title:"A Cyvathon video", url}); }
+        else { await navigator.clipboard.writeText(url); if(btn){ const o=btn.innerHTML; btn.innerHTML='<i class="fas fa-check"></i> Copied!'; setTimeout(()=>btn.innerHTML=o,1500); } } }catch{}
+      try{ const d=await api("/video/"+id+"/share",{method:"POST",body:"{}"});
+        if(d.shares!=null){ const v=(DATA.videos||[]).find(x=>x.id===id); if(v) v.shares=d.shares; } }catch{}
+    }
     async function countView(id){
       try{
         const k="vw_"+id;
