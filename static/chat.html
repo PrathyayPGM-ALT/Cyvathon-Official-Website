@@ -21,7 +21,11 @@
     .shell{ flex:1; display:grid; grid-template-columns:290px 1fr; min-height:0; }
 
     /* sidebar */
-    .side{ border-right:1px solid var(--panel-border); display:flex; flex-direction:column; min-height:0; background:var(--bg-soft); }
+    .side{ border-right:1px solid var(--panel-border); display:flex; flex-direction:column; min-height:0; background:var(--bg-soft); position:relative; z-index:250; }
+    /* on desktop the sidebar lays up over the top nav bar (its exact height is measured into --navh) */
+    @media(min-width:761px){
+      .side{ margin-top:calc(-1 * var(--navh, 64px)); height:calc(100% + var(--navh, 64px)); }
+    }
     .side .top{ padding:.9rem .9rem .5rem; }
     .side .srch{ margin:0; padding:.6rem .9rem; border-radius:22px; }
     .side .scroll{ overflow-y:auto; flex:1; padding:.3rem .5rem 1rem; }
@@ -719,6 +723,9 @@
     (async function(){
       const user=await requireAuth(); if(!user) return;
       ME=user.username; renderNav("/chat", user);
+      // measure the top nav's height so the sidebar can lay exactly over it
+      const _setNavH=()=>{ const h=document.querySelector("header"); if(h) document.documentElement.style.setProperty("--navh", h.offsetHeight+"px"); };
+      _setNavH(); window.addEventListener("resize", _setNavH);
       try{ const me=await api("/me"); ADMIN=!!me.admin; if(me.user&&me.user.avatar) AVATARS[ME]=me.user.avatar; }catch{}
       try{ const d=await api("/citizens/list"); citizens=d.citizens||[]; citizens.forEach(c=>{ if(c.avatar) AVATARS[c.username]=c.avatar; }); }catch{}
       await loadGroups();
