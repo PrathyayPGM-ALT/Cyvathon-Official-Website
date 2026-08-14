@@ -52,7 +52,7 @@ nav{ max-width:1250px; margin:auto; display:flex; justify-content:space-between;
 .logo h1{ font-size:1.45rem; font-weight:800; letter-spacing:.5px;
   background:linear-gradient(90deg,var(--accent),var(--accent2));
   -webkit-background-clip:text; background-clip:text; color:transparent; }
-.nav-links{ display:flex; gap:1.3rem; flex-wrap:wrap; align-items:center; }
+.nav-links{ display:flex; gap:1.55rem; flex-wrap:wrap; align-items:center; }
 .nav-links a{ text-decoration:none; color:#c4cfdd; font-weight:500; font-size:.95rem; transition:.2s; }
 .nav-links a:hover{ color:var(--accent); }
 #navUser{ color:var(--accent); font-weight:600; }
@@ -86,22 +86,22 @@ nav{ max-width:1250px; margin:auto; display:flex; justify-content:space-between;
 }
 
 /* ---- LAYOUT ---- */
-.wrap{ max-width:1100px; margin:auto; padding:3rem 1.5rem; animation:fadeUp .5s ease both; }
+.wrap{ max-width:1120px; margin:auto; padding:3.6rem 1.7rem; animation:fadeUp .5s ease both; }
 .section-title{ text-align:center; font-size:2.15rem; font-weight:700; letter-spacing:-.6px;
-  margin-bottom:.55rem; color:#eef4fb; }
-.section-title::after{ content:""; display:block; width:54px; height:3px; margin:.8rem auto 0;
+  margin-bottom:.7rem; color:#eef4fb; }
+.section-title::after{ content:""; display:block; width:54px; height:3px; margin:.9rem auto 0;
   border-radius:3px; background:linear-gradient(90deg,var(--accent),var(--accent2)); opacity:.9; }
-.section-sub{ text-align:center; color:var(--muted); margin:0 auto 2.4rem; max-width:640px; font-size:.98rem; line-height:1.6; }
+.section-sub{ text-align:center; color:var(--muted); margin:0 auto 3rem; max-width:640px; font-size:.98rem; line-height:1.65; }
 
 /* ---- PANELS / CARDS ---- */
 .panel{ background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
-  border:1px solid var(--panel-border); border-radius:var(--radius); padding:1.8rem;
+  border:1px solid var(--panel-border); border-radius:var(--radius); padding:2.2rem;
   box-shadow:0 1px 0 rgba(255,255,255,.05) inset, var(--shadow-card); }
-.grid{ display:grid; gap:1.3rem; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); }
+.grid{ display:grid; gap:1.7rem; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); }
 .card{ background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
   border:1px solid var(--panel-border); border-radius:var(--radius-lg);
   box-shadow:0 1px 0 rgba(255,255,255,.04) inset;
-  padding:1.7rem; transition:transform .22s ease, border-color .22s, box-shadow .22s; }
+  padding:2.05rem; transition:transform .22s ease, border-color .22s, box-shadow .22s; }
 .card:hover{ transform:translateY(-6px); border-color:rgba(88,196,255,.45);
   box-shadow:0 18px 42px rgba(0,0,0,.45), 0 0 0 1px rgba(88,196,255,.18); }
 .card .icon{ font-size:2.1rem; color:var(--accent); margin-bottom:.85rem;
@@ -110,7 +110,7 @@ nav{ max-width:1250px; margin:auto; display:flex; justify-content:space-between;
 .card p{ color:var(--muted); font-size:.92rem; }
 
 /* ---- FORM ---- */
-input,select,textarea,button{ width:100%; padding:12px 15px; margin-top:12px;
+input,select,textarea,button{ width:100%; padding:12.5px 16px; margin-top:14px;
   border-radius:var(--radius-sm); font-size:14.5px; transition:.18s; font-family:inherit; }
 input,select,textarea{ background:#0b1019; color:var(--text); border:1px solid #232e3d; }
 input::placeholder,textarea::placeholder{ color:#5d6b7d; }
@@ -135,7 +135,7 @@ button.ghost:hover{ background:rgba(88,196,255,.1); }
   background:rgba(88,196,255,.12); color:var(--accent); }
 
 /* ---- CURRENCY STRIP ---- */
-.balances{ display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin:1.2rem 0; }
+.balances{ display:flex; gap:1.3rem; flex-wrap:wrap; justify-content:center; margin:1.7rem 0; }
 .bal{ flex:1; min-width:130px; text-align:center; padding:1.15rem 1rem; border-radius:14px;
   background:linear-gradient(180deg,rgba(88,196,255,.09),rgba(255,255,255,.015));
   border:1px solid var(--panel-border); transition:transform .2s, border-color .2s; }
@@ -200,9 +200,6 @@ html[data-theme="light"] input::placeholder,
 html[data-theme="light"] textarea::placeholder{ color:#9aa7b8; }
 html[data-theme="light"] *::-webkit-scrollbar-thumb{ background:rgba(15,40,80,.20); background-clip:content-box; }
 html[data-theme="light"] ::selection{ background:rgba(23,105,201,.22); color:#0a1626; }
-
-
-}
 
 /* ---- NOTIFICATION TOASTS ---- */
 .toast-wrap{ position:fixed; bottom:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:.6rem; max-width:340px; }
