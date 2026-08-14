@@ -263,7 +263,7 @@
 
   <script src="/static/app.js"></script>
   <script>
-    let ME=null, ADMIN=false, channel={type:"public"}, groups=[], citizens=[];
+    let ME=null, ADMIN=false, curMod=false, channel={type:"public"}, groups=[], citizens=[];
     let lastId=0, poll=null, _lastSender=null, _lastBody=null, pending=[], tmpc=0;
     let mention={open:false,start:0,items:[],idx:0};
     let replyTo=null, onlineSet=new Set(), lastTyping=0, AVATARS={};
@@ -327,17 +327,20 @@
     function showList(){ document.getElementById("shell").classList.remove("showmain"); }
 
     function openPublic(){
+      curMod = ADMIN;   // only the President moderates the Public Square
       const act = ADMIN ? `<button class="danger act" onclick="purge()"><i class="fas fa-trash"></i> Clear all</button>` : "";
       setHeader('<i class="fa-solid fa-landmark"></i>', true, "Public Square", "Everyone in Cyvathon", act);
       switchTo({type:"public"});
     }
     function openGroup(id){
       const g=groups.find(x=>x.id===id); if(!g) return;
+      curMod = ADMIN || g.owner===ME;   // the creator or the President moderates a group
       setHeader(esc(g.name[0].toUpperCase()), true, g.name, `${g.members.length} member${g.members.length===1?"":"s"}`,
         `<button class="ghost act" onclick="openAddModal(${id})"><i class="fas fa-user-plus"></i> Add</button>`);
       switchTo({type:"group",id});
     }
     function openDM(enc){
+      curMod = false;
       const name=decodeURIComponent(enc); if(name===ME){ location.href="/profile"; return; }
       setHeader(esc(name[0].toUpperCase()), false, name, "Direct message",
         `<a class="link act" href="/profile?user=${encodeURIComponent(name)}"><i class="fas fa-id-card"></i> View profile</a>`);
@@ -539,14 +542,18 @@
       const q=m[1].toLowerCase();
       mention.start=caret-m[1].length-1;
       const items=citizens.filter(c=>c.username!==ME && c.username.toLowerCase().includes(q)).slice(0,6);
+      // moderators (chat creator / President) can ping the whole chat with @everyone
+      if(curMod && channel.type!=="dm" && "everyone".includes(q)){
+        items.unshift({username:"everyone", designation:"Notify the whole chat", _all:true});
+      }
       if(!items.length){ closeMention(); return; }
       mention.items=items; mention.idx=0; mention.open=true; renderMention();
     }
     function renderMention(){
       const p=document.getElementById("mentionPop");
       p.innerHTML=mention.items.map((c,i)=>`<div class="mrow ${i===mention.idx?'sel':''}" onmousedown="event.preventDefault()" onclick="pickMention(${i})">
-        <div class="mav">${esc(c.username[0].toUpperCase())}</div>
-        <div><div class="mn">${esc(c.username)}</div><div class="mr">${esc(c.company||c.designation||'Citizen')}</div></div></div>`).join("");
+        <div class="mav"${c._all?' style="background:linear-gradient(135deg,#ffce56,#f0a92c);color:#3a2a00"':''}>${c._all?'📢':esc(c.username[0].toUpperCase())}</div>
+        <div><div class="mn">${c._all?'@everyone':esc(c.username)}</div><div class="mr">${esc(c.company||c.designation||'Citizen')}</div></div></div>`).join("");
       p.classList.add("open");
     }
     function pickMention(i){

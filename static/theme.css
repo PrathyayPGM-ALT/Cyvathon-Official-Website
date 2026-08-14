@@ -86,7 +86,7 @@ nav{ max-width:1250px; margin:auto; display:flex; justify-content:space-between;
 }
 
 /* ---- LAYOUT ---- */
-.wrap{ max-width:1120px; margin:auto; padding:3.6rem 1.7rem; animation:fadeUp .5s ease both; }
+.wrap{ max-width:1240px; margin:auto; padding:3.6rem 1.7rem; animation:fadeUp .5s ease both; }
 .section-title{ text-align:center; font-size:2.15rem; font-weight:700; letter-spacing:-.6px;
   margin-bottom:.7rem; color:#eef4fb; }
 .section-title::after{ content:""; display:block; width:54px; height:3px; margin:.9rem auto 0;

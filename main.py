@@ -5428,10 +5428,35 @@ def send_message():
     row = _insert_message({"sender": user["username"], "recipient": None, "content": content},
                           request.get_json())
     _notify_mentions(user["username"], content, "/chat")
+    # @everyone in the Public Square pings all citizens — President only
+    if _EVERYONE_RE.search(content) and is_treasury_admin(user):
+        try:
+            allc = {r["username"] for r in (supabase.table("cybucks")
+                    .select("username").execute().data or [])}
+            _notify_everyone(user["username"], "/chat", allc)
+        except Exception:
+            pass
     return jsonify(success=True, message=row)
 
 
 _MENTION_RE = re.compile(r"@([A-Za-z0-9_.\-]{2,32})")
+_EVERYONE_RE = re.compile(r"(?<![\w@])@everyone\b", re.I)
+
+
+def _is_group_mod(user, group):
+    """A chat moderator: the group's creator/owner, or the President."""
+    if not user:
+        return False
+    if is_treasury_admin(user):
+        return True
+    return bool(group) and group.get("owner") == user["username"]
+
+
+def _notify_everyone(sender, link, recipients):
+    """Fan out an @everyone ping to a set of usernames (moderators only)."""
+    for n in list(recipients)[:800]:
+        if n and n != sender:
+            notify(n, f"\U0001F4E2 {sender} tagged @everyone", link)
 
 
 def _notify_mentions(sender, content, link, exclude=None, only=None):
@@ -6312,6 +6337,11 @@ def group_send(gid):
     members = {m["username"] for m in (supabase.table("chat_group_members")
                .select("username").eq("group_id", gid).execute().data or [])}
     _notify_mentions(user["username"], content, f"/chat?group={gid}", only=members)
+    # @everyone pings the whole group — moderators only (creator or President)
+    if _EVERYONE_RE.search(content):
+        grp = supabase.table("chat_groups").select("*").eq("id", gid).execute().data
+        if _is_group_mod(user, grp[0] if grp else None):
+            _notify_everyone(user["username"], f"/chat?group={gid}", members)
     return jsonify(success=True, message=row)
 
 
