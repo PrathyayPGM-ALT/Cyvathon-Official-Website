@@ -5862,7 +5862,9 @@ def videos_list():
     av = _avatars_for(everyone)
     counts = {}
     try:
-        for c in (supabase.table("video_comments").select("video_id").execute().data or []):
+        vids_ids = [v.get("id") for v in vids]
+        for c in (supabase.table("video_comments").select("video_id")
+                  .in_("video_id", vids_ids).execute().data or []):
             counts[c["video_id"]] = counts.get(c["video_id"], 0) + 1
     except Exception:
         pass
@@ -6066,14 +6068,16 @@ def blogs_list():
     ids = [p["id"] for p in posts]
     likes, mine, comments = {}, set(), {}
     try:
-        for l in (supabase.table("blog_likes").select("blog_id,username").execute().data or []):
+        for l in (supabase.table("blog_likes").select("blog_id,username")
+                  .in_("blog_id", ids).execute().data or []):
             likes[l["blog_id"]] = likes.get(l["blog_id"], 0) + 1
             if l["username"] == user["username"]:
                 mine.add(l["blog_id"])
     except Exception:
         pass
     try:
-        for c in (supabase.table("blog_comments").select("blog_id").execute().data or []):
+        for c in (supabase.table("blog_comments").select("blog_id")
+                  .in_("blog_id", ids).execute().data or []):
             comments[c["blog_id"]] = comments.get(c["blog_id"], 0) + 1
     except Exception:
         pass

@@ -45,8 +45,21 @@ async function api(path, options = {}) {
 let _mePromise = null, _meAt = 0;
 function fetchMe() {
   if (_mePromise && (Date.now() - _meAt) < 5000) return _mePromise;
+  // Reuse a very recent /me cached in this tab so navigating between pages
+  // doesn't re-hit the server every time (big in-app speed win).
+  try {
+    const raw = sessionStorage.getItem("cy_me");
+    if (raw) {
+      const c = JSON.parse(raw);
+      if (c && c.d && (Date.now() - c.t) < 15000) {
+        _meAt = Date.now(); _mePromise = Promise.resolve(c.d); return _mePromise;
+      }
+    }
+  } catch (e) {}
   _meAt = Date.now();
-  _mePromise = api("/me").catch(() => null);
+  _mePromise = api("/me")
+    .then(d => { try { sessionStorage.setItem("cy_me", JSON.stringify({ t: Date.now(), d })); } catch (e) {} return d; })
+    .catch(() => null);
   return _mePromise;
 }
 
@@ -169,6 +182,7 @@ async function refreshNotifBadge() {
 }
 
 async function doLogout() {
+  try { sessionStorage.removeItem("cy_me"); } catch {}
   try { await api("/logout", { method: "POST", body: "{}" }); } catch {}
   window.location.href = "/";
 }
