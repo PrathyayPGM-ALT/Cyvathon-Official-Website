@@ -309,9 +309,11 @@
     }
 
     /* ---------------- CHANNEL SWITCHING ---------------- */
-    function setHeader(iconHtml,iconGray,title,sub,actHtml){
+    function setHeader(iconHtml,iconGray,title,sub,actHtml,avatarUrl){
       const ic=document.getElementById("cIcon");
-      ic.className="av"+(iconGray?" g":""); ic.innerHTML=iconHtml;
+      ic.className="av"+(iconGray?" g":"");
+      if(avatarUrl){ ic.innerHTML=""; ic.setAttribute("style", avatarStyle(avatarUrl).replace(/^style="|"$/g,"")); }
+      else { ic.removeAttribute("style"); ic.innerHTML=iconHtml; }
       document.getElementById("cTitle").textContent=title;
       document.getElementById("cSub").textContent=sub;
       document.getElementById("cAct").innerHTML=actHtml||"";
@@ -343,7 +345,8 @@
       curMod = false;
       const name=decodeURIComponent(enc); if(name===ME){ location.href="/profile"; return; }
       setHeader(esc(name[0].toUpperCase()), false, name, "Direct message",
-        `<a class="link act" href="/profile?user=${encodeURIComponent(name)}"><i class="fas fa-id-card"></i> View profile</a>`);
+        `<a class="link act" href="/profile?user=${encodeURIComponent(name)}"><i class="fas fa-id-card"></i> View profile</a>`,
+        AVATARS[name]);
       switchTo({type:"dm",name});
       updateHeaderPresence();
     }
