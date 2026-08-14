@@ -93,6 +93,15 @@
         <div class="betrow"><input id="slotBet" type="number" min="1" step="1" placeholder="Bet (CB)"><button onclick="playSlots()">Spin</button></div>
         <div class="res" id="slotRes"></div>
       </div>
+
+      <!-- BLUFF (multiplayer) -->
+      <div class="game" style="border-color:rgba(255,206,86,.35)">
+        <h3><i class="fas fa-user-group"></i> Bluff <span style="font-size:.7rem;color:var(--gold);border:1px solid var(--gold);border-radius:20px;padding:.1rem .5rem;margin-left:.3rem;">MULTIPLAYER</span></h3>
+        <div class="edge">Play live vs other citizens · bet up to 1000 CB · winner takes the pot</div>
+        <div class="stage"><div style="font-size:2.6rem;letter-spacing:-.4rem">🃏🂡🂮</div></div>
+        <p class="small muted" style="text-align:center;margin:.2rem 0 .6rem">Claim a rank, or bluff. Get caught and you eat the pile — empty your hand first to win.</p>
+        <div class="betrow"><button onclick="location.href='/casino/bluff'" style="width:100%"><i class="fas fa-play"></i> Play Bluff</button></div>
+      </div>
     </div>
 
     <div class="panel log" id="logBox" style="display:none;">

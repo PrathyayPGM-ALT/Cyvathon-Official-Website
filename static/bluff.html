@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bluff · Cyvathon Casino</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .btop{ max-width:960px; margin:0 auto 1.4rem; text-align:center; }
+    .btop h2{ font-size:1.9rem; margin:0; }
+    .btop p{ color:var(--muted); margin:.35rem 0 0; }
+    .stage{ max-width:960px; margin:0 auto; }
+
+    /* lobby */
+    .lobby{ display:grid; grid-template-columns:1fr 1fr; gap:1.3rem; }
+    @media(max-width:720px){ .lobby{ grid-template-columns:1fr; } }
+    .gcard{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; padding:1.4rem 1.5rem; }
+    .gcard h3{ margin:0 0 1rem; font-size:1.1rem; }
+    .glist{ display:flex; flex-direction:column; gap:.7rem; max-height:340px; overflow-y:auto; }
+    .grow{ display:flex; align-items:center; gap:.8rem; background:var(--panel-2); border:1px solid var(--panel-border);
+      border-radius:12px; padding:.7rem .9rem; }
+    .grow .gi{ flex:1; min-width:0; } .grow .gh{ font-weight:700; } .grow .gs{ font-size:.8rem; color:var(--muted); }
+    .grow button{ width:auto; margin:0; padding:.5rem 1.1rem; }
+    .mut{ color:var(--muted); text-align:center; padding:1.5rem 0; }
+
+    /* table */
+    .felt{ background:radial-gradient(120% 120% at 50% 0%, #123b2f, #0c241d); border:1px solid #1c4a3b;
+      border-radius:20px; padding:1.6rem 1.5rem; box-shadow:inset 0 2px 30px rgba(0,0,0,.4); }
+    .seats{ display:flex; flex-wrap:wrap; gap:.7rem; justify-content:center; margin-bottom:1.3rem; }
+    .seat{ background:rgba(0,0,0,.28); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:.7rem 1rem;
+      min-width:120px; text-align:center; transition:.15s; }
+    .seat.turn{ border-color:var(--gold); box-shadow:0 0 0 2px rgba(255,206,86,.35); }
+    .seat .sn{ font-weight:700; font-size:.95rem; } .seat.you .sn{ color:var(--accent); }
+    .seat .sc{ font-size:.78rem; color:#b9c6bf; margin-top:.15rem; }
+    .seat .mini{ display:flex; gap:2px; justify-content:center; margin-top:.4rem; }
+    .seat .mini i{ width:10px; height:14px; border-radius:2px; background:linear-gradient(135deg,#2a6cf0,#1b3f8f); box-shadow:0 1px 2px rgba(0,0,0,.4); }
+
+    .center-tbl{ text-align:center; margin:.5rem 0 1.2rem; }
+    .pile{ display:inline-flex; flex-direction:column; align-items:center; gap:.5rem; }
+    .pile-cards{ position:relative; height:96px; width:120px; margin:0 auto; }
+    .pile-cards .cb{ position:absolute; width:64px; height:90px; border-radius:8px; left:50%; top:0;
+      background:linear-gradient(135deg,#2a6cf0,#16357c); border:2px solid #fff2; box-shadow:0 4px 10px rgba(0,0,0,.4); }
+    .claim-chip{ font-weight:800; font-size:1.05rem; color:var(--gold); }
+    .pile-sub{ font-size:.82rem; color:#b9c6bf; }
+    .turnline{ text-align:center; font-weight:700; margin:.4rem 0 1rem; min-height:1.3em; }
+    .turnline .hl{ color:var(--gold); }
+
+    /* your hand */
+    .hand-wrap{ margin-top:.4rem; }
+    .hand-label{ font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:.5rem; text-align:center; }
+    .hand{ display:flex; flex-wrap:wrap; gap:.4rem; justify-content:center; }
+    .pcard{ width:56px; height:78px; border-radius:9px; background:#fff; color:#111; border:1px solid #d7d7d7;
+      display:flex; flex-direction:column; justify-content:space-between; padding:.3rem .35rem; cursor:pointer; font-weight:800;
+      position:relative; transition:transform .12s, box-shadow .12s; user-select:none; }
+    .pcard:hover{ transform:translateY(-4px); }
+    .pcard.sel{ transform:translateY(-10px); box-shadow:0 0 0 3px var(--accent); }
+    .pcard.red{ color:#d61f3a; }
+    .pcard .tr{ font-size:.92rem; line-height:1; } .pcard .br{ font-size:.92rem; line-height:1; align-self:flex-end; transform:rotate(180deg); }
+    .pcard .mid{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:1.5rem; }
+
+    /* controls */
+    .ctrls{ margin-top:1.3rem; background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; padding:1rem 1.1rem; }
+    .ctrls .rankrow{ display:flex; align-items:center; gap:.55rem; flex-wrap:wrap; margin-bottom:.8rem; }
+    .ctrls .rankrow b{ font-size:.86rem; color:var(--muted); }
+    .rankpick{ display:flex; gap:.3rem; flex-wrap:wrap; }
+    .rankpick button{ width:auto; margin:0; padding:.35rem .6rem; font-size:.8rem; background:var(--panel-2); color:var(--text);
+      border:1px solid var(--panel-border); box-shadow:none; border-radius:8px; min-width:34px; }
+    .rankpick button.on{ background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#06223a; border-color:transparent; }
+    .actrow{ display:flex; gap:.6rem; flex-wrap:wrap; }
+    .actrow button{ width:auto; margin:0; padding:.7rem 1.4rem; }
+    .btn-call{ background:linear-gradient(135deg,#ff9a3c,#ff5d6c); color:#2a0410; }
+    .hint{ color:var(--muted); font-size:.85rem; margin-top:.5rem; }
+    .log{ margin-top:1.2rem; background:var(--panel); border:1px solid var(--panel-border); border-radius:12px; padding:.8rem 1rem;
+      max-height:150px; overflow-y:auto; font-size:.85rem; color:#cdd6e0; }
+    .log div{ padding:.15rem 0; border-bottom:1px solid var(--panel-border); } .log div:last-child{ border-bottom:none; }
+    .won{ text-align:center; padding:2rem 1rem; }
+    .won .trophy{ font-size:3rem; } .won h3{ font-size:1.6rem; margin:.5rem 0; }
+    .backlink{ display:inline-block; margin-top:1rem; color:var(--muted); text-decoration:none; }
+    .backlink:hover{ color:var(--accent); }
+    .msg{ text-align:center; min-height:1.2em; margin-top:.6rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <div class="btop">
+      <h2>🃏 Bluff</h2>
+      <p>Play your cards, claim a rank — or lie through your teeth. Get caught and you eat the pile.</p>
+    </div>
+    <div class="stage" id="stage"><p class="mut">Loading the table…</p></div>
+    <p style="text-align:center;margin-top:1.4rem;"><a class="backlink" href="/casino"><i class="fas fa-arrow-left"></i> Back to the Casino</a></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, GID=null, V=null, sel=new Set(), pickRank=null, poll=null, busy=false;
+    const $=(id)=>document.getElementById(id);
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const RANKS=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+    const SUIT={S:"♠",H:"♥",D:"♦",C:"♣"};
+    const isRed=(s)=>s==="H"||s==="D";
+
+    /* ---------- lobby ---------- */
+    async function showLobby(){
+      stopPoll();
+      let d; try{ d=await api("/casino/bluff/list"); }catch(e){ $("stage").innerHTML=`<p class="mut">${esc(e.message)}</p>`; return; }
+      ME=d.me;
+      if(d.mine){ GID=d.mine; return renderGame(); }   // already seated somewhere — rejoin
+      const list=(d.games||[]);
+      $("stage").innerHTML=`
+        <div class="lobby">
+          <div class="gcard"><h3>🎴 Open tables</h3>
+            <div class="glist" id="glist">${list.length?list.map(g=>`
+              <div class="grow"><div class="gi"><div class="gh">${esc(g.host)}'s table</div>
+                <div class="gs">${g.players}/4 players · ${g.ante} CB ante</div></div>
+                <button onclick="join(${g.gid})">Join</button></div>`).join("")
+              :`<p class="mut">No open tables. Start one! →</p>`}</div>
+          </div>
+          <div class="gcard"><h3>➕ New table</h3>
+            <p class="gs" style="color:var(--muted)">Everyone antes the same. Winner takes the whole pot.</p>
+            <label class="hint">Ante per player (max 1000 CB)</label>
+            <input id="ante" type="number" min="1" max="1000" value="100" placeholder="Ante in CB">
+            <button onclick="create()" id="createBtn"><i class="fas fa-plus"></i> Create table</button>
+            <p class="msg" id="lmsg"></p>
+          </div>
+        </div>`;
+    }
+    async function create(){
+      const ante=parseInt($("ante").value||"0",10); const m=$("lmsg");
+      if(!(ante>=1&&ante<=1000)){ m.style.color="var(--red)"; m.textContent="Ante must be 1–1000 CB."; return; }
+      $("createBtn").disabled=true;
+      try{ const d=await api("/casino/bluff/create",{method:"POST",body:JSON.stringify({ante})}); GID=d.gid; renderGame(); }
+      catch(e){ m.style.color="var(--red)"; m.textContent=e.message; $("createBtn").disabled=false; }
+    }
+    async function join(gid){
+      try{ await api("/casino/bluff/join",{method:"POST",body:JSON.stringify({gid})}); GID=gid; renderGame(); }
+      catch(e){ alert(e.message); showLobby(); }
+    }
+
+    /* ---------- game ---------- */
+    async function renderGame(){
+      startPoll();
+      await refresh();
+    }
+    async function refresh(){
+      if(!GID) return;
+      try{ const d=await api("/casino/bluff/state?gid="+GID); V=d.view; draw(); }
+      catch(e){ /* game vanished */ GID=null; showLobby(); }
+    }
+    function startPoll(){ if(poll) return; poll=setInterval(refresh, 1600); }
+    function stopPoll(){ if(poll){ clearInterval(poll); poll=null; } }
+
+    function card(c, i){
+      const r=c.slice(0,-1), s=c.slice(-1);
+      return `<div class="pcard ${isRed(s)?'red':''} ${sel.has(i)?'sel':''}" onclick="toggle(${i})">
+        <div class="tr">${r}${SUIT[s]}</div><div class="mid">${SUIT[s]}</div><div class="br">${r}${SUIT[s]}</div></div>`;
+    }
+    function draw(){
+      if(!V) return;
+      if(V.status==="waiting") return drawWaiting();
+      if(V.status==="done") return drawDone();
+      drawPlaying();
+    }
+    function drawWaiting(){
+      stopPollUnlessNeeded();
+      const seats=V.players.map(p=>`<div class="seat ${p.you?'you':''}"><div class="sn">${esc(p.username)}${p.username===V.host?' 👑':''}</div><div class="sc">seated</div></div>`).join("");
+      $("stage").innerHTML=`
+        <div class="felt">
+          <div class="turnline">Waiting for players… <span class="hl">${V.players.length}/4</span> · ante <span class="hl">${V.ante} CB</span> · pot <span class="hl">${V.pot} CB</span></div>
+          <div class="seats">${seats}</div>
+          <div class="actrow" style="justify-content:center">
+            ${V.can_start?`<button onclick="startGame()"><i class="fas fa-play"></i> Start game</button>`:''}
+            <button class="ghost" onclick="leave()">Leave table</button>
+          </div>
+          ${!V.can_start&&V.host===ME?'<p class="hint" style="text-align:center">Need at least 2 players to start.</p>':''}
+          ${V.host!==ME?'<p class="hint" style="text-align:center">Waiting for the host to start…</p>':''}
+        </div>
+        ${logHtml()}`;
+      startPoll();
+    }
+    function stopPollUnlessNeeded(){ /* keep polling in waiting/playing */ }
+
+    function drawPlaying(){
+      startPoll();
+      const yourTurn = V.turn===ME;
+      const seats=V.players.map(p=>{
+        const mini=Array.from({length:Math.min(p.count,13)},()=>'<i></i>').join("");
+        return `<div class="seat ${p.is_turn?'turn':''} ${p.you?'you':''}">
+          <div class="sn">${esc(p.username)}</div><div class="sc">${p.count} card${p.count===1?'':'s'}${p.username===V.pending?' · 🏁':''}</div>
+          <div class="mini">${mini}</div></div>`;
+      }).join("");
+      const pileStack=Array.from({length:Math.min(V.pile_count,6)},(_,k)=>`<div class="cb" style="transform:translateX(-50%) rotate(${(k-3)*4}deg)"></div>`).join("");
+      $("stage").innerHTML=`
+        <div class="felt">
+          <div class="seats">${seats}</div>
+          <div class="center-tbl"><div class="pile">
+            <div class="pile-cards">${pileStack||'<div class="pile-sub" style="padding-top:2.2rem">empty pile</div>'}</div>
+            ${V.claim?`<div class="claim-chip">Claim: ${V.claim}</div>`:'<div class="pile-sub">new round — the current player names the rank</div>'}
+            <div class="pile-sub">${V.pile_count} card${V.pile_count===1?'':'s'} in the pile · pot ${V.pot} CB</div>
+          </div></div>
+          <div class="turnline">${yourTurn?'<span class="hl">Your turn</span> — play cards or call the last bluff':'Waiting on <span class="hl">'+esc(V.turn||'')+'</span>…'}</div>
+
+          <div class="hand-wrap">
+            <div class="hand-label">Your hand (${V.hand.length})</div>
+            <div class="hand">${V.hand.map((c,i)=>card(c,i)).join("")||'<span class="pile-sub">no cards</span>'}</div>
+          </div>
+          ${yourTurn?controls():'<p class="hint" style="text-align:center;margin-top:1rem">Sit tight — your move is coming up.</p>'}
+          <p class="msg" id="gmsg"></p>
+          <div class="actrow" style="justify-content:center;margin-top:1rem"><button class="ghost" onclick="leave()">Forfeit &amp; leave</button></div>
+        </div>
+        ${logHtml()}`;
+    }
+    function controls(){
+      const needRank = !V.claim;
+      const canCall = !!V.last;
+      return `<div class="ctrls">
+        ${needRank?`<div class="rankrow"><b>Claim rank:</b><div class="rankpick" id="rankpick">${RANKS.map(r=>`<button class="${pickRank===r?'on':''}" onclick="setRank('${r}')">${r}</button>`).join("")}</div></div>`
+          :`<div class="rankrow"><b>You must claim:</b> <span class="claim-chip">${V.claim}</span> <span class="hint">(play those cards — or bluff)</span></div>`}
+        <div class="actrow">
+          <button onclick="doPlay()"><i class="fas fa-hand"></i> Play ${sel.size||''} card${sel.size===1?'':'s'} as ${needRank?(pickRank||'?'):V.claim}</button>
+          ${canCall?`<button class="btn-call" onclick="doCall()"><i class="fas fa-gavel"></i> Call bluff on ${esc(V.last.player)}</button>`:''}
+        </div>
+        <p class="hint">Select 1–7 cards from your hand${needRank?', pick the rank to claim':''}. Nobody sees the cards you play — only your claim.</p>
+      </div>`;
+    }
+    function drawDone(){
+      stopPoll();
+      const won=V.winner===ME;
+      $("stage").innerHTML=`
+        <div class="felt"><div class="won">
+          <div class="trophy">${won?'🏆':'🃏'}</div>
+          <h3>${won?'You win!':esc(V.winner||'Someone')+' wins'}</h3>
+          <p class="pile-sub">${won?`The pot of ${V.pot} CB is yours.`:`${esc(V.winner||'The winner')} takes the ${V.pot} CB pot.`}</p>
+          <button onclick="backToLobby()" style="width:auto;margin-top:1.2rem;padding:.7rem 1.6rem"><i class="fas fa-rotate-right"></i> New game</button>
+        </div></div>
+        ${logHtml()}`;
+    }
+    function logHtml(){ return `<div class="log">${(V.log||[]).slice().reverse().map(l=>`<div>${esc(l)}</div>`).join("")||'<div class="pile-sub">—</div>'}</div>`; }
+
+    /* ---------- actions ---------- */
+    function toggle(i){ if(V.turn!==ME) return; if(sel.has(i)) sel.delete(i); else { if(sel.size>=7) return; sel.add(i); } draw(); }
+    function setRank(r){ pickRank=r; draw(); }
+    async function doPlay(){
+      if(busy) return; const m=()=>$("gmsg");
+      if(!sel.size){ if(m()){m().style.color="var(--red)";m().textContent="Select 1–7 cards first.";} return; }
+      if(!V.claim && !pickRank){ if(m()){m().style.color="var(--red)";m().textContent="Pick a rank to claim.";} return; }
+      busy=true;
+      try{ const d=await api("/casino/bluff/play",{method:"POST",body:JSON.stringify({gid:GID,cards:[...sel],rank:V.claim||pickRank})});
+        sel.clear(); pickRank=null; V=d.view; draw(); }
+      catch(e){ if(m()){m().style.color="var(--red)";m().textContent=e.message;} }
+      finally{ busy=false; }
+    }
+    async function doCall(){
+      if(busy) return; busy=true;
+      try{ const d=await api("/casino/bluff/call",{method:"POST",body:JSON.stringify({gid:GID})}); sel.clear(); V=d.view; draw(); }
+      catch(e){ const m=$("gmsg"); if(m){m.style.color="var(--red)";m.textContent=e.message;} }
+      finally{ busy=false; }
+    }
+    async function startGame(){ try{ await api("/casino/bluff/start",{method:"POST",body:JSON.stringify({gid:GID})}); refresh(); }catch(e){ alert(e.message); } }
+    async function leave(){
+      if(V && V.status==="playing" && !confirm("Forfeit the game? The pot goes to the player closest to winning.")) return;
+      try{ await api("/casino/bluff/leave",{method:"POST",body:JSON.stringify({gid:GID})}); }catch{}
+      GID=null; sel.clear(); pickRank=null; showLobby();
+    }
+    function backToLobby(){ GID=null; sel.clear(); pickRank=null; showLobby(); }
+
+    window.addEventListener("beforeunload",()=>{ /* leave in-flight games alone; state persists server-side */ });
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      ME=user.username; renderNav("/casino", user);
+      showLobby();
+    })();
+  </script>
+</body>
+</html>

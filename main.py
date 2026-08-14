@@ -5133,6 +5133,328 @@ def casino_play():
 
 
 # ============================================================
+#  BLUFF  — multiplayer card game (a.k.a. Cheat / BS), bet in Cybucks
+# ============================================================
+BLUFF_RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+BLUFF_SUITS = ["S", "H", "D", "C"]
+BLUFF_MAX_ANTE = 1000
+BLUFF_MAX_PLAYERS = 4
+
+
+def _bluff_rank_of(card):
+    return card[:-1]
+
+
+def _bluff_deal(players):
+    deck = [r + s for r in BLUFF_RANKS for s in BLUFF_SUITS]
+    random.shuffle(deck)
+    hands = {p: [] for p in players}
+    for i, c in enumerate(deck):
+        hands[players[i % len(players)]].append(c)
+    return hands
+
+
+def _bluff_play(s, me, idxs, rank=None):
+    if s.get("winner"):
+        return "The game is over"
+    players = s["players"]
+    if s.get("pending"):                       # declining to challenge => the pending player wins
+        s["winner"] = s["pending"]; s["pending"] = None
+        s["log"] = (s.get("log", []) + [f"{s['winner']} wins — nobody challenged the last play!"])[-10:]
+        return None
+    if players[s["turn"]] != me:
+        return "It's not your turn"
+    hand = s["hands"][me]
+    try:
+        idxs = sorted(set(int(i) for i in idxs))
+    except (TypeError, ValueError):
+        return "Bad card selection"
+    if not (1 <= len(idxs) <= 7):
+        return "Play between 1 and 7 cards"
+    if any(i < 0 or i >= len(hand) for i in idxs):
+        return "Bad card selection"
+    if s["claim"] is None:
+        if rank not in BLUFF_RANKS:
+            return "Choose a rank to claim"
+        s["claim"] = rank
+    claim = s["claim"]
+    cards = [hand[i] for i in idxs]
+    sel = set(idxs)
+    s["hands"][me] = [c for j, c in enumerate(hand) if j not in sel]
+    s["pile"].extend(cards)
+    s["last"] = {"player": me, "count": len(cards), "claim": claim}
+    s["log"] = (s.get("log", []) + [f"{me} played {len(cards)} × {claim}"])[-10:]
+    if not s["hands"][me]:
+        s["pending"] = me
+    s["turn"] = (s["turn"] + 1) % len(players)
+    return None
+
+
+def _bluff_call(s, me):
+    if s.get("winner"):
+        return "The game is over"
+    players = s["players"]
+    if players[s["turn"]] != me:
+        return "It's not your turn"
+    last = s.get("last")
+    if not last or s["claim"] is None:
+        return "There's nothing to call yet"
+    reveal = s["pile"][-last["count"]:]
+    bluffing = any(_bluff_rank_of(c) != last["claim"] for c in reveal)
+    if bluffing:
+        taker = last["player"]; s["pending"] = None
+        s["log"] = (s.get("log", []) + [f"{me} called bluff on {last['player']} — CAUGHT! {last['player']} takes the pile"])[-10:]
+    else:
+        if s.get("pending") == last["player"]:
+            s["winner"] = last["player"]
+            s["log"] = (s.get("log", []) + [f"{me} called bluff on {last['player']} — but it was true. {last['player']} wins!"])[-10:]
+            return None
+        taker = me
+        s["log"] = (s.get("log", []) + [f"{me} called bluff on {last['player']} — wrong! {me} takes the pile"])[-10:]
+    s["hands"][taker].extend(s["pile"])
+    s["pile"] = []; s["claim"] = None; s["last"] = None; s["pending"] = None
+    ti = players.index(taker)
+    s["turn"] = (ti + 1) % len(players)
+    return None
+
+
+def _bluff_view(g, me):
+    s = g.get("state") or {}
+    players = s.get("players", [])
+    turn_user = players[s["turn"]] if (g["status"] == "playing" and players) else None
+    hands = s.get("hands", {})
+    pcount = len(players) if players else 1
+    return {
+        "gid": g["id"], "status": g["status"], "host": g["host"],
+        "ante": g["ante"], "pot": g["ante"] * pcount, "me": me,
+        "players": [{"username": p, "count": len(hands.get(p, [])),
+                     "is_turn": p == turn_user, "you": p == me} for p in players],
+        "turn": turn_user, "claim": s.get("claim"), "pile_count": len(s.get("pile", [])),
+        "last": s.get("last"), "pending": s.get("pending"), "winner": g.get("winner"),
+        "log": s.get("log", []), "hand": hands.get(me, []),
+        "you_in": me in players,
+        "can_start": g["status"] == "waiting" and g["host"] == me and len(players) >= 2,
+    }
+
+
+@app.route("/casino/bluff")
+def bluff_page():
+    return app.send_static_file("bluff.html")
+
+
+@app.route("/casino/bluff/list")
+def bluff_list():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        rows = supabase.table("bluff_games").select("*").eq("status", "waiting") \
+            .order("id", desc=True).limit(30).execute().data or []
+    except Exception:
+        return jsonify(success=True, games=[], me=user["username"])
+    games = [{"gid": g["id"], "host": g["host"], "ante": g["ante"],
+              "players": len((g.get("state") or {}).get("players", []))} for g in rows]
+    # if you're already seated in a game, tell the client so it can jump back in
+    mine = None
+    try:
+        act = supabase.table("bluff_games").select("id,state,status") \
+            .in_("status", ["waiting", "playing"]).order("id", desc=True).limit(60).execute().data or []
+        for g in act:
+            if user["username"] in ((g.get("state") or {}).get("players", [])):
+                mine = g["id"]; break
+    except Exception:
+        pass
+    return jsonify(success=True, games=games, me=user["username"], mine=mine)
+
+
+@limiter.limit("20/min")
+@app.route("/casino/bluff/create", methods=["POST"])
+def bluff_create():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        ante = int(float((request.get_json() or {}).get("ante") or 0))
+    except (TypeError, ValueError):
+        ante = 0
+    if not (1 <= ante <= BLUFF_MAX_ANTE):
+        return jsonify(success=False, error=f"Ante must be 1–{BLUFF_MAX_ANTE} CB"), 400
+    fresh = supabase.table("cybucks").select("balance").eq("username", me).execute().data
+    if not fresh or ante > _available_cb(me, fresh[0].get("balance")):
+        return jsonify(success=False, error="Not enough spendable Cybucks for that ante"), 400
+    if not cas_adjust(me, "balance", -ante):
+        return jsonify(success=False, error="Couldn't place your ante — try again"), 400
+    state = {"players": [me], "hands": {}, "turn": 0, "claim": None,
+             "pile": [], "last": None, "pending": None, "winner": None,
+             "log": [f"{me} opened a table (ante {ante} CB)"]}
+    try:
+        g = supabase.table("bluff_games").insert(
+            {"status": "waiting", "host": me, "ante": ante, "state": state}).execute().data[0]
+    except Exception:
+        cas_adjust(me, "balance", ante, allow_negative=True)      # refund on failure
+        return jsonify(success=False, error="Bluff isn't set up yet — run the migration."), 500
+    return jsonify(success=True, gid=g["id"])
+
+
+def _bluff_get(gid):
+    r = supabase.table("bluff_games").select("*").eq("id", gid).execute().data
+    return r[0] if r else None
+
+
+@limiter.limit("30/min")
+@app.route("/casino/bluff/join", methods=["POST"])
+def bluff_join():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    gid = (request.get_json() or {}).get("gid")
+    g = _bluff_get(gid)
+    if not g:
+        return jsonify(success=False, error="Table not found"), 404
+    if g["status"] != "waiting":
+        return jsonify(success=False, error="That game has already started"), 400
+    state = g["state"]; players = state["players"]
+    if me in players:
+        return jsonify(success=True, gid=gid)
+    if len(players) >= BLUFF_MAX_PLAYERS:
+        return jsonify(success=False, error="That table is full (4 players max)"), 400
+    ante = g["ante"]
+    fresh = supabase.table("cybucks").select("balance").eq("username", me).execute().data
+    if not fresh or ante > _available_cb(me, fresh[0].get("balance")):
+        return jsonify(success=False, error="Not enough spendable Cybucks for that ante"), 400
+    if not cas_adjust(me, "balance", -ante):
+        return jsonify(success=False, error="Couldn't place your ante — try again"), 400
+    players.append(me)
+    state["log"] = (state.get("log", []) + [f"{me} joined the table"])[-10:]
+    supabase.table("bluff_games").update({"state": state}).eq("id", gid).execute()
+    return jsonify(success=True, gid=gid)
+
+
+@limiter.limit("30/min")
+@app.route("/casino/bluff/leave", methods=["POST"])
+def bluff_leave():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    gid = (request.get_json() or {}).get("gid")
+    g = _bluff_get(gid)
+    if not g or me not in (g["state"].get("players") or []):
+        return jsonify(success=True)
+    state = g["state"]; players = state["players"]; ante = g["ante"]
+    if g["status"] == "waiting":
+        players.remove(me)
+        cas_adjust(me, "balance", ante, allow_negative=True)      # refund the ante
+        if not players:
+            supabase.table("bluff_games").delete().eq("id", gid).execute()
+            return jsonify(success=True)
+        host = me == g["host"] and players[0] or g["host"]
+        state["log"] = (state.get("log", []) + [f"{me} left the table"])[-10:]
+        supabase.table("bluff_games").update({"state": state, "host": host}).eq("id", gid).execute()
+        return jsonify(success=True)
+    if g["status"] == "playing":
+        # forfeit: game ends, the pot goes to the remaining player closest to winning
+        others = [p for p in players if p != me]
+        if not others:
+            supabase.table("bluff_games").update({"status": "done"}).eq("id", gid).execute()
+            return jsonify(success=True)
+        hands = state.get("hands", {})
+        winner = min(others, key=lambda p: (len(hands.get(p, [])), players.index(p)))
+        pot = ante * len(players)
+        cas_adjust(winner, "balance", pot, allow_negative=True)
+        state["winner"] = winner
+        state["log"] = (state.get("log", []) + [f"{me} forfeited — {winner} wins the pot ({pot} CB)"])[-10:]
+        supabase.table("bluff_games").update({"status": "done", "winner": winner, "state": state}).eq("id", gid).execute()
+        log_txn("bluff", "Bluff table", winner, pot, "cybucks", "won the pot (forfeit)")
+        return jsonify(success=True)
+    return jsonify(success=True)
+
+
+@limiter.limit("30/min")
+@app.route("/casino/bluff/start", methods=["POST"])
+def bluff_start():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    gid = (request.get_json() or {}).get("gid")
+    g = _bluff_get(gid)
+    if not g:
+        return jsonify(success=False, error="Table not found"), 404
+    if g["host"] != user["username"]:
+        return jsonify(success=False, error="Only the host can start"), 403
+    if g["status"] != "waiting":
+        return jsonify(success=False, error="Already started"), 400
+    state = g["state"]; players = state["players"]
+    if len(players) < 2:
+        return jsonify(success=False, error="Need at least 2 players"), 400
+    state["hands"] = _bluff_deal(players)
+    state["turn"] = 0; state["claim"] = None; state["pile"] = []
+    state["last"] = None; state["pending"] = None; state["winner"] = None
+    state["log"] = (state.get("log", []) + ["The game begins — cards dealt."])[-10:]
+    supabase.table("bluff_games").update({"status": "playing", "state": state}).eq("id", gid).execute()
+    return jsonify(success=True)
+
+
+@app.route("/casino/bluff/state")
+def bluff_state():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    g = _bluff_get(request.args.get("gid", type=int))
+    if not g:
+        return jsonify(success=False, error="Table not found"), 404
+    return jsonify(success=True, view=_bluff_view(g, user["username"]))
+
+
+def _bluff_finish_if_won(g, gid):
+    """If the state has a winner, mark the game done and pay the pot."""
+    state = g["state"]
+    if not state.get("winner"):
+        supabase.table("bluff_games").update({"state": state}).eq("id", gid).execute()
+        return
+    winner = state["winner"]
+    pot = g["ante"] * len(state["players"])
+    cas_adjust(winner, "balance", pot, allow_negative=True)
+    supabase.table("bluff_games").update({"status": "done", "winner": winner, "state": state}).eq("id", gid).execute()
+    log_txn("bluff", "Bluff table", winner, pot, "cybucks", "won the pot")
+
+
+@limiter.limit("120/min")
+@app.route("/casino/bluff/play", methods=["POST"])
+def bluff_play_route():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json() or {}
+    g = _bluff_get(d.get("gid"))
+    if not g or g["status"] != "playing":
+        return jsonify(success=False, error="Game isn't running"), 400
+    err = _bluff_play(g["state"], user["username"], d.get("cards") or [], d.get("rank"))
+    if err:
+        return jsonify(success=False, error=err), 400
+    _bluff_finish_if_won(g, g["id"])
+    return jsonify(success=True, view=_bluff_view(_bluff_get(g["id"]), user["username"]))
+
+
+@limiter.limit("120/min")
+@app.route("/casino/bluff/call", methods=["POST"])
+def bluff_call_route():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    g = _bluff_get((request.get_json() or {}).get("gid"))
+    if not g or g["status"] != "playing":
+        return jsonify(success=False, error="Game isn't running"), 400
+    err = _bluff_call(g["state"], user["username"])
+    if err:
+        return jsonify(success=False, error=err), 400
+    _bluff_finish_if_won(g, g["id"])
+    return jsonify(success=True, view=_bluff_view(_bluff_get(g["id"]), user["username"]))
+
+
+# ============================================================
 #  CHAT  (now gated behind the single national account)
 # ============================================================
 #  MAIL  — Gmail-style inbox (subject + body, multiple recipients)
