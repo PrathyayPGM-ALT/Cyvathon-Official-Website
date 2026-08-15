@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search · Cyvathon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    .sbox{ max-width:680px; margin:0 auto 1.8rem; position:relative; }
+    .sbox i.mag{ position:absolute; left:1.1rem; top:50%; transform:translateY(-50%); color:var(--muted); }
+    .sbox input{ margin:0; padding:1rem 1.1rem 1rem 2.8rem; font-size:1.05rem; border-radius:999px; }
+    .results{ max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:1.6rem; }
+    .grp h3{ font-size:1rem; margin:0 0 .8rem; display:flex; align-items:center; gap:.5rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+    .grp h3 .n{ background:var(--panel-2); border:1px solid var(--panel-border); border-radius:999px; padding:.05rem .55rem; font-size:.75rem; color:var(--muted); }
+    .rlist{ display:flex; flex-direction:column; gap:.6rem; }
+    .ritem{ display:flex; align-items:center; gap:.85rem; background:var(--panel); border:1px solid var(--panel-border);
+      border-radius:14px; padding:.85rem 1.05rem; text-decoration:none; transition:.14s; }
+    .ritem:hover{ border-color:rgba(88,196,255,.4); transform:translateX(3px); }
+    .ritem .av{ width:44px; height:44px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    .ritem .av.sq{ border-radius:12px; font-size:1.1rem; }
+    .ritem .ti{ min-width:0; flex:1; }
+    .ritem .tt{ font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ritem .ts{ font-size:.82rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ritem .chev{ color:var(--muted); flex-shrink:0; }
+    .hint,.empty{ text-align:center; color:var(--muted); padding:2rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+  <div class="wrap">
+    <h2 class="section-title"><i class="fas fa-magnifying-glass"></i> Search Cyvathon</h2>
+    <p class="section-sub">Find citizens, blogs, videos and companies — all in one place.</p>
+    <div class="sbox">
+      <i class="fas fa-magnifying-glass mag"></i>
+      <input id="q" placeholder="Search the Republic…" autocomplete="off" autofocus>
+    </div>
+    <div class="results" id="results"><p class="hint">Start typing to search across the whole Republic.</p></div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const esc=(s)=>(s||"").replace(/</g,"&lt;");
+    const enc=encodeURIComponent;
+    let timer=null, lastQ="";
+
+    function group(title, icon, items){
+      if(!items.length) return "";
+      return `<div class="grp"><h3>${icon} ${title} <span class="n">${items.length}</span></h3><div class="rlist">${items.join("")}</div></div>`;
+    }
+    function citizenRow(c){
+      const n=esc(c.username);
+      return `<a class="ritem" href="/profile?user=${enc(c.username)}">
+        <div class="av" ${avatarStyle(c.avatar)}>${c.avatar?'':n[0].toUpperCase()}</div>
+        <div class="ti"><div class="tt">${n}</div><div class="ts">${esc(c.designation||'Citizen')}${c.bio?' · '+esc(c.bio):''}</div></div>
+        <i class="fas fa-chevron-right chev"></i></a>`;
+    }
+    function blogRow(b){
+      return `<a class="ritem" href="/blogs?b=${b.id}">
+        <div class="av sq">📝</div>
+        <div class="ti"><div class="tt">${esc(b.title)}</div><div class="ts">by ${esc(b.username)}${b.excerpt?' · '+esc(b.excerpt):''}</div></div>
+        <i class="fas fa-chevron-right chev"></i></a>`;
+    }
+    function videoRow(v){
+      return `<a class="ritem" href="/videos?v=${v.id}">
+        <div class="av sq">🎬</div>
+        <div class="ti"><div class="tt">${esc(v.title)}</div><div class="ts">by ${esc(v.username)}${v.excerpt?' · '+esc(v.excerpt):''}</div></div>
+        <i class="fas fa-chevron-right chev"></i></a>`;
+    }
+    function companyRow(c){
+      return `<a class="ritem" href="/company?id=${c.id}">
+        <div class="av sq">🏢</div>
+        <div class="ti"><div class="tt">${esc(c.name)}</div><div class="ts">founded by ${esc(c.founder||'—')}</div></div>
+        <i class="fas fa-chevron-right chev"></i></a>`;
+    }
+
+    async function run(q){
+      const box=document.getElementById("results");
+      if(q.length<2){ box.innerHTML=`<p class="hint">Type at least 2 characters…</p>`; return; }
+      try{
+        const d=await api("/search_data?q="+enc(q));
+        if(d.q!==document.getElementById("q").value.trim()) return;   // stale
+        const html=[
+          group("Citizens","🧑", (d.citizens||[]).map(citizenRow)),
+          group("Blogs","📝", (d.blogs||[]).map(blogRow)),
+          group("Videos","🎬", (d.videos||[]).map(videoRow)),
+          group("Companies","🏢", (d.companies||[]).map(companyRow)),
+        ].join("");
+        box.innerHTML = html || `<p class="empty">No matches for “${esc(q)}”.</p>`;
+      }catch(e){ box.innerHTML=`<p class="empty">${esc(e.message)}</p>`; }
+    }
+    function onType(){
+      const q=document.getElementById("q").value.trim();
+      if(q===lastQ) return; lastQ=q;
+      const url=new URL(location); if(q) url.searchParams.set("q",q); else url.searchParams.delete("q");
+      history.replaceState({},"",url);
+      clearTimeout(timer); timer=setTimeout(()=>run(q), 220);
+    }
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      renderNav("/search", user);
+      const inp=document.getElementById("q");
+      inp.addEventListener("input", onType);
+      const q0=new URLSearchParams(location.search).get("q");
+      if(q0){ inp.value=q0; lastQ=q0; run(q0); }
+    })();
+  </script>
+</body>
+</html>

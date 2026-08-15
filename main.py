@@ -1835,14 +1835,19 @@ def public_profile(username):
     records = supabase.table("records").select("entry,created_at").eq("username", username) \
         .order("created_at", desc=True).limit(10).execute().data or []
 
+    nw = user_net_worth(username)
+    badges = [a for a in _achievements(u, records, nw) if a["earned"]]
     return jsonify(success=True, profile={
         "username": u["username"],
         "designation": u.get("designation") or "Citizen",
         "avatar": u.get("avatar"),
         "bio": u.get("bio"),
+        "banner": u.get("banner"),
+        "badges": badges,
+        "pinned": _pinned_blog(u.get("pinned_blog")),
         "cabinet_role": _gov_role(username),
         "member_since": u.get("created_at"),
-        "net_worth": user_net_worth(username),
+        "net_worth": nw,
         "account_type": u.get("account_type") or "citizen",
         "ally_interest": bool(u.get("ally_interest")),
         "allied": bool(u.get("allied")),
@@ -1864,6 +1869,104 @@ def set_bio():
     except Exception:
         return jsonify(success=False, error="Descriptions aren't enabled yet — the database needs a quick update."), 503
     return jsonify(success=True, bio=bio)
+
+
+def _pinned_blog(bid):
+    """A trimmed view of the blog a citizen has pinned to their profile."""
+    if not bid:
+        return None
+    try:
+        r = supabase.table("blogs").select("id,title,body,created_at,username").eq("id", bid).execute().data
+        if not r:
+            return None
+        p = r[0]; body = p.get("body") or ""
+        return {"id": p["id"], "title": p.get("title"), "username": p.get("username"),
+                "created_at": p.get("created_at"),
+                "excerpt": body[:220] + ("…" if len(body) > 220 else "")}
+    except Exception:
+        return None
+
+
+@limiter.limit("20/min")
+@app.route("/banner", methods=["POST"])
+def set_banner():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    url = ((request.get_json() or {}).get("url") or "").strip()[:500]
+    if url and not re.match(r"^https://", url):
+        return jsonify(success=False, error="Use a direct https:// image link."), 400
+    try:
+        supabase.table("cybucks").update({"banner": url or None}).eq("username", user["username"]).execute()
+    except Exception:
+        return jsonify(success=False, error="Banners aren't enabled yet — run the migration."), 503
+    return jsonify(success=True, banner=url or None)
+
+
+@limiter.limit("20/min")
+@app.route("/profile/pin", methods=["POST"])
+def pin_blog():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    bid = (request.get_json() or {}).get("blog_id")
+    if bid:
+        try:
+            bid = int(bid)
+        except (TypeError, ValueError):
+            return jsonify(success=False, error="Bad post"), 400
+        own = supabase.table("blogs").select("id").eq("id", bid).eq("username", user["username"]).execute().data
+        if not own:
+            return jsonify(success=False, error="You can only pin your own post"), 403
+    else:
+        bid = None
+    try:
+        supabase.table("cybucks").update({"pinned_blog": bid}).eq("username", user["username"]).execute()
+    except Exception:
+        return jsonify(success=False, error="Pinning isn't enabled yet — run the migration."), 503
+    return jsonify(success=True, pinned=_pinned_blog(bid))
+
+
+@app.route("/search")
+def search_page():
+    return app.send_static_file("search.html")
+
+
+@limiter.limit("60/min")
+@app.route("/search_data")
+def search_data():
+    """One-box search across citizens, blogs, videos and companies."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 2:
+        return jsonify(success=True, q=q, citizens=[], blogs=[], videos=[], companies=[])
+    safe = re.sub(r"[%,()*.]", " ", q).strip()
+    like = f"%{safe}%"
+
+    def find(table, cols, select, order=None, limit=8):
+        try:
+            qy = supabase.table(table).select(select)
+            qy = qy.ilike(cols[0], like) if len(cols) == 1 \
+                else qy.or_(",".join(f"{c}.ilike.{like}" for c in cols))
+            if order:
+                qy = qy.order(order, desc=True)
+            return qy.limit(limit).execute().data or []
+        except Exception:
+            return []
+
+    citizens = find("cybucks", ["username", "bio"], "username,designation,avatar,bio")
+    blogs = find("blogs", ["title", "body"], "id,title,username,body", order="id")
+    videos = find("videos", ["title", "description"], "id,title,username,kind,description", order="id")
+    companies = find("companies", ["name"], "id,name,founder")
+    for b in blogs:
+        body = b.pop("body", "") or ""
+        b["excerpt"] = body[:140] + ("…" if len(body) > 140 else "")
+    for v in videos:
+        dsc = v.pop("description", "") or ""
+        v["excerpt"] = dsc[:120] + ("…" if len(dsc) > 120 else "")
+    return jsonify(success=True, q=q, citizens=citizens, blogs=blogs, videos=videos, companies=companies)
 
 
 # ============================================================
@@ -3323,6 +3426,14 @@ def profile_data():
     loans = supabase.table("loans").select("*").eq("username", user["username"]) \
         .order("taken_at", desc=True).execute()
 
+    nw = user_net_worth(user["username"])
+    badges = [a for a in _achievements(user, records.data or [], nw) if a["earned"]]
+    try:
+        my_blogs = supabase.table("blogs").select("id,title").eq("username", user["username"]) \
+            .order("id", desc=True).limit(30).execute().data or []
+    except Exception:
+        my_blogs = []
+
     return jsonify(
         success=True,
         profile=public_user(user),
@@ -3332,6 +3443,10 @@ def profile_data():
         records=records.data or [],
         loans=loans.data or [],
         member_since=user.get("created_at"),
+        banner=user.get("banner"),
+        badges=badges,
+        pinned=_pinned_blog(user.get("pinned_blog")),
+        my_blogs=my_blogs,
     )
 
 

@@ -10,6 +10,10 @@
 -- 1) Interests: a comma-separated list of interest keys on each citizen
 alter table cybucks add column if not exists interests text default '';
 
+-- 1a2) Profile customization: banner image + a pinned blog post
+alter table cybucks add column if not exists banner       text;
+alter table cybucks add column if not exists pinned_blog  bigint;
+
 -- 1b) Account type: 'citizen' or 'micronation' (+ whether a nation wants an alliance)
 -- 1c) Flight Sim: best score + last daily-bonus date
 alter table cybucks add column if not exists flight_best      numeric default 0;

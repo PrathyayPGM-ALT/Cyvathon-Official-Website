@@ -72,7 +72,7 @@ function renderNav(active, user) {
     { label: "Money",      items: [["/bank","Bank"], ["/exchange","Stock Exchange"], ["/loans","Loans"], ["/casino","Casino"]] },
     { label: "Business",   items: [["/company","Companies"], ["/jobs","Jobs Board"], ["/states","States"], ["/marketplace","Import & Export"]] },
     { label: "Government",  items: [["/government","Cabinet"], ["/ministries","Ministries"], ["/legislature","Legislature"], ["/gazette","Gazette"], ["/court","Courts"], ["/fir","Report a Crime"], ["/voting","Elections"], ["/foreign","Foreign Affairs"], ["/treasury","Treasury"], ["/admin","Admin Panel"]] },
-    { label: "Community",   items: [["/citizens","Citizens"], ["/chat","Chat"], ["/videos","Videos"], ["/blogs","Blogs"], ["/flightsim","Flight Sim"], ["/ai","Cyvathon AI"], ["/invite","Invite Friends"], ["/news","News"], ["/rules","Rules"]] },
+    { label: "Community",   items: [["/search","Search"], ["/citizens","Citizens"], ["/chat","Chat"], ["/videos","Videos"], ["/blogs","Blogs"], ["/flightsim","Flight Sim"], ["/ai","Cyvathon AI"], ["/invite","Invite Friends"], ["/news","News"], ["/rules","Rules"]] },
     { label: "ID Card", items: [["/profile","ID Card"], ["/passport","Passport & Citizenship"], ["/portfolio","Portfolio"], ["/leaderboard","Leaderboards"]] },
   ];
 
