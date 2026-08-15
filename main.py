@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, g
 from flask_cors import CORS
 from supabase import create_client
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -247,6 +247,7 @@ def _strike(ip):
 
 @app.before_request
 def _firewall():
+    g._t0 = time()
     ip = client_ip()
     now = time()
     # 1. Permanent admin blocklist
@@ -270,6 +271,10 @@ def _firewall():
 
 @app.after_request
 def _security_headers(resp):
+    try:
+        resp.headers["X-Response-Time-ms"] = str(round((time() - getattr(g, "_t0", time())) * 1000))
+    except Exception:
+        pass
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["X-Frame-Options"] = "DENY"
     resp.headers["Referrer-Policy"] = "no-referrer"
@@ -1925,6 +1930,25 @@ def pin_blog():
     except Exception:
         return jsonify(success=False, error="Pinning isn't enabled yet — run the migration."), 503
     return jsonify(success=True, pinned=_pinned_blog(bid))
+
+
+@app.route("/health/timing")
+def health_timing():
+    """Diagnostic: time a few trivial Supabase round-trips. If each is >80ms,
+    the app server and the database are almost certainly in different regions."""
+    import time as _t
+    samples = []
+    for _ in range(4):
+        s = _t.perf_counter()
+        try:
+            supabase.table("cybucks").select("username").limit(1).execute()
+        except Exception:
+            pass
+        samples.append(round((_t.perf_counter() - s) * 1000))
+    warm = samples[1:] or samples          # drop the first (connection warm-up)
+    return jsonify(success=True, db_query_ms=samples, avg_ms=round(sum(warm) / len(warm)),
+                   note="Each value = one round-trip to Supabase. Under ~25ms = same region (good). "
+                        "Over ~80ms = Render and Supabase are in different regions — that's the slowness.")
 
 
 @app.route("/search")
