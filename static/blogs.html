@@ -148,32 +148,38 @@
     }
 
     /* ---------- rails ---------- */
-    function leftRail(){
-      const u=MEUSER||{}; const n=esc(u.username||"?");
-      const myPosts=POSTS.filter(p=>p.username===u.username).length;
-      return `<div class="rail l-rail"><div class="card me-card">
-        <div class="cover"></div>
-        <div class="inner">
-          <div class="av" ${avatarStyle(u.avatar)}>${u.avatar?'':n[0].toUpperCase()}</div>
-          <div class="nm"><a href="/profile">${n}</a></div>
-          <div class="role">${esc(u.designation||"Citizen")} · Cyvathon</div>
-          <div class="stat"><span>Your posts</span><b>${myPosts}</b></div>
-          <a class="idbtn" href="/profile"><i class="fas fa-id-card"></i> View ID Card</a>
-        </div></div></div>`;
-    }
-    function rightRail(){
+    function topVoicesCard(){
       const tally={};
       POSTS.forEach(p=>{ const k=p.username; if(!k) return;
         (tally[k]=tally[k]||{username:k,avatar:p.avatar,designation:p.designation,n:0}).n++; });
       const voices=Object.values(tally).sort((a,b)=>b.n-a.n).slice(0,5);
-      return `<div class="rail r-rail">
-        <div class="card rc"><h4>🏛️ Top voices</h4>
-          ${voices.length?voices.map(v=>{ const vn=esc(v.username);
-            return `<a class="voice" href="/profile?user=${enc(v.username)}">
-              <div class="av" ${avatarStyle(v.avatar)}>${v.avatar?'':vn[0].toUpperCase()}</div>
-              <div><div class="vn">${vn}</div><div class="vs">${esc(v.designation||"Citizen")} · ${v.n} post${v.n>1?'s':''}</div></div>
-            </a>`; }).join(""):`<div class="vs" style="color:var(--muted)">No writers yet.</div>`}
+      return `<div class="card rc"><h4>🏛️ Top voices</h4>
+        ${voices.length?voices.map(v=>{ const vn=esc(v.username);
+          return `<a class="voice" href="/profile?user=${enc(v.username)}">
+            <div class="av" ${avatarStyle(v.avatar)}>${v.avatar?'':vn[0].toUpperCase()}</div>
+            <div><div class="vn">${vn}</div><div class="vs">${esc(v.designation||"Citizen")} · ${v.n} post${v.n>1?'s':''}</div></div>
+          </a>`; }).join(""):`<div class="vs" style="color:var(--muted)">No writers yet.</div>`}
+      </div>`;
+    }
+    function leftRail(){
+      const u=MEUSER||{}; const n=esc(u.username||"?");
+      const myPosts=POSTS.filter(p=>p.username===u.username).length;
+      return `<div class="rail l-rail">
+        <div class="card me-card">
+          <div class="cover"></div>
+          <div class="inner">
+            <div class="av" ${avatarStyle(u.avatar)}>${u.avatar?'':n[0].toUpperCase()}</div>
+            <div class="nm"><a href="/profile">${n}</a></div>
+            <div class="role">${esc(u.designation||"Citizen")} · Cyvathon</div>
+            <div class="stat"><span>Your posts</span><b>${myPosts}</b></div>
+            <a class="idbtn" href="/profile"><i class="fas fa-id-card"></i> View ID Card</a>
+          </div>
         </div>
+        ${topVoicesCard()}
+      </div>`;
+    }
+    function rightRail(){
+      return `<div class="rail r-rail">
         <div class="card rc"><h4>✍️ Not sure what to write?</h4>
           <ul class="prompt" style="margin:0;padding-left:1.1rem;">
             <li>How you made your first 1,000 CB</li>
