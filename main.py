@@ -884,6 +884,46 @@ def flight_board():
     return jsonify(success=True, board=_flight_board(), best=best, me=user["username"])
 
 
+@limiter.limit("240/min")
+@app.route("/flight/presence", methods=["POST"])
+def flight_presence():
+    """Live multiplayer presence for the flight sim: report my aircraft's
+    position/orientation and get back the other pilots currently flying
+    (anyone who pinged in the last 6 seconds). Fail-open if not migrated."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    d = request.get_json() or {}
+    if d.get("gone"):
+        try:
+            supabase.table("flight_presence").delete().eq("username", me).execute()
+        except Exception:
+            pass
+        return jsonify(success=True, pilots=[])
+    now = time()
+
+    def _f(k, dv=0.0, lo=-1e6, hi=1e6):
+        try:
+            return max(lo, min(hi, float(d.get(k, dv))))
+        except (TypeError, ValueError):
+            return dv
+    row = {"username": me,
+           "x": _f("x", 0, -6000, 6000), "y": _f("y", 0, -100, 2500), "z": _f("z", 0, -6000, 6000),
+           "qx": _f("qx"), "qy": _f("qy"), "qz": _f("qz"), "qw": _f("qw", 1.0),
+           "spd": _f("spd", 0, 0, 2000), "updated_at": now}
+    try:
+        supabase.table("flight_presence").upsert(row).execute()
+        others = supabase.table("flight_presence").select("*") \
+            .neq("username", me).gt("updated_at", now - 6).limit(24).execute().data or []
+    except Exception:
+        return jsonify(success=True, pilots=[])
+    pilots = [{"username": o["username"], "x": o["x"], "y": o["y"], "z": o["z"],
+               "qx": o["qx"], "qy": o["qy"], "qz": o["qz"], "qw": o["qw"],
+               "spd": o.get("spd", 0)} for o in others]
+    return jsonify(success=True, pilots=pilots)
+
+
 @limiter.limit("40/min")
 @app.route("/flight/score", methods=["POST"])
 def flight_score():

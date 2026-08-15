@@ -108,6 +108,16 @@ create table if not exists bluff_games (
 );
 create index if not exists idx_bluff_status on bluff_games (status, id desc);
 
+-- 7) Flight Sim live multiplayer presence (ephemeral; rows expire by timestamp)
+create table if not exists flight_presence (
+    username   text primary key,
+    x  double precision default 0, y  double precision default 0, z  double precision default 0,
+    qx double precision default 0, qy double precision default 0, qz double precision default 0, qw double precision default 1,
+    spd        double precision default 0,
+    updated_at double precision default 0
+);
+create index if not exists idx_flight_presence on flight_presence (updated_at);
+
 -- ============================================================
 -- 5) The Registry — classified dossier/files system (Athena · Office of Records)
 --    Per-file access control: visibility = 'public' (all citizens) |

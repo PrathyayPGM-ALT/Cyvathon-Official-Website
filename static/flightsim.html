@@ -84,6 +84,7 @@
         <div class="hud" id="hud">
           <div class="frame"></div>
           <div class="cross"><i></i><i></i><i></i></div>
+          <div id="pilotsBadge" style="display:none;position:absolute;top:14px;left:50%;transform:translateX(-50%);align-items:center;gap:.4rem;background:rgba(8,14,26,.6);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:.35rem .9rem;font-size:.85rem;font-weight:700;backdrop-filter:blur(6px);z-index:5;"><i class="fas fa-users" style="color:#58c4ff"></i> <span id="pilotsOnline">0</span> flying</div>
           <canvas class="mini" id="mini" width="150" height="150"></canvas>
           <div class="stallw" id="stallw">STALL</div>
           <div class="warnp" id="warnp">PULL UP</div>
@@ -354,6 +355,7 @@
       plane.pos.set(0,2,-620); plane.vel.set(0,0,0);
       plane.quat.identity(); plane.throttle=0; plane.onGround=true; plane.dist=0; plane.ringsHit=0; plane.coinsHit=0; plane.stall=false;
       touchPitch=0; touchRoll=0; crashReason="";
+      clearPilots(); presT=0;
       rings.forEach(placeRing); coins.forEach(placeCoin);
       document.getElementById("startScreen").classList.add("hide");
       document.getElementById("overScreen").classList.add("hide");
@@ -362,11 +364,72 @@
       if(raf) cancelAnimationFrame(raf); raf=requestAnimationFrame(loop);
     }
 
+    /* ---------------- MULTIPLAYER PRESENCE ---------------- */
+    let PILOTS={}, presT=0, presBusy=false;
+    function makeLabel(text){
+      const c=document.createElement("canvas"); c.width=320; c.height=72;
+      const ctx=c.getContext("2d");
+      ctx.font="bold 42px Inter, Segoe UI, sans-serif"; ctx.textBaseline="middle";
+      const w=Math.min(300, ctx.measureText(text).width+34);
+      ctx.fillStyle="rgba(8,14,26,.72)";
+      const x=(320-w)/2; roundRect(ctx,x,10,w,52,14); ctx.fill();
+      ctx.fillStyle="#eaf2fb"; ctx.textAlign="center";
+      ctx.fillText(text, 160, 37, 288);
+      const tex=new THREE.CanvasTexture(c); tex.anisotropy=2;
+      const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex, depthTest:false, transparent:true}));
+      spr.scale.set(20,4.5,1); spr.renderOrder=999; return spr;
+    }
+    function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r);
+      ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+    function makePilot(name){
+      const g=new THREE.Group();
+      const white=new THREE.MeshLambertMaterial({color:0xeaf2fb});
+      const red=new THREE.MeshLambertMaterial({color:0xff6b78});
+      const b=new THREE.Mesh(new THREE.CylinderGeometry(1.1,0.85,8,12), white); b.rotation.x=Math.PI/2; g.add(b);
+      const nose=new THREE.Mesh(new THREE.ConeGeometry(1.1,3,12), red); nose.rotation.x=-Math.PI/2; nose.position.z=-5.5; g.add(nose);
+      const wing=new THREE.Mesh(new THREE.BoxGeometry(15,0.35,2.6), white); wing.position.set(0,0.1,0.3); g.add(wing);
+      const fin=new THREE.Mesh(new THREE.BoxGeometry(0.3,3,2), red); fin.position.set(0,1.4,4.6); g.add(fin);
+      g.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
+      const lbl=makeLabel(name); lbl.position.set(0,6,0); g.add(lbl);
+      scene.add(g); return g;
+    }
+    function clearPilots(){ for(const k in PILOTS){ scene.remove(PILOTS[k].g); } PILOTS={}; }
+    async function pingPresence(){
+      if(presBusy) return; presBusy=true;
+      try{
+        const d=await api("/flight/presence",{method:"POST",body:JSON.stringify({
+          x:plane.pos.x,y:plane.pos.y,z:plane.pos.z,
+          qx:plane.quat.x,qy:plane.quat.y,qz:plane.quat.z,qw:plane.quat.w,
+          spd:plane.vel.length()})});
+        const list=d.pilots||[]; const now=performance.now();
+        for(const o of list){
+          let p=PILOTS[o.username];
+          if(!p){ p=PILOTS[o.username]={g:makePilot(o.username),tp:new THREE.Vector3(o.x,o.y,o.z),
+            tq:new THREE.Quaternion(o.qx,o.qy,o.qz,o.qw),seen:now};
+            p.g.position.set(o.x,o.y,o.z); p.g.quaternion.set(o.qx,o.qy,o.qz,o.qw); }
+          p.tp.set(o.x,o.y,o.z); p.tq.set(o.qx,o.qy,o.qz,o.qw); p.seen=now;
+        }
+        const badge=document.getElementById("pilotsOnline");
+        if(badge){ badge.textContent=list.length; document.getElementById("pilotsBadge").style.display="flex"; }
+      }catch{}
+      finally{ presBusy=false; }
+    }
+    function leavePresence(){
+      clearPilots();
+      try{ navigator.sendBeacon("/flight/presence", new Blob([JSON.stringify({gone:true})],{type:"application/json"})); }catch{}
+    }
+    window.addEventListener("beforeunload", leavePresence);
+
     function loop(t){
       let dt=(t-last)/1000; last=t; if(dt>0.05) dt=0.05;
       simTime+=dt;
       if(state==="playing") step(dt);
       updateCamera(dt);
+      // multiplayer: ping ~1.2/s and smoothly move other pilots toward their latest report
+      if(state==="playing"){ presT-=dt; if(presT<=0){ presT=0.8; pingPresence(); } }
+      for(const k in PILOTS){ const p=PILOTS[k];
+        p.g.position.lerp(p.tp, Math.min(1,dt*6)); p.g.quaternion.slerp(p.tq, Math.min(1,dt*6));
+        if(performance.now()-p.seen>6500){ scene.remove(p.g); delete PILOTS[k]; } }
       if(prop) prop.rotation.z += dt*(20+plane.throttle*45);
       if(plane._waterU) plane._waterU.t.value=simTime;
       // sun + shadow frustum follow the plane
@@ -527,6 +590,7 @@
     async function gameOver(){
       if(state!=="playing") return;
       state="over";
+      leavePresence();
       const score=scoreNow();
       document.getElementById("overTitle").textContent = crashReason==="crash" ? "💥 Crashed" : "Flight ended";
       document.getElementById("finalScore").textContent=score;
