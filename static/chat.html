@@ -326,12 +326,24 @@
       closePanels(); renderSide(); loadNew(true).then(refreshReactions); refreshTyping();
       restartPoll();
     }
-    // Focus-aware polling: fast while you're looking at the chat, gentle when
-    // the tab is hidden — messages land quickly without hammering the server.
+    // Burst polling: ~2 checks/sec while the conversation is actually live
+    // (messages arriving, someone typing, you just sent) so replies land in
+    // ~250ms — then it eases off when things go quiet, and naps when hidden.
+    let lastActivity=0;
+    function pollDelay(){
+      if(document.visibilityState!=="visible") return 5000;   // tab in background
+      return (Date.now()-lastActivity<45000) ? 500 : 2000;    // live burst vs idle
+    }
     function restartPoll(){
-      if(poll) clearInterval(poll);
-      const fast = document.visibilityState === "visible";
-      poll = setInterval(()=>{ loadNew(false); refreshTyping(); refreshReactions(); }, fast ? 1000 : 5000);
+      if(poll) clearTimeout(poll);
+      const tick=async()=>{
+        const before=lastId;
+        try{ await loadNew(false); }catch{}
+        refreshTyping(); refreshReactions();
+        if(lastId>before) lastActivity=Date.now();            // a message arrived — stay fast
+        poll=setTimeout(tick, pollDelay());
+      };
+      poll=setTimeout(tick, pollDelay());
     }
     document.addEventListener("visibilitychange", ()=>{ restartPoll(); if(document.visibilityState==="visible") loadNew(false); });
     function showList(){ document.getElementById("shell").classList.remove("showmain"); }
@@ -449,6 +461,7 @@
       body.to=channel.name; return api("/dm",{method:"POST",body:JSON.stringify(body)});
     }
     function doSend(content){
+      lastActivity=Date.now();          // you're mid-conversation — keep polling fast
       const r=replyTo; cancelReply();
       const m={sender:ME,content};
       if(r){ m.reply_to=r.id; m.reply_sender=r.sender; m.reply_text=r.text; }
@@ -538,6 +551,7 @@
       const el=document.getElementById("typingRow");
       const names=(list||[]).filter(u=>u!==ME);
       if(!names.length){ el.classList.remove("show"); el.textContent=""; return; }
+      lastActivity=Date.now();          // someone's typing — a message is imminent, poll fast
       el.textContent = names.length===1 ? `${names[0]} is typing…`
         : names.length===2 ? `${names[0]} and ${names[1]} are typing…`
         : "Several people are typing…";
