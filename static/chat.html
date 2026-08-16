@@ -324,8 +324,16 @@
       document.getElementById("typingRow").classList.remove("show");
       document.getElementById("shell").classList.add("showmain");
       closePanels(); renderSide(); loadNew(true).then(refreshReactions); refreshTyping();
-      if(poll) clearInterval(poll); poll=setInterval(()=>{ loadNew(false); refreshTyping(); refreshReactions(); },2500);
+      restartPoll();
     }
+    // Focus-aware polling: fast while you're looking at the chat, gentle when
+    // the tab is hidden — messages land quickly without hammering the server.
+    function restartPoll(){
+      if(poll) clearInterval(poll);
+      const fast = document.visibilityState === "visible";
+      poll = setInterval(()=>{ loadNew(false); refreshTyping(); refreshReactions(); }, fast ? 1000 : 5000);
+    }
+    document.addEventListener("visibilitychange", ()=>{ restartPoll(); if(document.visibilityState==="visible") loadNew(false); });
     function showList(){ document.getElementById("shell").classList.remove("showmain"); }
 
     function openPublic(){
