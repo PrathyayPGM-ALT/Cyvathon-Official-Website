@@ -38,6 +38,20 @@
     .ctrl input{ margin:0; width:auto; flex:1; min-width:120px; padding:.5rem .7rem; }
     .ctrl button{ margin:0; width:auto; padding:.5rem 1rem; font-size:.85rem; }
     .tag-min{ font-size:.72rem; padding:.18rem .6rem; border-radius:20px; background:rgba(88,196,255,.12); color:var(--accent); }
+
+    /* --- vacancy applications --- */
+    .vac{ border:1px solid rgba(88,196,255,.35); background:rgba(88,196,255,.05);
+      border-radius:12px; padding:.9rem 1rem; margin-top:.9rem; }
+    .vac h4{ margin:0 0 .4rem; font-size:.75rem; letter-spacing:1.2px;
+      text-transform:uppercase; color:var(--accent); }
+    .vac .prog{ height:6px; border-radius:4px; background:rgba(255,255,255,.08);
+      overflow:hidden; margin:.6rem 0 .45rem; }
+    .vac .prog i{ display:block; height:100%; background:var(--accent); transition:width .3s; }
+    .vac .cands{ display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.5rem; }
+    .vac .cand{ font-size:.75rem; padding:.2rem .6rem; border-radius:20px;
+      background:var(--panel-2); border:1px solid var(--panel-border); }
+    .vac textarea{ margin-top:.6rem; }
+    .inelig{ font-size:.82rem; color:#e0a86c; margin-top:.5rem; }
   </style>
 </head>
 <body>
@@ -69,6 +83,7 @@
     const msg=(t,err=true)=>{const m=document.getElementById("msg");m.textContent=t;m.style.color=err?"var(--red)":"var(--green)";};
 
     async function load(){
+      await loadVacancies();
       const d=await api("/ministries/list");
       PRES=d.is_president; ME=d.me;
       document.getElementById("createBox").style.display = PRES ? "block" : "none";
@@ -96,9 +111,65 @@
               <div class="small">Minister: ${ul(m.minister)} ${m.is_minister?'<span class="tag-min">you</span>':''}</div></div></div>
           <p class="mandate">${esc(m.mandate)||'<span class="muted">No mandate set.</span>'}</p>
           <div class="stat"><span>Budget: <b>${fmt(m.budget)} CB</b></span></div>
+          ${vacancyHtml(m)}
           ${ctrl}
         </div>`;
       }).join("");
+    }
+
+    /* Vacant ministries are open to applications. Once enough citizens have
+       applied, the backend opens the election by itself. */
+    let VAC = {}, ELIGIBLE = false, WHY = "", NEEDED = 4;
+
+    async function loadVacancies(){
+      try{
+        const d = await api("/ministries/vacancies");
+        VAC = {}; (d.vacancies || []).forEach(v => VAC[v.id] = v);
+        ELIGIBLE = d.eligible; WHY = d.reason || ""; NEEDED = d.min_applicants || 4;
+      }catch(e){ VAC = {}; }
+    }
+
+    function vacancyHtml(m){
+      const v = VAC[m.id];
+      if (!v) return "";
+      const pct = Math.min(100, Math.round(v.applicants / v.needed * 100));
+      const short = Math.max(0, v.needed - v.applicants);
+      return `<div class="vac">
+        <h4><i class="fas fa-user-tie"></i> This seat is vacant</h4>
+        <div class="small">${v.applicants} of ${v.needed} applicants needed to trigger an election${
+          short ? ` — <b>${short} more</b>` : ` — <b>election opening</b>`}.</div>
+        <div class="prog"><i style="width:${pct}%"></i></div>
+        ${v.candidates.length ? `<div class="cands">${
+          v.candidates.map(c=>`<span class="cand">${esc(c)}</span>`).join("")}</div>` : ""}
+        ${v.applied
+          ? `<p class="small" style="margin-top:.6rem;color:var(--green)">
+               <i class="fas fa-check"></i> You have applied.
+               <a class="link" href="#" onclick="withdraw(${m.id});return false;">Withdraw</a></p>`
+          : ELIGIBLE
+            ? `<textarea id="st${m.id}" rows="2" placeholder="Why should the nation pick you?"></textarea>
+               <button onclick="applyFor(${m.id})"><i class="fas fa-hand"></i> Apply for this post</button>`
+            : `<p class="inelig"><i class="fas fa-ban"></i> ${esc(WHY)}</p>`}
+      </div>`;
+    }
+
+    async function applyFor(id){
+      const statement = val("st"+id);
+      try{
+        const r = await api("/ministries/apply",{method:"POST",
+          body:JSON.stringify({ministry_id:id, statement})});
+        msg(r.election_opened
+              ? "Application filed — enough candidates, the election is now open!"
+              : `Application filed. ${Math.max(0, r.needed - r.applicants)} more needed to open the vote.`,
+            false);
+        await loadVacancies(); load();
+      }catch(e){ msg(e.message); }
+    }
+
+    async function withdraw(id){
+      try{ await api("/ministries/withdraw",{method:"POST",
+             body:JSON.stringify({ministry_id:id})});
+           await loadVacancies(); load(); }
+      catch(e){ msg(e.message); }
     }
 
     async function act(path, body, okmsg){

@@ -184,6 +184,20 @@
     .fi .ft a{ color:var(--text); font-weight:700; text-decoration:none; }
     .fi .ft a:hover{ color:var(--accent); }
     .fi .fw{ font-size:.72rem; color:var(--muted); white-space:nowrap; flex-shrink:0; }
+
+    /* --- cabinet vacancy call --- */
+    .vacban{ border:1px solid rgba(255,206,86,.4); background:rgba(255,206,86,.07);
+      border-radius:16px; padding:1.1rem 1.3rem; margin-bottom:1.8rem; }
+    .vacban h3{ margin:0 0 .3rem; font-size:1.05rem; display:flex;
+      align-items:center; gap:.55rem; }
+    .vacban h3 i{ color:var(--gold,#ffce56); }
+    .vacban p{ margin:0; color:var(--muted); font-size:.9rem; }
+    .vacban .seats{ display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.75rem; }
+    .vacban .seat{ font-size:.78rem; padding:.3rem .75rem; border-radius:20px;
+      background:var(--panel-2); border:1px solid var(--panel-border);
+      text-decoration:none; color:inherit; }
+    .vacban .seat:hover{ border-color:var(--gold,#ffce56); }
+    .vacban .seat b{ color:var(--gold,#ffce56); }
   </style>
 </head>
 <body>
@@ -277,6 +291,7 @@
     <section class="wrap" style="padding-top:.5rem;">
       <div id="interestBanner"></div>
       <div id="hubRec"></div>
+      <div id="vacancyBanner"></div>
       <div id="hubGrid"></div>
     </section>
     <section class="wrap" id="hubFeedWrap" style="padding-top:0; display:none;">
@@ -299,6 +314,7 @@
     const GROUPS = [
       ["Money & Markets", "#58c4ff", [
         ["/bank","fa-building-columns","Bank","Send & convert money"],
+        ["/card","fa-credit-card","Debit Card","Print it, get scanned, get paid"],
         ["/exchange","fa-chart-line","Stock Exchange","Trade company shares"],
         ["/loans","fa-hand-holding-dollar","Loans","Borrow up to 5000 CB"],
         ["/casino","fa-dice","Casino","Bet against the House"],
@@ -444,6 +460,7 @@
             </a>`).join("")}</div>
         </div>`).join("");
       loadRecommended();
+      loadVacancies();
       loadFeed("hubFeed", "hubFeedWrap", 12);
       loadHubNews();
     }
@@ -473,6 +490,31 @@
             </div>`;
         }
       }catch{}
+    }
+
+    /* A vacant cabinet seat is the sort of thing citizens should see the
+       moment they land, not have to go hunting for. */
+    async function loadVacancies(){
+      let d;
+      try{ d = await api("/ministries/vacancies"); }catch(e){ return; }
+      const vac = (d.vacancies || []);
+      if (!vac.length) return;
+      const esc = (x)=>(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      const seats = vac.map(v => {
+        const short = Math.max(0, v.needed - v.applicants);
+        return `<a class="seat" href="/ministries">${esc(v.name)} —
+          <b>${short ? short + " more needed" : "election opening"}</b></a>`;
+      }).join("");
+      document.getElementById("vacancyBanner").innerHTML = `
+        <div class="vacban">
+          <h3><i class="fas fa-landmark-dome"></i>
+            ${vac.length} cabinet seat${vac.length===1?" is":"s are"} vacant</h3>
+          <p>${d.eligible
+              ? "You are eligible to stand. Apply, and once enough citizens do, an election opens automatically."
+              : esc(d.reason || "Applications are open to eligible citizens.")}</p>
+          <div class="seats">${seats}</div>
+        </div>`;
     }
 
     async function loadHubNews(){

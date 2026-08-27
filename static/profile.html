@@ -60,6 +60,19 @@
     .pinned .pl{ font-size:.72rem; text-transform:uppercase; letter-spacing:1px; color:var(--gold); font-weight:700; margin-bottom:.4rem; }
     .pinned h4{ margin:0 0 .35rem; font-size:1.1rem; } .pinned h4 a{ color:var(--text); text-decoration:none; } .pinned h4 a:hover{ color:var(--accent); }
     .pinned p{ color:var(--muted); font-size:.9rem; white-space:pre-wrap; line-height:1.5; }
+
+    /* --- criminal record --- */
+    .crim{ border:1px solid rgba(224,108,108,.4); background:rgba(224,108,108,.07);
+      border-radius:12px; padding:.9rem 1rem; margin-bottom:1rem; }
+    .crim h4{ margin:0 0 .55rem; font-size:.72rem; letter-spacing:1.3px;
+      text-transform:uppercase; color:#e06c6c; display:flex; align-items:center; gap:.5rem; }
+    .crow{ display:flex; justify-content:space-between; gap:1rem; padding:.5rem 0;
+      border-top:1px solid rgba(255,255,255,.07); font-size:.86rem; }
+    .crow:first-of-type{ border-top:none; }
+    .crow .pen{ color:#e0a86c; white-space:nowrap; font-weight:600; }
+    .crow .sp{ color:var(--muted); text-decoration:line-through; }
+    .crim .bar{ margin-top:.6rem; font-size:.78rem; color:#e06c6c; }
+    .clean{ font-size:.82rem; color:var(--green); }
   </style>
 </head>
 <body>
@@ -70,6 +83,38 @@
   <script>
     const qs = new URLSearchParams(location.search);
     const esc = (s)=>(s||"").replace(/</g,"&lt;");
+
+    /* A conviction is what bars a citizen from standing for office, so it
+       gets its own block rather than being buried in the general record. */
+    function criminalHtml(records){
+      if(!records || !records.length)
+        return `<p class="clean"><i class="fas fa-circle-check"></i> No criminal record.</p>`;
+      const active = records.filter(r=>r.active);
+      const rows = records.map(r=>{
+        const pen=[];
+        if(r.fine > 0) pen.push(`${r.fine} CB`);
+        if(r.jail_days > 0) pen.push(`${r.jail_days} day(s)`);
+        return `<div class="crow">
+          <span class="${r.spent?'sp':''}">${esc(r.reason||"Unspecified")}
+            <span style="color:var(--muted)"> · ${new Date(r.created_at).toLocaleDateString()}</span>
+            ${r.spent?' <span class="small">(pardoned)</span>':''}</span>
+          <span class="pen">${pen.join(" + ")||"—"}</span></div>`;
+      }).join("");
+      return `<div class="crim">
+        <h4><i class="fas fa-gavel"></i> Criminal Record — ${records.length} entr${records.length===1?"y":"ies"}</h4>
+        ${rows}
+        ${active.length ? `<div class="bar"><i class="fas fa-ban"></i>
+          Barred from holding office in Cyvathon.</div>` : ""}
+      </div>`;
+    }
+
+    async function loadCriminal(username, mountId){
+      try{
+        const d = await api("/records/"+encodeURIComponent(username));
+        const el = document.getElementById(mountId);
+        if (el) el.innerHTML = criminalHtml(d.records);
+      }catch(e){}
+    }
 
     function recordsHtml(records){
       if(!records || !records.length) return `<p class="muted">Clean record. Nothing on file.</p>`;
@@ -209,7 +254,9 @@
         </div>
         <div class="panel ${(p.interests&&p.interests.length)?'':'int-req'}" id="interestPanel" style="text-align:left;margin:0 0 1.4rem;"></div>
         <h3 style="margin-bottom:.8rem;"><i class="fas fa-file-lines"></i> Official Record</h3>
+        <div id="crimMine"></div>
         <div>${recordsHtml(d.records)}</div>`;
+      loadCriminal(d.username || (window.__me||""), "crimMine");
       renderInterests(p.interests||[]);
     }
 
@@ -281,7 +328,9 @@
         ${pinnedHtml(p.pinned, false)}
         ${p.bio?`<div class="panel" style="text-align:left;margin:0 0 1.4rem;"><b><i class="fas fa-circle-info"></i> What ${esc(p.username)} Does</b><p style="margin-top:.5rem;white-space:pre-wrap;">${esc(p.bio)}</p></div>`:''}
         <h3 style="margin-bottom:.8rem;"><i class="fas fa-file-lines"></i> Public Record</h3>
+        <div id="crimTheirs"></div>
         <div>${recordsHtml(p.records)}</div>`;
+      loadCriminal(p.username, "crimTheirs");
     }
 
     (async function(){

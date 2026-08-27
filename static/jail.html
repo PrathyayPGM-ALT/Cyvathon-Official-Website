@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detained · Cyvathon</title>
+  <!-- social / SEO metadata -->
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="You are serving a sentence in Cyvathon." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/jail" />
+  <meta name="theme-color" content="#58c4ff" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="Detained · Cyvathon" />
+  <meta property="og:description" content="You are serving a sentence in Cyvathon." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/jail" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Detained · Cyvathon" />
+  <meta name="twitter:description" content="You are serving a sentence in Cyvathon." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    body{ min-height:100vh; }
+    .cell{ max-width:560px; margin:0 auto; padding:3rem 1.25rem 4rem; text-align:center; }
+
+    /* bars slide down over the page */
+    .bars{ position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.5;
+      background:repeating-linear-gradient(90deg,
+        transparent 0 62px, #10151d 62px 74px); }
+    .bars::after{ content:""; position:absolute; inset:0;
+      background:linear-gradient(180deg,rgba(0,0,0,.55),transparent 30%,transparent 70%,rgba(0,0,0,.55)); }
+    .cell, .foot{ position:relative; z-index:1; }
+
+    .lock{ font-size:3.4rem; color:#e06c6c; margin-bottom:.8rem; }
+    h1{ font-size:2rem; margin:0 0 .4rem; letter-spacing:-.5px; }
+    .sub{ color:var(--muted); margin-bottom:2rem; }
+
+    .clock{ display:flex; gap:.7rem; justify-content:center; margin:1.6rem 0 .6rem; }
+    .unit{ background:var(--panel); border:1px solid var(--panel-border);
+      border-radius:14px; padding:.85rem 1rem; min-width:74px; }
+    .unit .n{ font-size:1.9rem; font-weight:800; font-variant-numeric:tabular-nums;
+      line-height:1; color:var(--accent); }
+    .unit .l{ font-size:.62rem; text-transform:uppercase; letter-spacing:1.2px;
+      color:var(--muted); margin-top:.4rem; }
+    .released{ font-size:.82rem; color:var(--muted); }
+
+    .why{ background:var(--panel); border:1px solid var(--panel-border);
+      border-radius:14px; padding:1.1rem 1.2rem; margin-top:2rem; text-align:left; }
+    .why h3{ font-size:.72rem; text-transform:uppercase; letter-spacing:1.4px;
+      color:var(--muted); margin:0 0 .5rem; }
+    .why p{ margin:0; }
+    .rec{ display:flex; justify-content:space-between; gap:1rem; padding:.55rem 0;
+      border-top:1px solid var(--panel-border); font-size:.86rem; }
+    .rec:first-of-type{ border-top:none; }
+    .rec .pen{ color:#e0a86c; white-space:nowrap; }
+
+    .foot{ text-align:center; margin-top:2rem; }
+    .foot button{ width:auto; margin:0; }
+    .free{ color:var(--green); font-size:1.05rem; }
+  </style>
+</head>
+<body>
+  <div class="bars"></div>
+
+  <div class="cell">
+    <div class="lock"><i class="fas fa-handcuffs"></i></div>
+    <h1>You are in jail</h1>
+    <p class="sub" id="sub">The Republic of Cyvathon has detained you.</p>
+
+    <div id="body">
+      <p class="small" style="color:var(--muted)">Checking your sentence…</p>
+    </div>
+
+    <div class="foot">
+      <button class="ghost" onclick="logout()"><i class="fas fa-right-from-bracket"></i> Log out</button>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const esc=(s)=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
+    let LEFT = 0, timer = null;
+
+    function pad(n){ return String(n).padStart(2,"0"); }
+
+    function paintClock(){
+      if (LEFT <= 0){ freed(); return; }
+      const d = Math.floor(LEFT/86400), h = Math.floor(LEFT%86400/3600),
+            m = Math.floor(LEFT%3600/60), s = LEFT%60;
+      const el = document.getElementById("clock");
+      if (el) el.innerHTML =
+        `<div class="unit"><div class="n">${d}</div><div class="l">Days</div></div>
+         <div class="unit"><div class="n">${pad(h)}</div><div class="l">Hours</div></div>
+         <div class="unit"><div class="n">${pad(m)}</div><div class="l">Minutes</div></div>
+         <div class="unit"><div class="n">${pad(s)}</div><div class="l">Seconds</div></div>`;
+      LEFT--;
+    }
+
+    function freed(){
+      clearInterval(timer);
+      document.getElementById("sub").textContent = "Your sentence is complete.";
+      document.getElementById("body").innerHTML =
+        `<p class="free"><i class="fas fa-dove"></i> You are free to go.</p>
+         <button style="margin-top:1rem;width:auto;" onclick="location.href='/'">
+           <i class="fas fa-arrow-right"></i> Return to Cyvathon</button>`;
+    }
+
+    function recordRow(r){
+      const pen = [];
+      if (r.fine > 0) pen.push(`${r.fine} CB fine`);
+      if (r.jail_days > 0) pen.push(`${r.jail_days} day(s)`);
+      return `<div class="rec"><span>${esc(r.reason || "Unspecified")}</span>
+              <span class="pen">${pen.join(" + ") || "—"}</span></div>`;
+    }
+
+    async function logout(){
+      try{ await api("/logout",{method:"POST",body:"{}"}); }catch(e){}
+      location.href = "/login";
+    }
+
+    (async function(){
+      let d;
+      try{ d = await api("/jail/status"); }
+      catch(e){ location.href = "/login"; return; }
+
+      if (!d.jailed){ freed(); return; }
+
+      const until = new Date(d.jailed.until);
+      LEFT = d.jailed.seconds_left;
+
+      const records = (d.records || []).filter(r => !r.spent).slice(0, 6);
+      document.getElementById("body").innerHTML = `
+        <div class="clock" id="clock"></div>
+        <p class="released">Released on <b>${until.toLocaleString()}</b></p>
+        <div class="why">
+          <h3><i class="fas fa-gavel"></i> Reason</h3>
+          <p>${esc(d.jailed.reason) || "No reason was recorded."}</p>
+          ${d.jailed.by ? `<p class="small" style="margin-top:.6rem;color:var(--muted)">
+            Ordered by ${esc(d.jailed.by)}</p>` : ""}
+        </div>
+        ${records.length ? `<div class="why">
+          <h3><i class="fas fa-file-lines"></i> Your criminal record</h3>
+          ${records.map(recordRow).join("")}
+        </div>` : ""}
+        <p class="small" style="margin-top:1.4rem;color:var(--muted)">
+          The rest of Cyvathon is closed to you until your sentence ends.
+          Only the President can pardon you.
+        </p>`;
+
+      paintClock();
+      timer = setInterval(paintClock, 1000);
+    })();
+  </script>
+</body>
+</html>

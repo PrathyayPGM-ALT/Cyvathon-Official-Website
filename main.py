@@ -81,7 +81,16 @@ _CONFIG_KEYS = {
     "bond_rate": "BOND_RATE", "bond_days": "BOND_DAYS", "company_fee": "COMPANY_FEE",
     "loan_max": "LOAN_MAX", "loan_days": "LOAN_DAYS", "starting_grant": "STARTING_GRANT",
     "gdp": "GDP", "gdp_multiplier": "GDP_MULTIPLIER",
+    "record_expiry_days": "RECORD_EXPIRY_DAYS",
+    "ministry_min_applicants": "MINISTRY_MIN_APPLICANTS",
+    "fine_bars_office": "FINE_BARS_OFFICE",
 }
+
+# Justice levers. RECORD_EXPIRY_DAYS = 0 means a conviction bars a citizen
+# from office permanently; set it above 0 to let convictions become spent.
+RECORD_EXPIRY_DAYS      = 0
+MINISTRY_MIN_APPLICANTS = 4
+FINE_BARS_OFFICE        = True
 
 COMPANY_CATEGORIES = ["Finance", "Selling", "Service", "Technology", "Other"]
 
@@ -311,7 +320,12 @@ def refresh_config():
             v = row.get(col)
             if v is not None:
                 # day/grant fields are whole numbers
-                g[name] = int(v) if name.endswith(("_DAYS", "GRANT")) or name in ("LOAN_MAX",) else v
+                if name == "FINE_BARS_OFFICE":
+                    g[name] = bool(v)
+                elif name.endswith(("_DAYS", "GRANT")) or name in ("LOAN_MAX", "MINISTRY_MIN_APPLICANTS"):
+                    g[name] = int(v)
+                else:
+                    g[name] = v
     except Exception as e:
         logging.warning("config load skipped (using defaults): %s", e)
 
@@ -3372,6 +3386,14 @@ def court_rule():
             fine = 0
     except (TypeError, ValueError):
         fine = 0
+    # A sentence may be a fine, jail time, or both.
+    try:
+        jail_days = float(d.get("jail_days") or 0)
+        if not math.isfinite(jail_days) or jail_days < 0:
+            jail_days = 0
+        jail_days = min(jail_days, MAX_JAIL_DAYS)
+    except (TypeError, ValueError):
+        jail_days = 0
 
     if verdict == "guilty":
         paid = 0
@@ -3385,10 +3407,26 @@ def court_rule():
             log_txn("court", case["defendant"], case["plaintiff"], paid, "cybucks", "Court fine")
         supabase.table("court_cases").update({
             "status": "guilty", "verdict": note, "fine": paid,
+            "jail_days": jail_days,
             "judge": user["username"], "ruled_at": _now().isoformat()
         }).eq("id", case["id"]).execute()
-        add_record(case["defendant"], f"Found GUILTY in '{case['title']}'. Fined {paid} CB. {note}")
-        notify(case["defendant"], f"⚖️ You were found guilty in '{case['title']}' — fined {paid} CB.", "/court")
+        # The sentence goes on the permanent criminal record, which is what
+        # bars the defendant from standing for office.
+        if paid > 0 or jail_days > 0:
+            add_criminal_record(case["defendant"], user["username"],
+                                f"{case['title']}: {note}".strip(" :"),
+                                fine=paid, jail_days=jail_days, case_id=case["id"])
+        if jail_days > 0:
+            send_to_jail(case["defendant"], jail_days,
+                         f"Sentenced in '{case['title']}'", user["username"])
+        sentence = []
+        if paid > 0:
+            sentence.append(f"fined {paid} CB")
+        if jail_days > 0:
+            sentence.append(f"jailed for {jail_days:g} day(s)")
+        sent_txt = " and ".join(sentence) if sentence else "convicted without penalty"
+        add_record(case["defendant"], f"Found GUILTY in '{case['title']}' — {sent_txt}. {note}".strip())
+        notify(case["defendant"], f"⚖️ You were found guilty in '{case['title']}' — {sent_txt}.", "/court")
         notify(case["plaintiff"], f"⚖️ You won '{case['title']}' — awarded {paid} CB.", "/court")
     else:
         supabase.table("court_cases").update({
@@ -4015,10 +4053,24 @@ def close_poll():
         for b in ballots:
             tally[b["choice"]] = tally.get(b["choice"], 0) + 1
         winner = max(tally, key=tally.get)
-        supabase.table("government").update({"holder": winner}) \
-            .eq("position", poll["position"]).execute()
+        # A ministry election installs a minister; everything else fills a
+        # seat in the government table.
+        if poll.get("ministry_id"):
+            supabase.table("ministries").update({"minister": winner}) \
+                .eq("id", poll["ministry_id"]).execute()
+            supabase.table("ministry_applications").update({"status": "elected"}) \
+                .eq("ministry_id", poll["ministry_id"]).eq("username", winner).execute()
+            supabase.table("ministry_applications").update({"status": "closed"}) \
+                .eq("ministry_id", poll["ministry_id"]).eq("status", "pending").execute()
+            supabase.table("cybucks").update({"designation": "Minister"}) \
+                .eq("username", winner).execute()
+            notify_all(f"\U0001F3DB\uFE0F {winner} has been elected {poll['position']}.",
+                       "/ministries", exclude=winner)
+        else:
+            supabase.table("government").update({"holder": winner}) \
+                .eq("position", poll["position"]).execute()
         # update winner's designation if the position maps to one
-        if poll["position"] in SALARY_TABLE:
+        if not poll.get("ministry_id") and poll["position"] in SALARY_TABLE:
             supabase.table("cybucks").update({"designation": poll["position"]}) \
                 .eq("username", winner).execute()
         add_record(winner, f"Elected {poll['position']} of Cyvathon by national vote.")
@@ -7310,6 +7362,540 @@ def card_all():
                       "designation": r.get("designation") or "Citizen",
                       "since": r.get("created_at")})
     return jsonify(success=True, cards=cards, count=len(cards))
+
+
+# ============================================================
+#  JUSTICE — jail, criminal records, eligibility for office
+# ============================================================
+#  A conviction is a structured row in `criminal_records`, separate from
+#  the free-text `records` feed. It carries a fine and/or a jail term, it
+#  shows on the citizen's ID, and it bars them from standing for office.
+#
+#  RECORD_EXPIRY_DAYS = 0 means "bars you forever", which is the rule the
+#  President asked for. Set it above 0 from the admin panel to let
+#  convictions become spent after that many days.
+# ============================================================
+
+# Pages a jailed citizen may still reach. Everything else is blocked.
+_JAIL_ALLOWED_PATHS = {"/jail", "/jail/status", "/logout", "/me",
+                       "/favicon.ico", "/robots.txt", "/sitemap.xml"}
+_JAIL_ALLOWED_PREFIXES = ("/static/",)
+
+MAX_JAIL_DAYS = 365
+
+
+def _jail_info(user):
+    """Return jail details for a citizen, or None if they are free.
+       Sentences that have run out are treated as served."""
+    if not user:
+        return None
+    until = _parse(user.get("jailed_until"))
+    if not until:
+        return None
+    now = _now()
+    if until <= now:
+        return None
+    return {
+        "until": until.isoformat(),
+        "reason": user.get("jail_reason") or "",
+        "by": user.get("jailed_by") or "",
+        "seconds_left": int((until - now).total_seconds()),
+    }
+
+
+def is_jailed(user):
+    return _jail_info(user) is not None
+
+
+def _release_if_served(user):
+    """Clear a spent sentence so the citizen isn't re-checked forever."""
+    if not user or not user.get("jailed_until"):
+        return user
+    until = _parse(user.get("jailed_until"))
+    if until and until <= _now():
+        try:
+            supabase.table("cybucks").update(
+                {"jailed_until": None, "jail_reason": None, "jailed_by": None}
+            ).eq("username", user["username"]).execute()
+            notify(user["username"], "\U0001F513 You have served your sentence and are free.", "/")
+        except Exception as e:
+            logging.warning("jail release failed for %s: %s", user.get("username"), e)
+        user["jailed_until"] = None
+    return user
+
+
+def _record_is_active(rec):
+    """A conviction still counts against you unless it's been spent, or
+       enough days have passed for it to expire (when expiry is enabled)."""
+    if rec.get("spent"):
+        return False
+    days = int(RECORD_EXPIRY_DAYS or 0)
+    if days <= 0:
+        return True                       # permanent
+    when = _parse(rec.get("created_at"))
+    return not when or (_now() - when).days < days
+
+
+def criminal_records(username, active_only=False):
+    try:
+        rows = supabase.table("criminal_records").select("*") \
+            .eq("username", username).order("created_at", desc=True) \
+            .limit(50).execute().data or []
+    except Exception as e:
+        logging.warning("criminal record lookup failed: %s", e)
+        return []
+    return [r for r in rows if _record_is_active(r)] if active_only else rows
+
+
+def _has_unpaid_loan(username):
+    try:
+        rows = supabase.table("loans").select("id,repaid,defaulted") \
+            .eq("username", username).eq("repaid", False).execute().data or []
+    except Exception:
+        return False
+    return bool(rows)
+
+
+def office_eligibility(user):
+    """Can this citizen stand for office? Returns (ok, reason)."""
+    if not user:
+        return False, "Not logged in"
+    if user.get("banned"):
+        return False, "Banned citizens cannot hold office."
+    if is_jailed(user):
+        return False, "You cannot stand for office while serving a sentence."
+    recs = criminal_records(user["username"], active_only=True)
+    if not FINE_BARS_OFFICE:
+        recs = [r for r in recs if (r.get("jail_days") or 0) > 0]
+    if recs:
+        n = len(recs)
+        return False, (f"You have {n} criminal record{'' if n == 1 else 's'} on file. "
+                       "A conviction bars you from holding office in Cyvathon.")
+    if _has_unpaid_loan(user["username"]):
+        return False, "Settle your outstanding loan before standing for office."
+    return True, ""
+
+
+def add_criminal_record(username, issued_by, reason, fine=0, jail_days=0, case_id=None):
+    kind = "both" if (fine > 0 and jail_days > 0) else ("jail" if jail_days > 0 else "fine")
+    try:
+        supabase.table("criminal_records").insert({
+            "username": username, "kind": kind, "fine": round(float(fine or 0), 2),
+            "jail_days": float(jail_days or 0), "reason": reason[:500],
+            "case_id": case_id, "issued_by": issued_by,
+        }).execute()
+    except Exception as e:
+        logging.warning("criminal record insert failed: %s", e)
+
+
+def send_to_jail(username, days, reason, by):
+    """Start (or extend) a jail term. Returns the release time."""
+    days = max(0.0, min(float(days or 0), MAX_JAIL_DAYS))
+    until = _now() + timedelta(days=days)
+    supabase.table("cybucks").update({
+        "jailed_until": until.isoformat(),
+        "jail_reason": (reason or "")[:300],
+        "jailed_by": by,
+    }).eq("username", username).execute()
+    notify(username, f"\U0001F6A8 You have been jailed for {days:g} day(s). {reason or ''}".strip(), "/jail")
+    refresh_jailed(force=True)
+    return until
+
+
+# The gate runs on EVERY request, so it must not hit the database. Jailing is
+# rare, so the roster is cached in memory and refreshed like BLOCKED_IPS is.
+# Worst-case staleness is JAIL_CACHE_TTL; jailing and releasing refresh at once.
+_JAILED = {}            # username -> (release datetime, reason, jailed_by)
+_JAILED_AT = 0.0
+JAIL_CACHE_TTL = 30     # seconds
+
+
+def refresh_jailed(force=False):
+    global _JAILED, _JAILED_AT
+    if not force and (time() - _JAILED_AT) < JAIL_CACHE_TTL:
+        return
+    _JAILED_AT = time()
+    try:
+        rows = supabase.table("cybucks") \
+            .select("username,jailed_until,jail_reason,jailed_by") \
+            .not_.is_("jailed_until", "null").execute().data or []
+    except Exception as e:
+        logging.warning("jail roster refresh skipped: %s", e)
+        return
+    now, roster = _now(), {}
+    for r in rows:
+        until = _parse(r.get("jailed_until"))
+        if until and until > now:
+            roster[r["username"]] = (until, r.get("jail_reason") or "",
+                                     r.get("jailed_by") or "")
+    _JAILED = roster
+
+
+@app.before_request
+def _jail_gate():
+    """A jailed citizen sees only the jail page."""
+    p = request.path
+    if p in _JAIL_ALLOWED_PATHS or p.startswith(_JAIL_ALLOWED_PREFIXES):
+        return None
+    username = session.get("username")
+    if not username:
+        return None
+    refresh_jailed()
+    entry = _JAILED.get(username)
+    if not entry:
+        return None
+    until, reason, by = entry
+    now = _now()
+    if until <= now:                       # sentence served
+        _JAILED.pop(username, None)
+        return None
+    info = {"until": until.isoformat(), "reason": reason, "by": by,
+            "seconds_left": int((until - now).total_seconds())}
+    # HTML navigation gets the jail page; API calls get a clear 403.
+    if request.method == "GET" and "text/html" in (request.headers.get("Accept") or ""):
+        return app.send_static_file("jail.html")
+    return jsonify(success=False, error="You are in jail.", jailed=info), 403
+
+
+@app.route("/jail")
+def jail_page():
+    return app.send_static_file("jail.html")
+
+
+@app.route("/jail/status")
+@limiter.limit("60/minute")
+def jail_status():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    info = _jail_info(user)
+    if not info:
+        _release_if_served(user)
+    return jsonify(success=True, jailed=info,
+                   username=user["username"],
+                   records=criminal_records(user["username"])[:10])
+
+
+@app.route("/jail/put", methods=["POST"])
+@limiter.limit("20/minute")
+def jail_put():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="Only the President may jail a citizen"), 403
+    d = request.get_json() or {}
+    target = (d.get("username") or "").strip()
+    reason = (d.get("reason") or "").strip()
+    try:
+        days = float(d.get("days") or 0)
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Invalid number of days"), 400
+    if not target:
+        return jsonify(success=False, error="Who?"), 400
+    if days <= 0 or days > MAX_JAIL_DAYS:
+        return jsonify(success=False, error=f"Days must be between 1 and {MAX_JAIL_DAYS}"), 400
+    if target == user["username"]:
+        return jsonify(success=False, error="You cannot jail yourself."), 400
+    rows = supabase.table("cybucks").select("username").eq("username", target).execute().data
+    if not rows:
+        return jsonify(success=False, error="No such citizen"), 404
+
+    until = send_to_jail(target, days, reason, user["username"])
+    add_criminal_record(target, user["username"],
+                        reason or "Detained by presidential order", jail_days=days)
+    add_record(target, f"Jailed for {days:g} day(s) by presidential order. {reason}".strip())
+    return jsonify(success=True, until=until.isoformat())
+
+
+@app.route("/jail/release", methods=["POST"])
+@limiter.limit("20/minute")
+def jail_release():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="Only the President may release a citizen"), 403
+    target = ((request.get_json() or {}).get("username") or "").strip()
+    if not target:
+        return jsonify(success=False, error="Who?"), 400
+    supabase.table("cybucks").update(
+        {"jailed_until": None, "jail_reason": None, "jailed_by": None}
+    ).eq("username", target).execute()
+    refresh_jailed(force=True)
+    notify(target, "\U0001F513 You have been released by presidential pardon.", "/")
+    add_record(target, "Released from jail by presidential pardon.")
+    return jsonify(success=True)
+
+
+@app.route("/jail/pardon", methods=["POST"])
+@limiter.limit("20/minute")
+def jail_pardon():
+    """Wipe a conviction, so it no longer bars the citizen from office."""
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="Only the President may pardon"), 403
+    rec_id = (request.get_json() or {}).get("record_id")
+    if not rec_id:
+        return jsonify(success=False, error="Which record?"), 400
+    rows = supabase.table("criminal_records").update({"spent": True}) \
+        .eq("id", rec_id).execute().data
+    if not rows:
+        return jsonify(success=False, error="Record not found"), 404
+    who = rows[0]["username"]
+    notify(who, "\U0001F54A\uFE0F A conviction on your record has been pardoned.", "/profile")
+    add_record(who, "A conviction was pardoned by the President.")
+    return jsonify(success=True)
+
+
+@app.route("/jail/inmates")
+@limiter.limit("30/minute")
+def jail_inmates():
+    """Who is currently serving time — public, like a prison roll."""
+    try:
+        rows = supabase.table("cybucks").select(
+            "username,jailed_until,jail_reason,jailed_by,avatar") \
+            .not_.is_("jailed_until", "null").execute().data or []
+    except Exception as e:
+        logging.warning("inmate list failed: %s", e)
+        rows = []
+    now = _now()
+    out = []
+    for r in rows:
+        until = _parse(r.get("jailed_until"))
+        if not until or until <= now:
+            continue
+        out.append({"username": r["username"], "until": until.isoformat(),
+                    "reason": r.get("jail_reason") or "", "by": r.get("jailed_by") or "",
+                    "avatar": r.get("avatar"),
+                    "seconds_left": int((until - now).total_seconds())})
+    out.sort(key=lambda x: x["seconds_left"], reverse=True)
+    return jsonify(success=True, inmates=out, count=len(out))
+
+
+@app.route("/records/<username>")
+@limiter.limit("40/minute")
+def records_for(username):
+    """A citizen's criminal record — public, so voters can judge candidates."""
+    recs = criminal_records(unquote(username or ""))
+    return jsonify(success=True, records=[{
+        "id": r["id"], "kind": r.get("kind"), "fine": r.get("fine") or 0,
+        "jail_days": r.get("jail_days") or 0, "reason": r.get("reason") or "",
+        "issued_by": r.get("issued_by"), "spent": bool(r.get("spent")),
+        "active": _record_is_active(r), "created_at": r.get("created_at"),
+    } for r in recs])
+
+
+# ============================================================
+#  CABINET — applying for a vacant ministry
+# ============================================================
+def _ministry_vacancies():
+    try:
+        rows = supabase.table("ministries").select("*").order("rank").execute().data or []
+    except Exception:
+        return []
+    return [m for m in rows if (m.get("minister") or "Vacant") == "Vacant"]
+
+
+def _applicants(ministry_id, status="pending"):
+    try:
+        q = supabase.table("ministry_applications").select("*").eq("ministry_id", ministry_id)
+        if status:
+            q = q.eq("status", status)
+        return q.order("created_at").execute().data or []
+    except Exception:
+        return []
+
+
+def _open_ministry_election(ministry, applicants, opened_by="the Republic"):
+    """Once enough citizens have applied, the vote opens by itself."""
+    names = [a["username"] for a in applicants]
+    existing = supabase.table("polls").select("id").eq("ministry_id", ministry["id"]) \
+        .eq("open", True).execute().data
+    if existing:
+        return None
+    poll = supabase.table("polls").insert({
+        "title": f"Election — {ministry['name']}",
+        "position": ministry["name"],
+        "options": names,
+        "open": True,
+        "created_by": opened_by,
+        "ministry_id": ministry["id"],
+    }).execute().data[0]
+    notify_all(f"\U0001F5F3\uFE0F An election has opened for {ministry['name']} — "
+               f"{len(names)} candidates. Cast your vote.", "/voting")
+    return poll
+
+
+@app.route("/ministries/vacancies")
+@limiter.limit("30/minute")
+def ministry_vacancies():
+    user = get_current_user(run_economics=False)
+    vac = _ministry_vacancies()
+    mine, out = (user or {}).get("username"), []
+    for m in vac:
+        apps = _applicants(m["id"])
+        out.append({
+            "id": m["id"], "name": m["name"], "mandate": m.get("mandate") or "",
+            "icon": m.get("icon") or "fa-landmark",
+            "applicants": len(apps),
+            "needed": int(MINISTRY_MIN_APPLICANTS),
+            "applied": any(a["username"] == mine for a in apps),
+            "candidates": [a["username"] for a in apps],
+        })
+    ok, why = office_eligibility(user) if user else (False, "Not logged in")
+    return jsonify(success=True, vacancies=out, eligible=ok, reason=why,
+                   min_applicants=int(MINISTRY_MIN_APPLICANTS))
+
+
+@app.route("/ministries/apply", methods=["POST"])
+@limiter.limit("10/minute")
+def ministry_apply():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+
+    ok, why = office_eligibility(user)
+    if not ok:
+        return jsonify(success=False, error=why), 403
+
+    d = request.get_json() or {}
+    try:
+        mid = int(d.get("ministry_id") or 0)
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Which ministry?"), 400
+    statement = (d.get("statement") or "").strip()[:600]
+    if len(statement) < 10:
+        return jsonify(success=False, error="Tell the nation why you want the job (at least 10 characters)."), 400
+
+    rows = supabase.table("ministries").select("*").eq("id", mid).execute().data
+    if not rows:
+        return jsonify(success=False, error="No such ministry"), 404
+    ministry = rows[0]
+    if (ministry.get("minister") or "Vacant") != "Vacant":
+        return jsonify(success=False, error="That ministry already has a minister."), 400
+
+    try:
+        supabase.table("ministry_applications").insert({
+            "ministry_id": mid, "username": user["username"], "statement": statement,
+        }).execute()
+    except Exception:
+        return jsonify(success=False, error="You have already applied for this ministry."), 400
+
+    add_record(user["username"], f"Applied for the post of {ministry['name']}.")
+
+    apps = _applicants(mid)
+    opened = False
+    if len(apps) >= int(MINISTRY_MIN_APPLICANTS):
+        opened = bool(_open_ministry_election(ministry, apps))
+    return jsonify(success=True, applicants=len(apps),
+                   needed=int(MINISTRY_MIN_APPLICANTS), election_opened=opened)
+
+
+@app.route("/ministries/applications")
+@limiter.limit("30/minute")
+def ministry_applications():
+    try:
+        mid = int(request.args.get("ministry_id") or 0)
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Which ministry?"), 400
+    apps = _applicants(mid, status=None)
+    return jsonify(success=True, applications=[{
+        "username": a["username"], "statement": a.get("statement") or "",
+        "status": a.get("status"), "created_at": a.get("created_at"),
+    } for a in apps])
+
+
+@app.route("/ministries/withdraw", methods=["POST"])
+@limiter.limit("10/minute")
+def ministry_withdraw():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        mid = int((request.get_json() or {}).get("ministry_id") or 0)
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Which ministry?"), 400
+    supabase.table("ministry_applications").update({"status": "withdrawn"}) \
+        .eq("ministry_id", mid).eq("username", user["username"]) \
+        .eq("status", "pending").execute()
+    return jsonify(success=True)
+
+
+# ============================================================
+#  ANNOUNCEMENTS — tell every citizen when something changes
+# ============================================================
+#  Broadcasts a notification to the whole nation. Used to announce new
+#  features (debit cards, the courts, elections) so citizens actually find
+#  them, rather than discovering them by accident.
+#
+#  Each announcement is also filed in the Gazette, so there is a permanent
+#  public record of what changed and when.
+# ============================================================
+
+# Ready-made announcements the President can fire from the admin panel.
+ANNOUNCEMENT_PRESETS = [
+    {"key": "cards",
+     "label": "Debit cards",
+     "message": "\U0001F4B3 Cyvathon debit cards have arrived — open the Bank to see yours, "
+                "print it, and let other citizens scan it to pay you.",
+     "link": "/card"},
+    {"key": "justice",
+     "label": "Courts & jail",
+     "message": "\u2696\uFE0F The justice system is live. Cases can now end in a fine, "
+                "jail time, or both — and convictions go on your permanent record.",
+     "link": "/court"},
+    {"key": "cabinet",
+     "label": "Cabinet applications",
+     "message": "\U0001F3DB\uFE0F Vacant ministries are open for applications. Apply, and once "
+                "enough citizens stand, an election opens automatically.",
+     "link": "/ministries"},
+]
+
+
+@app.route("/announce/presets")
+@limiter.limit("30/minute")
+def announce_presets():
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    return jsonify(success=True, presets=ANNOUNCEMENT_PRESETS)
+
+
+@app.route("/announce", methods=["POST"])
+@limiter.limit("6/minute")
+def announce():
+    """Notify every citizen, and file the announcement in the Gazette."""
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="Only the President may address the nation"), 403
+
+    d = request.get_json() or {}
+    key = (d.get("preset") or "").strip()
+    if key:
+        preset = next((p for p in ANNOUNCEMENT_PRESETS if p["key"] == key), None)
+        if not preset:
+            return jsonify(success=False, error="Unknown announcement"), 400
+        message, link = preset["message"], preset["link"]
+    else:
+        message = (d.get("message") or "").strip()[:300]
+        link = (d.get("link") or "").strip()[:120]
+        if len(message) < 5:
+            return jsonify(success=False, error="Say something worth announcing."), 400
+        if link and not link.startswith("/"):
+            return jsonify(success=False, error="Link must be a path on this site, e.g. /card"), 400
+
+    notify_all(message, link, exclude=None)
+    try:
+        n = len(supabase.table("gazette").select("id").eq("kind", "announcement")
+                .execute().data or []) + 1
+        supabase.table("gazette").insert({
+            "ref": f"Announcement No. {n} of {_now().year}",
+            "kind": "announcement",
+            "title": "National Announcement",
+            "body": message,
+            "issued_by": user["username"],
+        }).execute()
+    except Exception as e:
+        logging.warning("gazette entry for announcement failed: %s", e)
+
+    return jsonify(success=True, message=message, link=link)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))

@@ -82,6 +82,32 @@
       </div>
 
       <div class="panel" style="margin-top:1.6rem;">
+        <h3><i class="fas fa-bullhorn"></i> Address the Nation</h3>
+        <p class="small">Sends a notification to <b>every citizen</b> and files it in the Gazette.
+          Use it whenever something new lands.</p>
+        <div id="presets" class="row" style="flex-wrap:wrap;"></div>
+        <div class="row"><input id="annMsg" placeholder="Or write your own announcement…" style="flex:3">
+          <input id="annLink" placeholder="/link (optional)"></div>
+        <button onclick="announce()"><i class="fas fa-paper-plane"></i> Announce</button>
+        <p id="annMsgOut" class="small"></p>
+      </div>
+
+      <div class="panel" style="margin-top:1.6rem;">
+        <h3><i class="fas fa-handcuffs"></i> Justice — Jail a Citizen</h3>
+        <p class="small">A jailed citizen can see <b>nothing but the jail page</b> until their
+          sentence ends. The sentence goes on their permanent criminal record and bars them
+          from standing for office.</p>
+        <div class="row"><input id="jailUser" placeholder="Username">
+          <input id="jailDays" type="number" min="1" max="365" placeholder="Days"></div>
+        <div class="row"><input id="jailReason" placeholder="Reason" style="flex:3"></div>
+        <button class="danger" onclick="jailPut()"><i class="fas fa-gavel"></i> Send to jail</button>
+
+        <h4 style="margin-top:1.4rem;color:var(--muted);">Currently Serving</h4>
+        <div id="inmates"></div>
+        <p id="jailMsg" class="small"></p>
+      </div>
+
+      <div class="panel" style="margin-top:1.6rem;">
         <h3><i class="fas fa-ban"></i> Security — Block a Citizen</h3>
         <p class="small">Enter a username to <b>ban the account and block their signup IP</b> automatically — no need to find the IP yourself.</p>
         <div class="row"><input id="blockUser" placeholder="Username to block"><input id="blockReason" placeholder="Reason (optional)"></div>
@@ -114,6 +140,82 @@
   <script>
     const FIELDS = ["vat_rate","tax_period_days","salary_period_days","savings_rate",
       "bond_rate","bond_days","company_fee","loan_max","loan_days","starting_grant","gdp_multiplier"];
+    /* ---- Announcements ---- */
+    const annOut=(t,err=true)=>{const m=document.getElementById("annMsgOut");
+      m.textContent=t; m.style.color=err?"var(--red)":"var(--green)";};
+
+    async function loadPresets(){
+      try{
+        const d = await api("/announce/presets");
+        document.getElementById("presets").innerHTML = d.presets.map(p=>
+          `<button class="ghost" style="width:auto;margin:0 .4rem .4rem 0;"
+             onclick="announce('${p.key}')">${p.label}</button>`).join("");
+      }catch(e){}
+    }
+
+    async function announce(preset){
+      const body = preset ? {preset}
+        : {message:(document.getElementById("annMsg").value||"").trim(),
+           link:(document.getElementById("annLink").value||"").trim()};
+      try{
+        const r = await api("/announce",{method:"POST",body:JSON.stringify(body)});
+        annOut("Sent to every citizen: " + r.message, false);
+        document.getElementById("annMsg").value="";
+        document.getElementById("annLink").value="";
+      }catch(e){ annOut(e.message); }
+    }
+
+    /* ---- Jail ---- */
+    const jailOut=(t,err=true)=>{const m=document.getElementById("jailMsg");
+      m.textContent=t; m.style.color=err?"var(--red)":"var(--green)";};
+
+    function humanLeft(secs){
+      const d=Math.floor(secs/86400), h=Math.floor(secs%86400/3600), m=Math.floor(secs%3600/60);
+      return d ? `${d}d ${h}h` : (h ? `${h}h ${m}m` : `${m}m`);
+    }
+
+    async function loadInmates(){
+      try{
+        const d = await api("/jail/inmates");
+        const host = document.getElementById("inmates");
+        if(!d.count){ host.innerHTML = `<p class="small" style="color:var(--muted)">Nobody is in jail.</p>`; return; }
+        host.innerHTML = d.inmates.map(i=>`
+          <div class="row" style="align-items:center;justify-content:space-between;gap:.6rem;">
+            <span><b>${escA(i.username)}</b>
+              <span class="small" style="color:var(--muted)"> — ${escA(i.reason)||"no reason"}
+              · ${humanLeft(i.seconds_left)} left</span></span>
+            <button class="ghost" style="width:auto;margin:0;"
+              onclick="jailRelease('${escA(i.username)}')">Release</button>
+          </div>`).join("");
+      }catch(e){}
+    }
+
+    const escA=(x)=>(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
+    async function jailPut(){
+      const username=(document.getElementById("jailUser").value||"").trim();
+      const days=(document.getElementById("jailDays").value||"").trim();
+      const reason=(document.getElementById("jailReason").value||"").trim();
+      if(!username || !days){ jailOut("Username and days are both required."); return; }
+      try{
+        await api("/jail/put",{method:"POST",body:JSON.stringify({username,days,reason})});
+        jailOut(`${username} has been jailed for ${days} day(s).`, false);
+        document.getElementById("jailUser").value="";
+        document.getElementById("jailDays").value="";
+        document.getElementById("jailReason").value="";
+        loadInmates();
+      }catch(e){ jailOut(e.message); }
+    }
+
+    async function jailRelease(username){
+      try{
+        await api("/jail/release",{method:"POST",body:JSON.stringify({username})});
+        jailOut(`${username} released.`, false);
+        loadInmates();
+      }catch(e){ jailOut(e.message); }
+    }
+
     async function showLiveGdp(){ try{ const e=await api("/economy"); const el=document.getElementById("gdpLive"); if(el) el.textContent=fmt(e.gdp); }catch{} }
     const msg=(t,err=true)=>{const m=document.getElementById("msg");m.textContent=t;m.style.color=err?"var(--red)":"var(--green)";};
 
@@ -198,6 +300,8 @@
     (async function(){
       const user=await requireAuth(); if(!user) return;
       renderNav("/admin", user);
+      loadPresets();
+      loadInmates();
       try{
         const r=await api("/admin/config");
         document.getElementById("panel").style.display="block";
