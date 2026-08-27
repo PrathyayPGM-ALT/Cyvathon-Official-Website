@@ -177,13 +177,20 @@ const fmt = (n) => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString();
 
 /* Inline style that turns any avatar circle into a photo when a url is set. */
 function avatarStyle(url) {
-  return url ? `style="background-image:url('${(url + "").replace(/'/g, "%27")}');background-size:cover;background-position:center;"` : "";
+  // Percent-encode every character that could terminate the url(), the style
+  // attribute, or the tag itself — a hostile url must not become markup.
+  const safe = encodeURI(url + "").replace(/['()]/g, encodeURIComponent);
+  return url ? `style="background-image:url('${safe}');background-size:cover;background-position:center;"` : "";
 }
 
 /* Render chat text safely with **bold**, *italic*, __underline__, emojis,
    inline image/GIF URLs, and links. Escapes HTML first. */
 function renderRich(text) {
-  let s = (text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // Quotes MUST be escaped too: the URLs captured below are interpolated into
+  // href="" / src="" attributes, so an unescaped " would break out and let a
+  // message inject its own event handler.
+  let s = (text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   const imgs = [];
   s = s.replace(/(https?:\/\/[^\s]+?\.(?:gif|png|jpe?g|webp))/gi, function (m) { imgs.push(m); return "@@IMG" + (imgs.length - 1) + "@@"; });
   const auds = [];

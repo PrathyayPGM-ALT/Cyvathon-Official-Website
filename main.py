@@ -798,8 +798,8 @@ def recommended():
     return jsonify(success=True, interests=keys, recommended=cards[:6])
 
 
-@limiter.limit("30/min")
 @app.route("/interests", methods=["POST"])
+@limiter.limit("30/minute")
 def set_interests_endpoint():
     user = get_current_user(run_economics=False)
     if not user:
@@ -834,8 +834,8 @@ def foreign_data():
     return jsonify(success=True, nations=nations, is_president=is_treasury_admin(user))
 
 
-@limiter.limit("30/min")
 @app.route("/foreign/set_ally", methods=["POST"])
+@limiter.limit("30/minute")
 def foreign_set_ally():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -889,8 +889,8 @@ def flight_board():
     return jsonify(success=True, board=_flight_board(), best=best, me=user["username"])
 
 
-@limiter.limit("240/min")
 @app.route("/flight/presence", methods=["POST"])
+@limiter.limit("240/minute")
 def flight_presence():
     """Live multiplayer presence for the flight sim: report my aircraft's
     position/orientation and get back the other pilots currently flying
@@ -929,8 +929,8 @@ def flight_presence():
     return jsonify(success=True, pilots=pilots)
 
 
-@limiter.limit("40/min")
 @app.route("/flight/score", methods=["POST"])
+@limiter.limit("40/minute")
 def flight_score():
     user = get_current_user(run_economics=False)
     if not user:
@@ -1197,8 +1197,8 @@ def registry_file_get(fid):
     return jsonify(success=True, file=out, can_manage=_reg_can_manage(user), me=user["username"])
 
 
-@limiter.limit("30/min")
 @app.route("/registry/file", methods=["POST"])
+@limiter.limit("30/minute")
 def registry_file_create():
     user = get_current_user(run_economics=False)
     if not user or not _reg_can_manage(user):
@@ -1236,8 +1236,8 @@ def registry_file_create():
     return jsonify(success=True, file=row)
 
 
-@limiter.limit("30/min")
 @app.route("/registry/file/<int:fid>/delete", methods=["POST"])
+@limiter.limit("30/minute")
 def registry_file_delete(fid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -1252,8 +1252,8 @@ def registry_file_delete(fid):
     return jsonify(success=True)
 
 
-@limiter.limit("20/min")
 @app.route("/registry/bulletin", methods=["POST"])
+@limiter.limit("20/minute")
 def registry_bulletin_create():
     user = get_current_user(run_economics=False)
     if not user or not _reg_can_manage(user):
@@ -1274,8 +1274,8 @@ def registry_bulletin_create():
     return jsonify(success=True, bulletin=row)
 
 
-@limiter.limit("30/min")
 @app.route("/registry/officer", methods=["POST"])
+@limiter.limit("30/minute")
 def registry_officer():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -1308,8 +1308,8 @@ def registry_officer():
     return jsonify(success=True)
 
 
-@limiter.limit("6/min")
 @app.route("/registry/apply", methods=["POST"])
+@limiter.limit("6/minute")
 def registry_apply():
     user = get_current_user(run_economics=False)
     if not user:
@@ -1331,8 +1331,8 @@ def registry_apply():
     return jsonify(success=True)
 
 
-@limiter.limit("30/min")
 @app.route("/registry/request/deny", methods=["POST"])
+@limiter.limit("30/minute")
 def registry_request_deny():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -1408,6 +1408,40 @@ def _share_value(c):
 # ============================================================
 #  PAGES
 # ============================================================
+@app.route("/favicon.ico")
+def favicon():
+    # Browsers request this at the root; serve it instead of logging a 404.
+    return app.send_static_file("favicon.ico")
+
+
+@app.route("/sitemap.xml")
+def sitemap():
+    """List the public pages for search engines. Private and classified
+    pages are deliberately absent — see robots() above."""
+    pages = ["", "/rules", "/news", "/blogs", "/videos", "/citizens",
+             "/leaderboard", "/government", "/ministries", "/legislature",
+             "/court", "/gazette", "/states", "/foreign", "/treasury",
+             "/exchange", "/company", "/jobs", "/marketplace", "/casino",
+             "/flightsim", "/passport", "/login"]
+    urls = "".join(f"<url><loc>https://cyvathon.onrender.com{p}</loc></url>"
+                   for p in pages)
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>'
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+           f'{urls}</urlset>')
+    return app.response_class(xml, mimetype="application/xml")
+
+
+@app.route("/robots.txt")
+def robots():
+    # Keep private / classified pages out of search indexes.
+    body = "User-agent: *\n"
+    for p in ("/admin", "/athena", "/warroom", "/registry", "/mail",
+              "/notifications", "/profile", "/portfolio", "/search"):
+        body += f"Disallow: {p}\n"
+    body += "Allow: /\nSitemap: https://cyvathon.onrender.com/sitemap.xml\n"
+    return app.response_class(body, mimetype="text/plain")
+
+
 @app.route("/")
 def home():
     return app.send_static_file("index.html")
@@ -1630,8 +1664,8 @@ def _ip_account_count(ip):
         return 0
 
 
-@limiter.limit("25/min")
 @app.route("/register", methods=["POST"])
+@limiter.limit("25/minute")
 def register():
     ip = client_ip()
     now = time()
@@ -1766,8 +1800,8 @@ def register():
     return jsonify(success=True, user=public_user(new_user), admin=is_treasury_admin(new_user), cia=is_cia(new_user))
 
 
-@limiter.limit("10/min")
 @app.route("/login", methods=["POST"])
+@limiter.limit("10/minute")
 def login():
     data = request.get_json()
     username = data.get("username", "").strip()
@@ -1861,8 +1895,8 @@ def public_profile(username):
     })
 
 
-@limiter.limit("20/min")
 @app.route("/bio", methods=["POST"])
+@limiter.limit("20/minute")
 def set_bio():
     user = get_current_user(run_economics=False)
     if not user:
@@ -1892,14 +1926,14 @@ def _pinned_blog(bid):
         return None
 
 
-@limiter.limit("20/min")
 @app.route("/banner", methods=["POST"])
+@limiter.limit("20/minute")
 def set_banner():
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     url = ((request.get_json() or {}).get("url") or "").strip()[:500]
-    if url and not re.match(r"^https://", url):
+    if url and not re.match(r"^https://[A-Za-z0-9._~:/?#@!$&*+,;=%-]+$", url):
         return jsonify(success=False, error="Use a direct https:// image link."), 400
     try:
         supabase.table("cybucks").update({"banner": url or None}).eq("username", user["username"]).execute()
@@ -1908,8 +1942,8 @@ def set_banner():
     return jsonify(success=True, banner=url or None)
 
 
-@limiter.limit("20/min")
 @app.route("/profile/pin", methods=["POST"])
+@limiter.limit("20/minute")
 def pin_blog():
     user = get_current_user(run_economics=False)
     if not user:
@@ -1956,8 +1990,8 @@ def search_page():
     return app.send_static_file("search.html")
 
 
-@limiter.limit("60/min")
 @app.route("/search_data")
+@limiter.limit("60/minute")
 def search_data():
     """One-box search across citizens, blogs, videos and companies."""
     user = get_current_user(run_economics=False)
@@ -2025,8 +2059,8 @@ def _transferable_value(sender):
     return wealth - grant_locked - _outstanding_loan(sender["username"])
 
 
-@limiter.limit("20/min")
 @app.route("/transfer", methods=["POST"])
+@limiter.limit("20/minute")
 def transfer():
     user = get_current_user(run_economics=False)
     if not user:
@@ -2068,8 +2102,8 @@ def transfer():
     return jsonify(success=True, user=public_user(fresh))
 
 
-@limiter.limit("30/min")
 @app.route("/convert", methods=["POST"])
+@limiter.limit("30/minute")
 def convert():
     """Convert between cybucks / pufb / aquilines.
        1 Cybuck = 1 Pufferbuck = 10 Aquilines."""
@@ -2172,8 +2206,8 @@ def list_companies():
     return jsonify(success=True, companies=res.data or [], categories=COMPANY_CATEGORIES)
 
 
-@limiter.limit("10/min")
 @app.route("/companies", methods=["POST"])
+@limiter.limit("10/minute")
 def create_company():
     user = get_current_user(run_economics=False)
     if not user:
@@ -2434,8 +2468,8 @@ def exchange_company(cid):
     )
 
 
-@limiter.limit("10/min")
 @app.route("/exchange/ipo", methods=["POST"])
+@limiter.limit("10/minute")
 def exchange_ipo():
     user = get_current_user(run_economics=False)
     if not user:
@@ -2470,8 +2504,8 @@ def exchange_ipo():
     return jsonify(success=True)
 
 
-@limiter.limit("40/min")
 @app.route("/exchange/order", methods=["POST"])
+@limiter.limit("40/minute")
 def exchange_order():
     user = get_current_user(run_economics=False)
     if not user:
@@ -2519,8 +2553,8 @@ def exchange_order():
     return jsonify(success=True, filled=filled, quantity=qty)
 
 
-@limiter.limit("30/min")
 @app.route("/exchange/cancel", methods=["POST"])
+@limiter.limit("30/minute")
 def exchange_cancel():
     user = get_current_user(run_economics=False)
     if not user:
@@ -2619,8 +2653,8 @@ def portfolio_data():
                    cash=cash, cash_cb=cash_cb, net_worth=user_net_worth(me))
 
 
-@limiter.limit("10/min")
 @app.route("/exchange/dividend", methods=["POST"])
+@limiter.limit("10/minute")
 def exchange_dividend():
     """Founder pays a per-share dividend to all shareholders from company capital."""
     user = get_current_user(run_economics=False)
@@ -2709,8 +2743,8 @@ def market_list():
                    my_companies=my_companies, state=state)
 
 
-@limiter.limit("15/min")
 @app.route("/market", methods=["POST"])
+@limiter.limit("15/minute")
 def market_create():
     user = get_current_user(run_economics=False)
     if not user:
@@ -2769,8 +2803,8 @@ def market_create():
     return jsonify(success=True, item=item)
 
 
-@limiter.limit("30/min")
 @app.route("/market/buy", methods=["POST"])
+@limiter.limit("30/minute")
 def market_buy():
     user = get_current_user(run_economics=False)
     if not user:
@@ -2821,8 +2855,8 @@ def _add_cash_currency(username, currency, delta):
     cas_adjust(username, CURRENCY_COLUMN[currency], delta, allow_negative=True)
 
 
-@limiter.limit("20/min")
 @app.route("/market/delete", methods=["POST"])
+@limiter.limit("20/minute")
 def market_delete():
     user = get_current_user(run_economics=False)
     if not user:
@@ -2892,8 +2926,8 @@ def company_info(cid):
     )
 
 
-@limiter.limit("10/min")
 @app.route("/company/cofounder", methods=["POST"])
+@limiter.limit("10/minute")
 def add_cofounder():
     user = get_current_user(run_economics=False)
     if not user:
@@ -2925,8 +2959,8 @@ def add_cofounder():
     return jsonify(success=True)
 
 
-@limiter.limit("10/min")
 @app.route("/referrals")
+@limiter.limit("10/minute")
 def referrals():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3014,8 +3048,8 @@ def _assert_founder(user, cid):
     return c[0]
 
 
-@limiter.limit("20/min")
 @app.route("/jobs/decide", methods=["POST"])
+@limiter.limit("20/minute")
 def jobs_decide():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3048,8 +3082,8 @@ def jobs_decide():
     return jsonify(success=True)
 
 
-@limiter.limit("30/min")
 @app.route("/jobs/pay", methods=["POST"])
+@limiter.limit("30/minute")
 def jobs_pay():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3081,8 +3115,8 @@ def jobs_pay():
     return jsonify(success=True)
 
 
-@limiter.limit("20/min")
 @app.route("/jobs/fire", methods=["POST"])
+@limiter.limit("20/minute")
 def jobs_fire():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3112,8 +3146,8 @@ def savings_view():
                    balance=user.get("balance") or 0, rate=SAVINGS_RATE)
 
 
-@limiter.limit("20/min")
 @app.route("/savings/deposit", methods=["POST"])
+@limiter.limit("20/minute")
 def savings_deposit():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3134,8 +3168,8 @@ def savings_deposit():
     return jsonify(success=True)
 
 
-@limiter.limit("20/min")
 @app.route("/savings/withdraw", methods=["POST"])
+@limiter.limit("20/minute")
 def savings_withdraw():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3170,8 +3204,8 @@ def bonds_view():
                    balance=user.get("balance") or 0)
 
 
-@limiter.limit("15/min")
 @app.route("/bonds/buy", methods=["POST"])
+@limiter.limit("15/minute")
 def bonds_buy():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3196,8 +3230,8 @@ def bonds_buy():
     return jsonify(success=True, bond=bond)
 
 
-@limiter.limit("15/min")
 @app.route("/bonds/redeem", methods=["POST"])
+@limiter.limit("15/minute")
 def bonds_redeem():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3258,8 +3292,8 @@ def court_case(cid):
                    is_judge=is_court_judge(user), me=user["username"])
 
 
-@limiter.limit("30/min")
 @app.route("/court/debate", methods=["POST"])
+@limiter.limit("30/minute")
 def court_debate():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3274,8 +3308,8 @@ def court_debate():
     return jsonify(success=True)
 
 
-@limiter.limit("10/min")
 @app.route("/court/file", methods=["POST"])
+@limiter.limit("10/minute")
 def court_file():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3304,8 +3338,8 @@ def court_file():
     return jsonify(success=True)
 
 
-@limiter.limit("20/min")
 @app.route("/court/rule", methods=["POST"])
+@limiter.limit("20/minute")
 def court_rule():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3378,8 +3412,8 @@ def my_loans():
     return jsonify(success=True, loans=res.data or [], max_loan=LOAN_MAX, balance=user.get("balance") or 0)
 
 
-@limiter.limit("10/min")
 @app.route("/loans", methods=["POST"])
+@limiter.limit("10/minute")
 def take_loan():
     user = get_current_user()
     if not user:
@@ -3406,8 +3440,8 @@ def take_loan():
     return jsonify(success=True, loan=loan)
 
 
-@limiter.limit("10/min")
 @app.route("/loans/repay", methods=["POST"])
+@limiter.limit("10/minute")
 def repay_loan():
     user = get_current_user()
     if not user:
@@ -3615,8 +3649,8 @@ def passport_data():
     }, achievements=_achievements(user, records, nw))
 
 
-@limiter.limit("10/min")
 @app.route("/passport/issue", methods=["POST"])
+@limiter.limit("10/minute")
 def passport_issue():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3631,8 +3665,8 @@ def passport_issue():
     return jsonify(success=True)
 
 
-@limiter.limit("10/min")
 @app.route("/citizenship/oath", methods=["POST"])
+@limiter.limit("10/minute")
 def citizenship_oath():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3831,8 +3865,8 @@ def state_info(sid):
     return jsonify(success=True, state=d)
 
 
-@limiter.limit("15/min")
 @app.route("/state/<sid>/settle", methods=["POST"])
+@limiter.limit("15/minute")
 def state_settle(sid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -3859,8 +3893,8 @@ def state_settle(sid):
     return jsonify(success=True, home=sid, state=_state_public(s))
 
 
-@limiter.limit("20/min")
 @app.route("/state/<sid>/enter", methods=["POST"])
+@limiter.limit("20/minute")
 def state_enter(sid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -3902,8 +3936,8 @@ def list_polls():
     return jsonify(success=True, polls=out, is_president=is_treasury_admin(user))
 
 
-@limiter.limit("10/min")
 @app.route("/polls", methods=["POST"])
+@limiter.limit("10/minute")
 def create_poll():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3928,8 +3962,8 @@ def create_poll():
     return jsonify(success=True, poll=poll)
 
 
-@limiter.limit("30/min")
 @app.route("/polls/vote", methods=["POST"])
+@limiter.limit("30/minute")
 def cast_vote():
     user = get_current_user(run_economics=False)
     if not user:
@@ -3959,8 +3993,8 @@ def cast_vote():
     return jsonify(success=True)
 
 
-@limiter.limit("10/min")
 @app.route("/polls/close", methods=["POST"])
+@limiter.limit("10/minute")
 def close_poll():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -4003,8 +4037,8 @@ def news_list():
                    is_president=is_treasury_admin(user) if user else False)
 
 
-@limiter.limit("20/min")
 @app.route("/news", methods=["POST"])
+@limiter.limit("20/minute")
 def news_create():
     user = get_current_user(run_economics=False)
     if not user:
@@ -4025,8 +4059,8 @@ def news_create():
     return jsonify(success=True, item=item)
 
 
-@limiter.limit("20/min")
 @app.route("/news/delete", methods=["POST"])
+@limiter.limit("20/minute")
 def news_delete():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -4127,8 +4161,8 @@ def legislature_bill(bid):
                    is_sponsor=user["username"] == b["sponsor"], me=user["username"])
 
 
-@limiter.limit("10/min")
 @app.route("/legislature/table", methods=["POST"])
+@limiter.limit("10/minute")
 def legislature_table():
     user = get_current_user(run_economics=False)
     if not user:
@@ -4146,8 +4180,8 @@ def legislature_table():
     return jsonify(success=True, bill=bill)
 
 
-@limiter.limit("40/min")
 @app.route("/legislature/vote", methods=["POST"])
+@limiter.limit("40/minute")
 def legislature_vote():
     user = get_current_user(run_economics=False)
     if not user:
@@ -4171,8 +4205,8 @@ def legislature_vote():
     return jsonify(success=True)
 
 
-@limiter.limit("30/min")
 @app.route("/legislature/debate", methods=["POST"])
+@limiter.limit("30/minute")
 def legislature_debate():
     user = get_current_user(run_economics=False)
     if not user:
@@ -4187,8 +4221,8 @@ def legislature_debate():
     return jsonify(success=True)
 
 
-@limiter.limit("10/min")
 @app.route("/legislature/withdraw", methods=["POST"])
+@limiter.limit("10/minute")
 def legislature_withdraw():
     user = get_current_user(run_economics=False)
     if not user:
@@ -4212,8 +4246,8 @@ def _next_gazette_no(kind):
     return len(rows) + 1
 
 
-@limiter.limit("15/min")
 @app.route("/legislature/assent", methods=["POST"])
+@limiter.limit("15/minute")
 def legislature_assent():
     """The Head of State grants assent (enact) or rejects a bill."""
     user = get_current_user(run_economics=False)
@@ -4265,8 +4299,8 @@ def gazette_listing():
                    is_president=is_treasury_admin(user) if user else False)
 
 
-@limiter.limit("15/min")
 @app.route("/gazette/decree", methods=["POST"])
+@limiter.limit("15/minute")
 def gazette_decree():
     """The Head of State issues a binding executive decree."""
     user = get_current_user(run_economics=False)
@@ -4302,8 +4336,8 @@ def ministries_list():
                    is_president=is_treasury_admin(user) if user else False, me=me)
 
 
-@limiter.limit("15/min")
 @app.route("/ministries/create", methods=["POST"])
+@limiter.limit("15/minute")
 def ministries_create():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -4326,8 +4360,8 @@ def _set_designation_safe(username, desig):
     supabase.table("cybucks").update({"designation": desig}).eq("username", username).execute()
 
 
-@limiter.limit("20/min")
 @app.route("/ministries/appoint", methods=["POST"])
+@limiter.limit("20/minute")
 def ministries_appoint():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -4350,8 +4384,8 @@ def ministries_appoint():
     return jsonify(success=True)
 
 
-@limiter.limit("20/min")
 @app.route("/ministries/dismiss", methods=["POST"])
+@limiter.limit("20/minute")
 def ministries_dismiss():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -4368,8 +4402,8 @@ def ministries_dismiss():
     return jsonify(success=True)
 
 
-@limiter.limit("20/min")
 @app.route("/ministries/fund", methods=["POST"])
+@limiter.limit("20/minute")
 def ministries_fund():
     """The President allocates Treasury funds to a ministry's budget."""
     user = get_current_user(run_economics=False)
@@ -4391,8 +4425,8 @@ def ministries_fund():
     return jsonify(success=True)
 
 
-@limiter.limit("20/min")
 @app.route("/ministries/mandate", methods=["POST"])
+@limiter.limit("20/minute")
 def ministries_mandate():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -4403,8 +4437,8 @@ def ministries_mandate():
     return jsonify(success=True)
 
 
-@limiter.limit("30/min")
 @app.route("/ministries/spend", methods=["POST"])
+@limiter.limit("30/minute")
 def ministries_spend():
     """A minister (or the President) spends the ministry budget to pay a citizen."""
     user = get_current_user(run_economics=False)
@@ -4439,8 +4473,8 @@ def ministries_spend():
     return jsonify(success=True)
 
 
-@limiter.limit("15/min")
 @app.route("/ministries/delete", methods=["POST"])
+@limiter.limit("15/minute")
 def ministries_delete():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -4483,8 +4517,8 @@ def fir_list():
     return jsonify(success=True, firs=mine, me=me)
 
 
-@limiter.limit("10/min")
 @app.route("/fir/file", methods=["POST"])
+@limiter.limit("10/minute")
 def fir_file():
     user = get_current_user(run_economics=False)
     if not user:
@@ -4506,8 +4540,8 @@ def fir_file():
     return jsonify(success=True, fir=fir)
 
 
-@limiter.limit("20/min")
 @app.route("/fir/evidence", methods=["POST"])
+@limiter.limit("20/minute")
 def fir_evidence():
     user = get_current_user(run_economics=False)
     if not user:
@@ -4554,8 +4588,8 @@ def athena_data():
                    op_cooldown=max(0, int(ATHENA_OP_COOLDOWN - (now - _last_op.get(user["username"], 0)))))
 
 
-@limiter.limit("15/min")
 @app.route("/athena/recruit", methods=["POST"])
+@limiter.limit("15/minute")
 def athena_recruit():
     user = get_current_user(run_economics=False)
     if not user or not is_cia_director(user):
@@ -4577,8 +4611,8 @@ def athena_recruit():
     return jsonify(success=True)
 
 
-@limiter.limit("15/min")
 @app.route("/athena/dismiss", methods=["POST"])
+@limiter.limit("15/minute")
 def athena_dismiss():
     user = get_current_user(run_economics=False)
     if not user or not is_cia_director(user):
@@ -4591,8 +4625,8 @@ def athena_dismiss():
     return jsonify(success=True)
 
 
-@limiter.limit("30/min")
 @app.route("/athena/case", methods=["POST"])
+@limiter.limit("30/minute")
 def athena_case():
     """Agents act on an FIR: assign, change status, or add a secret note."""
     user = get_current_user(run_economics=False)
@@ -4624,8 +4658,8 @@ def athena_case():
     return jsonify(success=True)
 
 
-@limiter.limit("15/min")
 @app.route("/athena/escalate", methods=["POST"])
+@limiter.limit("15/minute")
 def athena_escalate():
     """Take an FIR to the Courts. Evidence must already be on file."""
     user = get_current_user(run_economics=False)
@@ -4688,8 +4722,8 @@ def _athena_intel(limit=25):
         return []      # table not migrated yet
 
 
-@limiter.limit("30/min")
 @app.route("/athena/op", methods=["POST"])
+@limiter.limit("30/minute")
 def athena_op():
     user = get_current_user(run_economics=False)
     if not user or not is_cia(user):
@@ -4722,8 +4756,8 @@ def athena_op():
     return jsonify(success=True, op_success=success, reward=reward, detail=detail)
 
 
-@limiter.limit("20/min")
 @app.route("/athena/report", methods=["POST"])
+@limiter.limit("20/minute")
 def athena_report():
     user = get_current_user(run_economics=False)
     if not user or not is_cia(user):
@@ -4849,8 +4883,8 @@ _recon_last = {}
 RECON_MIN_GAP = 60      # deep recon (robots/sitemap) at most once/min per target
 
 
-@limiter.limit("10/min")
 @app.route("/athena/recon", methods=["POST"])
+@limiter.limit("10/minute")
 def athena_recon():
     """Deep recon: read the target's robots.txt & sitemap.xml — files a site
     intentionally publishes for crawlers — to map the routes they expose."""
@@ -4887,8 +4921,8 @@ def athena_recon():
     return jsonify(success=True, surveil=_surveil_payload(), found=len(routes))
 
 
-@limiter.limit("40/min")
 @app.route("/athena/surveil", methods=["GET", "POST"])
+@limiter.limit("40/minute")
 def athena_surveil():
     user = get_current_user(run_economics=False)
     if not user or not is_cia(user):
@@ -4959,8 +4993,8 @@ def warroom_data():
                    threats=threats, surveil=_surveil_payload(), me=user["username"])
 
 
-@limiter.limit("30/min")
 @app.route("/warroom/set", methods=["POST"])
+@limiter.limit("30/minute")
 def warroom_set():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -4980,8 +5014,8 @@ def warroom_set():
     return jsonify(success=True)
 
 
-@limiter.limit("30/min")
 @app.route("/warroom/grant", methods=["POST"])
+@limiter.limit("30/minute")
 def warroom_grant():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -5000,8 +5034,8 @@ def warroom_grant():
     return jsonify(success=True)
 
 
-@limiter.limit("30/min")
 @app.route("/warroom/revoke", methods=["POST"])
+@limiter.limit("30/minute")
 def warroom_revoke():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -5045,8 +5079,8 @@ def admin_config_get():
     return jsonify(success=True, config=(r[0] if r else {}))
 
 
-@limiter.limit("20/min")
 @app.route("/admin/config", methods=["POST"])
+@limiter.limit("20/minute")
 def admin_config_set():
     user = get_current_user(run_economics=False)
     if not user:
@@ -5098,8 +5132,8 @@ def admin_security():
     return jsonify(success=True, blocked=blocked, signups=signups, banned=banned, pending=pending)
 
 
-@limiter.limit("60/min")
 @app.route("/admin/approve", methods=["POST"])
+@limiter.limit("60/minute")
 def admin_approve():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -5122,8 +5156,8 @@ def admin_approve():
     return jsonify(success=True, referral_paid=bool(was_pending and ref))
 
 
-@limiter.limit("60/min")
 @app.route("/admin/reject", methods=["POST"])
+@limiter.limit("60/minute")
 def admin_reject():
     """Reject a pending applicant: delete the account and block their signup IP."""
     user = get_current_user(run_economics=False)
@@ -5155,8 +5189,8 @@ def admin_reject():
     return jsonify(success=True, ip_blocked=bool(block))
 
 
-@limiter.limit("30/min")
 @app.route("/admin/block_user", methods=["POST"])
+@limiter.limit("30/minute")
 def admin_block_user():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -5181,8 +5215,8 @@ def admin_block_user():
     return jsonify(success=True, ip_blocked=bool(ip), ip=ip)
 
 
-@limiter.limit("30/min")
 @app.route("/admin/unban", methods=["POST"])
+@limiter.limit("30/minute")
 def admin_unban():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -5196,8 +5230,8 @@ def admin_unban():
     return jsonify(success=True)
 
 
-@limiter.limit("30/min")
 @app.route("/admin/block", methods=["POST"])
+@limiter.limit("30/minute")
 def admin_block():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -5215,8 +5249,8 @@ def admin_block():
     return jsonify(success=True)
 
 
-@limiter.limit("30/min")
 @app.route("/admin/unblock", methods=["POST"])
+@limiter.limit("30/minute")
 def admin_unblock():
     user = get_current_user(run_economics=False)
     if not user or not is_treasury_admin(user):
@@ -5281,8 +5315,8 @@ def _casino_resolve(game, bet, choice):
     return 0, face, f"{face} — no match."
 
 
-@limiter.limit("60/min")
 @app.route("/casino/play", methods=["POST"])
+@limiter.limit("60/minute")
 def casino_play():
     user = get_current_user(run_economics=False)
     if not user:
@@ -5468,8 +5502,8 @@ def bluff_list():
     return jsonify(success=True, games=games, me=user["username"], mine=mine)
 
 
-@limiter.limit("20/min")
 @app.route("/casino/bluff/create", methods=["POST"])
+@limiter.limit("20/minute")
 def bluff_create():
     user = get_current_user(run_economics=False)
     if not user:
@@ -5503,8 +5537,8 @@ def _bluff_get(gid):
     return r[0] if r else None
 
 
-@limiter.limit("30/min")
 @app.route("/casino/bluff/join", methods=["POST"])
+@limiter.limit("30/minute")
 def bluff_join():
     user = get_current_user(run_economics=False)
     if not user:
@@ -5533,8 +5567,8 @@ def bluff_join():
     return jsonify(success=True, gid=gid)
 
 
-@limiter.limit("30/min")
 @app.route("/casino/bluff/leave", methods=["POST"])
+@limiter.limit("30/minute")
 def bluff_leave():
     user = get_current_user(run_economics=False)
     if not user:
@@ -5573,8 +5607,8 @@ def bluff_leave():
     return jsonify(success=True)
 
 
-@limiter.limit("30/min")
 @app.route("/casino/bluff/start", methods=["POST"])
+@limiter.limit("30/minute")
 def bluff_start():
     user = get_current_user(run_economics=False)
     if not user:
@@ -5622,8 +5656,8 @@ def _bluff_finish_if_won(g, gid):
     log_txn("bluff", "Bluff table", winner, pot, "cybucks", "won the pot")
 
 
-@limiter.limit("120/min")
 @app.route("/casino/bluff/play", methods=["POST"])
+@limiter.limit("120/minute")
 def bluff_play_route():
     user = get_current_user(run_economics=False)
     if not user:
@@ -5639,8 +5673,8 @@ def bluff_play_route():
     return jsonify(success=True, view=_bluff_view(_bluff_get(g["id"]), user["username"]))
 
 
-@limiter.limit("120/min")
 @app.route("/casino/bluff/call", methods=["POST"])
+@limiter.limit("120/minute")
 def bluff_call_route():
     user = get_current_user(run_economics=False)
     if not user:
@@ -5783,8 +5817,8 @@ def mail_get(mid):
                          "rid": mine["id"] if mine else None})
 
 
-@limiter.limit("20/min")
 @app.route("/mail/send", methods=["POST"])
+@limiter.limit("20/minute")
 def mail_send():
     user = get_current_user(run_economics=False)
     if not user:
@@ -5853,8 +5887,8 @@ def mail_send():
     return jsonify(success=True, mail=m)
 
 
-@limiter.limit("60/min")
 @app.route("/mail/<int:mid>/star", methods=["POST"])
+@limiter.limit("60/minute")
 def mail_star(mid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -5868,8 +5902,8 @@ def mail_star(mid):
     return jsonify(success=True, starred=new)
 
 
-@limiter.limit("60/min")
 @app.route("/mail/<int:mid>/archive", methods=["POST"])
+@limiter.limit("60/minute")
 def mail_archive(mid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -5900,8 +5934,8 @@ def _insert_message(row, data):
     return supabase.table("messages").insert(row).execute().data[0]
 
 
-@limiter.limit("120 per minute")
 @app.route("/presence", methods=["GET", "POST"])
+@limiter.limit("120 per minute")
 def presence():
     user = get_current_user(run_economics=False)   # this call also marks me online
     if not user:
@@ -5914,8 +5948,8 @@ def presence():
     return jsonify(success=True, online=online)
 
 
-@limiter.limit("240 per minute")
 @app.route("/typing", methods=["GET", "POST"])
+@limiter.limit("240 per minute")
 def typing():
     user = get_current_user(run_economics=False)
     if not user:
@@ -5935,8 +5969,8 @@ def typing():
     return jsonify(success=True, typing=others)
 
 
-@limiter.limit("60 per minute")
 @app.route("/messages", methods=["POST"])
+@limiter.limit("60 per minute")
 def send_message():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6034,8 +6068,8 @@ def _store_image(f, folder):
     return url.rstrip("?"), None
 
 
-@limiter.limit("20/min")
 @app.route("/chat/upload", methods=["POST"])
+@limiter.limit("20/minute")
 def chat_upload():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6080,8 +6114,8 @@ def _store_voice(f, folder):
     return url.rstrip("?"), None
 
 
-@limiter.limit("30/min")
 @app.route("/voice/upload", methods=["POST"])
+@limiter.limit("30/minute")
 def voice_upload():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6096,8 +6130,8 @@ def voice_upload():
     return jsonify(success=True, url=url)
 
 
-@limiter.limit("12/min")
 @app.route("/avatar", methods=["POST"])
+@limiter.limit("12/minute")
 def set_avatar():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6115,8 +6149,8 @@ def set_avatar():
     return jsonify(success=True, url=url)
 
 
-@limiter.limit("12/min")
 @app.route("/avatar/remove", methods=["POST"])
+@limiter.limit("12/minute")
 def remove_avatar():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6169,8 +6203,8 @@ def _tenor_gifs(q):
     return gifs
 
 
-@limiter.limit("40/min")
 @app.route("/gif/search")
+@limiter.limit("40/minute")
 def gif_search():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6187,8 +6221,8 @@ def gif_search():
         return jsonify(success=True, gifs=[], error="GIF search unavailable")
 
 
-@limiter.limit("6/min")
 @app.route("/admin/purge_chat", methods=["POST"])
+@limiter.limit("6/minute")
 def admin_purge_chat():
     """President-only: wipe all chat messages for a clean slate (keeps groups/DMs structure)."""
     user = get_current_user(run_economics=False)
@@ -6198,8 +6232,8 @@ def admin_purge_chat():
     return jsonify(success=True)
 
 
-@limiter.limit("4/min")
 @app.route("/admin/purge_bots", methods=["POST"])
+@limiter.limit("4/minute")
 def admin_purge_bots():
     """President-only: wipe all accounts whose username starts with `prefix`
     (default 'bot_'), plus every trace, and block the IPs they came from."""
@@ -6403,8 +6437,8 @@ def videos_list():
     return jsonify(success=True, videos=vids, top=top, me=user["username"])
 
 
-@limiter.limit("20/min")
 @app.route("/videos", methods=["POST"])
+@limiter.limit("20/minute")
 def videos_post():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6476,8 +6510,8 @@ def _store_video(f, folder):
     return url.rstrip("?"), None
 
 
-@limiter.limit("8/min")
 @app.route("/video/upload", methods=["POST"])
+@limiter.limit("8/minute")
 def video_upload():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6523,8 +6557,8 @@ def video_get(vid):
     return jsonify(success=True, video=v, comments=cmts, me=user["username"])
 
 
-@limiter.limit("30/min")
 @app.route("/video/<int:vid>/share", methods=["POST"])
+@limiter.limit("30/minute")
 def video_share(vid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -6540,8 +6574,8 @@ def video_share(vid):
         return jsonify(success=True, shares=None)     # shares column not migrated — degrade quietly
 
 
-@limiter.limit("60/min")
 @app.route("/video/<int:vid>/view", methods=["POST"])
+@limiter.limit("60/minute")
 def video_view(vid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -6557,8 +6591,8 @@ def video_view(vid):
         return jsonify(success=True, views=None)     # views column not migrated — degrade quietly
 
 
-@limiter.limit("40/min")
 @app.route("/video/<int:vid>/comment", methods=["POST"])
+@limiter.limit("40/minute")
 def video_comment(vid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -6625,8 +6659,8 @@ def blogs_list():
     return jsonify(success=True, posts=posts, me=user["username"])
 
 
-@limiter.limit("15/min")
 @app.route("/blogs", methods=["POST"])
+@limiter.limit("15/minute")
 def blogs_post():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6671,8 +6705,8 @@ def blog_get(bid):
                    likes=len(likes), liked=any(l["username"] == user["username"] for l in likes))
 
 
-@limiter.limit("30/min")
 @app.route("/blog/<int:bid>/share", methods=["POST"])
+@limiter.limit("30/minute")
 def blog_share(bid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -6688,8 +6722,8 @@ def blog_share(bid):
         return jsonify(success=True, shares=None)     # shares column not migrated — degrade quietly
 
 
-@limiter.limit("60/min")
 @app.route("/blog/<int:bid>/like", methods=["POST"])
+@limiter.limit("60/minute")
 def blog_like(bid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -6711,8 +6745,8 @@ def blog_like(bid):
     return jsonify(success=True, liked=liked, likes=total)
 
 
-@limiter.limit("40/min")
 @app.route("/blog/<int:bid>/comment", methods=["POST"])
+@limiter.limit("40/minute")
 def blog_comment(bid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -6730,8 +6764,8 @@ def blog_comment(bid):
     return jsonify(success=True, comment=row)
 
 
-@limiter.limit("90 per minute")
 @app.route("/dm/<username>", methods=["GET"])
+@limiter.limit("90 per minute")
 def dm_thread(username):
     user = get_current_user(run_economics=False)
     if not user:
@@ -6748,8 +6782,8 @@ def dm_thread(username):
     return jsonify(success=True, messages=msgs, me=me)
 
 
-@limiter.limit("60 per minute")
 @app.route("/dm", methods=["POST"])
+@limiter.limit("60 per minute")
 def dm_send():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6772,8 +6806,8 @@ def dm_send():
     return jsonify(success=True, message=row)
 
 
-@limiter.limit("90 per minute")
 @app.route("/messages", methods=["GET"])
+@limiter.limit("90 per minute")
 def get_messages():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6814,8 +6848,8 @@ def groups_list():
     return jsonify(success=True, groups=groups, me=user["username"])
 
 
-@limiter.limit("10/min")
 @app.route("/groups", methods=["POST"])
+@limiter.limit("10/minute")
 def groups_create():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6838,8 +6872,8 @@ def groups_create():
     return jsonify(success=True, group=g)
 
 
-@limiter.limit("20/min")
 @app.route("/groups/add", methods=["POST"])
+@limiter.limit("20/minute")
 def groups_add():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6861,8 +6895,8 @@ def groups_add():
     return jsonify(success=True)
 
 
-@limiter.limit("20/min")
 @app.route("/groups/leave", methods=["POST"])
+@limiter.limit("20/minute")
 def groups_leave():
     user = get_current_user(run_economics=False)
     if not user:
@@ -6873,8 +6907,8 @@ def groups_leave():
     return jsonify(success=True)
 
 
-@limiter.limit("90 per minute")
 @app.route("/groups/<int:gid>/messages", methods=["GET"])
+@limiter.limit("90 per minute")
 def group_messages(gid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -6889,8 +6923,8 @@ def group_messages(gid):
     return jsonify(success=True, messages=res, me=user["username"])
 
 
-@limiter.limit("60 per minute")
 @app.route("/groups/<int:gid>/messages", methods=["POST"])
+@limiter.limit("60 per minute")
 def group_send(gid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -6937,8 +6971,8 @@ def _reactions_for(ids, me):
     return {mid: list(v.values()) for mid, v in agg.items()}
 
 
-@limiter.limit("120/min")
 @app.route("/messages/<int:mid>/react", methods=["POST"])
+@limiter.limit("120/minute")
 def message_react(mid):
     user = get_current_user(run_economics=False)
     if not user:
@@ -6960,8 +6994,8 @@ def message_react(mid):
     return jsonify(success=True, reactions=_reactions_for([mid], me).get(mid, []))
 
 
-@limiter.limit("240/min")
 @app.route("/reactions")
+@limiter.limit("240/minute")
 def reactions_get():
     user = get_current_user(run_economics=False)
     if not user:
@@ -7023,8 +7057,8 @@ def _groq_reply(messages):
     return r.json()["choices"][0]["message"]["content"].strip()
 
 
-@limiter.limit("20/min")
 @app.route("/ai_ask", methods=["POST"])
+@limiter.limit("20/minute")
 def ai_ask():
     try:
         data = request.get_json(force=True) or {}

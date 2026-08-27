@@ -4,6 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cyvathon ID Card</title>
+  <!-- social / SEO metadata -->
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="Your Cyvathon ID card — citizenship status, designation, net worth, badges and public profile." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/profile" />
+  <meta name="theme-color" content="#58c4ff" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="Cyvathon ID Card" />
+  <meta property="og:description" content="Your Cyvathon ID card — citizenship status, designation, net worth, badges and public profile." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/profile" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Cyvathon ID Card" />
+  <meta name="twitter:description" content="Your Cyvathon ID card — citizenship status, designation, net worth, badges and public profile." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
   <style>
@@ -94,7 +114,7 @@
 
     /* ---- Banner / badges / pinned post ---- */
     function bannerHtml(banner, own){
-      const bg = banner ? `background-image:url('${(banner+'').replace(/'/g,"%27")}')` : '';
+      const bg = banner ? `background-image:url('${encodeURI(banner+'').replace(/['()]/g, encodeURIComponent)}')` : '';
       return `<div class="id-banner" style="${bg}">${own?`<button class="ghost bedit" style="width:auto;margin:0;padding:.25rem .7rem;font-size:.72rem;" onclick="editBanner()"><i class="fas fa-image"></i> Banner</button>`:''}</div>`;
     }
     function badgesHtml(badges){

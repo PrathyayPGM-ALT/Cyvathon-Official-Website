@@ -20,9 +20,9 @@ This repository contains the code for the **Cyvathon Official Website**, the **C
   https://cyvathon.onrender.com/ 
 
 - **Cybucks Banking System (from this repo):**  
-  https://cyvathon-official-website.onrender.com/bank
+  https://cyvathon.onrender.com/bank
 - **Cyvathon Chat (from this repo):**  
-  https://cyvathon-official-website.onrender.com/chat  
+  https://cyvathon.onrender.com/chat  
 
 ---
 
