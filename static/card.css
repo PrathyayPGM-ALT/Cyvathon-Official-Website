@@ -1,0 +1,94 @@
+/* ============================================================
+   CYVATHON DEBIT CARD
+   Drawn at true ISO/IEC 7810 ID-1 size (85.6 x 53.98 mm) so a printed
+   card can be cut out and carried. Shared by /card, /card/sheet and /bank.
+   ============================================================ */
+
+.cy-card{
+  width:85.6mm; height:53.98mm; border-radius:3.2mm; position:relative;
+  overflow:hidden; color:#eaf3fb; flex-shrink:0;
+  background:linear-gradient(135deg,#0b1a2e 0%,#123456 45%,#0d2440 100%);
+  font-family:"Segoe UI",system-ui,sans-serif;
+  -webkit-print-color-adjust:exact; print-color-adjust:exact;
+}
+.cy-card::after{ content:""; position:absolute; right:-14mm; top:-16mm;
+  width:44mm; height:44mm; border-radius:50%;
+  background:radial-gradient(circle,rgba(88,196,255,.42),transparent 68%); }
+/* box-sizing matters: with content-box the padding would make .inner taller
+   than the card and push the bottom block off the edge. */
+.cy-card .inner{ position:relative; z-index:2; height:100%; box-sizing:border-box;
+  padding:3.6mm 4.2mm; display:flex; flex-direction:column; }
+
+.cy-top{ display:flex; justify-content:space-between; align-items:flex-start; }
+.cy-brand{ font-size:3.5mm; font-weight:800; letter-spacing:.7mm; }
+.cy-brand span{ color:#58c4ff; }
+.cy-type{ font-size:2.1mm; letter-spacing:.5mm; color:#9dc4e4;
+  text-transform:uppercase; margin-top:.5mm; }
+
+.cy-chip{ width:9mm; height:6.6mm; border-radius:1.2mm; margin-top:1.8mm;
+  background:linear-gradient(135deg,#e8c766,#b8912f 45%,#f2dd9a); position:relative; }
+.cy-chip::before,.cy-chip::after{ content:""; position:absolute; left:12%;
+  right:12%; height:.35mm; background:rgba(0,0,0,.32); }
+.cy-chip::before{ top:34%; } .cy-chip::after{ top:64%; }
+
+.cy-num{ font-family:"Consolas","SF Mono",monospace; font-size:4.3mm;
+  letter-spacing:.42mm; margin-top:1.6mm; text-shadow:0 .3mm .6mm rgba(0,0,0,.55); }
+
+.cy-bottom{ margin-top:auto; }
+.cy-foot{ display:flex; justify-content:space-between; align-items:flex-end; gap:2mm; }
+.cy-lbl{ font-size:1.7mm; letter-spacing:.35mm; color:#8fb4d4; text-transform:uppercase; }
+.cy-val{ font-size:2.9mm; font-weight:700; text-transform:uppercase;
+  letter-spacing:.2mm; white-space:nowrap; overflow:hidden;
+  max-width:42mm; text-overflow:ellipsis; }
+.cy-qr{ width:16mm; height:16mm; background:#fff; border-radius:1.2mm;
+  padding:.9mm; flex-shrink:0; box-sizing:border-box; }
+.cy-qr img{ width:100%; height:100%; display:block; }
+.cy-bars{ height:5.5mm; margin-top:1.2mm; background:#fff;
+  border-radius:.6mm; padding:.5mm .8mm; box-sizing:border-box; }
+.cy-bars img{ width:100%; height:100%; display:block; }
+
+/* ---- back face ---- */
+.cy-card.back{ background:linear-gradient(135deg,#0d2440 0%,#123456 55%,#0b1a2e 100%); }
+.cy-card.back .inner{ padding:0; }
+.cy-mag{ height:10mm; margin-top:4.5mm; background:linear-gradient(#12181f,#05070a); }
+.cy-back-body{ padding:3mm 4.2mm 3.6mm; display:flex; flex-direction:column; height:100%;
+  box-sizing:border-box; }
+.cy-sign{ background:repeating-linear-gradient(-58deg,#f2f4f7,#f2f4f7 1.4mm,#e2e7ee 1.4mm,#e2e7ee 2.8mm);
+  border-radius:.8mm; height:8mm; margin-top:3mm; display:flex; align-items:center;
+  justify-content:space-between; padding:0 2mm; box-sizing:border-box; }
+.cy-sign .sig{ font-family:"Segoe Script","Brush Script MT",cursive; color:#16202c;
+  font-size:3.4mm; white-space:nowrap; overflow:hidden; max-width:52mm; }
+.cy-sign .cvv{ font-family:"Consolas",monospace; color:#16202c; font-size:2.8mm;
+  letter-spacing:.3mm; }
+.cy-fine{ font-size:1.85mm; line-height:1.45; color:#9dc4e4; margin-top:auto; }
+.cy-fine b{ color:#d6e8f7; }
+
+/* ---- interactive (screen only) ---- */
+.cy-stage{ perspective:1100px; width:85.6mm; height:53.98mm; }
+.cy-flip{ position:relative; width:100%; height:100%;
+  transform-style:preserve-3d; transition:transform .55s cubic-bezier(.2,.7,.3,1);
+  cursor:pointer; }
+.cy-flip .cy-card{ position:absolute; inset:0; backface-visibility:hidden;
+  -webkit-backface-visibility:hidden; box-shadow:0 14px 38px rgba(0,0,0,.5); }
+.cy-flip .cy-card.back{ transform:rotateY(180deg); }
+.cy-flip.is-flipped{ transform:rotateY(180deg); }
+/* moving glare, positioned by JS */
+.cy-glare{ position:absolute; inset:0; border-radius:3.2mm; pointer-events:none;
+  z-index:5; opacity:0; transition:opacity .25s;
+  background:radial-gradient(circle at var(--gx,50%) var(--gy,50%),
+             rgba(255,255,255,.30), rgba(255,255,255,0) 55%); }
+.cy-flip.is-tilting .cy-glare{ opacity:1; }
+.cy-hint{ font-size:.78rem; color:var(--muted); text-align:center; margin-top:.6rem; }
+
+@media (prefers-reduced-motion: reduce){
+  .cy-flip{ transition:none; }
+  .cy-glare{ display:none; }
+}
+
+@media print{
+  .cy-stage{ perspective:none; }
+  .cy-flip{ transform:none !important; transition:none; }
+  .cy-flip .cy-card{ position:relative; box-shadow:none; }
+  .cy-flip .cy-card.back{ display:none; }   /* print the front only */
+  .cy-glare,.cy-hint{ display:none !important; }
+}

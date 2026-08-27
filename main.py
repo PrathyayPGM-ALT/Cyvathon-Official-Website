@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, session, g
 from flask_cors import CORS
 from supabase import create_client
 from werkzeug.security import generate_password_hash, check_password_hash
+import io
 import os
 import logging
 import math
@@ -14,6 +15,7 @@ from urllib.parse import unquote
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from google import genai
+import segno
 
 
 # ============================================================
@@ -7095,6 +7097,219 @@ def ai_ask():
 def health():
     return "Backend secure, vro!"
 
+
+
+# ============================================================
+#  CYVATHON DEBIT CARDS
+#  A printable card carrying the citizen's card number as a QR
+#  (scanned to pay them) plus a Code128 stripe. The number is derived
+#  from the account id the same way passport numbers are, so nothing
+#  new has to be stored — and a lost card is reissued by reprinting.
+#
+#  SECURITY NOTE: a printed barcode is public. The card number is an
+#  IDENTIFIER, never a credential: scanning it can only send money TO
+#  the holder, never take money from them. Do not add a "charge this
+#  card" endpoint without also requiring the holder to approve.
+# ============================================================
+CARD_BIN = "492100"          # Cyvathon issuer prefix, like a real card's BIN
+
+
+def _luhn_check_digit(digits):
+    """Standard Luhn check digit, so a mistyped card number is rejected."""
+    total = 0
+    for i, ch in enumerate(reversed(digits)):
+        d = int(ch)
+        if i % 2 == 0:                 # doubled from the right of the payload
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return str((10 - total % 10) % 10)
+
+
+def _card_number(user):
+    """16 digits: 6-digit issuer prefix + 9-digit account id + Luhn check."""
+    body = CARD_BIN + f"{int(user.get('id') or 0):09d}"
+    return body + _luhn_check_digit(body)
+
+
+def _card_pretty(num):
+    return " ".join(num[i:i + 4] for i in range(0, len(num), 4))
+
+
+def _card_account_id(cardno):
+    """Reverse a card number to an account id, or None if it isn't valid."""
+    digits = re.sub(r"\D", "", cardno or "")
+    if len(digits) != 16 or not digits.startswith(CARD_BIN):
+        return None
+    if _luhn_check_digit(digits[:15]) != digits[15]:
+        return None
+    try:
+        return int(digits[6:15])
+    except ValueError:
+        return None
+
+
+def _card_holder(cardno):
+    """Look up the citizen a card belongs to. Returns None when unknown."""
+    aid = _card_account_id(cardno)
+    if aid is None:
+        return None
+    try:
+        rows = supabase.table("cybucks").select("*").eq("id", aid).execute().data
+    except Exception:
+        return None
+    return rows[0] if rows else None
+
+
+# ---- Code128-B/C ------------------------------------------------------
+# Verified bit-for-bit against the python-barcode reference implementation.
+# 106 symbols of 11 modules each, concatenated.
+_C128 = (
+    "1101100110011001101100110011001101001001100010010001100100010011001001100100010011000100"
+    "1000110010011001001000110010001001100010010010110011100100110111001001100111010111001100"
+    "1001110110010011100110110011100101100101110011001001110110111001001100111010011101101110"
+    "1110100110011100101100111001001101110110010011100110100111001100101101101100011011000110"
+    "1100011011010100011000100010110001000100011010110001000100011010001000110001011010001000"
+    "1100010100011000100010101101110001011000111010001101110101110110001011100011010001110110"
+    "1110111011011010001110110001011101101110100011011100010110111011101110101100011101000110"
+    "1110001011011101101000111011000101110001101011101111010110010000101111000101010100110000"
+    "1010000110010010110000100100001101000010110010000100110101100100001011000010010011010000"
+    "1001100001010000110100100001100101100001001011001010000111101110101100001010010001111010"
+    "1010011110010010111100100100111101011110010010011110100100111100101111010010011110010100"
+    "1111001001011011011110110111101101111011011010101111000101000111101000101111010111101000"
+    "1011110001011110101000111101000101011101111010111101110111010111101111010111011010000100"
+    "1101001000011010011100"
+)
+_C128_STOP = "1100011101011"
+
+
+def _c128_bits(digits):
+    """Code128-C bit pattern for an even-length digit string."""
+    vals = [105] + [int(digits[i:i + 2]) for i in range(0, len(digits), 2)]
+    chk = (vals[0] + sum(i * v for i, v in enumerate(vals[1:], 1))) % 103
+    vals.append(chk)
+    return "".join(_C128[v * 11:(v + 1) * 11] for v in vals) + _C128_STOP
+
+
+def _barcode_svg(digits, height=70):
+    """Render the Code128 stripe as an SVG of 1-module-wide bars."""
+    bits = _c128_bits(digits)
+    bars, run = [], 0
+    for i, b in enumerate(bits):
+        if b == "1":
+            run += 1
+        elif run:
+            bars.append((i - run, run)); run = 0
+    if run:
+        bars.append((len(bits) - run, run))
+    rects = "".join(f'<rect x="{x}" y="0" width="{w}" height="{height}"/>'
+                    for x, w in bars)
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {len(bits)} {height}" '
+            f'preserveAspectRatio="none" shape-rendering="crispEdges">'
+            f'<g fill="#0d1117">{rects}</g></svg>')
+
+
+def _pay_url(cardno):
+    return request.url_root.rstrip("/") + "/pay?c=" + cardno
+
+
+# ---- routes -----------------------------------------------------------
+@app.route("/card")
+def card_page():
+    return app.send_static_file("card.html")
+
+
+@app.route("/pay")
+def pay_page():
+    return app.send_static_file("pay.html")
+
+
+@app.route("/card_data")
+@limiter.limit("30/minute")
+def card_data():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    num = _card_number(user)
+    return jsonify(success=True, card={
+        "number": num,
+        "pretty": _card_pretty(num),
+        "holder": user["username"],
+        "designation": user.get("designation") or "Citizen",
+        "since": user.get("created_at"),
+        "pay_url": _pay_url(num),
+    })
+
+
+@app.route("/card/barcode/<cardno>.svg")
+@limiter.limit("60/minute")
+def card_barcode(cardno):
+    digits = re.sub(r"\D", "", cardno or "")
+    if len(digits) != 16:
+        return jsonify(success=False, error="Bad card number"), 400
+    resp = app.response_class(_barcode_svg(digits), mimetype="image/svg+xml")
+    resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
+
+
+@app.route("/card/qr/<cardno>.svg")
+@limiter.limit("60/minute")
+def card_qr(cardno):
+    digits = re.sub(r"\D", "", cardno or "")
+    if len(digits) != 16:
+        return jsonify(success=False, error="Bad card number"), 400
+    buf = io.BytesIO()
+    segno.make(_pay_url(digits), error="m").save(
+        buf, kind="svg", scale=1, dark="#0d1117", light=None,
+        svgclass=None, lineclass=None, omitsize=True, xmldecl=False)
+    resp = app.response_class(buf.getvalue(), mimetype="image/svg+xml")
+    resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
+
+
+@app.route("/card/resolve")
+@limiter.limit("40/minute")
+def card_resolve():
+    """Card number -> who to pay. Public on purpose: the whole point of the
+    QR is that someone else can scan it and send the holder money."""
+    holder = _card_holder(request.args.get("c", ""))
+    if not holder:
+        return jsonify(success=False, error="That card isn't recognised."), 404
+    if holder.get("banned"):
+        return jsonify(success=False, error="That account is banned."), 403
+    return jsonify(success=True, holder={
+        "username": holder["username"],
+        "designation": holder.get("designation") or "Citizen",
+        "avatar": holder.get("avatar"),
+        "company": holder.get("company"),
+    })
+
+
+@app.route("/card/sheet")
+def card_sheet_page():
+    return app.send_static_file("cardsheet.html")
+
+
+@app.route("/card/all")
+@limiter.limit("6/minute")
+def card_all():
+    """Every citizen's card, for the President to print and hand out."""
+    user = get_current_user(run_economics=False)
+    if not user or not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    rows = supabase.table("cybucks").select(
+        "id,username,designation,created_at,banned").order("id").execute().data or []
+    cards = []
+    for r in rows:
+        if r.get("banned"):
+            continue
+        num = _card_number(r)
+        cards.append({"number": num, "pretty": _card_pretty(num),
+                      "holder": r["username"],
+                      "designation": r.get("designation") or "Citizen",
+                      "since": r.get("created_at")})
+    return jsonify(success=True, cards=cards, count=len(cards))
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))

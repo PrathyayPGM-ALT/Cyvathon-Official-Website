@@ -69,7 +69,7 @@ async function requireAuth() {
 function renderNav(active, user) {
   const GROUPS = [
     { label: "Home", href: "/" },
-    { label: "Money",      items: [["/bank","Bank"], ["/exchange","Stock Exchange"], ["/loans","Loans"], ["/casino","Casino"]] },
+    { label: "Money",      items: [["/bank","Bank"], ["/card","Debit Card"], ["/pay","Pay by Card"], ["/exchange","Stock Exchange"], ["/loans","Loans"], ["/casino","Casino"]] },
     { label: "Business",   items: [["/company","Companies"], ["/jobs","Jobs Board"], ["/states","States"], ["/marketplace","Import & Export"]] },
     { label: "Government",  items: [["/government","Cabinet"], ["/ministries","Ministries"], ["/legislature","Legislature"], ["/gazette","Gazette"], ["/court","Courts"], ["/fir","Report a Crime"], ["/voting","Elections"], ["/foreign","Foreign Affairs"], ["/treasury","Treasury"], ["/admin","Admin Panel"]] },
     { label: "Community",   items: [["/search","Search"], ["/citizens","Citizens"], ["/chat","Chat"], ["/videos","Videos"], ["/blogs","Blogs"], ["/flightsim","Flight Sim"], ["/ai","Cyvathon AI"], ["/invite","Invite Friends"], ["/news","News"], ["/rules","Rules"]] },

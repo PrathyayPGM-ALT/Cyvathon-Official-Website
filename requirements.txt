@@ -5,3 +5,4 @@ supabase
 google-genai
 werkzeug
 gunicorn
+segno

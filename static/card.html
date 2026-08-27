@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debit Card · Cyvathon</title>
+  <!-- social / SEO metadata -->
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="Your Cyvathon debit card — print it, carry it, and let other citizens scan it to pay you." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/card" />
+  <meta name="theme-color" content="#58c4ff" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="Debit Card · Cyvathon" />
+  <meta property="og:description" content="Your Cyvathon debit card — print it, carry it, and let other citizens scan it to pay you." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/card" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Debit Card · Cyvathon" />
+  <meta name="twitter:description" content="Your Cyvathon debit card — print it, carry it, and let other citizens scan it to pay you." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/card.css">
+  <style>
+    .stage-wrap{ display:flex; flex-direction:column; align-items:center; gap:1.2rem; }
+    .hint{ max-width:520px; text-align:center; }
+    .row{ display:flex; gap:.6rem; flex-wrap:wrap; justify-content:center; }
+    .row button{ width:auto; margin:0; }
+    @media print{
+      @page{ size:auto; margin:12mm; }
+      body{ background:#fff !important; }
+      #nav,.noprint{ display:none !important; }
+      .stage-wrap{ gap:0; }
+      .cy-card{ outline:.3mm dashed #9bb; outline-offset:2mm; }
+    }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap" style="max-width:760px;">
+    <h2 class="section-title noprint"><i class="fas fa-credit-card"></i> Your Cyvathon Card</h2>
+    <p class="section-sub noprint">Print it, cut it out, carry it. Any citizen can scan the QR to pay you.</p>
+
+    <div class="stage-wrap">
+      <div id="card"></div>
+
+      <div class="noprint hint">
+        <p class="small" id="who"></p>
+        <div class="row" style="margin-top:.8rem;">
+          <button onclick="window.print()"><i class="fas fa-print"></i> Print card</button>
+          <button class="ghost" onclick="copyLink()"><i class="fas fa-link"></i> Copy pay link</button>
+        </div>
+        <p id="msg" class="small" style="margin-top:.7rem;"></p>
+        <p class="small" style="margin-top:1.2rem;color:var(--muted);">
+          <i class="fas fa-shield-halved"></i>
+          Your card number is safe to show. It can only be used to <b>send you</b> money —
+          never to take money out of your account. Lost it? Just print another.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script src="/static/card.js"></script>
+  <script>
+    let CARD = null;
+    const msg=(t,err=true)=>{const m=document.getElementById("msg");
+      m.textContent=t; m.style.color=err?"var(--red)":"var(--green)";};
+
+    async function copyLink(){
+      try{ await navigator.clipboard.writeText(CARD.pay_url);
+           msg("Pay link copied.",false); }
+      catch(e){ msg("Couldn't copy — your pay link is: "+CARD.pay_url); }
+    }
+
+    (async function(){
+      const user = await requireAuth(); if(!user) return;
+      renderNav("/card", user);
+      try{
+        const d = await api("/card_data");
+        CARD = d.card;
+        cyCardInteractive(document.getElementById("card"), CARD);
+        document.getElementById("who").textContent =
+          `Issued to ${CARD.holder} · ${CARD.designation}`;
+      }catch(e){ msg(e.message); }
+    })();
+  </script>
+</body>
+</html>
