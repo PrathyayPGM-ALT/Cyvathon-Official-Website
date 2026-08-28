@@ -1438,7 +1438,7 @@ def sitemap():
              "/leaderboard", "/government", "/ministries", "/legislature",
              "/court", "/gazette", "/states", "/foreign", "/treasury",
              "/exchange", "/company", "/jobs", "/marketplace", "/casino",
-             "/flightsim", "/passport", "/login"]
+             "/flightsim", "/packet", "/passport", "/login"]
     urls = "".join(f"<url><loc>https://cyvathon.onrender.com{p}</loc></url>"
                    for p in pages)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>'
@@ -7362,6 +7362,707 @@ def card_all():
                       "designation": r.get("designation") or "Citizen",
                       "since": r.get("created_at")})
     return jsonify(success=True, cards=cards, count=len(cards))
+
+
+# ============================================================
+#  FOOTBALL CARD TRADING  ("Packets")
+# ============================================================
+#  Not to be confused with the debit card above (/card): a "packet" is a
+#  citizen's Match Attax collection. Cards are looked up in an online
+#  football database so every entry carries a real player photo, club and
+#  nationality; the citizen then picks which Match Attax edition they hold.
+#
+#  Flow: browse someone's packet -> wishlist the cards you want -> offer
+#  cards out of your own packet for them -> they accept and the cards swap.
+
+# The Match Attax editions/finishes a card can be. `tier` drives sort order
+# and how loud the card frame looks; `color` is the frame colour.
+CARD_EDITIONS = [
+    {"key": "base",        "label": "Base",              "color": "#8aa0b4", "tier": 0},
+    {"key": "bronze",      "label": "Bronze",            "color": "#b87333", "tier": 1},
+    {"key": "silver",      "label": "Silver",            "color": "#c0c8d4", "tier": 2},
+    {"key": "gold",        "label": "Gold",              "color": "#ffce56", "tier": 3},
+    {"key": "blue_edge",   "label": "Blue Edge",         "color": "#58c4ff", "tier": 4},
+    {"key": "green_edge",  "label": "Green Edge",        "color": "#1fd6a6", "tier": 4},
+    {"key": "star_player", "label": "Star Player",       "color": "#a78bfa", "tier": 4},
+    {"key": "wonderkid",   "label": "Wonderkid",         "color": "#22d3ee", "tier": 4},
+    {"key": "red_edge",    "label": "Red Edge",          "color": "#ff5d6c", "tier": 5},
+    {"key": "motm",        "label": "Man of the Match",  "color": "#ff8fb0", "tier": 5},
+    {"key": "hat_trick",   "label": "Hat-Trick Hero",    "color": "#ff7a29", "tier": 5},
+    {"key": "gold_edge",   "label": "Gold Edge",         "color": "#e8b400", "tier": 6},
+    {"key": "record",      "label": "Record Breaker",    "color": "#7c5cff", "tier": 6},
+    {"key": "club_legend", "label": "Club Legend",       "color": "#c8a24a", "tier": 6},
+    {"key": "black_edge",  "label": "Black Edge",        "color": "#20242e", "tier": 7},
+    {"key": "hundred",     "label": "100 Club",          "color": "#ff3b6b", "tier": 8},
+    {"key": "limited",     "label": "Limited Edition",   "color": "#ffd700", "tier": 9},
+    {"key": "signature",   "label": "Signature",         "color": "#e6ecf5", "tier": 10},
+]
+EDITION_BY_KEY = {e["key"]: e for e in CARD_EDITIONS}
+
+# Free, key-less football database used to look players up. Falls back to a
+# clear "search unavailable" rather than an error if it's ever unreachable.
+SPORTSDB_KEY  = os.environ.get("SPORTSDB_API_KEY", "3").strip() or "3"
+SPORTSDB_BASE = "https://www.thesportsdb.com/api/v1/json"
+
+MAX_PACKET_CARDS = 500          # a packet is a collection, not a firehose
+MAX_TRADE_CARDS  = 12           # cards on either side of a single offer
+
+_player_cache = {}              # lowercased query -> (expires_ts, [players])
+PLAYER_CACHE_TTL = 900
+
+
+def _card_url_ok(url):
+    """Only allow a direct https image link — the same rule profile banners use."""
+    return bool(re.match(r"^https://[A-Za-z0-9._~:/?#@!$&*+,;=%-]+$", url or ""))
+
+
+def _search_players(q):
+    """Look a footballer up in the online database. Raises on transport failure."""
+    key = q.lower()
+    hit = _player_cache.get(key)
+    if hit and hit[0] > time():
+        return hit[1]
+    import requests
+    r = requests.get(f"{SPORTSDB_BASE}/{SPORTSDB_KEY}/searchplayers.php",
+                     params={"p": q}, timeout=8)
+    out = []
+    for p in (r.json().get("player") or []):
+        # The database covers every sport; a Match Attax packet is football only.
+        if (p.get("strSport") or "").lower() not in ("soccer", "football"):
+            continue
+        photo = p.get("strCutout") or p.get("strThumb") or p.get("strRender") or ""
+        out.append({
+            "player_id":   p.get("idPlayer") or "",
+            "player_name": (p.get("strPlayer") or "").strip(),
+            "team":        (p.get("strTeam") or "").strip(),
+            "nationality": (p.get("strNationality") or "").strip(),
+            "position":    (p.get("strPosition") or "").strip(),
+            "image_url":   photo if _card_url_ok(photo) else "",
+        })
+        if len(out) >= 24:
+            break
+    now = time()
+    _player_cache[key] = (now + PLAYER_CACHE_TTL, out)
+    for k in [k for k, v in _player_cache.items() if v[0] <= now]:
+        _player_cache.pop(k, None)
+    return out
+
+
+def _card_public(row, extra=None):
+    """Shape a packet row for the frontend, resolving its edition."""
+    ed = EDITION_BY_KEY.get(row.get("edition") or "base", CARD_EDITIONS[0])
+    out = {
+        "id":          row.get("id"),
+        "owner":       row.get("owner"),
+        "player_name": row.get("player_name") or "",
+        "team":        row.get("team") or "",
+        "nationality": row.get("nationality") or "",
+        "position":    row.get("position") or "",
+        "image_url":   row.get("image_url") or "",
+        "card_image":  row.get("card_image") or "",
+        "edition":     ed["key"],
+        "edition_label": ed["label"],
+        "edition_color": ed["color"],
+        "tier":        ed["tier"],
+        "series":      row.get("series") or "",
+        "rating":      row.get("rating"),
+        "quantity":    row.get("quantity") or 1,
+        "for_trade":   bool(row.get("for_trade")),
+        "note":        row.get("note") or "",
+        "created_at":  row.get("created_at"),
+    }
+    if extra:
+        out.update(extra)
+    return out
+
+
+def _packet_missing():
+    return jsonify(success=False,
+                   error="Card trading isn't enabled yet — the database needs a quick update "
+                         "(run migration_card_trading.sql)."), 503
+
+
+def _cards_by_ids(ids):
+    """Fetch packet rows for a list of ids, keyed by id. Empty list -> {}."""
+    ids = [i for i in ids if i]
+    if not ids:
+        return {}
+    rows = supabase.table("card_packet").select("*").in_("id", ids).execute().data or []
+    return {r["id"]: r for r in rows}
+
+
+def _parse_ids(val, cap=MAX_TRADE_CARDS):
+    """Accept a list (or comma-separated string) of card ids -> [int], deduped."""
+    if isinstance(val, str):
+        seq = [p for p in val.split(",") if p.strip()]
+    elif isinstance(val, list):
+        seq = val
+    else:
+        return []
+    out = []
+    for v in seq:
+        try:
+            i = int(v)
+        except (TypeError, ValueError):
+            continue
+        if i > 0 and i not in out:
+            out.append(i)
+    return out[:cap]
+
+
+def _card_label(card):
+    ed = EDITION_BY_KEY.get(card.get("edition") or "base", CARD_EDITIONS[0])
+    return f"{card.get('player_name') or 'Unknown'} ({ed['label']})"
+
+
+def _move_card(card, to_user):
+    """Give one copy of a card to another citizen. A stack of duplicates hands
+    over a single copy and keeps the rest; a lone card moves whole. Merges into
+    an identical card the receiver already holds."""
+    qty = card.get("quantity") or 1
+    same = supabase.table("card_packet").select("id,quantity").eq("owner", to_user) \
+        .eq("player_name", card.get("player_name")) \
+        .eq("edition", card.get("edition") or "base").execute().data or []
+    if same:
+        cas_num("card_packet", [("id", same[0]["id"])], "quantity", 1, places=0)
+    else:
+        supabase.table("card_packet").insert({
+            "owner": to_user,
+            "player_id": card.get("player_id"), "player_name": card.get("player_name"),
+            "team": card.get("team"), "nationality": card.get("nationality"),
+            "position": card.get("position"), "image_url": card.get("image_url"),
+            "card_image": card.get("card_image"), "edition": card.get("edition") or "base",
+            "series": card.get("series"), "rating": card.get("rating"),
+            "quantity": 1, "for_trade": False,
+        }).execute()
+    if qty > 1:
+        supabase.table("card_packet").update({"quantity": qty - 1}).eq("id", card["id"]).execute()
+    else:
+        supabase.table("card_wishlist").delete().eq("card_id", card["id"]).execute()
+        supabase.table("card_packet").delete().eq("id", card["id"]).execute()
+
+
+# ---- routes -----------------------------------------------------------
+@app.route("/packet")
+def packet_page():
+    return app.send_static_file("packet.html")
+
+
+@app.route("/packet/editions")
+def packet_editions():
+    return jsonify(success=True, editions=CARD_EDITIONS)
+
+
+@app.route("/packet/search")
+@limiter.limit("30/minute")
+def packet_search():
+    """Search the online football database for a player to add to a packet."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    q = (request.args.get("q") or "").strip()[:60]
+    if len(q) < 2:
+        return jsonify(success=True, players=[])
+    try:
+        return jsonify(success=True, players=_search_players(q))
+    except Exception as ex:
+        logging.warning("player search failed: %s", ex)
+        return jsonify(success=True, players=[],
+                       error="The card database is unreachable right now — "
+                             "you can still add the card by hand.")
+
+
+@app.route("/packet/collectors")
+@limiter.limit("60/minute")
+def packet_collectors():
+    """Every citizen who owns cards, so you know whose packet to browse."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        rows = supabase.table("card_packet").select("owner,for_trade,quantity").execute().data or []
+    except Exception:
+        return _packet_missing()
+    tally = {}
+    for r in rows:
+        t = tally.setdefault(r["owner"], {"username": r["owner"], "cards": 0, "trading": 0})
+        t["cards"] += r.get("quantity") or 1
+        if r.get("for_trade"):
+            t["trading"] += r.get("quantity") or 1
+    avatars = {}
+    try:
+        for c in (supabase.table("cybucks").select("username,avatar").execute().data or []):
+            avatars[c["username"]] = c.get("avatar")
+    except Exception:
+        pass
+    out = []
+    for t in tally.values():
+        t["avatar"] = avatars.get(t["username"])
+        t["me"] = t["username"] == user["username"]
+        out.append(t)
+    out.sort(key=lambda t: (-t["trading"], -t["cards"], t["username"].lower()))
+    return jsonify(success=True, collectors=out, me=user["username"])
+
+
+@app.route("/packet/data")
+@limiter.limit("60/minute")
+def packet_data():
+    """A packet: your own by default, or ?user=<name> for someone else's."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    owner = (request.args.get("user") or me).strip()[:32] or me
+    mine = owner == me
+
+    if not mine:
+        exists = supabase.table("cybucks").select("username").eq("username", owner).execute().data
+        if not exists:
+            return jsonify(success=False, error="No such citizen"), 404
+
+    try:
+        rows = supabase.table("card_packet").select("*").eq("owner", owner) \
+            .order("created_at", desc=True).execute().data or []
+        # What I have already wished for out of this packet.
+        wished = {w["card_id"] for w in (supabase.table("card_wishlist")
+                  .select("card_id").eq("username", me).execute().data or [])}
+        # Who wants each of my cards (only shown on my own packet).
+        wanters = {}
+        if mine:
+            for w in (supabase.table("card_wishlist").select("card_id,username")
+                      .eq("owner", me).execute().data or []):
+                wanters.setdefault(w["card_id"], []).append(w["username"])
+    except Exception:
+        return _packet_missing()
+
+    cards = [_card_public(r, {"wished": r["id"] in wished,
+                              "wanted_by": wanters.get(r["id"], [])}) for r in rows]
+    cards.sort(key=lambda c: (-c["tier"], c["player_name"].lower()))
+    return jsonify(success=True, owner=owner, mine=mine, me=me, cards=cards,
+                   total=sum(c["quantity"] for c in cards),
+                   trading=sum(c["quantity"] for c in cards if c["for_trade"]))
+
+
+@app.route("/packet/add", methods=["POST"])
+@limiter.limit("30/minute")
+def packet_add():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json() or {}
+    name = (d.get("player_name") or "").strip()[:80]
+    if not name:
+        return jsonify(success=False, error="Search for a player first"), 400
+
+    edition = (d.get("edition") or "base").strip()
+    if edition not in EDITION_BY_KEY:
+        return jsonify(success=False, error="Unknown edition"), 400
+
+    image_url  = (d.get("image_url") or "").strip()[:500]
+    card_image = (d.get("card_image") or "").strip()[:500]
+    if image_url and not _card_url_ok(image_url):
+        image_url = ""
+    if card_image and not _card_url_ok(card_image):
+        return jsonify(success=False, error="Use a direct https:// link for the card image."), 400
+
+    try:
+        qty = int(d.get("quantity") or 1)
+    except (TypeError, ValueError):
+        qty = 1
+    qty = max(1, min(qty, 99))
+
+    rating = d.get("rating")
+    try:
+        rating = round(float(rating), 2) if rating not in (None, "") else None
+        if rating is not None and not (0 <= rating <= 200):
+            rating = None
+    except (TypeError, ValueError):
+        rating = None
+
+    try:
+        held = supabase.table("card_packet").select("id").eq("owner", user["username"]).execute().data or []
+    except Exception:
+        return _packet_missing()
+    if len(held) >= MAX_PACKET_CARDS:
+        return jsonify(success=False, error=f"Your packet is full ({MAX_PACKET_CARDS} cards)."), 400
+
+    row = {
+        "owner": user["username"],
+        "player_id":   (d.get("player_id") or "").strip()[:32] or None,
+        "player_name": name,
+        "team":        (d.get("team") or "").strip()[:80],
+        "nationality": (d.get("nationality") or "").strip()[:60],
+        "position":    (d.get("position") or "").strip()[:40],
+        "image_url":   image_url,
+        "card_image":  card_image,
+        "edition":     edition,
+        "series":      (d.get("series") or "").strip()[:60],
+        "rating":      rating,
+        "quantity":    qty,
+        "for_trade":   bool(d.get("for_trade")),
+        "note":        (d.get("note") or "").strip()[:200],
+    }
+    try:
+        card = supabase.table("card_packet").insert(row).execute().data[0]
+    except Exception:
+        return _packet_missing()
+    return jsonify(success=True, card=_card_public(card))
+
+
+@app.route("/packet/update", methods=["POST"])
+@limiter.limit("40/minute")
+def packet_update():
+    """Change your own card: offer it for trade, fix the count, add a note."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json() or {}
+    try:
+        cid = int(d.get("card_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad card"), 400
+
+    try:
+        r = supabase.table("card_packet").select("*").eq("id", cid) \
+            .eq("owner", user["username"]).execute().data
+    except Exception:
+        return _packet_missing()
+    if not r:
+        return jsonify(success=False, error="That card isn't in your packet"), 404
+
+    patch = {}
+    if "for_trade" in d:
+        patch["for_trade"] = bool(d.get("for_trade"))
+    if "note" in d:
+        patch["note"] = (d.get("note") or "").strip()[:200]
+    if "quantity" in d:
+        try:
+            patch["quantity"] = max(1, min(int(d.get("quantity")), 99))
+        except (TypeError, ValueError):
+            pass
+    if not patch:
+        return jsonify(success=True, card=_card_public(r[0]))
+
+    supabase.table("card_packet").update(patch).eq("id", cid).execute()
+    card = {**r[0], **patch}
+
+    # Newly up for trade? Tell everyone who wished for it.
+    if patch.get("for_trade") and not r[0].get("for_trade"):
+        for w in (supabase.table("card_wishlist").select("username")
+                  .eq("card_id", cid).execute().data or []):
+            notify(w["username"],
+                   f"\U0001F3B4 {user['username']} put {_card_label(card)} up for trade — "
+                   "the card you wishlisted.",
+                   "/packet?user=" + user["username"])
+    return jsonify(success=True, card=_card_public(card))
+
+
+@app.route("/packet/remove", methods=["POST"])
+@limiter.limit("30/minute")
+def packet_remove():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        cid = int((request.get_json() or {}).get("card_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad card"), 400
+    try:
+        r = supabase.table("card_packet").select("id").eq("id", cid) \
+            .eq("owner", user["username"]).execute().data
+    except Exception:
+        return _packet_missing()
+    if not r:
+        return jsonify(success=False, error="That card isn't in your packet"), 404
+    supabase.table("card_wishlist").delete().eq("card_id", cid).execute()
+    supabase.table("card_packet").delete().eq("id", cid).execute()
+    return jsonify(success=True)
+
+
+@app.route("/packet/wishlist", methods=["POST"])
+@limiter.limit("40/minute")
+def packet_wishlist():
+    """Add (or remove) a card from someone else's packet to your wishlist."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json() or {}
+    try:
+        cid = int(d.get("card_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad card"), 400
+    remove = bool(d.get("remove"))
+
+    try:
+        r = supabase.table("card_packet").select("*").eq("id", cid).execute().data
+    except Exception:
+        return _packet_missing()
+    if not r:
+        return jsonify(success=False, error="That card is gone"), 404
+    card = r[0]
+    if card["owner"] == user["username"]:
+        return jsonify(success=False, error="That card is already yours"), 400
+
+    if remove:
+        supabase.table("card_wishlist").delete().eq("username", user["username"]) \
+            .eq("card_id", cid).execute()
+        return jsonify(success=True, wished=False)
+
+    already = supabase.table("card_wishlist").select("id").eq("username", user["username"]) \
+        .eq("card_id", cid).execute().data
+    if already:
+        return jsonify(success=True, wished=True)
+    try:
+        supabase.table("card_wishlist").insert({
+            "username": user["username"], "card_id": cid, "owner": card["owner"]}).execute()
+    except Exception:
+        return jsonify(success=True, wished=True)      # raced another wish — same outcome
+    notify(card["owner"],
+           f"\U0001F3B4 {user['username']} wishlisted your {_card_label(card)}.",
+           "/packet?tab=wishes")
+    return jsonify(success=True, wished=True)
+
+
+@app.route("/packet/wishes")
+@limiter.limit("60/minute")
+def packet_wishes():
+    """My wishlist, plus the cards other citizens want out of my packet."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        mine_rows = supabase.table("card_wishlist").select("*").eq("username", me) \
+            .order("created_at", desc=True).execute().data or []
+        theirs_rows = supabase.table("card_wishlist").select("*").eq("owner", me) \
+            .order("created_at", desc=True).execute().data or []
+    except Exception:
+        return _packet_missing()
+
+    cards = _cards_by_ids([r["card_id"] for r in mine_rows + theirs_rows])
+    wanted = [_card_public(cards[r["card_id"]], {"wished": True})
+              for r in mine_rows if r["card_id"] in cards]
+    wanted_from_me = []
+    for r in theirs_rows:
+        c = cards.get(r["card_id"])
+        if c:
+            wanted_from_me.append(_card_public(c, {"wanter": r["username"],
+                                                   "wished_at": r.get("created_at")}))
+    return jsonify(success=True, wanted=wanted, wanted_from_me=wanted_from_me)
+
+
+@app.route("/packet/trade", methods=["POST"])
+@limiter.limit("15/minute")
+def packet_trade():
+    """Offer cards out of your packet for cards out of someone else's."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    d = request.get_json() or {}
+    offer_ids = _parse_ids(d.get("offer_ids"))
+    want_ids  = _parse_ids(d.get("want_ids"))
+    message   = (d.get("message") or "").strip()[:300]
+
+    if not want_ids:
+        return jsonify(success=False, error="Pick at least one card you want"), 400
+    if not offer_ids:
+        return jsonify(success=False, error="Offer at least one card from your own packet"), 400
+
+    try:
+        cards = _cards_by_ids(offer_ids + want_ids)
+    except Exception:
+        return _packet_missing()
+    if len(cards) != len(set(offer_ids + want_ids)):
+        return jsonify(success=False, error="One of those cards no longer exists"), 404
+
+    for cid in offer_ids:
+        if cards[cid]["owner"] != me:
+            return jsonify(success=False, error="You can only offer cards from your own packet"), 403
+    owners = {cards[cid]["owner"] for cid in want_ids}
+    if len(owners) != 1:
+        return jsonify(success=False, error="Trade with one citizen at a time"), 400
+    to_user = owners.pop()
+    if to_user == me:
+        return jsonify(success=False, error="You already own those cards"), 400
+    for cid in want_ids:
+        if not cards[cid].get("for_trade"):
+            return jsonify(success=False,
+                           error=_card_label(cards[cid]) + " isn't up for trade — wishlist it instead."), 400
+
+    try:
+        supabase.table("card_trades").insert({
+            "from_user": me, "to_user": to_user, "message": message,
+            "offer_ids": ",".join(str(i) for i in offer_ids),
+            "want_ids":  ",".join(str(i) for i in want_ids),
+            "offer_label": ", ".join(_card_label(cards[i]) for i in offer_ids),
+            "want_label":  ", ".join(_card_label(cards[i]) for i in want_ids),
+        }).execute()
+    except Exception:
+        return _packet_missing()
+    notify(to_user,
+           f"\U0001F91D {me} offered you a card trade "
+           f"({len(offer_ids)} for {len(want_ids)}).", "/packet?tab=trades")
+    return jsonify(success=True)
+
+
+@app.route("/packet/trades")
+@limiter.limit("60/minute")
+def packet_trades():
+    """Trade offers waiting on me, and the ones I have sent."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        rows = supabase.table("card_trades").select("*") \
+            .order("created_at", desc=True).limit(120).execute().data or []
+    except Exception:
+        return _packet_missing()
+    rows = [r for r in rows if r["from_user"] == me or r["to_user"] == me]
+
+    ids = []
+    for r in rows:
+        ids += _parse_ids(r.get("offer_ids")) + _parse_ids(r.get("want_ids"))
+    cards = _cards_by_ids(ids)
+
+    def shape(r):
+        offer_ids, want_ids = _parse_ids(r.get("offer_ids")), _parse_ids(r.get("want_ids"))
+        offer = [_card_public(cards[i]) for i in offer_ids if i in cards]
+        want  = [_card_public(cards[i]) for i in want_ids  if i in cards]
+        # A card traded or deleted elsewhere makes a pending offer unfulfillable.
+        gone = r["status"] == "pending" and (len(offer) != len(offer_ids)
+                                             or len(want) != len(want_ids))
+        return {"id": r["id"], "from_user": r["from_user"], "to_user": r["to_user"],
+                "message": r.get("message") or "", "status": "stale" if gone else r["status"],
+                "created_at": r.get("created_at"), "offer": offer, "want": want,
+                # Once a trade settles the cards have moved, so fall back to the
+                # labels captured when the offer was made.
+                "offer_label": r.get("offer_label") or "",
+                "want_label": r.get("want_label") or "",
+                "incoming": r["to_user"] == me}
+
+    trades = [shape(r) for r in rows]
+    return jsonify(success=True, me=me, trades=trades,
+                   incoming=sum(1 for t in trades if t["incoming"] and t["status"] == "pending"),
+                   outgoing=sum(1 for t in trades if not t["incoming"] and t["status"] == "pending"))
+
+
+@app.route("/packet/trade/respond", methods=["POST"])
+@limiter.limit("20/minute")
+def packet_trade_respond():
+    """Accept or decline an offer. Accepting swaps the cards over."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    d = request.get_json() or {}
+    action = (d.get("action") or "").strip()
+    if action not in ("accept", "decline", "cancel"):
+        return jsonify(success=False, error="Unknown action"), 400
+    try:
+        tid = int(d.get("trade_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad trade"), 400
+
+    try:
+        r = supabase.table("card_trades").select("*").eq("id", tid).execute().data
+    except Exception:
+        return _packet_missing()
+    if not r:
+        return jsonify(success=False, error="Trade not found"), 404
+    t = r[0]
+    if t["status"] != "pending":
+        return jsonify(success=False, error="That offer is already settled"), 400
+
+    if action == "cancel":
+        if t["from_user"] != me:
+            return jsonify(success=False, error="Only the proposer can cancel"), 403
+        supabase.table("card_trades").update(
+            {"status": "cancelled", "resolved_at": _now().isoformat()}).eq("id", tid).execute()
+        return jsonify(success=True, status="cancelled")
+
+    if t["to_user"] != me:
+        return jsonify(success=False, error="That offer isn't addressed to you"), 403
+
+    if action == "decline":
+        supabase.table("card_trades").update(
+            {"status": "declined", "resolved_at": _now().isoformat()}).eq("id", tid).execute()
+        notify(t["from_user"], f"❌ {me} declined your card trade.", "/packet?tab=trades")
+        return jsonify(success=True, status="declined")
+
+    # ---- accept: re-check both sides still hold what they promised ----
+    offer_ids, want_ids = _parse_ids(t.get("offer_ids")), _parse_ids(t.get("want_ids"))
+    cards = _cards_by_ids(offer_ids + want_ids)
+    if len(cards) != len(set(offer_ids + want_ids)):
+        supabase.table("card_trades").update(
+            {"status": "stale", "resolved_at": _now().isoformat()}).eq("id", tid).execute()
+        return jsonify(success=False, error="Some of those cards have already been traded away."), 409
+    for cid in offer_ids:
+        if cards[cid]["owner"] != t["from_user"]:
+            return jsonify(success=False, error="The proposer no longer owns what they offered."), 409
+    for cid in want_ids:
+        if cards[cid]["owner"] != me:
+            return jsonify(success=False, error="You no longer own one of those cards."), 409
+
+    # Claim the trade first so a double-click can't run the swap twice.
+    claimed = supabase.table("card_trades") \
+        .update({"status": "accepted", "resolved_at": _now().isoformat()}) \
+        .eq("id", tid).eq("status", "pending").execute().data
+    if not claimed:
+        return jsonify(success=False, error="That offer is already settled"), 400
+
+    for cid in offer_ids:
+        _move_card(cards[cid], me)
+    for cid in want_ids:
+        _move_card(cards[cid], t["from_user"])
+
+    got  = ", ".join(_card_label(cards[i]) for i in offer_ids)
+    gave = ", ".join(_card_label(cards[i]) for i in want_ids)
+    add_record(me, f"Traded {gave} to {t['from_user']} for {got}.")
+    add_record(t["from_user"], f"Traded {got} to {me} for {gave}.")
+    notify(t["from_user"], f"✅ {me} accepted your card trade — you got {gave}.", "/packet")
+    log_txn("cards", t["from_user"], me, 0, "cards", f"Card trade: {got} for {gave}")
+
+    # Anyone still wishing for a card that just changed hands is told where it went.
+    for cid in offer_ids + want_ids:
+        new_owner = me if cid in offer_ids else t["from_user"]
+        for w in (supabase.table("card_wishlist").select("username")
+                  .eq("card_id", cid).execute().data or []):
+            if w["username"] not in (me, t["from_user"]):
+                notify(w["username"],
+                       f"\U0001F3B4 {_card_label(cards[cid])} on your wishlist moved to "
+                       f"{new_owner}'s packet.", "/packet?user=" + new_owner)
+    return jsonify(success=True, status="accepted")
+
+
+@app.route("/packet/summary")
+@limiter.limit("60/minute")
+def packet_summary():
+    """Small counts for the dashboard banner: offers waiting, cards wished for."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        pending = supabase.table("card_trades").select("id,from_user") \
+            .eq("to_user", me).eq("status", "pending").execute().data or []
+        wishes = supabase.table("card_wishlist").select("id").eq("owner", me).execute().data or []
+        mine = supabase.table("card_packet").select("quantity,for_trade") \
+            .eq("owner", me).execute().data or []
+        market = supabase.table("card_packet").select("id").eq("for_trade", True) \
+            .neq("owner", me).execute().data or []
+    except Exception:
+        # Not migrated yet — the banner just stays hidden rather than erroring.
+        return jsonify(success=True, enabled=False, offers=0, wishes=0,
+                       cards=0, trading=0, up_for_trade=0, offer_from=[])
+    return jsonify(success=True, enabled=True,
+                   offers=len(pending),
+                   offer_from=sorted({p["from_user"] for p in pending})[:3],
+                   wishes=len(wishes),
+                   cards=sum(c.get("quantity") or 1 for c in mine),
+                   trading=sum(c.get("quantity") or 1 for c in mine if c.get("for_trade")),
+                   up_for_trade=len(market))
 
 
 # ============================================================

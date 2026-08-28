@@ -198,6 +198,16 @@
       text-decoration:none; color:inherit; }
     .vacban .seat:hover{ border-color:var(--gold,#ffce56); }
     .vacban .seat b{ color:var(--gold,#ffce56); }
+
+    /* Card-trading alert: offers waiting on you, and cards people want. */
+    .cardban{ display:flex; flex-wrap:wrap; align-items:center; gap:1rem; justify-content:space-between;
+      border:1px solid rgba(31,214,166,.42); background:rgba(31,214,166,.08);
+      border-radius:16px; padding:1.1rem 1.3rem; margin-bottom:1.8rem; text-decoration:none; color:inherit; }
+    .cardban:hover{ border-color:var(--green,#1fd6a6); }
+    .cardban h3{ margin:0 0 .3rem; font-size:1.05rem; display:flex; align-items:center; gap:.55rem; }
+    .cardban h3 i{ color:var(--green,#1fd6a6); }
+    .cardban p{ margin:0; color:var(--muted); font-size:.9rem; }
+    .cardban .cta{ font-size:.85rem; font-weight:600; color:var(--green,#1fd6a6); white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -292,6 +302,7 @@
       <div id="interestBanner"></div>
       <div id="hubRec"></div>
       <div id="vacancyBanner"></div>
+      <div id="packetBanner"></div>
       <div id="hubGrid"></div>
     </section>
     <section class="wrap" id="hubFeedWrap" style="padding-top:0; display:none;">
@@ -341,6 +352,7 @@
         ["/blogs","fa-feather-pointed","Blogs","Write & read posts"],
         ["/flightsim","fa-plane-up","Flight Sim","Fly for the high score"],
         ["/casino","fa-dice","Casino","Bet against the House"],
+        ["/packet","fa-futbol","Card Packets","Trade Match Attax cards"],
         ["/ai","fa-robot","Cyvathon AI","Ask how anything works"],
         ["/invite","fa-user-plus","Invite Friends","Earn 500 CB per friend"],
         ["/news","fa-newspaper","News","National headlines"],
@@ -374,7 +386,7 @@
         ["fa-building-columns","Bank","#58c4ff"], ["fa-chart-line","Stock Exchange","#1fd6a6"],
         ["fa-briefcase","Companies","#22d3ee"], ["fa-landmark","Government","#ffce56"],
         ["fa-video","Videos","#ff5d6c"], ["fa-feather-pointed","Blogs","#a78bfa"],
-        ["fa-comments","Chat","#58c4ff"], ["fa-dice","Casino","#ff8fb0"],
+        ["fa-comments","Chat","#58c4ff"], ["fa-dice","Casino","#ff8fb0"], ["fa-futbol","Card Packets","#1fd6a6"],
         ["fa-map-location-dot","States","#a78bfa"], ["fa-passport","Passport","#22d3ee"],
         ["fa-hand-holding-dollar","Loans","#58c4ff"], ["fa-scale-balanced","Legislature","#ffce56"],
       ];
@@ -461,6 +473,7 @@
         </div>`).join("");
       loadRecommended();
       loadVacancies();
+      loadPacketBanner();
       loadFeed("hubFeed", "hubFeedWrap", 12);
       loadHubNews();
     }
@@ -515,6 +528,45 @@
               : esc(d.reason || "Applications are open to eligible citizens.")}</p>
           <div class="seats">${seats}</div>
         </div>`;
+    }
+
+    /* Card trading: an offer waiting on you (or a card someone wants) should
+       be visible the second you land, the same way a vacant seat is. */
+    async function loadPacketBanner(){
+      let d;
+      try{ d = await api("/packet/summary"); }catch(e){ return; }
+      if(!d.enabled) return;
+      const esc = (x)=>(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      let head, sub, href = "/packet";
+      if(d.offers){
+        const who = (d.offer_from||[]).map(esc).join(", ");
+        head = `${d.offers} card trade offer${d.offers===1?"":"s"} waiting on you`;
+        sub  = who ? `${who} want${d.offer_from.length===1?"s":""} to swap Match Attax cards with you.`
+                   : "Someone wants to swap Match Attax cards with you.";
+        href = "/packet?tab=trades";
+      } else if(d.wishes){
+        head = `${d.wishes} of your cards ${d.wishes===1?"is":"are"} on someone's wishlist`;
+        sub  = "Put them up for trade and the citizens who wished for them get told straight away.";
+        href = "/packet?tab=wishes";
+      } else if(!d.cards){
+        head = "Start your card packet";
+        sub  = "Search any footballer in the card database, add the editions you've pulled, and trade with other citizens.";
+        href = "/packet?tab=add";
+      } else if(d.up_for_trade){
+        head = `${d.up_for_trade} card${d.up_for_trade===1?"":"s"} up for trade across the Republic`;
+        sub  = "Browse other citizens' packets and wishlist what you're missing.";
+        href = "/packet?tab=browse";
+      } else return;
+
+      document.getElementById("packetBanner").innerHTML = `
+        <a class="cardban" href="${href}">
+          <div>
+            <h3><i class="fas fa-futbol"></i> ${head}</h3>
+            <p>${sub}</p>
+          </div>
+          <span class="cta">Open Card Packets &rarr;</span>
+        </a>`;
     }
 
     async function loadHubNews(){

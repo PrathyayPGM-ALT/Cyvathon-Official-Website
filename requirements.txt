@@ -6,3 +6,4 @@ google-genai
 werkzeug
 gunicorn
 segno
+requests

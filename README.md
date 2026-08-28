@@ -23,6 +23,8 @@ This repository contains the code for the **Cyvathon Official Website**, the **C
   https://cyvathon.onrender.com/bank
 - **Cyvathon Chat (from this repo):**  
   https://cyvathon.onrender.com/chat  
+- **Card Packets — Match Attax trading (from this repo):**  
+  https://cyvathon.onrender.com/packet  
 
 ---
 
@@ -42,6 +44,20 @@ A fun in-world currency manager built for:
 - Sending Cybucks to other users  
 
 > **Note:** This is a fun/learning project, not a real banking system.
+
+### 3. Card Packets
+Citizen-to-citizen **Match Attax** trading, under Community:
+- Search any footballer in an online football database — the player's photo,
+  club, position and nationality come straight from it
+- Pick the edition you actually pulled (Base through Black Edge, 100 Club,
+  Limited Edition…) and add it to your **packet**
+- Browse other citizens' packets and **wishlist** the cards you're missing —
+  the owner is notified
+- Offer cards out of your own packet for theirs; accepting swaps them over
+
+Needs `migration_card_trading.sql` run once in Supabase. The player lookup uses
+TheSportsDB's free API — set `SPORTSDB_API_KEY` to use your own key instead of
+the shared test key.
 
 ---
 
@@ -71,6 +87,9 @@ Cyvathon-Official-Website/
   ├── bank.html         # Banking system UI
 ├──index.html           # main website    
 ├── main.py             # Python backend
+├── schema.sql          # base database schema
+├── migration_*.sql     # incremental schema updates (run once each)
+├── tests/              # in-memory test suites (python tests/test_cards.py)
 ├── cyvathon.db         # SQLite database (auto-created if missing)
 ├── requirements.txt    # Python dependencies
 ├── Procfile            # Render startup command

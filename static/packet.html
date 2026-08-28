@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card Packets · Cyvathon</title>
+  <!-- social / SEO metadata -->
+  <meta name="description" content="Trade Match Attax football cards with other Cyvathon citizens — build your packet, wishlist their cards, swap." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/packet" />
+  <meta name="theme-color" content="#58c4ff" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="Card Packets · Cyvathon" />
+  <meta property="og:description" content="Trade Match Attax football cards with other Cyvathon citizens." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/packet" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Card Packets · Cyvathon" />
+  <meta name="twitter:description" content="Trade Match Attax football cards with other Cyvathon citizens." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    /* ---- tab bar ---- */
+    .tabs{ display:flex; flex-wrap:wrap; gap:.5rem; justify-content:center; margin-bottom:2rem; }
+    .tabs button{ width:auto; margin:0; padding:.6rem 1.15rem; font-size:.88rem;
+      background:var(--panel-2); color:var(--muted); box-shadow:none; border:1px solid var(--panel-border); }
+    .tabs button.on{ background:linear-gradient(135deg,var(--accent),var(--accent-deep)); color:#fff; border-color:transparent; }
+    .tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem; border-radius:20px;
+      background:var(--red); color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
+
+    /* ---- the card face ---- */
+    .cards{ display:grid; gap:1.1rem; grid-template-columns:repeat(auto-fill,minmax(178px,1fr)); }
+    .mcard{ position:relative; border-radius:14px; overflow:hidden; background:#0d1219;
+      border:2px solid var(--ec,#8aa0b4); box-shadow:0 8px 22px rgba(0,0,0,.4); transition:.2s; }
+    .mcard:hover{ transform:translateY(-4px); box-shadow:0 14px 34px rgba(0,0,0,.5); }
+    .mcard.sel{ outline:3px solid var(--accent); outline-offset:2px; }
+    .mcard .face{ position:relative; height:186px; display:flex; align-items:flex-end; justify-content:center;
+      background:radial-gradient(circle at 50% 22%, color-mix(in srgb, var(--ec,#8aa0b4) 55%, transparent), #0d1219 72%); }
+    .mcard .face img{ max-height:100%; max-width:100%; object-fit:contain; display:block; }
+    .mcard .face .ph{ font-size:3.2rem; color:rgba(255,255,255,.22); align-self:center; }
+    .mcard .scan{ width:100%; height:236px; object-fit:cover; display:block; background:#0d1219; }
+    .mcard .rate{ position:absolute; top:7px; left:7px; min-width:30px; padding:.15rem .4rem; border-radius:8px;
+      background:var(--ec,#8aa0b4); color:#0b0f16; font-weight:800; font-size:.92rem; text-align:center; }
+    .mcard .qty{ position:absolute; top:7px; right:7px; padding:.15rem .45rem; border-radius:8px;
+      background:rgba(0,0,0,.6); color:#fff; font-weight:700; font-size:.74rem; }
+    .mcard .info{ padding:.6rem .7rem .7rem; border-top:2px solid var(--ec,#8aa0b4); }
+    .mcard .nm{ font-weight:700; font-size:.92rem; line-height:1.2; }
+    .mcard .cl{ font-size:.75rem; color:var(--muted); margin-top:.15rem; }
+    .mcard .ed{ display:inline-block; margin-top:.45rem; padding:.16rem .55rem; border-radius:20px;
+      font-size:.68rem; font-weight:700; letter-spacing:.3px; text-transform:uppercase;
+      background:var(--ec,#8aa0b4); color:#0b0f16; }
+    .mcard .acts{ display:flex; gap:.35rem; padding:0 .7rem .7rem; }
+    .mcard .acts button{ width:auto; flex:1; margin:0; padding:.42rem .3rem; font-size:.74rem; box-shadow:none; }
+    .mcard .flag{ position:absolute; bottom:0; left:0; right:0; padding:.2rem; text-align:center;
+      font-size:.68rem; font-weight:700; background:rgba(31,214,166,.9); color:#04150f; }
+    .mcard .want{ font-size:.7rem; color:var(--gold); padding:0 .7rem .5rem; }
+    .mcard .note{ font-size:.72rem; color:var(--muted); padding:0 .7rem .5rem; font-style:italic; }
+
+    /* ---- collectors ---- */
+    .collectors{ display:grid; gap:.9rem; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); }
+    .col-c{ display:flex; align-items:center; gap:.8rem; padding:.9rem 1rem; border-radius:14px; cursor:pointer;
+      background:var(--panel); border:1px solid var(--panel-border); transition:.2s; text-align:left; }
+    .col-c:hover{ transform:translateY(-3px); border-color:rgba(88,196,255,.4); }
+    .col-c .av{ width:42px; height:42px; border-radius:50%; flex:none; display:grid; place-items:center;
+      background:linear-gradient(135deg,var(--accent),var(--accent-deep)); color:#fff; font-weight:700; }
+    .col-c b{ display:block; font-size:.95rem; }
+    .col-c span{ font-size:.76rem; color:var(--muted); }
+
+    /* ---- search results ---- */
+    .res{ display:grid; gap:.7rem; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); margin-top:1rem; }
+    .res-c{ display:flex; gap:.7rem; align-items:center; padding:.6rem .7rem; border-radius:12px; cursor:pointer;
+      background:var(--panel); border:1px solid var(--panel-border); transition:.15s; }
+    .res-c:hover{ border-color:var(--accent); }
+    .res-c.on{ border-color:var(--accent); background:rgba(88,196,255,.1); }
+    .res-c img{ width:44px; height:44px; border-radius:9px; object-fit:cover; background:#0b1019; flex:none; }
+    .res-c b{ display:block; font-size:.86rem; }
+    .res-c span{ font-size:.72rem; color:var(--muted); }
+
+    .form-grid{ display:grid; gap:.6rem; grid-template-columns:1fr 1fr; }
+    .form-grid .full{ grid-column:1/-1; }
+    @media(max-width:600px){ .form-grid{ grid-template-columns:1fr; } }
+
+    /* ---- trades ---- */
+    .trade{ padding:1.1rem 1.2rem; border-radius:14px; margin-bottom:1.1rem;
+      background:var(--panel); border:1px solid var(--panel-border); }
+    .trade.in{ border-left:4px solid var(--gold); }
+    .trade .sides{ display:grid; gap:1rem; grid-template-columns:1fr auto 1fr; align-items:center; margin:.9rem 0; }
+    .trade .sides .arrow{ font-size:1.3rem; color:var(--accent); }
+    .trade .mini{ display:flex; flex-wrap:wrap; gap:.4rem; }
+    .trade .mchip{ display:flex; align-items:center; gap:.4rem; padding:.28rem .55rem; border-radius:9px;
+      background:#0b1019; border:1px solid var(--ec,#8aa0b4); font-size:.76rem; }
+    .trade .mchip img{ width:24px; height:24px; border-radius:5px; object-fit:cover; }
+    .trade .row{ display:flex; gap:.5rem; }
+    .trade .row button{ width:auto; margin:0; padding:.5rem 1rem; font-size:.82rem; }
+    @media(max-width:640px){ .trade .sides{ grid-template-columns:1fr; } .trade .sides .arrow{ transform:rotate(90deg); text-align:center; } }
+
+    /* ---- trade builder drawer ---- */
+    .drawer{ position:fixed; inset:auto 0 0 0; max-height:76vh; overflow:auto; z-index:60;
+      background:var(--surface); border-top:2px solid var(--accent); box-shadow:0 -14px 44px rgba(0,0,0,.55);
+      padding:1.2rem 1.4rem 1.6rem; display:none; }
+    .drawer.open{ display:block; }
+    .drawer h3{ margin-bottom:.3rem; }
+    .drawer .close{ position:absolute; top:.8rem; right:1.1rem; cursor:pointer; color:var(--muted); font-size:1.2rem; }
+    .drawer .picks{ display:grid; gap:1.2rem; grid-template-columns:1fr 1fr; margin-top:1rem; }
+    @media(max-width:760px){ .drawer .picks{ grid-template-columns:1fr; } }
+    .drawer .picks h4{ font-size:.9rem; margin-bottom:.5rem; color:var(--muted); }
+    .picklist{ display:flex; flex-wrap:wrap; gap:.4rem; max-height:190px; overflow:auto; }
+    .pick{ padding:.35rem .6rem; border-radius:9px; cursor:pointer; font-size:.76rem;
+      background:#0b1019; border:1px solid var(--panel-border); }
+    .pick.on{ border-color:var(--accent); background:rgba(88,196,255,.14); }
+    .empty{ color:var(--muted); text-align:center; padding:2.2rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <h2 class="section-title"><i class="fas fa-futbol"></i> Card Packets</h2>
+    <p class="section-sub">Your Match Attax collection, and everyone else's. Search a player in the football
+      card database, pick the edition you pulled, then browse other citizens' packets, wishlist what you're
+      missing and offer your spares for it.</p>
+
+    <div class="tabs" id="tabs"></div>
+    <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
+
+    <!-- MY PACKET -->
+    <section id="tab-mine" class="tabpane">
+      <div class="panel" style="display:flex;flex-wrap:wrap;gap:1.2rem;justify-content:space-between;align-items:center;margin-bottom:1.6rem;">
+        <div>
+          <h3 style="margin:0" id="pkTitle">My Packet</h3>
+          <p class="small" style="margin-top:.25rem" id="pkSub"></p>
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+          <button class="ghost" style="width:auto;margin:0" onclick="go('add')"><i class="fas fa-plus"></i> Add a card</button>
+          <button class="ghost" style="width:auto;margin:0;display:none" id="backBtn" onclick="openPacket(null)">Back to my packet</button>
+        </div>
+      </div>
+      <div class="cards" id="pkCards"></div>
+    </section>
+
+    <!-- BROWSE -->
+    <section id="tab-browse" class="tabpane" style="display:none;">
+      <p class="section-sub" style="margin-bottom:1.4rem;">Open a citizen's packet to see what they hold and what they're willing to trade.</p>
+      <div class="collectors" id="collectors"></div>
+    </section>
+
+    <!-- WISHLIST -->
+    <section id="tab-wishes" class="tabpane" style="display:none;">
+      <h3 style="margin-bottom:.4rem;"><i class="fas fa-star" style="color:var(--gold)"></i> Cards I want</h3>
+      <p class="small" style="margin-bottom:1.1rem;">Wishlisted out of other citizens' packets. Their owner gets told the moment you add one.</p>
+      <div class="cards" id="wishMine"></div>
+      <h3 style="margin:2.4rem 0 .4rem;"><i class="fas fa-hand-holding-heart" style="color:var(--accent)"></i> Cards people want from me</h3>
+      <p class="small" style="margin-bottom:1.1rem;">Mark one "for trade" and they'll be notified straight away.</p>
+      <div class="cards" id="wishTheirs"></div>
+    </section>
+
+    <!-- TRADES -->
+    <section id="tab-trades" class="tabpane" style="display:none;">
+      <div id="tradeList"></div>
+    </section>
+
+    <!-- ADD A CARD -->
+    <section id="tab-add" class="tabpane" style="display:none;">
+      <div class="panel" style="max-width:860px;margin:0 auto;">
+        <h3><i class="fas fa-magnifying-glass"></i> 1. Find the player</h3>
+        <p class="small">Type a name and we'll look them up in the online football database — photo, club and
+          nationality come straight from it.</p>
+        <div style="display:flex;gap:.6rem;align-items:flex-end;">
+          <input id="q" placeholder="e.g. Bukayo Saka" onkeydown="if(event.key==='Enter')doSearch()">
+          <button style="width:auto;flex:none;" onclick="doSearch()">Search</button>
+        </div>
+        <div class="res" id="results"></div>
+        <p id="searchMsg" class="small"></p>
+
+        <h3 style="margin-top:2rem;"><i class="fas fa-layer-group"></i> 2. Describe the card</h3>
+        <div class="form-grid">
+          <select id="aEdition"></select>
+          <input id="aSeries" placeholder="Series (e.g. Match Attax 2024/25)">
+          <input id="aRating" type="number" min="0" max="200" step="1" placeholder="Card rating (optional)">
+          <input id="aQty" type="number" min="1" max="99" step="1" value="1" placeholder="How many copies">
+          <input class="full" id="aScan" placeholder="Photo of your actual card (https://... — optional)">
+          <input class="full" id="aNote" placeholder="Note (optional) — e.g. 'mint, want a Gold Edge for it'">
+          <label class="full small" style="display:flex;align-items:center;gap:.5rem;margin-top:.4rem;">
+            <input type="checkbox" id="aTrade" style="width:auto;margin:0;"> Put this card up for trade straight away
+          </label>
+        </div>
+
+        <h3 style="margin-top:2rem;"><i class="fas fa-eye"></i> 3. Preview</h3>
+        <div class="cards" id="preview" style="max-width:200px;"></div>
+        <button style="margin-top:1.2rem;" onclick="addCard()"><i class="fas fa-plus"></i> Add to my packet</button>
+        <p id="addMsg" class="small" style="text-align:center;"></p>
+      </div>
+    </section>
+  </div>
+
+  <!-- TRADE BUILDER -->
+  <div class="drawer" id="drawer">
+    <span class="close" onclick="closeDrawer()">&times;</span>
+    <h3>Offer a trade to <span id="dWho" style="color:var(--accent)"></span></h3>
+    <p class="small">Pick what you want from their packet, and what you'll give from yours.</p>
+    <div class="picks">
+      <div>
+        <h4>You want (their cards, up for trade)</h4>
+        <div class="picklist" id="dWant"></div>
+      </div>
+      <div>
+        <h4>You give (your cards)</h4>
+        <div class="picklist" id="dGive"></div>
+      </div>
+    </div>
+    <input id="dMsg" placeholder="Message (optional)">
+    <button style="margin-top:.9rem;" onclick="sendTrade()"><i class="fas fa-paper-plane"></i> Send offer</button>
+    <p id="dMsgOut" class="small" style="text-align:center;"></p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME = null, EDITIONS = [], VIEW = null, MYCARDS = [], TAB = "mine";
+    let PICKED = null;                    // player chosen from the search results
+    const WANT = new Set(), GIVE = new Set();
+
+    const esc = (s)=>(s==null?"":String(s))
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    /* Card art comes from an external database or another citizen — only ever
+       trust a plain https url, and percent-encode anything that could break out
+       of the src="" attribute. */
+    const imgSrc = (u)=>{
+      if(!/^https:\/\/[A-Za-z0-9._~:/?#@!$&*+,;=%-]+$/.test(u||"")) return "";
+      return encodeURI(u).replace(/["'<>]/g, encodeURIComponent);
+    };
+    const msg = (t,ok=false,el="msg")=>{ const m=document.getElementById(el);
+      m.textContent=t||""; m.style.color= ok?"var(--green)":"var(--red)"; };
+
+    function edition(key){ return EDITIONS.find(e=>e.key===key) || EDITIONS[0] ||
+      {key:"base",label:"Base",color:"#8aa0b4"}; }
+
+    /* ---------- a single Match Attax card face ---------- */
+    function cardHtml(c, opts={}){
+      const col = esc(c.edition_color || edition(c.edition).color);
+      const scan = imgSrc(c.card_image), photo = imgSrc(c.image_url);
+      const face = scan
+        ? `<img class="scan" src="${scan}" alt="" loading="lazy">`
+        : `<div class="face">${photo
+              ? `<img src="${photo}" alt="" loading="lazy">`
+              : `<i class="fas fa-user ph"></i>`}</div>`;
+      const rate = (c.rating || c.rating === 0)
+        ? `<div class="rate">${esc(c.rating)}</div>` : "";
+      const qty = (c.quantity > 1) ? `<div class="qty">x${esc(c.quantity)}</div>` : "";
+      const flag = c.for_trade ? `<div class="flag">FOR TRADE</div>` : "";
+      const wanted = (c.wanted_by && c.wanted_by.length)
+        ? `<div class="want"><i class="fas fa-star"></i> ${c.wanted_by.map(esc).join(", ")} want${c.wanted_by.length===1?"s":""} this</div>` : "";
+      const wanter = c.wanter
+        ? `<div class="want"><i class="fas fa-star"></i> wanted by ${esc(c.wanter)}</div>` : "";
+      const note = c.note ? `<div class="note">${esc(c.note)}</div>` : "";
+      const sel = opts.selected ? " sel" : "";
+      return `<div class="mcard${sel}" style="--ec:${col}" data-id="${esc(c.id)}">
+        <div style="position:relative">${face}${rate}${qty}${flag}</div>
+        <div class="info">
+          <div class="nm">${esc(c.player_name)}</div>
+          <div class="cl">${esc(c.team || "Unknown club")}${c.position ? " · " + esc(c.position) : ""}</div>
+          <span class="ed">${esc(c.edition_label || edition(c.edition).label)}</span>
+          ${c.series ? `<div class="cl" style="margin-top:.3rem">${esc(c.series)}</div>` : ""}
+        </div>
+        ${wanted}${wanter}${note}
+        ${opts.actions ? `<div class="acts">${opts.actions}</div>` : ""}
+      </div>`;
+    }
+
+    /* ---------- tabs ---------- */
+    function drawTabs(counts){
+      const defs = [
+        ["mine","My Packet","fa-box-open",0],
+        ["browse","Browse Packets","fa-users",0],
+        ["wishes","Wishlist","fa-star",counts.wishes||0],
+        ["trades","Trades","fa-handshake",counts.offers||0],
+        ["add","Add a Card","fa-plus",0],
+      ];
+      document.getElementById("tabs").innerHTML = defs.map(([k,t,i,n])=>
+        `<button class="${k===TAB?"on":""}" onclick="go('${k}')"><i class="fas ${i}"></i> ${t}${
+          n ? `<span class="badge">${n}</span>` : ""}</button>`).join("");
+    }
+    function go(tab){
+      TAB = tab;
+      document.querySelectorAll(".tabpane").forEach(p=>p.style.display="none");
+      document.getElementById("tab-"+tab).style.display = "block";
+      document.querySelectorAll("#tabs button").forEach((b,i)=>
+        b.classList.toggle("on", ["mine","browse","wishes","trades","add"][i]===tab));
+      msg("");
+      if(tab==="mine")   loadPacket(VIEW);
+      if(tab==="browse") loadCollectors();
+      if(tab==="wishes") loadWishes();
+      if(tab==="trades") loadTrades();
+      history.replaceState(null,"", tab==="mine" && VIEW ? "/packet?user="+encodeURIComponent(VIEW) : "/packet?tab="+tab);
+    }
+
+    /* ---------- my / someone's packet ---------- */
+    function openPacket(owner){ VIEW = owner; go("mine"); }
+
+    async function loadPacket(owner){
+      let d;
+      try{ d = await api("/packet/data" + (owner ? "?user="+encodeURIComponent(owner) : "")); }
+      catch(e){ return msg(e.message); }
+      VIEW = d.mine ? null : d.owner;
+      if(d.mine) MYCARDS = d.cards;
+      document.getElementById("pkTitle").textContent = d.mine ? "My Packet" : d.owner + "'s Packet";
+      document.getElementById("pkSub").textContent =
+        `${d.total} card${d.total===1?"":"s"} · ${d.trading} up for trade`;
+      const back = document.getElementById("backBtn");
+      back.style.display = d.mine ? "none" : "inline-block";
+
+      const box = document.getElementById("pkCards");
+      if(!d.cards.length){
+        box.innerHTML = `<p class="empty">${d.mine
+          ? "Your packet is empty — <a class='link' href='#' onclick=\"go('add');return false;\">add your first card</a>."
+          : "This citizen hasn't added any cards yet."}</p>`;
+        return;
+      }
+      box.innerHTML = d.cards.map(c=>{
+        let acts;
+        if(d.mine){
+          acts = `<button class="${c.for_trade?"danger":""}" onclick="setTrade(${c.id},${!c.for_trade})">${
+                    c.for_trade ? "Keep it" : "Trade it"}</button>
+                  <button class="ghost" onclick="dropCard(${c.id})">Remove</button>`;
+        }else{
+          acts = `<button class="${c.wished?"danger":"ghost"}" onclick="wish(${c.id},${!!c.wished})">${
+                    c.wished ? "Un-wish" : "Wishlist"}</button>` +
+                 (c.for_trade ? `<button onclick="openDrawer('${esc(d.owner)}',${c.id})">Offer</button>` : "");
+        }
+        return cardHtml(c, {actions:acts});
+      }).join("");
+    }
+
+    async function setTrade(id, on){
+      try{ await api("/packet/update",{method:"POST",body:JSON.stringify({card_id:id, for_trade:on})});
+        msg(on ? "Card is up for trade." : "Card taken off the trade list.", true); loadPacket(VIEW);
+      }catch(e){ msg(e.message); }
+    }
+    async function dropCard(id){
+      if(!confirm("Remove this card from your packet?")) return;
+      try{ await api("/packet/remove",{method:"POST",body:JSON.stringify({card_id:id})}); loadPacket(VIEW); }
+      catch(e){ msg(e.message); }
+    }
+    async function wish(id, already){
+      try{ await api("/packet/wishlist",{method:"POST",body:JSON.stringify({card_id:id, remove:already})});
+        msg(already ? "Removed from your wishlist." : "Added to your wishlist — the owner has been told.", true);
+        loadPacket(VIEW);
+      }catch(e){ msg(e.message); }
+    }
+
+    /* ---------- browse ---------- */
+    async function loadCollectors(){
+      let d;
+      try{ d = await api("/packet/collectors"); }catch(e){ return msg(e.message); }
+      const box = document.getElementById("collectors");
+      if(!d.collectors.length){ box.innerHTML = `<p class="empty">Nobody has started a packet yet — be the first.</p>`; return; }
+      box.innerHTML = d.collectors.map(c=>`
+        <div class="col-c" onclick="openPacket(${c.me ? "null" : "'"+esc(c.username)+"'"})">
+          <div class="av" ${avatarStyle(c.avatar)}>${c.avatar ? "" : esc((c.username[0]||"?").toUpperCase())}</div>
+          <div><b>${esc(c.username)}${c.me?" (you)":""}</b>
+            <span>${c.cards} card${c.cards===1?"":"s"} · ${c.trading} tradeable</span></div>
+        </div>`).join("");
+    }
+
+    /* ---------- wishlist ---------- */
+    async function loadWishes(){
+      let d;
+      try{ d = await api("/packet/wishes"); }catch(e){ return msg(e.message); }
+      const mine = document.getElementById("wishMine");
+      mine.innerHTML = d.wanted.length
+        ? d.wanted.map(c=>cardHtml(c,{actions:
+            `<button class="ghost" onclick="openPacket('${esc(c.owner)}')">See packet</button>` +
+            (c.for_trade ? `<button onclick="openDrawer('${esc(c.owner)}',${c.id})">Offer</button>` : "")
+          })).join("")
+        : `<p class="empty">Nothing wishlisted yet — open someone's packet and star what you're missing.</p>`;
+      const theirs = document.getElementById("wishTheirs");
+      theirs.innerHTML = d.wanted_from_me.length
+        ? d.wanted_from_me.map(c=>cardHtml(c,{actions:
+            c.for_trade ? `<button class="danger" onclick="setTrade(${c.id},false)">Keep it</button>`
+                        : `<button onclick="setTrade(${c.id},true)">Put up for trade</button>`
+          })).join("")
+        : `<p class="empty">Nobody has wishlisted your cards yet.</p>`;
+    }
+
+    /* ---------- trades ---------- */
+    function miniChip(c){
+      const p = imgSrc(c.card_image) || imgSrc(c.image_url);
+      return `<div class="mchip" style="--ec:${esc(c.edition_color)}">${
+        p ? `<img src="${p}" alt="" loading="lazy">` : ""}<span>${esc(c.player_name)}
+        <b style="color:${esc(c.edition_color)}">${esc(c.edition_label)}</b></span></div>`;
+    }
+    async function loadTrades(){
+      let d;
+      try{ d = await api("/packet/trades"); }catch(e){ return msg(e.message); }
+      const box = document.getElementById("tradeList");
+      if(!d.trades.length){
+        box.innerHTML = `<p class="empty">No trades yet. Open a packet, wishlist a card and make someone an offer.</p>`;
+        return;
+      }
+      box.innerHTML = d.trades.map(t=>{
+        const other = t.incoming ? t.from_user : t.to_user;
+        const head = t.incoming
+          ? `<b style="color:var(--gold)">${esc(other)}</b> wants to trade with you`
+          : `You offered <b style="color:var(--accent)">${esc(other)}</b> a trade`;
+        // From the reader's point of view: "you get" is always their own side.
+        const youGet  = t.incoming ? t.offer : t.want;
+        const youGive = t.incoming ? t.want  : t.offer;
+        const getLbl  = t.incoming ? t.offer_label : t.want_label;
+        const giveLbl = t.incoming ? t.want_label  : t.offer_label;
+        // A settled trade has already moved its cards, so fall back to the
+        // labels captured when the offer was made.
+        const side = (list, label)=> list.length ? list.map(miniChip).join("")
+          : (label ? `<span class="muted small">${esc(label)}</span>`
+                   : "<span class='muted small'>&mdash;</span>");
+        let acts = "";
+        if(t.status === "pending" && t.incoming)
+          acts = `<button onclick="respond(${t.id},'accept')"><i class="fas fa-check"></i> Accept</button>
+                  <button class="danger" onclick="respond(${t.id},'decline')">Decline</button>`;
+        else if(t.status === "pending")
+          acts = `<button class="ghost" onclick="respond(${t.id},'cancel')">Cancel offer</button>`;
+        const stateTag = {pending:"", accepted:"✅ Accepted", declined:"❌ Declined",
+                          cancelled:"Cancelled", stale:"⚠️ Cards no longer available"}[t.status] || "";
+        return `<div class="trade ${t.incoming?"in":""}">
+          <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+            <div>${head}</div>
+            <div class="small" style="margin:0">${esc(stateTag)}${t.created_at ? " · " + esc(new Date(t.created_at).toLocaleString()) : ""}</div>
+          </div>
+          ${t.message ? `<p class="small" style="font-style:italic">"${esc(t.message)}"</p>` : ""}
+          <div class="sides">
+            <div><h4 class="small" style="margin:0 0 .4rem">You get</h4>
+              <div class="mini">${side(youGet, getLbl)}</div></div>
+            <div class="arrow"><i class="fas fa-right-left"></i></div>
+            <div><h4 class="small" style="margin:0 0 .4rem">You give</h4>
+              <div class="mini">${side(youGive, giveLbl)}</div></div>
+          </div>
+          <div class="row">${acts}</div>
+        </div>`;
+      }).join("");
+    }
+    async function respond(id, action){
+      if(action==="accept" && !confirm("Accept this trade? The cards swap straight away.")) return;
+      try{ await api("/packet/trade/respond",{method:"POST",body:JSON.stringify({trade_id:id, action})});
+        msg(action==="accept" ? "Traded! The cards are in your packet." : "Done.", true);
+        loadTrades(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+
+    /* ---------- trade builder ---------- */
+    let DRAWER_THEIRS = [];
+    async function openDrawer(owner, preselect){
+      WANT.clear(); GIVE.clear();
+      if(preselect) WANT.add(preselect);
+      document.getElementById("dWho").textContent = owner;
+      document.getElementById("dMsgOut").textContent = "";
+      document.getElementById("drawer").dataset.owner = owner;
+      try{
+        const [them, mine] = await Promise.all([
+          api("/packet/data?user="+encodeURIComponent(owner)),
+          api("/packet/data"),
+        ]);
+        DRAWER_THEIRS = them.cards.filter(c=>c.for_trade);
+        MYCARDS = mine.cards;
+      }catch(e){ return msg(e.message); }
+      drawPicks();
+      document.getElementById("drawer").classList.add("open");
+    }
+    function closeDrawer(){ document.getElementById("drawer").classList.remove("open"); }
+    function drawPicks(){
+      const chip = (c,set)=>`<div class="pick ${set.has(c.id)?"on":""}" onclick="togglePick('${set===WANT?"want":"give"}',${c.id})">
+        ${esc(c.player_name)} <b style="color:${esc(c.edition_color)}">${esc(c.edition_label)}</b></div>`;
+      document.getElementById("dWant").innerHTML = DRAWER_THEIRS.length
+        ? DRAWER_THEIRS.map(c=>chip(c,WANT)).join("")
+        : `<span class="muted small">They have nothing up for trade yet.</span>`;
+      document.getElementById("dGive").innerHTML = MYCARDS.length
+        ? MYCARDS.map(c=>chip(c,GIVE)).join("")
+        : `<span class="muted small">Your packet is empty — add a card first.</span>`;
+    }
+    function togglePick(which, id){
+      const set = which==="want" ? WANT : GIVE;
+      set.has(id) ? set.delete(id) : set.add(id);
+      drawPicks();
+    }
+    async function sendTrade(){
+      const body = { to_user: document.getElementById("drawer").dataset.owner,
+                     want_ids:[...WANT], offer_ids:[...GIVE],
+                     message: document.getElementById("dMsg").value.trim() };
+      if(!body.want_ids.length) return msg("Pick at least one card you want", false, "dMsgOut");
+      if(!body.offer_ids.length) return msg("Offer at least one of your own cards", false, "dMsgOut");
+      try{
+        await api("/packet/trade",{method:"POST",body:JSON.stringify(body)});
+        msg("Offer sent!", true, "dMsgOut");
+        document.getElementById("dMsg").value = "";
+        setTimeout(()=>{ closeDrawer(); go("trades"); }, 700);
+      }catch(e){ msg(e.message, false, "dMsgOut"); }
+    }
+
+    /* ---------- add a card ---------- */
+    async function doSearch(){
+      const q = document.getElementById("q").value.trim();
+      if(q.length < 2) return msg("Type at least 2 letters", false, "searchMsg");
+      msg("Searching the card database…", true, "searchMsg");
+      let d;
+      try{ d = await api("/packet/search?q="+encodeURIComponent(q)); }
+      catch(e){ return msg(e.message, false, "searchMsg"); }
+      const box = document.getElementById("results");
+      if(!d.players.length){
+        box.innerHTML = "";
+        return msg(d.error || `No footballer called "${q}" in the database. Check the spelling, or add the card by hand below.`,
+                   false, "searchMsg");
+      }
+      msg(`${d.players.length} player${d.players.length===1?"":"s"} found — pick one.`, true, "searchMsg");
+      box.innerHTML = d.players.map((p,i)=>{
+        const img = imgSrc(p.image_url);
+        return `<div class="res-c" data-i="${i}" onclick="pick(${i})">
+          ${img ? `<img src="${img}" alt="" loading="lazy">` : `<div class="res-ph" style="width:44px;height:44px;border-radius:9px;background:#0b1019;display:grid;place-items:center;color:var(--muted)"><i class="fas fa-user"></i></div>`}
+          <div><b>${esc(p.player_name)}</b>
+            <span>${esc(p.team || "—")}${p.nationality ? " · " + esc(p.nationality) : ""}</span></div>
+        </div>`;
+      }).join("");
+      window.__results = d.players;
+      if(d.players.length === 1) pick(0);
+    }
+    function pick(i){
+      PICKED = (window.__results || [])[i] || null;
+      document.querySelectorAll(".res-c").forEach(el=>el.classList.toggle("on", +el.dataset.i === i));
+      drawPreview();
+    }
+    function drawPreview(){
+      const box = document.getElementById("preview");
+      if(!PICKED){ box.innerHTML = `<p class="muted small">Pick a player above to see the card.</p>`; return; }
+      const ed = edition(document.getElementById("aEdition").value);
+      const rating = document.getElementById("aRating").value;
+      box.innerHTML = cardHtml({
+        id: 0, player_name: PICKED.player_name, team: PICKED.team, position: PICKED.position,
+        image_url: PICKED.image_url, card_image: document.getElementById("aScan").value.trim(),
+        edition: ed.key, edition_label: ed.label, edition_color: ed.color,
+        series: document.getElementById("aSeries").value.trim(),
+        rating: rating === "" ? null : rating,
+        quantity: +document.getElementById("aQty").value || 1,
+        for_trade: document.getElementById("aTrade").checked,
+      });
+    }
+    async function addCard(){
+      if(!PICKED) return msg("Search for a player and pick them first", false, "addMsg");
+      const body = {
+        player_id: PICKED.player_id, player_name: PICKED.player_name, team: PICKED.team,
+        nationality: PICKED.nationality, position: PICKED.position, image_url: PICKED.image_url,
+        card_image: document.getElementById("aScan").value.trim(),
+        edition: document.getElementById("aEdition").value,
+        series: document.getElementById("aSeries").value.trim(),
+        rating: document.getElementById("aRating").value,
+        quantity: document.getElementById("aQty").value,
+        note: document.getElementById("aNote").value.trim(),
+        for_trade: document.getElementById("aTrade").checked,
+      };
+      try{
+        await api("/packet/add",{method:"POST",body:JSON.stringify(body)});
+        msg("Card added to your packet.", true, "addMsg");
+        PICKED = null;
+        document.getElementById("results").innerHTML = "";
+        document.getElementById("q").value = "";
+        ["aScan","aNote","aSeries","aRating"].forEach(id=>document.getElementById(id).value="");
+        document.getElementById("aQty").value = 1;
+        drawPreview();
+        refresh();
+      }catch(e){ msg(e.message, false, "addMsg"); }
+    }
+
+    async function refresh(){
+      try{ const s = await api("/packet/summary"); drawTabs(s); }catch{}
+    }
+
+    (async function(){
+      ME = await requireAuth(); if(!ME) return;
+      renderNav("/packet", ME);
+      try{ EDITIONS = (await api("/packet/editions")).editions || []; }catch{}
+      document.getElementById("aEdition").innerHTML =
+        EDITIONS.map(e=>`<option value="${esc(e.key)}">${esc(e.label)}</option>`).join("");
+      ["aEdition","aSeries","aRating","aQty","aScan","aTrade"].forEach(id=>{
+        const el = document.getElementById(id);
+        el.addEventListener("input", drawPreview); el.addEventListener("change", drawPreview);
+      });
+      drawPreview();
+      await refresh();
+
+      const p = new URLSearchParams(location.search);
+      const who = p.get("user"), tab = p.get("tab");
+      if(who && who !== ME.username) openPacket(who);
+      else go(["mine","browse","wishes","trades","add"].includes(tab) ? tab : "mine");
+    })();
+  </script>
+</body>
+</html>
