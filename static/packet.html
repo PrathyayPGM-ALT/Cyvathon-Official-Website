@@ -34,33 +34,113 @@
     .tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem; border-radius:20px;
       background:var(--red); color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
 
-    /* ---- the card face ---- */
-    .cards{ display:grid; gap:1.1rem; grid-template-columns:repeat(auto-fill,minmax(178px,1fr)); }
-    .mcard{ position:relative; border-radius:14px; overflow:hidden; background:#0d1219;
-      border:2px solid var(--ec,#8aa0b4); box-shadow:0 8px 22px rgba(0,0,0,.4); transition:.2s; }
-    .mcard:hover{ transform:translateY(-4px); box-shadow:0 14px 34px rgba(0,0,0,.5); }
-    .mcard.sel{ outline:3px solid var(--accent); outline-offset:2px; }
-    .mcard .face{ position:relative; height:186px; display:flex; align-items:flex-end; justify-content:center;
-      background:radial-gradient(circle at 50% 22%, color-mix(in srgb, var(--ec,#8aa0b4) 55%, transparent), #0d1219 72%); }
-    .mcard .face img{ max-height:100%; max-width:100%; object-fit:contain; display:block; }
-    .mcard .face .ph{ font-size:3.2rem; color:rgba(255,255,255,.22); align-self:center; }
-    .mcard .scan{ width:100%; height:236px; object-fit:cover; display:block; background:#0d1219; }
-    .mcard .rate{ position:absolute; top:7px; left:7px; min-width:30px; padding:.15rem .4rem; border-radius:8px;
-      background:var(--ec,#8aa0b4); color:#0b0f16; font-weight:800; font-size:.92rem; text-align:center; }
-    .mcard .qty{ position:absolute; top:7px; right:7px; padding:.15rem .45rem; border-radius:8px;
-      background:rgba(0,0,0,.6); color:#fff; font-weight:700; font-size:.74rem; }
-    .mcard .info{ padding:.6rem .7rem .7rem; border-top:2px solid var(--ec,#8aa0b4); }
-    .mcard .nm{ font-weight:700; font-size:.92rem; line-height:1.2; }
-    .mcard .cl{ font-size:.75rem; color:var(--muted); margin-top:.15rem; }
-    .mcard .ed{ display:inline-block; margin-top:.45rem; padding:.16rem .55rem; border-radius:20px;
-      font-size:.68rem; font-weight:700; letter-spacing:.3px; text-transform:uppercase;
-      background:var(--ec,#8aa0b4); color:#0b0f16; }
-    .mcard .acts{ display:flex; gap:.35rem; padding:0 .7rem .7rem; }
-    .mcard .acts button{ width:auto; flex:1; margin:0; padding:.42rem .3rem; font-size:.74rem; box-shadow:none; }
-    .mcard .flag{ position:absolute; bottom:0; left:0; right:0; padding:.2rem; text-align:center;
-      font-size:.68rem; font-weight:700; background:rgba(31,214,166,.9); color:#04150f; }
-    .mcard .want{ font-size:.7rem; color:var(--gold); padding:0 .7rem .5rem; }
-    .mcard .note{ font-size:.72rem; color:var(--muted); padding:0 .7rem .5rem; font-style:italic; }
+    /* ============ THE CARD ============
+       Real trading-card proportions (63 x 88 mm), so it reads as a card and
+       not a tile. Front and back are both built here and reused at grid size
+       and blown up in the flip view. */
+    .cards{ display:grid; gap:1.15rem; grid-template-columns:repeat(auto-fill,minmax(184px,1fr)); }
+
+    .mx{ position:relative; width:100%; aspect-ratio:63/88; border-radius:14px; overflow:hidden;
+      color:#fff; isolation:isolate; box-sizing:border-box;
+      background:
+        radial-gradient(120% 78% at 50% 8%, color-mix(in srgb, var(--ec) 78%, #000 0%), transparent 62%),
+        linear-gradient(168deg, color-mix(in srgb, var(--ec) 42%, #070a0f), #070a0f 58%, #05070b);
+      border:2px solid color-mix(in srgb, var(--ec) 82%, #fff 0%);
+      box-shadow:0 10px 26px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.09); }
+    /* the diagonal sheen every foil card has */
+    .mx::after{ content:""; position:absolute; inset:0; pointer-events:none; z-index:4;
+      background:linear-gradient(118deg, transparent 34%, rgba(255,255,255,.16) 46%,
+        rgba(255,255,255,.03) 52%, transparent 62%); }
+
+    .mx .ribbon{ position:absolute; top:0; left:0; right:0; z-index:3; padding:.3rem .55rem;
+      font-size:.6rem; font-weight:800; letter-spacing:.7px; text-transform:uppercase; text-align:center;
+      background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--ec) 92%, #000), transparent);
+      color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.65); }
+    .mx .art{ position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:center;
+      z-index:1; overflow:hidden; }
+    .mx .art img{ width:100%; height:100%; object-fit:contain; object-position:bottom center;
+      filter:drop-shadow(0 6px 14px rgba(0,0,0,.55)); }
+    .mx .art img.scan{ object-fit:cover; object-position:center; filter:none; }
+    .mx .art .ph{ align-self:center; font-size:3.4rem; color:rgba(255,255,255,.16); }
+
+    .mx .rating{ position:absolute; top:8px; left:8px; z-index:5; min-width:34px; padding:.16rem .34rem;
+      border-radius:9px; text-align:center; font-weight:900; font-size:1.02rem; line-height:1.15;
+      background:linear-gradient(160deg,#fff,color-mix(in srgb, var(--ec) 68%, #fff));
+      color:#0b0f16; box-shadow:0 3px 9px rgba(0,0,0,.45); }
+    .mx .rating small{ display:block; font-size:.44rem; font-weight:800; letter-spacing:.6px; opacity:.72; }
+    .mx .copies{ position:absolute; top:8px; right:8px; z-index:5; padding:.16rem .44rem; border-radius:20px;
+      background:rgba(6,9,14,.74); border:1px solid rgba(255,255,255,.2);
+      font-size:.68rem; font-weight:800; }
+
+    .mx .plate{ position:absolute; left:0; right:0; bottom:0; z-index:5; padding:.55rem .6rem .6rem;
+      background:linear-gradient(0deg, rgba(4,6,10,.96) 58%, rgba(4,6,10,.7) 82%, transparent);
+      border-top:2px solid var(--ec); }
+    .mx .plate .nm{ font-weight:800; font-size:.9rem; line-height:1.14; letter-spacing:-.2px;
+      text-shadow:0 1px 4px rgba(0,0,0,.8); }
+    .mx .plate .cl{ font-size:.68rem; color:#c2cfdd; margin-top:.12rem; }
+    .mx .plate .fin{ display:inline-block; margin-top:.34rem; padding:.14rem .5rem; border-radius:20px;
+      font-size:.6rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+      background:var(--ec); color:#0b0f16; }
+    .mx .plate .fin.dark{ color:#fff; }
+    .mx .trade-flag{ position:absolute; left:0; right:0; bottom:0; z-index:6; padding:.2rem;
+      text-align:center; font-size:.62rem; font-weight:800; letter-spacing:.6px;
+      background:var(--green); color:#04150f; }
+
+    /* ---- card back ---- */
+    .mx.back{ background:linear-gradient(168deg,#0e141d,#070a0f); display:flex; flex-direction:column; }
+    .mx.back .bhead{ padding:.6rem .7rem; background:linear-gradient(90deg, var(--ec), transparent);
+      border-bottom:2px solid var(--ec); }
+    .mx.back .bhead b{ display:block; font-size:.95rem; line-height:1.15; text-shadow:0 1px 4px rgba(0,0,0,.7); }
+    .mx.back .bhead span{ font-size:.66rem; color:#dfe8f2; }
+    .mx.back .stats{ flex:1; overflow:auto; padding:.5rem .7rem; font-size:.68rem; }
+    .mx.back .st{ display:flex; justify-content:space-between; gap:.6rem; padding:.24rem 0;
+      border-bottom:1px dashed rgba(255,255,255,.09); }
+    .mx.back .st b{ color:#fff; text-align:right; font-weight:700; }
+    .mx.back .st span{ color:#93a1b5; white-space:nowrap; }
+    .mx.back .bnote{ padding:.45rem .7rem; font-size:.66rem; color:#c2cfdd; font-style:italic;
+      border-top:1px solid rgba(255,255,255,.08); }
+
+    /* ---- grid tile wrapper ---- */
+    .tile{ cursor:pointer; transition:transform .2s, filter .2s; }
+    .tile:hover{ transform:translateY(-6px); filter:brightness(1.07); }
+    .tile .wants{ font-size:.68rem; color:var(--gold); margin-top:.4rem; text-align:center; }
+
+    /* ============ FLIP VIEWER ============ */
+    .viewer{ position:fixed; inset:0; z-index:80; display:none; place-items:center;
+      background:rgba(4,7,12,.82); backdrop-filter:blur(7px); padding:1.2rem; }
+    .viewer.open{ display:grid; }
+    .viewer .sheet{ display:grid; gap:1.8rem; grid-template-columns:auto minmax(260px,340px);
+      align-items:center; max-height:92vh; }
+    @media(max-width:820px){
+      .viewer{ padding:.8rem; align-items:start; overflow:auto; }
+      .viewer .sheet{ grid-template-columns:1fr; gap:1rem; justify-items:center; }
+    }
+    .stage{ perspective:1300px; width:min(76vw,300px); aspect-ratio:63/88; }
+    @media(max-width:820px){ .stage{ width:min(66vw,220px); } }
+    .flip{ position:relative; width:100%; height:100%; cursor:pointer;
+      transform-style:preserve-3d; transition:transform .6s cubic-bezier(.2,.7,.3,1); }
+    .flip .mx{ position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden;
+      box-shadow:0 22px 52px rgba(0,0,0,.66), inset 0 0 0 1px rgba(255,255,255,.09); }
+    .flip .mx.back{ transform:rotateY(180deg); }
+    .flip.is-flipped{ transform:rotateY(180deg); }
+    .glare{ position:absolute; inset:0; border-radius:14px; pointer-events:none; z-index:9; opacity:0;
+      transition:opacity .25s; background:radial-gradient(circle at var(--gx,50%) var(--gy,50%),
+      rgba(255,255,255,.34), rgba(255,255,255,0) 56%); }
+    .flip.is-tilting .glare{ opacity:1; }
+    .hint{ text-align:center; font-size:.76rem; color:var(--muted); margin-top:.75rem; }
+    .viewer .side{ background:var(--surface); border:1px solid var(--panel-border);
+      border-radius:16px; padding:1.3rem 1.4rem; max-height:88vh; overflow:auto; width:100%; box-sizing:border-box; }
+    .viewer .side h3{ margin-bottom:.2rem; font-size:1.15rem; }
+    .viewer .side .who{ font-size:.82rem; color:var(--muted); margin-bottom:1rem; }
+    .viewer .side .rows{ font-size:.84rem; margin-bottom:1.1rem; }
+    .viewer .side .rw{ display:flex; justify-content:space-between; gap:.8rem; padding:.34rem 0;
+      border-bottom:1px solid var(--panel-border); }
+    .viewer .side .rw span{ color:var(--muted); }
+    .viewer .side .rw b{ text-align:right; }
+    .viewer .side button{ margin-top:.55rem; }
+    .viewer .x{ position:fixed; top:1rem; right:1.3rem; font-size:1.9rem; color:#fff; cursor:pointer;
+      opacity:.72; z-index:90; line-height:1; }
+    .viewer .x:hover{ opacity:1; }
 
     /* ---- collectors ---- */
     .collectors{ display:grid; gap:.9rem; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); }
@@ -84,7 +164,10 @@
 
     .form-grid{ display:grid; gap:.6rem; grid-template-columns:1fr 1fr; }
     .form-grid .full{ grid-column:1/-1; }
+    .form-grid label.fld{ display:block; font-size:.72rem; color:var(--muted); margin-top:.5rem; }
     @media(max-width:600px){ .form-grid{ grid-template-columns:1fr; } }
+    .addwrap{ display:grid; gap:2rem; grid-template-columns:1fr 230px; align-items:start; }
+    @media(max-width:900px){ .addwrap{ grid-template-columns:1fr; } }
 
     /* ---- trades ---- */
     .trade{ padding:1.1rem 1.2rem; border-radius:14px; margin-bottom:1.1rem;
@@ -101,7 +184,7 @@
     @media(max-width:640px){ .trade .sides{ grid-template-columns:1fr; } .trade .sides .arrow{ transform:rotate(90deg); text-align:center; } }
 
     /* ---- trade builder drawer ---- */
-    .drawer{ position:fixed; inset:auto 0 0 0; max-height:76vh; overflow:auto; z-index:60;
+    .drawer{ position:fixed; inset:auto 0 0 0; max-height:76vh; overflow:auto; z-index:95;
       background:var(--surface); border-top:2px solid var(--accent); box-shadow:0 -14px 44px rgba(0,0,0,.55);
       padding:1.2rem 1.4rem 1.6rem; display:none; }
     .drawer.open{ display:block; }
@@ -114,7 +197,11 @@
     .pick{ padding:.35rem .6rem; border-radius:9px; cursor:pointer; font-size:.76rem;
       background:#0b1019; border:1px solid var(--panel-border); }
     .pick.on{ border-color:var(--accent); background:rgba(88,196,255,.14); }
-    .empty{ color:var(--muted); text-align:center; padding:2.2rem 1rem; }
+    .empty{ color:var(--muted); text-align:center; padding:2.2rem 1rem; grid-column:1/-1; }
+
+    @media (prefers-reduced-motion: reduce){
+      .flip{ transition:none; } .glare{ display:none; } .tile:hover{ transform:none; }
+    }
   </style>
 </head>
 <body>
@@ -123,8 +210,8 @@
   <div class="wrap">
     <h2 class="section-title"><i class="fas fa-futbol"></i> Card Packets</h2>
     <p class="section-sub">Your Match Attax collection, and everyone else's. Search a player in the football
-      card database, pick the edition you pulled, then browse other citizens' packets, wishlist what you're
-      missing and offer your spares for it.</p>
+      database, record the card type and finish you actually pulled, then browse other citizens' packets,
+      wishlist what you're missing and offer your spares for it. Tap any card to turn it over.</p>
 
     <div class="tabs" id="tabs"></div>
     <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
@@ -153,7 +240,7 @@
     <!-- WISHLIST -->
     <section id="tab-wishes" class="tabpane" style="display:none;">
       <h3 style="margin-bottom:.4rem;"><i class="fas fa-star" style="color:var(--gold)"></i> Cards I want</h3>
-      <p class="small" style="margin-bottom:1.1rem;">Wishlisted out of other citizens' packets. Their owner gets told the moment you add one.</p>
+      <p class="small" style="margin-bottom:1.1rem;">Wishlisted out of other citizens' packets. The owner is told the moment you add one.</p>
       <div class="cards" id="wishMine"></div>
       <h3 style="margin:2.4rem 0 .4rem;"><i class="fas fa-hand-holding-heart" style="color:var(--accent)"></i> Cards people want from me</h3>
       <p class="small" style="margin-bottom:1.1rem;">Mark one "for trade" and they'll be notified straight away.</p>
@@ -167,10 +254,10 @@
 
     <!-- ADD A CARD -->
     <section id="tab-add" class="tabpane" style="display:none;">
-      <div class="panel" style="max-width:860px;margin:0 auto;">
+      <div class="panel" style="max-width:980px;margin:0 auto;">
         <h3><i class="fas fa-magnifying-glass"></i> 1. Find the player</h3>
-        <p class="small">Type a name and we'll look them up in the online football database — photo, club and
-          nationality come straight from it.</p>
+        <p class="small">Type a name and we'll look them up in the online football database — photo, club,
+          position and nationality come straight from it.</p>
         <div style="display:flex;gap:.6rem;align-items:flex-end;">
           <input id="q" placeholder="e.g. Bukayo Saka" onkeydown="if(event.key==='Enter')doSearch()">
           <button style="width:auto;flex:none;" onclick="doSearch()">Search</button>
@@ -179,24 +266,48 @@
         <p id="searchMsg" class="small"></p>
 
         <h3 style="margin-top:2rem;"><i class="fas fa-layer-group"></i> 2. Describe the card</h3>
-        <div class="form-grid">
-          <select id="aEdition"></select>
-          <input id="aSeries" placeholder="Series (e.g. Match Attax 2024/25)">
-          <input id="aRating" type="number" min="0" max="200" step="1" placeholder="Card rating (optional)">
-          <input id="aQty" type="number" min="1" max="99" step="1" value="1" placeholder="How many copies">
-          <input class="full" id="aScan" placeholder="Photo of your actual card (https://... — optional)">
-          <input class="full" id="aNote" placeholder="Note (optional) — e.g. 'mint, want a Gold Edge for it'">
-          <label class="full small" style="display:flex;align-items:center;gap:.5rem;margin-top:.4rem;">
-            <input type="checkbox" id="aTrade" style="width:auto;margin:0;"> Put this card up for trade straight away
-          </label>
+        <div class="addwrap">
+          <div>
+            <div class="form-grid">
+              <div><label class="fld">Card type</label><select id="aSubset"></select></div>
+              <div><label class="fld">Finish / edition</label><select id="aEdition"></select></div>
+              <div><label class="fld">Series</label><select id="aSeries"></select></div>
+              <div><label class="fld">Card number</label><input id="aNo" placeholder="e.g. 142"></div>
+              <div><label class="fld">Rating</label><input id="aRating" type="number" min="0" max="200" step="1" placeholder="printed rating"></div>
+              <div><label class="fld">Copies you hold</label><input id="aQty" type="number" min="1" max="99" step="1" value="1"></div>
+              <div class="full"><label class="fld">Photo of your actual card</label>
+                <input type="file" id="aFile" accept="image/*" onchange="uploadPhoto()">
+                <p id="upMsg" class="small" style="margin-top:.3rem"></p></div>
+              <div class="full"><label class="fld">Reference page for this card (optional)</label>
+                <input id="aRef" placeholder="https://... e.g. its page on a card database"></div>
+              <div class="full"><label class="fld">Note (optional)</label>
+                <input id="aNote" placeholder="e.g. 'mint — after a Gold Edge for it'"></div>
+              <label class="full small" style="display:flex;align-items:center;gap:.5rem;margin-top:.4rem;">
+                <input type="checkbox" id="aTrade" style="width:auto;margin:0;"> Put this card up for trade straight away
+              </label>
+            </div>
+            <button style="margin-top:1.2rem;" onclick="addCard()"><i class="fas fa-plus"></i> Add to my packet</button>
+            <p id="addMsg" class="small" style="text-align:center;"></p>
+          </div>
+          <div>
+            <label class="fld" style="font-size:.72rem;color:var(--muted);">Live preview</label>
+            <div id="preview" style="margin-top:.5rem;"></div>
+          </div>
         </div>
-
-        <h3 style="margin-top:2rem;"><i class="fas fa-eye"></i> 3. Preview</h3>
-        <div class="cards" id="preview" style="max-width:200px;"></div>
-        <button style="margin-top:1.2rem;" onclick="addCard()"><i class="fas fa-plus"></i> Add to my packet</button>
-        <p id="addMsg" class="small" style="text-align:center;"></p>
       </div>
     </section>
+  </div>
+
+  <!-- FLIP VIEWER -->
+  <div class="viewer" id="viewer" onclick="if(event.target===this)closeViewer()">
+    <span class="x" onclick="closeViewer()">&times;</span>
+    <div class="sheet">
+      <div>
+        <div class="stage" id="stage"></div>
+        <div class="hint"><i class="fas fa-hand-pointer"></i> Tap the card to turn it over</div>
+      </div>
+      <div class="side" id="viewSide"></div>
+    </div>
   </div>
 
   <!-- TRADE BUILDER -->
@@ -205,14 +316,8 @@
     <h3>Offer a trade to <span id="dWho" style="color:var(--accent)"></span></h3>
     <p class="small">Pick what you want from their packet, and what you'll give from yours.</p>
     <div class="picks">
-      <div>
-        <h4>You want (their cards, up for trade)</h4>
-        <div class="picklist" id="dWant"></div>
-      </div>
-      <div>
-        <h4>You give (your cards)</h4>
-        <div class="picklist" id="dGive"></div>
-      </div>
+      <div><h4>You want (their cards, up for trade)</h4><div class="picklist" id="dWant"></div></div>
+      <div><h4>You give (your cards)</h4><div class="picklist" id="dGive"></div></div>
     </div>
     <input id="dMsg" placeholder="Message (optional)">
     <button style="margin-top:.9rem;" onclick="sendTrade()"><i class="fas fa-paper-plane"></i> Send offer</button>
@@ -221,8 +326,8 @@
 
   <script src="/static/app.js"></script>
   <script>
-    let ME = null, EDITIONS = [], VIEW = null, MYCARDS = [], TAB = "mine";
-    let PICKED = null;                    // player chosen from the search results
+    let ME = null, EDITIONS = [], SUBSETS = [], SERIES = [], VIEW = null, MYCARDS = [], TAB = "mine";
+    let PICKED = null, UPLOADED = "", VIEWING = null, PKT = null;
     const WANT = new Set(), GIVE = new Set();
 
     const esc = (s)=>(s==null?"":String(s))
@@ -231,46 +336,176 @@
     /* Card art comes from an external database or another citizen — only ever
        trust a plain https url, and percent-encode anything that could break out
        of the src="" attribute. */
-    const imgSrc = (u)=>{
+    const safeUrl = (u)=>{
       if(!/^https:\/\/[A-Za-z0-9._~:/?#@!$&*+,;=%-]+$/.test(u||"")) return "";
       return encodeURI(u).replace(/["'<>]/g, encodeURIComponent);
     };
     const msg = (t,ok=false,el="msg")=>{ const m=document.getElementById(el);
       m.textContent=t||""; m.style.color= ok?"var(--green)":"var(--red)"; };
 
-    function edition(key){ return EDITIONS.find(e=>e.key===key) || EDITIONS[0] ||
-      {key:"base",label:"Base",color:"#8aa0b4"}; }
+    const edition = (k)=> EDITIONS.find(e=>e.key===k) || EDITIONS[0] || {key:"base",label:"Base",color:"#8aa0b4",rarity:""};
+    const subset  = (k)=> SUBSETS.find(e=>e.key===k)  || SUBSETS[0]  || {key:"base",label:"Base"};
+    /* Dark frames need light text on the finish badge. */
+    const isDark = (hex)=>{
+      const m = /^#([0-9a-f]{6})$/i.exec(hex||""); if(!m) return false;
+      const n = parseInt(m[1],16);
+      return (((n>>16&255)*299 + (n>>8&255)*587 + (n&255)*114)/1000) < 128;
+    };
 
-    /* ---------- a single Match Attax card face ---------- */
-    function cardHtml(c, opts={}){
-      const col = esc(c.edition_color || edition(c.edition).color);
-      const scan = imgSrc(c.card_image), photo = imgSrc(c.image_url);
-      const face = scan
-        ? `<img class="scan" src="${scan}" alt="" loading="lazy">`
-        : `<div class="face">${photo
-              ? `<img src="${photo}" alt="" loading="lazy">`
-              : `<i class="fas fa-user ph"></i>`}</div>`;
+    /* ---------- card faces ---------- */
+    function cardFront(c){
+      const col  = esc(c.edition_color || edition(c.edition).color);
+      const scan = safeUrl(c.card_image), photo = safeUrl(c.image_url);
+      const art = scan ? `<img class="scan" src="${scan}" alt="" loading="lazy">`
+                : photo ? `<img src="${photo}" alt="" loading="lazy">`
+                : `<i class="fas fa-user ph"></i>`;
+      const sub = c.subset_label && c.subset !== "base"
+        ? `<div class="ribbon">${esc(c.subset_label)}</div>` : "";
       const rate = (c.rating || c.rating === 0)
-        ? `<div class="rate">${esc(c.rating)}</div>` : "";
-      const qty = (c.quantity > 1) ? `<div class="qty">x${esc(c.quantity)}</div>` : "";
-      const flag = c.for_trade ? `<div class="flag">FOR TRADE</div>` : "";
-      const wanted = (c.wanted_by && c.wanted_by.length)
-        ? `<div class="want"><i class="fas fa-star"></i> ${c.wanted_by.map(esc).join(", ")} want${c.wanted_by.length===1?"s":""} this</div>` : "";
-      const wanter = c.wanter
-        ? `<div class="want"><i class="fas fa-star"></i> wanted by ${esc(c.wanter)}</div>` : "";
-      const note = c.note ? `<div class="note">${esc(c.note)}</div>` : "";
-      const sel = opts.selected ? " sel" : "";
-      return `<div class="mcard${sel}" style="--ec:${col}" data-id="${esc(c.id)}">
-        <div style="position:relative">${face}${rate}${qty}${flag}</div>
-        <div class="info">
+        ? `<div class="rating">${esc(c.rating)}<small>RATING</small></div>` : "";
+      const copies = c.quantity > 1 ? `<div class="copies">x${esc(c.quantity)}</div>` : "";
+      const fin = c.edition !== "base"
+        ? `<span class="fin ${isDark(c.edition_color)?"dark":""}">${esc(c.edition_label)}</span>` : "";
+      return `<div class="mx" style="--ec:${col}">
+        <div class="art">${art}</div>${sub}${rate}${copies}
+        <div class="plate">
           <div class="nm">${esc(c.player_name)}</div>
           <div class="cl">${esc(c.team || "Unknown club")}${c.position ? " · " + esc(c.position) : ""}</div>
-          <span class="ed">${esc(c.edition_label || edition(c.edition).label)}</span>
-          ${c.series ? `<div class="cl" style="margin-top:.3rem">${esc(c.series)}</div>` : ""}
+          ${fin}
         </div>
-        ${wanted}${wanter}${note}
-        ${opts.actions ? `<div class="acts">${opts.actions}</div>` : ""}
+        ${c.for_trade ? `<div class="trade-flag">FOR TRADE</div>` : ""}
       </div>`;
+    }
+
+    function cardBack(c){
+      const col = esc(c.edition_color || edition(c.edition).color);
+      const row = (k,v)=> v ? `<div class="st"><span>${esc(k)}</span><b>${esc(v)}</b></div>` : "";
+      return `<div class="mx back" style="--ec:${col}">
+        <div class="bhead">
+          <b>${esc(c.player_name)}</b>
+          <span>${esc(c.team || "Unknown club")}${c.position ? " · " + esc(c.position) : ""}</span>
+        </div>
+        <div class="stats">
+          ${row("Card type", c.subset_label)}
+          ${row("Finish", c.edition_label)}
+          ${row("Rarity", c.rarity)}
+          ${row("Series", c.series)}
+          ${row("Card no.", c.card_no)}
+          ${row("Rating", (c.rating || c.rating === 0) ? c.rating : "")}
+          ${row("Nationality", c.nationality)}
+          ${row("Copies", c.quantity > 1 ? c.quantity : "")}
+          ${row("In the packet of", c.owner)}
+          ${row("Status", c.for_trade ? "Up for trade" : "Not for trade")}
+        </div>
+        ${c.note ? `<div class="bnote">${esc(c.note)}</div>` : ""}
+      </div>`;
+    }
+
+    /* A grid tile: the front, clickable, opening the flip viewer. */
+    function tile(c, ctx){
+      const wants = (c.wanted_by && c.wanted_by.length)
+        ? `<div class="wants"><i class="fas fa-star"></i> ${c.wanted_by.map(esc).join(", ")} want${c.wanted_by.length===1?"s":""} this</div>`
+        : (c.wanter ? `<div class="wants"><i class="fas fa-star"></i> wanted by ${esc(c.wanter)}</div>` : "");
+      return `<div class="tile" onclick="openViewer(${c.id},'${esc(ctx)}')" role="button" tabindex="0"
+                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openViewer(${c.id},'${esc(ctx)}')}">
+        ${cardFront(c)}${wants}</div>`;
+    }
+
+    /* ---------- flip viewer ---------- */
+    const CARD_INDEX = new Map();       // id -> card, for whatever is on screen
+    function indexCards(list){ list.forEach(c=>CARD_INDEX.set(c.id, c)); }
+
+    function openViewer(id, ctx){
+      const c = CARD_INDEX.get(id); if(!c) return;
+      VIEWING = c;
+      const stage = document.getElementById("stage");
+      stage.innerHTML = `<div class="flip">${cardFront(c)}${cardBack(c)}<div class="glare"></div></div>`;
+      wireFlip(stage);
+      document.getElementById("viewSide").innerHTML = sidePanel(c, ctx);
+      document.getElementById("viewer").classList.add("open");
+    }
+    function closeViewer(){ document.getElementById("viewer").classList.remove("open"); VIEWING = null; }
+    document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeViewer(); });
+
+    /* Tilt toward the pointer and turn over on click — the same feel as the
+       Cyvathon debit card, so both cards in the app behave alike. */
+    function wireFlip(stage){
+      const flip = stage.querySelector(".flip"), glare = stage.querySelector(".glare");
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let flipped = false, raf = null;
+      const MAX = 12;
+      function apply(px, py){
+        const ry = (px - .5) * 2 * MAX, rx = (.5 - py) * 2 * MAX;
+        flip.style.transform = `rotateY(${flipped ? 180 + ry : ry}deg) rotateX(${rx}deg)`;
+        glare.style.setProperty("--gx", (px*100).toFixed(1)+"%");
+        glare.style.setProperty("--gy", (py*100).toFixed(1)+"%");
+      }
+      function fromEvent(e){
+        const r = stage.getBoundingClientRect();
+        const pt = e.touches && e.touches[0] ? e.touches[0] : e;
+        const px = Math.min(1, Math.max(0, (pt.clientX - r.left)/r.width));
+        const py = Math.min(1, Math.max(0, (pt.clientY - r.top)/r.height));
+        if(raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(()=>apply(px,py));
+      }
+      function rest(){
+        if(raf) cancelAnimationFrame(raf);
+        flip.classList.remove("is-tilting");
+        flip.style.transform = flipped ? "rotateY(180deg)" : "";
+      }
+      if(!reduce){
+        stage.addEventListener("pointermove", e=>{
+          if(e.pointerType === "touch") return;     // touchmove drives it on touch
+          flip.classList.add("is-tilting"); fromEvent(e);
+        });
+        stage.addEventListener("pointerleave", rest);
+        stage.addEventListener("touchmove", e=>{ flip.classList.add("is-tilting"); fromEvent(e); }, {passive:true});
+        stage.addEventListener("touchend", rest);
+      }
+      function toggle(){ flipped = !flipped; flip.classList.toggle("is-flipped", flipped); rest(); }
+      flip.addEventListener("click", toggle);
+      flip.setAttribute("tabindex","0");
+      flip.setAttribute("role","button");
+      flip.setAttribute("aria-label","Match Attax card — activate to turn over");
+      flip.addEventListener("keydown", e=>{
+        if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggle(); }
+      });
+    }
+
+    function sidePanel(c, ctx){
+      const mine = c.owner === ME.username;
+      const rw = (k,v)=> v ? `<div class="rw"><span>${esc(k)}</span><b>${esc(v)}</b></div>` : "";
+      let acts = "";
+      if(mine){
+        acts = `<button class="${c.for_trade?"danger":""}" onclick="setTrade(${c.id},${!c.for_trade})">
+                  <i class="fas fa-${c.for_trade?"lock":"right-left"}"></i> ${c.for_trade?"Take off the trade list":"Put up for trade"}</button>
+                <button class="ghost" onclick="dropCard(${c.id})"><i class="fas fa-trash"></i> Remove from packet</button>`;
+      }else{
+        acts = `<button class="${c.wished?"danger":""}" onclick="wish(${c.id},${!!c.wished})">
+                  <i class="fas fa-star"></i> ${c.wished?"Remove from wishlist":"Add to my wishlist"}</button>` +
+               (c.for_trade
+                 ? `<button class="ghost" onclick="closeViewer();openDrawer('${esc(c.owner)}',${c.id})"><i class="fas fa-handshake"></i> Offer a trade for it</button>`
+                 : `<p class="small">Not up for trade yet — wishlisting it tells ${esc(c.owner)} you want it.</p>`) +
+               `<button class="ghost" onclick="closeViewer();openPacket('${esc(c.owner)}')"><i class="fas fa-box-open"></i> See the rest of the packet</button>`;
+      }
+      const ref = safeUrl(c.card_url);
+      return `<h3>${esc(c.player_name)}</h3>
+        <div class="who">${mine ? "In your packet" : "In " + esc(c.owner) + "'s packet"}</div>
+        <div class="rows">
+          ${rw("Card type", c.subset_label)}
+          ${rw("Finish", c.edition_label)}
+          ${rw("Rarity", c.rarity)}
+          ${rw("Series", c.series)}
+          ${rw("Card no.", c.card_no)}
+          ${rw("Club", c.team)}
+          ${rw("Nationality", c.nationality)}
+          ${rw("Position", c.position)}
+          ${rw("Rating", (c.rating || c.rating===0) ? c.rating : "")}
+          ${rw("Copies", c.quantity)}
+        </div>
+        ${c.note ? `<p class="small" style="font-style:italic">"${esc(c.note)}"</p>` : ""}
+        ${ref ? `<p class="small"><a class="link" href="${ref}" target="_blank" rel="noopener noreferrer">Reference page <i class="fas fa-arrow-up-right-from-square"></i></a></p>` : ""}
+        ${acts}`;
     }
 
     /* ---------- tabs ---------- */
@@ -300,57 +535,46 @@
       history.replaceState(null,"", tab==="mine" && VIEW ? "/packet?user="+encodeURIComponent(VIEW) : "/packet?tab="+tab);
     }
 
-    /* ---------- my / someone's packet ---------- */
+    /* ---------- packets ---------- */
     function openPacket(owner){ VIEW = owner; go("mine"); }
 
     async function loadPacket(owner){
       let d;
       try{ d = await api("/packet/data" + (owner ? "?user="+encodeURIComponent(owner) : "")); }
       catch(e){ return msg(e.message); }
+      PKT = d;
       VIEW = d.mine ? null : d.owner;
       if(d.mine) MYCARDS = d.cards;
+      indexCards(d.cards);
       document.getElementById("pkTitle").textContent = d.mine ? "My Packet" : d.owner + "'s Packet";
       document.getElementById("pkSub").textContent =
         `${d.total} card${d.total===1?"":"s"} · ${d.trading} up for trade`;
-      const back = document.getElementById("backBtn");
-      back.style.display = d.mine ? "none" : "inline-block";
+      document.getElementById("backBtn").style.display = d.mine ? "none" : "inline-block";
 
       const box = document.getElementById("pkCards");
-      if(!d.cards.length){
-        box.innerHTML = `<p class="empty">${d.mine
-          ? "Your packet is empty — <a class='link' href='#' onclick=\"go('add');return false;\">add your first card</a>."
-          : "This citizen hasn't added any cards yet."}</p>`;
-        return;
-      }
-      box.innerHTML = d.cards.map(c=>{
-        let acts;
-        if(d.mine){
-          acts = `<button class="${c.for_trade?"danger":""}" onclick="setTrade(${c.id},${!c.for_trade})">${
-                    c.for_trade ? "Keep it" : "Trade it"}</button>
-                  <button class="ghost" onclick="dropCard(${c.id})">Remove</button>`;
-        }else{
-          acts = `<button class="${c.wished?"danger":"ghost"}" onclick="wish(${c.id},${!!c.wished})">${
-                    c.wished ? "Un-wish" : "Wishlist"}</button>` +
-                 (c.for_trade ? `<button onclick="openDrawer('${esc(d.owner)}',${c.id})">Offer</button>` : "");
-        }
-        return cardHtml(c, {actions:acts});
-      }).join("");
+      box.innerHTML = d.cards.length
+        ? d.cards.map(c=>tile(c,"packet")).join("")
+        : `<p class="empty">${d.mine
+            ? "Your packet is empty — <a class='link' href='#' onclick=\"go('add');return false;\">add your first card</a>."
+            : "This citizen hasn't added any cards yet."}</p>`;
     }
 
     async function setTrade(id, on){
       try{ await api("/packet/update",{method:"POST",body:JSON.stringify({card_id:id, for_trade:on})});
-        msg(on ? "Card is up for trade." : "Card taken off the trade list.", true); loadPacket(VIEW);
+        msg(on ? "Card is up for trade." : "Card taken off the trade list.", true);
+        closeViewer(); loadPacket(VIEW); refresh();
       }catch(e){ msg(e.message); }
     }
     async function dropCard(id){
       if(!confirm("Remove this card from your packet?")) return;
-      try{ await api("/packet/remove",{method:"POST",body:JSON.stringify({card_id:id})}); loadPacket(VIEW); }
-      catch(e){ msg(e.message); }
+      try{ await api("/packet/remove",{method:"POST",body:JSON.stringify({card_id:id})});
+        closeViewer(); loadPacket(VIEW); refresh();
+      }catch(e){ msg(e.message); }
     }
     async function wish(id, already){
       try{ await api("/packet/wishlist",{method:"POST",body:JSON.stringify({card_id:id, remove:already})});
         msg(already ? "Removed from your wishlist." : "Added to your wishlist — the owner has been told.", true);
-        loadPacket(VIEW);
+        closeViewer(); loadPacket(VIEW); refresh();
       }catch(e){ msg(e.message); }
     }
 
@@ -372,25 +596,18 @@
     async function loadWishes(){
       let d;
       try{ d = await api("/packet/wishes"); }catch(e){ return msg(e.message); }
-      const mine = document.getElementById("wishMine");
-      mine.innerHTML = d.wanted.length
-        ? d.wanted.map(c=>cardHtml(c,{actions:
-            `<button class="ghost" onclick="openPacket('${esc(c.owner)}')">See packet</button>` +
-            (c.for_trade ? `<button onclick="openDrawer('${esc(c.owner)}',${c.id})">Offer</button>` : "")
-          })).join("")
+      indexCards(d.wanted); indexCards(d.wanted_from_me);
+      document.getElementById("wishMine").innerHTML = d.wanted.length
+        ? d.wanted.map(c=>tile(c,"wish")).join("")
         : `<p class="empty">Nothing wishlisted yet — open someone's packet and star what you're missing.</p>`;
-      const theirs = document.getElementById("wishTheirs");
-      theirs.innerHTML = d.wanted_from_me.length
-        ? d.wanted_from_me.map(c=>cardHtml(c,{actions:
-            c.for_trade ? `<button class="danger" onclick="setTrade(${c.id},false)">Keep it</button>`
-                        : `<button onclick="setTrade(${c.id},true)">Put up for trade</button>`
-          })).join("")
+      document.getElementById("wishTheirs").innerHTML = d.wanted_from_me.length
+        ? d.wanted_from_me.map(c=>tile(c,"wanted")).join("")
         : `<p class="empty">Nobody has wishlisted your cards yet.</p>`;
     }
 
     /* ---------- trades ---------- */
     function miniChip(c){
-      const p = imgSrc(c.card_image) || imgSrc(c.image_url);
+      const p = safeUrl(c.card_image) || safeUrl(c.image_url);
       return `<div class="mchip" style="--ec:${esc(c.edition_color)}">${
         p ? `<img src="${p}" alt="" loading="lazy">` : ""}<span>${esc(c.player_name)}
         <b style="color:${esc(c.edition_color)}">${esc(c.edition_label)}</b></span></div>`;
@@ -472,13 +689,17 @@
     }
     function closeDrawer(){ document.getElementById("drawer").classList.remove("open"); }
     function drawPicks(){
-      const chip = (c,set)=>`<div class="pick ${set.has(c.id)?"on":""}" onclick="togglePick('${set===WANT?"want":"give"}',${c.id})">
-        ${esc(c.player_name)} <b style="color:${esc(c.edition_color)}">${esc(c.edition_label)}</b></div>`;
+      const chip = (c,which)=>{
+        const set = which==="want" ? WANT : GIVE;
+        return `<div class="pick ${set.has(c.id)?"on":""}" onclick="togglePick('${which}',${c.id})">
+          ${esc(c.player_name)}${c.subset!=="base" ? " " + esc(c.subset_label) : ""}
+          <b style="color:${esc(c.edition_color)}">${esc(c.edition_label)}</b></div>`;
+      };
       document.getElementById("dWant").innerHTML = DRAWER_THEIRS.length
-        ? DRAWER_THEIRS.map(c=>chip(c,WANT)).join("")
+        ? DRAWER_THEIRS.map(c=>chip(c,"want")).join("")
         : `<span class="muted small">They have nothing up for trade yet.</span>`;
       document.getElementById("dGive").innerHTML = MYCARDS.length
-        ? MYCARDS.map(c=>chip(c,GIVE)).join("")
+        ? MYCARDS.map(c=>chip(c,"give")).join("")
         : `<span class="muted small">Your packet is empty — add a card first.</span>`;
     }
     function togglePick(which, id){
@@ -487,8 +708,7 @@
       drawPicks();
     }
     async function sendTrade(){
-      const body = { to_user: document.getElementById("drawer").dataset.owner,
-                     want_ids:[...WANT], offer_ids:[...GIVE],
+      const body = { want_ids:[...WANT], offer_ids:[...GIVE],
                      message: document.getElementById("dMsg").value.trim() };
       if(!body.want_ids.length) return msg("Pick at least one card you want", false, "dMsgOut");
       if(!body.offer_ids.length) return msg("Offer at least one of your own cards", false, "dMsgOut");
@@ -496,7 +716,7 @@
         await api("/packet/trade",{method:"POST",body:JSON.stringify(body)});
         msg("Offer sent!", true, "dMsgOut");
         document.getElementById("dMsg").value = "";
-        setTimeout(()=>{ closeDrawer(); go("trades"); }, 700);
+        setTimeout(()=>{ closeDrawer(); go("trades"); refresh(); }, 700);
       }catch(e){ msg(e.message, false, "dMsgOut"); }
     }
 
@@ -504,26 +724,27 @@
     async function doSearch(){
       const q = document.getElementById("q").value.trim();
       if(q.length < 2) return msg("Type at least 2 letters", false, "searchMsg");
-      msg("Searching the card database…", true, "searchMsg");
+      msg("Searching the football database…", true, "searchMsg");
       let d;
       try{ d = await api("/packet/search?q="+encodeURIComponent(q)); }
       catch(e){ return msg(e.message, false, "searchMsg"); }
       const box = document.getElementById("results");
       if(!d.players.length){
         box.innerHTML = "";
-        return msg(d.error || `No footballer called "${q}" in the database. Check the spelling, or add the card by hand below.`,
+        return msg(d.error || `No footballer called "${q}" in the database. Check the spelling.`,
                    false, "searchMsg");
       }
       msg(`${d.players.length} player${d.players.length===1?"":"s"} found — pick one.`, true, "searchMsg");
+      window.__results = d.players;
       box.innerHTML = d.players.map((p,i)=>{
-        const img = imgSrc(p.image_url);
+        const img = safeUrl(p.image_url);
         return `<div class="res-c" data-i="${i}" onclick="pick(${i})">
-          ${img ? `<img src="${img}" alt="" loading="lazy">` : `<div class="res-ph" style="width:44px;height:44px;border-radius:9px;background:#0b1019;display:grid;place-items:center;color:var(--muted)"><i class="fas fa-user"></i></div>`}
+          ${img ? `<img src="${img}" alt="" loading="lazy">`
+                : `<div style="width:44px;height:44px;border-radius:9px;background:#0b1019;display:grid;place-items:center;color:var(--muted)"><i class="fas fa-user"></i></div>`}
           <div><b>${esc(p.player_name)}</b>
             <span>${esc(p.team || "—")}${p.nationality ? " · " + esc(p.nationality) : ""}</span></div>
         </div>`;
       }).join("");
-      window.__results = d.players;
       if(d.players.length === 1) pick(0);
     }
     function pick(i){
@@ -531,58 +752,89 @@
       document.querySelectorAll(".res-c").forEach(el=>el.classList.toggle("on", +el.dataset.i === i));
       drawPreview();
     }
-    function drawPreview(){
-      const box = document.getElementById("preview");
-      if(!PICKED){ box.innerHTML = `<p class="muted small">Pick a player above to see the card.</p>`; return; }
+
+    function formCard(){
       const ed = edition(document.getElementById("aEdition").value);
+      const sb = subset(document.getElementById("aSubset").value);
       const rating = document.getElementById("aRating").value;
-      box.innerHTML = cardHtml({
-        id: 0, player_name: PICKED.player_name, team: PICKED.team, position: PICKED.position,
-        image_url: PICKED.image_url, card_image: document.getElementById("aScan").value.trim(),
-        edition: ed.key, edition_label: ed.label, edition_color: ed.color,
-        series: document.getElementById("aSeries").value.trim(),
+      return {
+        id: 0, owner: ME.username,
+        player_name: PICKED ? PICKED.player_name : "Your player",
+        team: PICKED ? PICKED.team : "", position: PICKED ? PICKED.position : "",
+        nationality: PICKED ? PICKED.nationality : "",
+        image_url: PICKED ? PICKED.image_url : "", card_image: UPLOADED,
+        edition: ed.key, edition_label: ed.label, edition_color: ed.color, rarity: ed.rarity,
+        subset: sb.key, subset_label: sb.label,
+        series: document.getElementById("aSeries").value,
+        card_no: document.getElementById("aNo").value.trim(),
         rating: rating === "" ? null : rating,
         quantity: +document.getElementById("aQty").value || 1,
         for_trade: document.getElementById("aTrade").checked,
-      });
+        note: document.getElementById("aNote").value.trim(),
+      };
     }
+    function drawPreview(){
+      document.getElementById("preview").innerHTML = cardFront(formCard());
+    }
+
+    async function uploadPhoto(){
+      const f = document.getElementById("aFile").files[0];
+      if(!f) return;
+      msg("Uploading…", true, "upMsg");
+      const fd = new FormData(); fd.append("file", f);
+      try{
+        const res = await fetch("/packet/upload", {method:"POST", credentials:"include", body:fd});
+        const d = await res.json();
+        if(!res.ok || d.success === false) throw new Error(d.error || "Upload failed");
+        UPLOADED = d.url;
+        msg("Photo attached — that's the card face now.", true, "upMsg");
+        drawPreview();
+      }catch(e){ msg(e.message, false, "upMsg"); }
+    }
+
     async function addCard(){
       if(!PICKED) return msg("Search for a player and pick them first", false, "addMsg");
-      const body = {
-        player_id: PICKED.player_id, player_name: PICKED.player_name, team: PICKED.team,
-        nationality: PICKED.nationality, position: PICKED.position, image_url: PICKED.image_url,
-        card_image: document.getElementById("aScan").value.trim(),
-        edition: document.getElementById("aEdition").value,
-        series: document.getElementById("aSeries").value.trim(),
-        rating: document.getElementById("aRating").value,
-        quantity: document.getElementById("aQty").value,
-        note: document.getElementById("aNote").value.trim(),
-        for_trade: document.getElementById("aTrade").checked,
-      };
+      const c = formCard();
       try{
-        await api("/packet/add",{method:"POST",body:JSON.stringify(body)});
+        await api("/packet/add",{method:"POST",body:JSON.stringify({
+          player_id: PICKED.player_id, player_name: c.player_name, team: c.team,
+          nationality: c.nationality, position: c.position, image_url: c.image_url,
+          card_image: UPLOADED, card_url: document.getElementById("aRef").value.trim(),
+          edition: c.edition, subset: c.subset, series: c.series, card_no: c.card_no,
+          rating: document.getElementById("aRating").value,
+          quantity: document.getElementById("aQty").value,
+          note: c.note, for_trade: c.for_trade,
+        })});
         msg("Card added to your packet.", true, "addMsg");
-        PICKED = null;
+        PICKED = null; UPLOADED = "";
         document.getElementById("results").innerHTML = "";
-        document.getElementById("q").value = "";
-        ["aScan","aNote","aSeries","aRating"].forEach(id=>document.getElementById(id).value="");
+        ["q","aNote","aRating","aNo","aRef"].forEach(id=>document.getElementById(id).value="");
+        document.getElementById("aFile").value = "";
         document.getElementById("aQty").value = 1;
+        msg("", true, "upMsg"); msg("", true, "searchMsg");
         drawPreview();
         refresh();
       }catch(e){ msg(e.message, false, "addMsg"); }
     }
 
     async function refresh(){
-      try{ const s = await api("/packet/summary"); drawTabs(s); }catch{}
+      try{ drawTabs(await api("/packet/summary")); }catch{}
     }
 
     (async function(){
       ME = await requireAuth(); if(!ME) return;
       renderNav("/packet", ME);
-      try{ EDITIONS = (await api("/packet/editions")).editions || []; }catch{}
+      try{
+        const d = await api("/packet/editions");
+        EDITIONS = d.editions || []; SUBSETS = d.subsets || []; SERIES = d.series || [];
+      }catch{}
       document.getElementById("aEdition").innerHTML =
-        EDITIONS.map(e=>`<option value="${esc(e.key)}">${esc(e.label)}</option>`).join("");
-      ["aEdition","aSeries","aRating","aQty","aScan","aTrade"].forEach(id=>{
+        EDITIONS.map(e=>`<option value="${esc(e.key)}">${esc(e.label)}${e.rarity?" — "+esc(e.rarity):""}</option>`).join("");
+      document.getElementById("aSubset").innerHTML =
+        SUBSETS.map(e=>`<option value="${esc(e.key)}">${esc(e.label)}</option>`).join("");
+      document.getElementById("aSeries").innerHTML =
+        SERIES.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
+      ["aEdition","aSubset","aSeries","aNo","aRating","aQty","aTrade","aNote"].forEach(id=>{
         const el = document.getElementById(id);
         el.addEventListener("input", drawPreview); el.addEventListener("change", drawPreview);
       });

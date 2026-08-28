@@ -49,15 +49,27 @@ A fun in-world currency manager built for:
 Citizen-to-citizen **Match Attax** trading, under Community:
 - Search any footballer in an online football database — the player's photo,
   club, position and nationality come straight from it
-- Pick the edition you actually pulled (Base through Black Edge, 100 Club,
-  Limited Edition…) and add it to your **packet**
-- Browse other citizens' packets and **wishlist** the cards you're missing —
-  the owner is notified
+- Record the card you actually pulled: its **subset** (Base, Captain, 100 Club,
+  Hall of Fame…) and its **finish** (Blue Crystal, Black Edge, Gold Edge,
+  Goldrush /100, Gold Rainbow 1/1…), with the real pull rates shown
+- Photograph your own copy and it becomes the card face
+- Tap any card to open it and turn it over — stats on the back, same tilt-and-
+  flip feel as the Cyvathon debit card
+- Browse other citizens' packets and **wishlist** what you're missing — the
+  owner is notified
 - Offer cards out of your own packet for theirs; accepting swaps them over
 
-Needs `migration_card_trading.sql` run once in Supabase. The player lookup uses
-TheSportsDB's free API — set `SPORTSDB_API_KEY` to use your own key instead of
-the shared test key.
+Needs `migration_card_trading.sql` run once in Supabase, plus the public `chat`
+Storage bucket that avatars already use (card photos go in there too).
+
+**On the card data.** The player lookup uses TheSportsDB's free API — set
+`SPORTSDB_API_KEY` to use your own key instead of the shared test key. There is
+no open Match Attax card API: Topps publishes none, and card databases like
+TCDB sit behind bot protection that blocks server-to-server use. So the subset,
+finish and pull-rate lists in `main.py` are reference data transcribed from the
+published Match Attax checklist, and the card art is either the player photo
+from TheSportsDB or the owner's own photo of the card in their hand. Update
+`CARD_SUBSETS` / `CARD_EDITIONS` / `CARD_SERIES` when a new season ships.
 
 ---
 

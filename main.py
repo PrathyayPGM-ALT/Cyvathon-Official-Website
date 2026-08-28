@@ -7375,29 +7375,78 @@ def card_all():
 #  Flow: browse someone's packet -> wishlist the cards you want -> offer
 #  cards out of your own packet for them -> they accept and the cards swap.
 
-# The Match Attax editions/finishes a card can be. `tier` drives sort order
-# and how loud the card frame looks; `color` is the frame colour.
+# A real Match Attax card is two things at once: which SUBSET it belongs to
+# (a plain base card, a Captain, a 100 Club…) and which FINISH it was pulled in
+# (plain, Blue Crystal, Black Edge…). Both are printed on the card, and
+# collectors name a card using both — "Saka, Captain, Black Edge" — so the
+# packet stores them separately instead of mashing them into one label.
+#
+# Names and pull rates below follow the published Match Attax 2024/25 checklist.
+# There is no public Match Attax API to read this from (see _search_players),
+# so it is kept here as reference data and reviewed when a new season ships.
+
+CARD_SUBSETS = [
+    {"key": "base",         "label": "Base",                        "tier": 0},
+    {"key": "attax_debut",  "label": "Attax Debut",                 "tier": 1},
+    {"key": "captain",      "label": "Captain",                     "tier": 2},
+    {"key": "team_badge",   "label": "Team Badge",                  "tier": 2},
+    {"key": "new_signing",  "label": "New Signing",                 "tier": 2},
+    {"key": "star_ballers", "label": "Star Ballers",                "tier": 3},
+    {"key": "scream_team",  "label": "Scream Team",                 "tier": 3},
+    {"key": "snow_ballers", "label": "Snow Ballers",                "tier": 3},
+    {"key": "queens",       "label": "Queens of Europe",            "tier": 3},
+    {"key": "squadzone",    "label": "Festive Edition Squadzone",   "tier": 3},
+    {"key": "celebration",  "label": "Classic Celebration",         "tier": 3},
+    {"key": "heritage",     "label": "Topps Heritage",              "tier": 4},
+    {"key": "generation",   "label": "Generation Now",              "tier": 4},
+    {"key": "motm_sig",     "label": "Man of the Match Signature Style", "tier": 4},
+    {"key": "vintage",      "label": "Vintage Vibes Legend",        "tier": 5},
+    {"key": "trophy",       "label": "Trophy Triumph",              "tier": 5},
+    {"key": "pro_elite",    "label": "Chrome Pro Elite Shield",     "tier": 6},
+    {"key": "hundred",      "label": "100 Club",                    "tier": 7},
+    {"key": "hall_of_fame", "label": "Match Attax Hall of Fame",    "tier": 8},
+    {"key": "jersey_relic", "label": "Jersey Relic",                "tier": 9},
+    {"key": "memento",      "label": "UCL Champion Memento Relic",  "tier": 9},
+    {"key": "autograph",    "label": "Genuine Autograph",           "tier": 10},
+    {"key": "auto_combo",   "label": "Genuine Autograph Combo",     "tier": 11},
+    {"key": "ultimate",     "label": "Ultimate Talent Autograph",   "tier": 12},
+]
+SUBSET_BY_KEY = {s["key"]: s for s in CARD_SUBSETS}
+
+# `rarity` is what's actually printed/quoted for the pull — shown on the card so
+# a trade is negotiated on real scarcity rather than vibes.
 CARD_EDITIONS = [
-    {"key": "base",        "label": "Base",              "color": "#8aa0b4", "tier": 0},
-    {"key": "bronze",      "label": "Bronze",            "color": "#b87333", "tier": 1},
-    {"key": "silver",      "label": "Silver",            "color": "#c0c8d4", "tier": 2},
-    {"key": "gold",        "label": "Gold",              "color": "#ffce56", "tier": 3},
-    {"key": "blue_edge",   "label": "Blue Edge",         "color": "#58c4ff", "tier": 4},
-    {"key": "green_edge",  "label": "Green Edge",        "color": "#1fd6a6", "tier": 4},
-    {"key": "star_player", "label": "Star Player",       "color": "#a78bfa", "tier": 4},
-    {"key": "wonderkid",   "label": "Wonderkid",         "color": "#22d3ee", "tier": 4},
-    {"key": "red_edge",    "label": "Red Edge",          "color": "#ff5d6c", "tier": 5},
-    {"key": "motm",        "label": "Man of the Match",  "color": "#ff8fb0", "tier": 5},
-    {"key": "hat_trick",   "label": "Hat-Trick Hero",    "color": "#ff7a29", "tier": 5},
-    {"key": "gold_edge",   "label": "Gold Edge",         "color": "#e8b400", "tier": 6},
-    {"key": "record",      "label": "Record Breaker",    "color": "#7c5cff", "tier": 6},
-    {"key": "club_legend", "label": "Club Legend",       "color": "#c8a24a", "tier": 6},
-    {"key": "black_edge",  "label": "Black Edge",        "color": "#20242e", "tier": 7},
-    {"key": "hundred",     "label": "100 Club",          "color": "#ff3b6b", "tier": 8},
-    {"key": "limited",     "label": "Limited Edition",   "color": "#ffd700", "tier": 9},
-    {"key": "signature",   "label": "Signature",         "color": "#e6ecf5", "tier": 10},
+    {"key": "base",         "label": "Base",            "color": "#8aa0b4", "tier": 0,  "rarity": ""},
+    {"key": "rainbow_foil", "label": "Rainbow Foil",    "color": "#a78bfa", "tier": 1,  "rarity": "2 per packet"},
+    {"key": "blue_crystal", "label": "Blue Crystal",    "color": "#58c4ff", "tier": 2,  "rarity": "1:4 packets"},
+    {"key": "black_edge",   "label": "Black Edge",      "color": "#20242e", "tier": 3,  "rarity": "1:30 packets"},
+    {"key": "platinum",     "label": "Platinum Pull",   "color": "#d6dde8", "tier": 4,  "rarity": "1:30 packets"},
+    {"key": "gold_edge",    "label": "Gold Edge",       "color": "#e8b400", "tier": 5,  "rarity": "1:35 packets"},
+    {"key": "starburst",    "label": "Starburst",       "color": "#ff7a29", "tier": 6,  "rarity": "Match of the Day exclusive"},
+    {"key": "blue_diamond", "label": "Blue Diamond",    "color": "#22d3ee", "tier": 7,  "rarity": "Bundle exclusive"},
+    {"key": "goldrush",     "label": "Goldrush",        "color": "#ffd700", "tier": 8,  "rarity": "/100"},
+    {"key": "refractor",    "label": "Refractor",       "color": "#7c5cff", "tier": 9,  "rarity": "/99"},
+    {"key": "orange",       "label": "Orange",          "color": "#ff8a3d", "tier": 10, "rarity": "/25"},
+    {"key": "mirrors",      "label": "Mirrors",         "color": "#c0c8d4", "tier": 11, "rarity": "/25"},
+    {"key": "rainbow_num",  "label": "Rainbow",         "color": "#ff3b6b", "tier": 12, "rarity": "/10"},
+    {"key": "gold_rainbow", "label": "Gold Rainbow",    "color": "#fff1a8", "tier": 13, "rarity": "1/1"},
 ]
 EDITION_BY_KEY = {e["key"]: e for e in CARD_EDITIONS}
+
+# The releases a card can come from. Free text is still accepted for anything
+# older or more obscure than this list.
+CARD_SERIES = [
+    "Match Attax 2025/26",
+    "Match Attax Extra 2024/25",
+    "Match Attax 2024/25",
+    "Match Attax UEFA Euro 2024",
+    "Match Attax Extra 2023/24",
+    "Match Attax 2023/24",
+    "Match Attax 2022/23",
+    "Match Attax 2021/22",
+    "Match Attax 2020/21",
+    "Topps Premier League 2025/26",
+]
 
 # Free, key-less football database used to look players up. Falls back to a
 # clear "search unavailable" rather than an error if it's ever unreachable.
@@ -7449,8 +7498,9 @@ def _search_players(q):
 
 
 def _card_public(row, extra=None):
-    """Shape a packet row for the frontend, resolving its edition."""
-    ed = EDITION_BY_KEY.get(row.get("edition") or "base", CARD_EDITIONS[0])
+    """Shape a packet row for the frontend, resolving its subset and finish."""
+    ed  = EDITION_BY_KEY.get(row.get("edition") or "base", CARD_EDITIONS[0])
+    sub = SUBSET_BY_KEY.get(row.get("subset") or "base", CARD_SUBSETS[0])
     out = {
         "id":          row.get("id"),
         "owner":       row.get("owner"),
@@ -7460,10 +7510,17 @@ def _card_public(row, extra=None):
         "position":    row.get("position") or "",
         "image_url":   row.get("image_url") or "",
         "card_image":  row.get("card_image") or "",
+        "card_url":    row.get("card_url") or "",
         "edition":     ed["key"],
         "edition_label": ed["label"],
         "edition_color": ed["color"],
-        "tier":        ed["tier"],
+        "rarity":      ed["rarity"],
+        "subset":      sub["key"],
+        "subset_label": sub["label"],
+        # How special the card is overall — both halves count, so a Hall of Fame
+        # base sits above a plain Rainbow Foil when the packet is sorted.
+        "tier":        ed["tier"] + sub["tier"],
+        "card_no":     row.get("card_no") or "",
         "series":      row.get("series") or "",
         "rating":      row.get("rating"),
         "quantity":    row.get("quantity") or 1,
@@ -7511,8 +7568,15 @@ def _parse_ids(val, cap=MAX_TRADE_CARDS):
 
 
 def _card_label(card):
-    ed = EDITION_BY_KEY.get(card.get("edition") or "base", CARD_EDITIONS[0])
-    return f"{card.get('player_name') or 'Unknown'} ({ed['label']})"
+    """"Saka, Captain, Black Edge" — how a collector would actually name it."""
+    ed  = EDITION_BY_KEY.get(card.get("edition") or "base", CARD_EDITIONS[0])
+    sub = SUBSET_BY_KEY.get(card.get("subset") or "base", CARD_SUBSETS[0])
+    bits = [card.get("player_name") or "Unknown"]
+    if sub["key"] != "base":
+        bits.append(sub["label"])
+    if ed["key"] != "base":
+        bits.append(ed["label"])
+    return bits[0] if len(bits) == 1 else f"{bits[0]} ({', '.join(bits[1:])})"
 
 
 def _move_card(card, to_user):
@@ -7522,6 +7586,7 @@ def _move_card(card, to_user):
     qty = card.get("quantity") or 1
     same = supabase.table("card_packet").select("id,quantity").eq("owner", to_user) \
         .eq("player_name", card.get("player_name")) \
+        .eq("subset", card.get("subset") or "base") \
         .eq("edition", card.get("edition") or "base").execute().data or []
     if same:
         cas_num("card_packet", [("id", same[0]["id"])], "quantity", 1, places=0)
@@ -7531,9 +7596,10 @@ def _move_card(card, to_user):
             "player_id": card.get("player_id"), "player_name": card.get("player_name"),
             "team": card.get("team"), "nationality": card.get("nationality"),
             "position": card.get("position"), "image_url": card.get("image_url"),
-            "card_image": card.get("card_image"), "edition": card.get("edition") or "base",
-            "series": card.get("series"), "rating": card.get("rating"),
-            "quantity": 1, "for_trade": False,
+            "card_image": card.get("card_image"), "card_url": card.get("card_url"),
+            "edition": card.get("edition") or "base", "subset": card.get("subset") or "base",
+            "series": card.get("series"), "card_no": card.get("card_no"),
+            "rating": card.get("rating"), "quantity": 1, "for_trade": False,
         }).execute()
     if qty > 1:
         supabase.table("card_packet").update({"quantity": qty - 1}).eq("id", card["id"]).execute()
@@ -7550,7 +7616,9 @@ def packet_page():
 
 @app.route("/packet/editions")
 def packet_editions():
-    return jsonify(success=True, editions=CARD_EDITIONS)
+    """The Match Attax reference data the add-a-card form is built from."""
+    return jsonify(success=True, editions=CARD_EDITIONS,
+                   subsets=CARD_SUBSETS, series=CARD_SERIES)
 
 
 @app.route("/packet/search")
@@ -7657,6 +7725,9 @@ def packet_add():
     edition = (d.get("edition") or "base").strip()
     if edition not in EDITION_BY_KEY:
         return jsonify(success=False, error="Unknown edition"), 400
+    subset = (d.get("subset") or "base").strip()
+    if subset not in SUBSET_BY_KEY:
+        return jsonify(success=False, error="Unknown card type"), 400
 
     image_url  = (d.get("image_url") or "").strip()[:500]
     card_image = (d.get("card_image") or "").strip()[:500]
@@ -7664,6 +7735,9 @@ def packet_add():
         image_url = ""
     if card_image and not _card_url_ok(card_image):
         return jsonify(success=False, error="Use a direct https:// link for the card image."), 400
+    card_url = (d.get("card_url") or "").strip()[:500]
+    if card_url and not _card_url_ok(card_url):
+        return jsonify(success=False, error="Use an https:// link for the card's reference page."), 400
 
     try:
         qty = int(d.get("quantity") or 1)
@@ -7695,8 +7769,11 @@ def packet_add():
         "position":    (d.get("position") or "").strip()[:40],
         "image_url":   image_url,
         "card_image":  card_image,
+        "card_url":    card_url,
         "edition":     edition,
+        "subset":      subset,
         "series":      (d.get("series") or "").strip()[:60],
+        "card_no":     (d.get("card_no") or "").strip()[:16],
         "rating":      rating,
         "quantity":    qty,
         "for_trade":   bool(d.get("for_trade")),
@@ -7707,6 +7784,25 @@ def packet_add():
     except Exception:
         return _packet_missing()
     return jsonify(success=True, card=_card_public(card))
+
+
+@app.route("/packet/upload", methods=["POST"])
+@limiter.limit("20/minute")
+def packet_upload():
+    """Photograph the card actually in your hand. Beats any stock scan — it
+    shows your copy, creases and all — and it's the only card art we can
+    legitimately host, since no Match Attax image database is open to us."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    f = request.files.get("file")
+    if not f:
+        return jsonify(success=False, error="No file"), 400
+    url, err = _store_image(f, "cards")
+    if err:
+        code = 400 if ("Images only" in err or "Empty" in err or "too large" in err) else 500
+        return jsonify(success=False, error=err), code
+    return jsonify(success=True, url=url)
 
 
 @app.route("/packet/update", methods=["POST"])

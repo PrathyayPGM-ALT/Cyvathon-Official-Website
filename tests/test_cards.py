@@ -19,7 +19,8 @@ db = FakeSupabase()
 main.supabase = db
 db.unique["card_wishlist"] = [("username", "card_id")]
 db.defaults["card_packet"] = {"quantity": 1, "for_trade": False, "note": "",
-                              "edition": "base", "series": "", "team": ""}
+                              "edition": "base", "subset": "base", "series": "",
+                              "team": "", "card_no": "", "card_url": ""}
 db.defaults["card_trades"] = {"status": "pending", "message": "",
                               "offer_ids": "", "want_ids": ""}
 
@@ -57,16 +58,24 @@ check("logged out cannot add", r.status_code, 401)
 
 r = client_as("Aarav").post("/packet/add", json={
     "player_name": "Bukayo Saka", "team": "Arsenal", "position": "Right Winger",
-    "nationality": "England", "edition": "black_edge", "rating": 99,
+    "nationality": "England", "edition": "black_edge", "subset": "captain", "rating": 99,
+    "card_no": "142",
     "image_url": "https://r2.thesportsdb.com/images/media/player/cutout/x.png",
     "series": "Match Attax 2024/25"})
 check("citizen can add a card", r.status_code, 200)
 check("  edition kept", r.get_json()["card"]["edition"], "black_edge")
 check("  edition label resolved", r.get_json()["card"]["edition_label"], "Black Edge")
+check("  subset kept", r.get_json()["card"]["subset_label"], "Captain")
+check("  real pull rate surfaced", r.get_json()["card"]["rarity"], "1:30 packets")
+check("  card number kept", r.get_json()["card"]["card_no"], "142")
 check("  player photo kept", bool(r.get_json()["card"]["image_url"]), True)
 
 r = client_as("Aarav").post("/packet/add", json={"player_name": "X", "edition": "holographic-unicorn"})
 check("unknown edition rejected", r.status_code, 400)
+r = client_as("Aarav").post("/packet/add", json={"player_name": "X", "subset": "not-a-subset"})
+check("unknown card type rejected", r.status_code, 400)
+r = client_as("Aarav").post("/packet/add", json={"player_name": "X", "card_url": "javascript:x"})
+check("non-https reference link rejected", r.status_code, 400)
 r = client_as("Aarav").post("/packet/add", json={"player_name": ""})
 check("nameless card rejected", r.status_code, 400)
 
@@ -75,15 +84,16 @@ r = client_as("Aarav").post("/packet/add", json={
     "player_name": "Hack", "card_image": 'javascript:alert(1)'})
 check("non-https card scan rejected", r.status_code, 400)
 r = client_as("Aarav").post("/packet/add", json={
-    "player_name": "Ollie Watkins", "team": "Aston Villa", "edition": "gold",
+    "player_name": "Ollie Watkins", "team": "Aston Villa", "edition": "rainbow_foil",
     "image_url": "http://insecure.example.com/x.png"})
 check("non-https player photo dropped, card still added", r.status_code, 200)
 check("  photo blanked", r.get_json()["card"]["image_url"], "")
 
 client_as("Meera").post("/packet/add", json={
-    "player_name": "Erling Haaland", "team": "Man City", "edition": "limited", "rating": 105})
+    "player_name": "Erling Haaland", "team": "Man City", "edition": "gold_rainbow", "rating": 105})
 client_as("Meera").post("/packet/add", json={
-    "player_name": "Cole Palmer", "team": "Chelsea", "edition": "gold_edge"})
+    "player_name": "Cole Palmer", "team": "Chelsea", "edition": "gold_edge",
+    "subset": "hundred"})
 check("Meera holds two cards", len(card_of("Meera")), 2)
 
 
@@ -183,9 +193,10 @@ check("a settled trade cannot be accepted twice", r.status_code, 400)
 # fall back to the labels captured when the offer was made.
 d = client_as("Meera").get("/packet/trades").get_json()
 settled = [t for t in d["trades"] if t["id"] == tid][0]
+# The label names both halves of the card, the way a collector would.
 check("settled trade still says what was offered",
-      "Bukayo Saka (Black Edge)" in settled["offer_label"], True)
-check("  and what was wanted", settled["want_label"], "Erling Haaland (Limited Edition)")
+      "Bukayo Saka (Captain, Black Edge)" in settled["offer_label"], True)
+check("  and what was wanted", settled["want_label"], "Erling Haaland (Gold Rainbow)")
 
 
 print("\n=== 6. declining and cancelling ===")
@@ -212,7 +223,8 @@ check("  cards stayed put", names("Aarav"), ["Erling Haaland"])
 
 print("\n=== 7. duplicates split instead of moving whole ===")
 client_as("Kabir").post("/packet/add", json={
-    "player_name": "Phil Foden", "edition": "silver", "quantity": 3, "for_trade": True})
+    "player_name": "Phil Foden", "edition": "blue_crystal", "subset": "star_ballers",
+    "quantity": 3, "for_trade": True})
 foden = card_of("Kabir")[0]
 client_as("Aarav").post("/packet/trade", json={
     "want_ids": [foden["id"]], "offer_ids": [haaland2["id"]]})
@@ -244,8 +256,12 @@ check("  it's gone", [c for c in card_of("Aarav") if c["player_name"] == "Phil F
 print("\n=== 9. edition catalog ===")
 d = client_as("Aarav").get("/packet/editions").get_json()
 keys = [e["key"] for e in d["editions"]]
-check("catalog exposes the editions", "black_edge" in keys and "limited" in keys, True)
-check("  every edition has a colour", all(e.get("color") for e in d["editions"]), True)
+check("catalog exposes the real finishes",
+      "black_edge" in keys and "gold_edge" in keys and "blue_crystal" in keys, True)
+check("  every finish has a colour", all(e.get("color") for e in d["editions"]), True)
+subs = [x["key"] for x in d["subsets"]]
+check("  and the real subsets", "captain" in subs and "hundred" in subs, True)
+check("  and the release list", "Match Attax 2024/25" in d["series"], True)
 
 
 print(f"\n{'='*46}\n  {PASS} passed, {FAIL} failed\n{'='*46}")

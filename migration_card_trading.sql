@@ -19,15 +19,26 @@ create table if not exists card_packet (
     nationality text default '',
     position    text default '',
     image_url   text default '',            -- player cutout/photo from the online database
-    card_image  text default '',            -- optional scan of the physical card
+    card_image  text default '',            -- photo of the owner's actual card
+    card_url    text default '',            -- optional link to a reference page for the card
+    -- A Match Attax card is a SUBSET (Base, Captain, 100 Club…) printed in a
+    -- FINISH (Base, Black Edge, Gold Edge…). Both are kept, because collectors
+    -- name and value a card using both.
+    subset      text not null default 'base',
     edition     text not null default 'base',
     series      text default '',            -- e.g. "Match Attax 2024/25"
-    rating      numeric,                    -- the number printed on the card
+    card_no     text default '',            -- number printed on the card
+    rating      numeric,                    -- the rating printed on the card
     quantity    integer not null default 1,
     for_trade   boolean not null default false,
     note        text default '',
     created_at  timestamptz default now()
 );
+
+-- Added after the first cut of this migration; safe to re-run either way.
+alter table card_packet add column if not exists subset   text not null default 'base';
+alter table card_packet add column if not exists card_url text default '';
+alter table card_packet add column if not exists card_no  text default '';
 
 create index if not exists idx_card_packet_owner
     on card_packet (owner, created_at desc);
@@ -73,6 +84,9 @@ create table if not exists card_trades (
     created_at  timestamptz default now(),
     resolved_at timestamptz
 );
+
+alter table card_trades add column if not exists offer_label text default '';
+alter table card_trades add column if not exists want_label  text default '';
 
 create index if not exists idx_card_trades_to
     on card_trades (to_user, status, created_at desc);
