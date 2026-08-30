@@ -208,6 +208,16 @@
     .cardban h3 i{ color:var(--green,#1fd6a6); }
     .cardban p{ margin:0; color:var(--muted); font-size:.9rem; }
     .cardban .cta{ font-size:.85rem; font-weight:600; color:var(--green,#1fd6a6); white-space:nowrap; }
+
+    /* Cyvazon alert — parcels waiting on you, in the service's own amber. */
+    .czban{ display:flex; flex-wrap:wrap; align-items:center; gap:1rem; justify-content:space-between;
+      border:1px solid rgba(255,153,0,.42); background:rgba(255,153,0,.08);
+      border-radius:16px; padding:1.1rem 1.3rem; margin-bottom:1.8rem; text-decoration:none; color:inherit; }
+    .czban:hover{ border-color:#ff9900; }
+    .czban h3{ margin:0 0 .3rem; font-size:1.05rem; display:flex; align-items:center; gap:.55rem; }
+    .czban h3 i{ color:#ff9900; }
+    .czban p{ margin:0; color:var(--muted); font-size:.9rem; }
+    .czban .cta{ font-size:.85rem; font-weight:600; color:#ff9900; white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -303,6 +313,7 @@
       <div id="hubRec"></div>
       <div id="vacancyBanner"></div>
       <div id="packetBanner"></div>
+      <div id="cyvazonBanner"></div>
       <div id="hubGrid"></div>
     </section>
     <section class="wrap" id="hubFeedWrap" style="padding-top:0; display:none;">
@@ -334,6 +345,7 @@
         ["/jobs","fa-clipboard-list","Jobs Board","Find work & earn a wage"],
         ["/states","fa-map-location-dot","States","Local state marketplaces"],
         ["/marketplace","fa-store","Import & Export","National cross-border trade"],
+        ["/cyvazon","fa-truck-fast","Cyvazon","Free delivery, anywhere in school"],
       ]],
       ["Government", "#ffce56", [
         ["/government","fa-landmark","Government","See the cabinet"],
@@ -386,7 +398,7 @@
         ["fa-building-columns","Bank","#58c4ff"], ["fa-chart-line","Stock Exchange","#1fd6a6"],
         ["fa-briefcase","Companies","#22d3ee"], ["fa-landmark","Government","#ffce56"],
         ["fa-video","Videos","#ff5d6c"], ["fa-feather-pointed","Blogs","#a78bfa"],
-        ["fa-comments","Chat","#58c4ff"], ["fa-dice","Casino","#ff8fb0"], ["fa-futbol","Card Packets","#1fd6a6"],
+        ["fa-comments","Chat","#58c4ff"], ["fa-dice","Casino","#ff8fb0"], ["fa-futbol","Card Packets","#1fd6a6"], ["fa-truck-fast","Cyvazon","#ff9900"],
         ["fa-map-location-dot","States","#a78bfa"], ["fa-passport","Passport","#22d3ee"],
         ["fa-hand-holding-dollar","Loans","#58c4ff"], ["fa-scale-balanced","Legislature","#ffce56"],
       ];
@@ -474,6 +486,7 @@
       loadRecommended();
       loadVacancies();
       loadPacketBanner();
+      loadCyvazonBanner();
       loadFeed("hubFeed", "hubFeedWrap", 12);
       loadHubNews();
     }
@@ -566,6 +579,40 @@
             <p>${sub}</p>
           </div>
           <span class="cta">Open Card Packets &rarr;</span>
+        </a>`;
+    }
+
+    /* Cyvazon: a parcel you need to hand over — or one waiting to be carried —
+       is time-sensitive in a way a menu item isn't. */
+    async function loadCyvazonBanner(){
+      let d;
+      try{ d = await api("/cyvazon/summary"); }catch(e){ return; }
+      if(!d.enabled || !d.open) return;
+      let head, sub, href = "/cyvazon?tab=mine";
+      if(d.incoming){
+        head = `${d.incoming} parcel${d.incoming===1?"":"s"} on the way to you`;
+        sub  = "Confirm each one when it reaches your hands — that credits the courier who ran it.";
+      } else if(d.to_hand_over){
+        head = `${d.to_hand_over} parcel${d.to_hand_over===1?" is":"s are"} waiting to leave you`;
+        sub  = "Something you sold or traded still needs handing to a courier.";
+      } else if(d.carrying){
+        head = `You're carrying ${d.carrying} Cyvazon parcel${d.carrying===1?"":"s"}`;
+        sub  = "Finish the run and the recipient signs for it.";
+        href = "/cyvazon?tab=jobs";
+      } else if(d.courier && d.waiting){
+        head = `${d.waiting} delivery job${d.waiting===1?"":"s"} unclaimed`;
+        sub  = "Claim a run and earn your courier wage.";
+        href = "/cyvazon?tab=jobs";
+      } else if(!d.courier){
+        head = "Cyvazon is hiring couriers";
+        sub  = `Deliver parcels around school and earn ${d.wage} CB a week — more than most jobs in Cyvathon.`;
+        href = "/cyvazon?tab=crew";
+      } else return;
+
+      document.getElementById("cyvazonBanner").innerHTML = `
+        <a class="czban" href="${href}">
+          <div><h3><i class="fas fa-truck-fast"></i> ${head}</h3><p>${sub}</p></div>
+          <span class="cta">Open Cyvazon &rarr;</span>
         </a>`;
     }
 

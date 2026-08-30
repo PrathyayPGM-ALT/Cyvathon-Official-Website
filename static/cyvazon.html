@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvazon · Cyvathon</title>
+  <!-- social / SEO metadata -->
+  <meta name="description" content="Cyvazon — Cyvathon's national delivery service. Free delivery anywhere in school, run by citizen couriers." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/cyvazon" />
+  <meta name="theme-color" content="#ff9900" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="Cyvazon · Cyvathon" />
+  <meta property="og:description" content="Free delivery anywhere in school, run by citizen couriers." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/cyvazon" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Cyvazon · Cyvathon" />
+  <meta name="twitter:description" content="Free delivery anywhere in school, run by citizen couriers." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    /* ============================================================
+       CYVAZON — its own livery. Warm amber on deep slate: this is a
+       courier service, not the Treasury, and it should feel like one.
+       Only the page body is re-skinned; the Cyvathon nav keeps the
+       site theme so you never lose your bearings.
+       ============================================================ */
+    .cz{
+      --cz-ink:#131a22;          /* deep slate, the Cyvazon "shelf" colour */
+      --cz-ink-2:#1b2530;
+      --cz-amber:#ff9900;
+      --cz-amber-2:#ffb340;
+      --cz-line:rgba(255,255,255,.1);
+      --cz-text:#f2f6fa;
+      --cz-muted:#9fb0c2;
+      --cz-green:#1fd6a6;
+    }
+    :root[data-theme="light"] .cz{
+      --cz-ink:#ffffff; --cz-ink-2:#f4f7fb;
+      --cz-line:rgba(15,40,80,.14);
+      --cz-text:#10243f; --cz-muted:#5a6b80;
+    }
+
+    /* ---- banner ---- */
+    .cz-hero{ background:linear-gradient(135deg,var(--cz-ink),var(--cz-ink-2));
+      border:1px solid var(--cz-line); border-radius:20px; padding:2.1rem 2rem 1.9rem;
+      margin-bottom:2rem; position:relative; overflow:hidden; }
+    .cz-hero::after{ content:""; position:absolute; right:-60px; top:-60px; width:230px; height:230px;
+      border-radius:50%; background:radial-gradient(circle,rgba(255,153,0,.22),transparent 68%); }
+    .cz-logo{ display:flex; align-items:center; gap:.15rem; font-size:2.5rem; font-weight:800;
+      letter-spacing:-1.4px; color:var(--cz-text); line-height:1; }
+    .cz-logo .zn{ color:var(--cz-amber); }
+    /* our own delivery mark — a parcel on a route, not a swoosh */
+    .cz-mark{ width:152px; height:29px; margin:.4rem 0 .95rem 2px; display:block; }
+    .cz-hero p{ color:var(--cz-muted); max-width:620px; margin:0; line-height:1.65; font-size:.96rem; }
+    .cz-badges{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.1rem; }
+    .cz-badge{ display:inline-flex; align-items:center; gap:.4rem; padding:.36rem .8rem; border-radius:20px;
+      font-size:.78rem; font-weight:600; background:rgba(255,153,0,.13);
+      border:1px solid rgba(255,153,0,.36); color:var(--cz-amber-2); }
+    .cz-badge.free{ background:rgba(31,214,166,.13); border-color:rgba(31,214,166,.36); color:var(--cz-green); }
+
+    /* ---- panels ---- */
+    .cz-panel{ background:var(--cz-ink); border:1px solid var(--cz-line); border-radius:16px;
+      padding:1.4rem 1.5rem; margin-bottom:1.4rem; color:var(--cz-text); }
+    .cz-panel h3{ display:flex; align-items:center; gap:.55rem; margin-bottom:.35rem; font-size:1.08rem; }
+    .cz-panel h3 i{ color:var(--cz-amber); }
+    .cz-panel .sub{ color:var(--cz-muted); font-size:.86rem; margin-bottom:1rem; line-height:1.6; }
+    .cz .lbl{ display:block; font-size:.72rem; color:var(--cz-muted); margin-top:.55rem;
+      text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+    .cz input, .cz select, .cz textarea{ background:var(--cz-ink-2); border:1px solid var(--cz-line);
+      color:var(--cz-text); margin-top:5px; }
+    .cz input:focus,.cz select:focus,.cz textarea:focus{ border-color:var(--cz-amber); box-shadow:0 0 0 3px rgba(255,153,0,.16); }
+    .cz button{ background:linear-gradient(135deg,var(--cz-amber),#e07f00); color:#191d21;
+      box-shadow:0 6px 18px rgba(255,153,0,.26); font-weight:700; }
+    .cz button:hover{ box-shadow:0 10px 24px rgba(255,153,0,.36); }
+    .cz button.ghost{ background:transparent; border:1px solid rgba(255,153,0,.5);
+      color:var(--cz-amber); box-shadow:none; }
+    .cz button.ghost:hover{ background:rgba(255,153,0,.1); }
+    .cz button.danger{ background:linear-gradient(135deg,#ff6b78,#e03e4d); color:#fff; }
+    .cz-grid2{ display:grid; gap:.7rem; grid-template-columns:1fr 1fr; }
+    .cz-grid2 .full{ grid-column:1/-1; }
+    @media(max-width:640px){ .cz-grid2{ grid-template-columns:1fr; } }
+
+    /* ---- tabs ---- */
+    .cz-tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.6rem; }
+    .cz-tabs button{ width:auto; margin:0; padding:.55rem 1.1rem; font-size:.86rem;
+      background:var(--cz-ink); color:var(--cz-muted); border:1px solid var(--cz-line); box-shadow:none; }
+    .cz-tabs button.on{ background:linear-gradient(135deg,var(--cz-amber),#e07f00); color:#191d21; border-color:transparent; }
+    .cz-tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem;
+      border-radius:20px; background:#e03e4d; color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
+
+    /* ---- parcel card ---- */
+    .parcels{ display:grid; gap:.9rem; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+    .parcel{ background:var(--cz-ink); border:1px solid var(--cz-line); border-left:4px solid var(--cz-amber);
+      border-radius:13px; padding:1rem 1.1rem; color:var(--cz-text); }
+    .parcel.done{ border-left-color:var(--cz-green); opacity:.78; }
+    .parcel .top{ display:flex; justify-content:space-between; gap:.7rem; align-items:flex-start; }
+    .parcel .what{ font-weight:700; font-size:.98rem; line-height:1.25; }
+    .parcel .kind{ font-size:.63rem; font-weight:800; letter-spacing:.6px; text-transform:uppercase;
+      padding:.18rem .5rem; border-radius:20px; white-space:nowrap;
+      background:rgba(255,153,0,.15); color:var(--cz-amber-2); border:1px solid rgba(255,153,0,.32); }
+    .parcel .kind.market{ background:rgba(88,196,255,.15); color:#7fd0ff; border-color:rgba(88,196,255,.34); }
+    .parcel .kind.card{ background:rgba(167,139,250,.15); color:#c4b1ff; border-color:rgba(167,139,250,.34); }
+    .parcel .leg{ display:flex; align-items:center; gap:.55rem; margin:.75rem 0; font-size:.83rem; }
+    .parcel .leg .stop{ flex:1; min-width:0; }
+    .parcel .leg .stop b{ display:block; }
+    .parcel .leg .stop span{ color:var(--cz-muted); font-size:.73rem; }
+    .parcel .leg i{ color:var(--cz-amber); }
+    .parcel .who{ font-size:.78rem; color:var(--cz-muted); }
+    .parcel .note{ font-size:.78rem; color:var(--cz-muted); font-style:italic; margin-top:.4rem; }
+    .parcel .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.85rem; }
+    .parcel .acts button{ width:auto; margin:0; padding:.44rem .9rem; font-size:.79rem; }
+
+    /* ---- progress rail ---- */
+    .rail{ display:flex; align-items:center; gap:.3rem; margin-top:.7rem; }
+    .rail .dot{ width:9px; height:9px; border-radius:50%; background:var(--cz-line); flex:none; }
+    .rail .dot.on{ background:var(--cz-amber); box-shadow:0 0 0 3px rgba(255,153,0,.16); }
+    .rail .dot.done{ background:var(--cz-green); }
+    .rail .bar{ flex:1; height:2px; background:var(--cz-line); }
+    .rail .bar.on{ background:var(--cz-amber); }
+    .rail-lbl{ font-size:.68rem; color:var(--cz-muted); margin-top:.3rem; letter-spacing:.3px; }
+
+    /* ---- couriers ---- */
+    .crew{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); }
+    .crew-c{ display:flex; align-items:center; gap:.75rem; padding:.85rem 1rem; border-radius:13px;
+      background:var(--cz-ink); border:1px solid var(--cz-line); color:var(--cz-text); }
+    .crew-c .av{ width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center;
+      background:linear-gradient(135deg,var(--cz-amber),#e07f00); color:#191d21; font-weight:800; }
+    .crew-c b{ display:block; font-size:.92rem; }
+    .crew-c span{ font-size:.74rem; color:var(--cz-muted); }
+    .empty{ color:var(--cz-muted); text-align:center; padding:2.2rem 1rem; grid-column:1/-1; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap cz">
+    <!-- HERO -->
+    <div class="cz-hero">
+      <div class="cz-logo">Cyv<span class="zn">azon</span></div>
+      <!-- Our own mark: a parcel travelling a dotted route between two stops.
+           Deliberately not a swoosh under the wordmark. -->
+      <svg class="cz-mark" viewBox="0 0 134 26" fill="none" aria-hidden="true">
+        <circle cx="6" cy="13" r="4.4" stroke="#ff9900" stroke-width="2.2"/>
+        <path d="M14 13h9M28 13h9M42 13h8" stroke="#ff9900" stroke-width="2.2"
+              stroke-linecap="round" opacity=".55"/>
+        <rect x="57" y="2" width="22" height="22" rx="4" stroke="#ff9900" stroke-width="2.2"/>
+        <path d="M57 9h22M68 2v22" stroke="#ff9900" stroke-width="2.2" opacity=".7"/>
+        <path d="M86 13h8M99 13h9M113 13h9" stroke="#ff9900" stroke-width="2.2"
+              stroke-linecap="round" opacity=".55"/>
+        <circle cx="128" cy="13" r="4.4" fill="#ff9900"/>
+      </svg>
+      <p>The national delivery service. Anything, to anyone, anywhere in school — a book to
+        the library, a Match Attax card to another form room, something you sold on the
+        marketplace. <b style="color:var(--cz-text)">Delivery is free.</b> Couriers are citizens
+        who signed up to run parcels, and the nation pays their wage through the delivery levy.</p>
+      <div class="cz-badges" id="heroBadges"></div>
+    </div>
+
+    <div class="cz-tabs" id="tabs"></div>
+    <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
+
+    <!-- SEND -->
+    <section id="tab-send" class="czpane">
+      <div class="cz-panel">
+        <h3><i class="fas fa-box-open"></i> Send something</h3>
+        <p class="sub">Free, whatever it is. Tell us which class it's leaving from and which
+          class it's going to — a courier picks it up from there.</p>
+        <div class="cz-grid2">
+          <div><label class="lbl">Send to</label>
+            <input id="sTo" list="citizenList" placeholder="Citizen's username">
+            <datalist id="citizenList"></datalist></div>
+          <div><label class="lbl">What is it?</label>
+            <input id="sWhat" placeholder="e.g. a Match Attax card, a book, a note"></div>
+          <div><label class="lbl">Collect from — class</label>
+            <input id="sFromClass" placeholder="e.g. 8B"></div>
+          <div><label class="lbl">Collect from — where</label>
+            <select id="sFromArea"></select></div>
+          <div><label class="lbl">Deliver to — class</label>
+            <input id="sToClass" placeholder="e.g. 10A"></div>
+          <div><label class="lbl">Deliver to — where</label>
+            <select id="sToArea"></select></div>
+          <div class="full"><label class="lbl">Anything the courier should know</label>
+            <input id="sNotes" placeholder="e.g. 'ask for me at the door — break time only'"></div>
+        </div>
+        <button style="margin-top:1.1rem;" onclick="sendParcel()"><i class="fas fa-paper-plane"></i> Book a free delivery</button>
+        <p id="sendMsg" class="small" style="text-align:center;"></p>
+      </div>
+
+      <div class="cz-panel">
+        <h3><i class="fas fa-location-dot"></i> Where to find you</h3>
+        <p class="sub">Set your usual class once and every delivery to you is addressed
+          there automatically — including things you buy on the marketplace and cards you trade.</p>
+        <div class="cz-grid2">
+          <div><label class="lbl">My class</label><input id="hClass" placeholder="e.g. 9C"></div>
+          <div><label class="lbl">Usually found in</label><select id="hArea"></select></div>
+        </div>
+        <button class="ghost" style="margin-top:.9rem;width:auto;" onclick="saveHome()">Save</button>
+        <span id="homeMsg" class="small" style="margin-left:.6rem;"></span>
+      </div>
+    </section>
+
+    <!-- MY PARCELS -->
+    <section id="tab-mine" class="czpane" style="display:none;">
+      <h3 style="margin-bottom:.3rem;"><i class="fas fa-truck-ramp-box" style="color:var(--cz-amber)"></i> Coming to me</h3>
+      <p class="small" style="margin-bottom:1rem;">Confirm each one when it actually reaches your hands — that's what closes the run and credits the courier.</p>
+      <div class="parcels" id="incoming"></div>
+      <h3 style="margin:2.2rem 0 .3rem;"><i class="fas fa-hand-holding-box" style="color:var(--cz-amber)"></i> For me to hand over</h3>
+      <p class="small" style="margin-bottom:1rem;">Things you've sold, traded or posted. Have them ready for the courier.</p>
+      <div class="parcels" id="sending"></div>
+    </section>
+
+    <!-- COURIER JOBS -->
+    <section id="tab-jobs" class="czpane" style="display:none;">
+      <div id="courierGate"></div>
+      <div id="courierBody" style="display:none;">
+        <h3 style="margin-bottom:.3rem;"><i class="fas fa-bolt" style="color:var(--cz-amber)"></i> Runs I'm carrying</h3>
+        <div class="parcels" id="carrying" style="margin-bottom:2.2rem;"></div>
+        <h3 style="margin-bottom:.3rem;"><i class="fas fa-list-check" style="color:var(--cz-amber)"></i> Open jobs</h3>
+        <p class="small" style="margin-bottom:1rem;">Claim one and it's yours to run.</p>
+        <div class="parcels" id="board"></div>
+      </div>
+    </section>
+
+    <!-- DELIVERY ADMIN (President only) -->
+    <section id="tab-admin" class="czpane" style="display:none;">
+      <div id="adminBody"></div>
+    </section>
+
+    <!-- CREW -->
+    <section id="tab-crew" class="czpane" style="display:none;">
+      <div class="cz-panel" id="joinPanel"></div>
+      <h3 style="margin-bottom:.3rem;"><i class="fas fa-people-carry-box" style="color:var(--cz-amber)"></i> The courier crew</h3>
+      <p class="small" style="margin-bottom:1rem;">Citizens keeping the Republic moving.</p>
+      <div class="crew" id="crew"></div>
+    </section>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, CFG=null, TAB="send", AREAS=[];
+    const esc=(s)=>(s==null?"":String(s))
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const msg=(t,ok=false,el="msg")=>{const m=document.getElementById(el);
+      m.textContent=t||""; m.style.color= ok?"var(--cz-green)":"var(--red)";};
+
+    const STEPS = ["open","claimed","picked_up","delivered"];
+    const STEP_LABEL = {open:"Waiting for a courier", claimed:"Courier assigned",
+                        picked_up:"On the way", delivered:"Delivered"};
+
+    function rail(status){
+      const i = STEPS.indexOf(status);
+      let h = "";
+      STEPS.forEach((s,n)=>{
+        if(n) h += `<div class="bar ${n<=i?"on":""}"></div>`;
+        h += `<div class="dot ${n<i?"done":(n===i?"on":"")}"></div>`;
+      });
+      return `<div class="rail">${h}</div><div class="rail-lbl">${esc(STEP_LABEL[status]||status)}</div>`;
+    }
+
+    function where(cls, area){
+      const c = esc(cls), a = esc(area);
+      if(c && a) return `<b>${c}</b><span>${a}</span>`;
+      return `<b>${c||a||"—"}</b><span>${c&&a?"":""}</span>`;
+    }
+
+    function parcel(p, role){
+      const kindLbl = {market:"Marketplace", card:"Card trade", custom:"Parcel"}[p.kind] || "Parcel";
+      let acts = "";
+      if(role==="board")
+        acts = `<button onclick="claim(${p.id})"><i class="fas fa-hand"></i> Claim this run</button>`;
+      else if(role==="carrying"){
+        if(p.status==="claimed")
+          acts = `<button onclick="setStatus(${p.id},'picked_up')"><i class="fas fa-box"></i> I've collected it</button>
+                  <button class="ghost" onclick="setStatus(${p.id},'drop')">Give it up</button>`;
+        else
+          acts = `<span class="who"><i class="fas fa-hourglass-half"></i> Waiting for ${esc(p.recipient)} to confirm</span>
+                  <button class="ghost" onclick="setStatus(${p.id},'drop')">Give it up</button>`;
+      }
+      else if(role==="incoming" && (p.status==="claimed"||p.status==="picked_up"))
+        acts = `<button onclick="setStatus(${p.id},'delivered')"><i class="fas fa-check"></i> It reached me</button>`;
+      else if(role==="sending" && (p.status==="open"||p.status==="claimed"))
+        acts = `<button class="danger" onclick="cancelParcel(${p.id})">Cancel</button>`;
+
+      const other = role==="incoming" ? `From ${esc(p.sender)}`
+                  : role==="sending"  ? `To ${esc(p.recipient)}`
+                  : `${esc(p.sender)} &rarr; ${esc(p.recipient)}`;
+      return `<div class="parcel ${p.status==="delivered"?"done":""}">
+        <div class="top">
+          <div class="what">${esc(p.item_label)}</div>
+          <span class="kind ${esc(p.kind)}">${esc(kindLbl)}</span>
+        </div>
+        <div class="who">${other}${p.courier?` · courier <b>${esc(p.courier)}</b>`:""}</div>
+        <div class="leg">
+          <div class="stop">${where(p.pickup_class,p.pickup_area)}</div>
+          <i class="fas fa-arrow-right-long"></i>
+          <div class="stop">${where(p.dropoff_class,p.dropoff_area)}</div>
+        </div>
+        ${rail(p.status)}
+        ${p.notes?`<div class="note">"${esc(p.notes)}"</div>`:""}
+        <div class="acts">${acts}</div>
+      </div>`;
+    }
+
+    /* ---- tabs ---- */
+    function drawTabs(c){
+      c = c || {};
+      const defs = [
+        ["send","Send something","fa-paper-plane",0],
+        ["mine","My parcels","fa-boxes-stacked",(c.incoming||0)+(c.to_hand_over||0)],
+        ["jobs","Courier jobs","fa-truck-fast",c.courier?(c.waiting||0)+(c.carrying||0):0],
+        ["crew","The crew","fa-people-carry-box",0],
+      ];
+      // The delivery admin panel is the President's alone.
+      if(c.is_admin) defs.push(["admin","Delivery admin","fa-user-shield",ADMIN_PENDING]);
+      document.getElementById("tabs").innerHTML = defs.map(([k,t,i,n])=>
+        `<button class="${k===TAB?"on":""}" onclick="go('${k}')"><i class="fas ${i}"></i> ${t}${
+          n?`<span class="badge">${n}</span>`:""}</button>`).join("");
+    }
+    function go(tab){
+      TAB=tab;
+      document.querySelectorAll(".czpane").forEach(p=>p.style.display="none");
+      document.getElementById("tab-"+tab).style.display="block";
+      const order = ["send","mine","jobs","crew"].concat(CFG.is_admin?["admin"]:[]);
+      document.querySelectorAll("#tabs button").forEach((b,i)=>
+        b.classList.toggle("on", order[i]===tab));
+      msg("");
+      if(tab==="mine"||tab==="jobs") loadBoard();
+      if(tab==="crew") loadCrew();
+      if(tab==="admin") loadAdmin();
+      history.replaceState(null,"","/cyvazon?tab="+tab);
+    }
+
+    /* ---- board ---- */
+    async function loadBoard(){
+      let d;
+      try{ d = await api("/cyvazon/board"); }catch(e){ return msg(e.message); }
+      const put=(id,list,role,empty)=>{
+        document.getElementById(id).innerHTML = list.length
+          ? list.map(p=>parcel(p,role)).join("") : `<p class="empty">${empty}</p>`;
+      };
+      put("incoming", d.incoming, "incoming", "Nothing on its way to you.");
+      put("sending",  d.sending,  "sending",  "Nothing waiting to be collected from you.");
+
+      const gate = document.getElementById("courierGate");
+      if(d.courier){
+        gate.innerHTML = "";
+        document.getElementById("courierBody").style.display = "block";
+        put("carrying", d.carrying, "carrying", "You're not carrying anything right now.");
+        put("board",    d.board,    "board",    "No open jobs — the Republic is all caught up.");
+      }else{
+        document.getElementById("courierBody").style.display = "none";
+        gate.innerHTML = `<div class="cz-panel">
+          <h3><i class="fas fa-id-badge"></i> Couriers only</h3>
+          <p class="sub">${CFG.courier_status === "pending"
+            ? "Your application is with the President. Once it is approved, the jobs board opens here."
+            : `Apply to be a courier to see and claim delivery jobs. Couriers earn
+               <b style="color:var(--cz-amber)">${esc(CFG.wage)} CB</b> every ${esc(CFG.salary_days)}
+               days on top of their normal salary.`}</p>
+          <button onclick="go('crew')">${CFG.courier_status === "pending"
+            ? "View my application" : "Apply to deliver"}</button></div>`;
+      }
+    }
+
+    async function claim(id){
+      try{ await api("/cyvazon/claim",{method:"POST",body:JSON.stringify({delivery_id:id})});
+        msg("Claimed — go and collect it.",true); loadBoard(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+    async function setStatus(id, action){
+      if(action==="delivered" && !confirm("Confirm this parcel actually reached you?")) return;
+      try{ await api("/cyvazon/status",{method:"POST",body:JSON.stringify({delivery_id:id,action})});
+        msg(action==="delivered"?"Signed for — the courier has been credited.":"Updated.",true);
+        loadBoard(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+    async function cancelParcel(id){
+      if(!confirm("Cancel this delivery?")) return;
+      try{ await api("/cyvazon/cancel",{method:"POST",body:JSON.stringify({delivery_id:id})});
+        loadBoard(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+
+    /* ---- crew ---- */
+    async function loadCrew(){
+      let d;
+      try{ d = await api("/cyvazon/couriers"); }catch(e){ return msg(e.message); }
+      document.getElementById("crew").innerHTML = d.couriers.length
+        ? d.couriers.map(c=>`<div class="crew-c">
+            <div class="av" ${avatarStyle(c.avatar)}>${c.avatar?"":esc((c.username[0]||"?").toUpperCase())}</div>
+            <div><b>${esc(c.username)}${c.me?" (you)":""}</b>
+              <span>${c.deliveries} delivered${c.covers?" · "+esc(c.covers):""}</span></div>
+          </div>`).join("")
+        : `<p class="empty">No couriers yet — the service needs you.</p>`;
+      drawJoin();
+    }
+    function drawJoin(){
+      const p = document.getElementById("joinPanel");
+      if(!CFG.courier && CFG.courier_status === "pending"){
+        p.innerHTML = `<h3><i class="fas fa-hourglass-half"></i> Application in with the President</h3>
+          <p class="sub">You have applied to join the crew. The President vets every courier before
+            they can carry other citizens' things — you'll get a notification either way.</p>
+          <button class="ghost" style="width:auto" onclick="resign()">Withdraw my application</button>
+          <span id="joinMsg" class="small" style="margin-left:.6rem;"></span>`;
+        return;
+      }
+      if(CFG.courier){
+        p.innerHTML = `<h3><i class="fas fa-check-circle"></i> You're a Cyvazon courier</h3>
+          <p class="sub">You're earning <b style="color:var(--cz-amber)">${esc(CFG.wage)} CB</b> every
+            ${esc(CFG.salary_days)} days on top of your salary, and you've completed
+            <b>${esc(CFG.deliveries_done)}</b> ${CFG.deliveries_done===1?"run":"runs"}.</p>
+          <button class="ghost" style="width:auto" onclick="resign()">Stand down</button>
+          <span id="joinMsg" class="small" style="margin-left:.6rem;"></span>`;
+      }else{
+        p.innerHTML = `<h3><i class="fas fa-user-plus"></i> Become a courier</h3>
+          <p class="sub">Run parcels around school and draw
+            <b style="color:var(--cz-amber)">${esc(CFG.wage)} CB</b> every ${esc(CFG.salary_days)} days —
+            more than most jobs in Cyvathon, because the service is free to everyone else.</p>
+          <label class="lbl">Which classes or areas can you reach?</label>
+          <input id="jCovers" placeholder="e.g. 8B, 9C, library at break">
+          <label class="lbl">Anything else</label>
+          <input id="jNote" placeholder="e.g. 'fastest at lunch'">
+          <p class="small" style="color:var(--cz-muted)"><i class="fas fa-circle-info"></i>
+            Applications are reviewed by the President before you can start.</p>
+          <button style="margin-top:.6rem;" onclick="signup()"><i class="fas fa-truck-fast"></i> Apply to join</button>
+          <p id="joinMsg" class="small"></p>`;
+      }
+    }
+    async function signup(){
+      try{
+        await api("/cyvazon/signup",{method:"POST",body:JSON.stringify({
+          covers:(document.getElementById("jCovers")||{}).value||"",
+          note:(document.getElementById("jNote")||{}).value||""})});
+        CFG.courier = false; CFG.courier_status = "pending";
+        msg("Application sent — the President will review it.",true,"joinMsg");
+        drawJoin(); loadCrew(); refresh();
+      }catch(e){ msg(e.message,false,"joinMsg"); }
+    }
+    async function resign(){
+      try{ await api("/cyvazon/resign",{method:"POST",body:"{}"});
+        CFG.courier=false; CFG.courier_status=""; drawJoin(); loadCrew(); refresh();
+      }catch(e){ msg(e.message,false,"joinMsg"); }
+    }
+
+    /* ---- delivery admin (President only) ---- */
+    let ADMIN_PENDING = 0;
+    async function loadAdmin(){
+      let d;
+      try{ d = await api("/cyvazon/admin"); }
+      catch(e){
+        document.getElementById("adminBody").innerHTML =
+          `<div class="cz-panel"><p class="sub">${esc(e.message)}</p></div>`;
+        return;
+      }
+      ADMIN_PENDING = d.pending.length;
+
+      const line = (c, acts)=>`<div class="crew-c" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:.75rem;min-width:0;">
+          <div class="av">${esc((c.username[0]||"?").toUpperCase())}</div>
+          <div style="min-width:0"><b>${esc(c.username)}</b>
+            <span>${c.covers?esc(c.covers):"no areas given"}${
+              c.deliveries?" \u00b7 "+esc(c.deliveries)+" delivered":""}</span>
+            ${c.note?`<span style="font-style:italic">"${esc(c.note)}"</span>`:""}</div>
+        </div>
+        <div style="display:flex;gap:.35rem;flex:none;">${acts}</div></div>`;
+
+      const btn = "width:auto;margin:0;padding:.4rem .8rem;font-size:.78rem";
+      const pend = d.pending.length
+        ? d.pending.map(c=>line(c,
+            `<button style="${btn}" onclick="decide('${esc(c.username)}','approve')">Approve</button>
+             <button class="ghost" style="${btn}" onclick="decide('${esc(c.username)}','reject')">Turn away</button>`)).join("")
+        : `<p class="empty">No applications waiting.</p>`;
+
+      const appr = d.approved.length
+        ? d.approved.map(c=>line(c,
+            `<button class="danger" style="${btn}" onclick="decide('${esc(c.username)}','revoke')">Revoke</button>`)).join("")
+        : `<p class="empty">No approved couriers yet.</p>`;
+
+      const pc = d.parcels || {};
+      const stat = (k,v,c)=>`<div style="flex:1;min-width:118px;padding:.75rem .9rem;border-radius:12px;
+        background:var(--cz-ink-2);border:1px solid var(--cz-line);">
+        <div style="font-size:1.5rem;font-weight:800;color:${c}">${v||0}</div>
+        <div style="font-size:.7rem;color:var(--cz-muted);text-transform:uppercase;letter-spacing:.5px">${k}</div></div>`;
+
+      document.getElementById("adminBody").innerHTML = `
+        <div class="cz-panel">
+          <h3><i class="fas fa-chart-simple"></i> Service at a glance</h3>
+          <p class="sub">What Cyvazon is costing the Treasury, and what is moving right now.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:.7rem;">
+            ${stat("Awaiting a courier", pc.open, "var(--cz-amber)")}
+            ${stat("In transit", (pc.claimed||0)+(pc.picked_up||0), "var(--cz-amber)")}
+            ${stat("Delivered", pc.delivered, "var(--cz-green)")}
+            ${stat("Couriers on the books", d.approved.length, "var(--cz-text)")}
+            ${stat("Wage bill per period", d.weekly_cost + " CB", "var(--cz-text)")}
+          </div>
+          <p class="sub" style="margin:.9rem 0 0;">Funded by the ${(d.levy*100).toFixed(0)}% delivery levy.
+            Change the wage or the levy in the <a class="link" href="/admin">Presidential Admin Panel</a>.</p>
+        </div>
+
+        <div class="cz-panel">
+          <h3><i class="fas fa-user-check"></i> Courier applications${
+            d.pending.length?` <span class="cz-badge">${d.pending.length} waiting</span>`:""}</h3>
+          <p class="sub">Nobody carries another citizen's property until you approve them.</p>
+          <div class="crew" style="grid-template-columns:1fr;">${pend}</div>
+        </div>
+
+        <div class="cz-panel">
+          <h3><i class="fas fa-id-badge"></i> Approved couriers</h3>
+          <p class="sub">Revoking a licence releases anything they are holding back onto the board.</p>
+          <div class="crew" style="grid-template-columns:1fr;">${appr}</div>
+        </div>`;
+      try{ drawTabs(await api("/cyvazon/summary")); }catch{}
+    }
+
+    async function decide(who, action){
+      const verb = {approve:"Approve", reject:"Turn away", revoke:"Revoke the licence of"}[action];
+      if(!confirm(verb + " " + who + "?")) return;
+      try{
+        const r = await api("/cyvazon/admin/decide",{method:"POST",
+          body:JSON.stringify({username:who, action})});
+        msg(r.released ? "Done \u2014 " + r.released + " parcel(s) went back on the board." : "Done.", true);
+        loadAdmin();
+      }catch(e){ msg(e.message); }
+    }
+
+    /* ---- send ---- */
+    async function sendParcel(){
+      const body = {
+        recipient: document.getElementById("sTo").value.trim(),
+        item_label: document.getElementById("sWhat").value.trim(),
+        pickup_class: document.getElementById("sFromClass").value.trim(),
+        pickup_area: document.getElementById("sFromArea").value,
+        dropoff_class: document.getElementById("sToClass").value.trim(),
+        dropoff_area: document.getElementById("sToArea").value,
+        notes: document.getElementById("sNotes").value.trim(),
+      };
+      try{
+        await api("/cyvazon/request",{method:"POST",body:JSON.stringify(body)});
+        msg("Booked — a courier will pick it up.",true,"sendMsg");
+        ["sTo","sWhat","sNotes"].forEach(id=>document.getElementById(id).value="");
+        refresh();
+      }catch(e){ msg(e.message,false,"sendMsg"); }
+    }
+    async function saveHome(){
+      try{
+        const d = await api("/cyvazon/home",{method:"POST",body:JSON.stringify({
+          class: document.getElementById("hClass").value.trim(),
+          area: document.getElementById("hArea").value})});
+        CFG.home = d.home;
+        document.getElementById("sFromClass").value = d.home.class;
+        document.getElementById("sFromArea").value  = d.home.area;
+        msg("Saved.",true,"homeMsg");
+      }catch(e){ msg(e.message,false,"homeMsg"); }
+    }
+
+    function drawHero(){
+      document.getElementById("heroBadges").innerHTML = `
+        <span class="cz-badge free"><i class="fas fa-gift"></i> Delivery always free</span>
+        <span class="cz-badge"><i class="fas fa-sack-dollar"></i> Couriers earn ${esc(CFG.wage)} CB / ${esc(CFG.salary_days)} days</span>
+        <span class="cz-badge"><i class="fas fa-receipt"></i> Funded by a ${(CFG.levy*100).toFixed(0)}% delivery levy</span>
+        ${CFG.open?"":`<span class="cz-badge" style="background:rgba(224,62,77,.15);border-color:rgba(224,62,77,.4);color:#ff8f9a"><i class="fas fa-ban"></i> Service suspended</span>`}`;
+    }
+
+    async function refresh(){
+      try{ drawTabs(await api("/cyvazon/summary")); }catch{}
+    }
+
+    (async function(){
+      ME = await requireAuth(); if(!ME) return;
+      renderNav("/cyvazon", ME);
+      try{ CFG = await api("/cyvazon/config"); }
+      catch(e){ return msg(e.message); }
+      AREAS = CFG.areas || [];
+      const opts = `<option value="">—</option>` + AREAS.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join("");
+      ["sFromArea","sToArea","hArea"].forEach(id=>document.getElementById(id).innerHTML = opts);
+      document.getElementById("hClass").value = CFG.home.class || "";
+      document.getElementById("hArea").value  = CFG.home.area || "";
+      document.getElementById("sFromClass").value = CFG.home.class || "";
+      document.getElementById("sFromArea").value  = CFG.home.area || "";
+      drawHero();
+      try{
+        const u = await api("/users");
+        document.getElementById("citizenList").innerHTML =
+          (u.users||[]).map(n=>`<option value="${esc(n.username||n)}"></option>`).join("");
+      }catch{}
+      await refresh();
+      const t = new URLSearchParams(location.search).get("tab");
+      go(["send","mine","jobs","crew","admin"].includes(t) ? t : "send");
+    })();
+  </script>
+</body>
+</html>

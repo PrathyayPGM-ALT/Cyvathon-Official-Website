@@ -78,9 +78,32 @@
     <div class="market-grid" id="grid"></div>
   </div>
 
+  <!-- Cyvazon checkout: the goods still have to physically move, so ask where
+       they should go before the sale is closed. -->
+  <div id="delivWrap" style="display:none;position:fixed;inset:0;z-index:80;background:rgba(4,7,12,.8);
+       backdrop-filter:blur(6px);display:none;place-items:center;padding:1.2rem;">
+    <div class="panel" style="max-width:460px;width:100%;text-align:left;">
+      <h3 style="display:flex;align-items:center;gap:.5rem;">
+        <i class="fas fa-truck-fast" style="color:#ff9900"></i> Delivery</h3>
+      <p class="small">Cyvazon will bring <b id="dvItem"></b> to you, free. Tell us where you'll be —
+        or collect it in person if you'd rather.</p>
+      <div class="form-grid">
+        <input id="dvClass" placeholder="Your class (e.g. 9C)">
+        <select id="dvArea"></select>
+        <input class="full" id="dvNotes" placeholder="Note for the courier (optional)">
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem;">
+        <button style="width:auto;flex:1" onclick="confirmBuy(false)"><i class="fas fa-truck"></i> Buy &amp; deliver</button>
+        <button class="ghost" style="width:auto" onclick="confirmBuy(true)">I'll collect it</button>
+        <button class="ghost" style="width:auto" onclick="closeDeliv()">Cancel</button>
+      </div>
+      <p id="dvMsg" class="small" style="text-align:center;"></p>
+    </div>
+  </div>
+
   <script src="/static/app.js"></script>
   <script>
-    let ME = null;
+    let ME = null, LAST_ITEMS = [];
     const NAME = (n)=> (n||"").replace(/</g,"&lt;");
     const CUR = { cybucks:"CB", pufb:"PUFB", aquilines:"AQ", cybit:"CBT" };
     const msg = (t,err=true)=>{ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
@@ -98,6 +121,7 @@
       sel.innerHTML = '<option value="">Sell as: Myself</option>' +
         (d.my_companies||[]).map(c=>`<option value="${c.id}">Sell as: ${NAME(c.name)}</option>`).join("");
 
+      LAST_ITEMS = d.items;
       const grid = document.getElementById("grid");
       if(!d.items.length){ grid.innerHTML = `<p class="muted">Nothing listed yet — be the first to sell something!</p>`; return; }
       grid.innerHTML = d.items.map(it=>{
@@ -141,10 +165,43 @@
       }catch(e){ msg(e.message); }
     }
 
+    /* Buying is a two-step now: pay, and say where the thing should go.
+       Skipping the delivery record is exactly how a sale gets "forgotten". */
+    let PENDING = null;
     async function buyItem(id){
-      try{ await api("/market/buy",{method:"POST",body:JSON.stringify({item_id:id})});
-        msg("Done! Check your ID Card record.",false); load();
-      }catch(e){ msg(e.message); }
+      const it = (LAST_ITEMS||[]).find(x=>x.id===id);
+      PENDING = id;
+      document.getElementById("dvItem").textContent = it ? it.title : "your item";
+      document.getElementById("delivWrap").style.display = "grid";
+      if(!document.getElementById("dvArea").options.length){
+        try{
+          const c = await api("/cyvazon/config");
+          document.getElementById("dvArea").innerHTML = '<option value="">Where in school —</option>' +
+            (c.areas||[]).map(a=>`<option value="${NAME(a)}">${NAME(a)}</option>`).join("");
+          if(c.home){ document.getElementById("dvClass").value = c.home.class||"";
+                      document.getElementById("dvArea").value = c.home.area||""; }
+        }catch{}
+      }
+    }
+    function closeDeliv(){ document.getElementById("delivWrap").style.display="none"; PENDING=null; }
+    async function confirmBuy(collect){
+      if(!PENDING) return;
+      const body = {item_id:PENDING, collect:!!collect};
+      if(!collect){
+        body.dropoff_class = document.getElementById("dvClass").value.trim();
+        body.dropoff_area  = document.getElementById("dvArea").value;
+        body.delivery_notes = document.getElementById("dvNotes").value.trim();
+        if(!body.dropoff_class){
+          const m=document.getElementById("dvMsg");
+          m.textContent="Which class should it come to?"; m.style.color="var(--red)"; return;
+        }
+      }
+      try{
+        const r = await api("/market/buy",{method:"POST",body:JSON.stringify(body)});
+        closeDeliv();
+        msg(r.delivery ? "Bought — Cyvazon is bringing it to you." : "Done! Check your ID Card record.", false);
+        load();
+      }catch(e){ const m=document.getElementById("dvMsg"); m.textContent=e.message; m.style.color="var(--red)"; }
     }
     async function removeItem(id){
       try{ await api("/market/delete",{method:"POST",body:JSON.stringify({item_id:id})}); load(); }

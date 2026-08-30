@@ -62,6 +62,26 @@ Citizen-to-citizen **Match Attax** trading, under Community:
 Needs `migration_card_trading.sql` run once in Supabase, plus the public `chat`
 Storage bucket that avatars already use (card photos go in there too).
 
+### 4. Cyvazon — national delivery
+Free delivery anywhere in school, run by citizen couriers (`/cyvazon`):
+- Send anything to anyone — say which class it leaves from and which class
+  it goes to, and a courier runs it
+- Marketplace purchases and accepted card trades raise a parcel automatically,
+  so the goods can't be quietly kept after the deal settles
+- Couriers **apply**, and the President approves each one from the delivery
+  admin panel (visible only to the President) before they can carry anything
+- Approved couriers earn 500 CB per pay period on top of their salary
+- Only the **recipient** can confirm a parcel arrived — a courier can't close
+  their own run
+- Delivery is free, so the nation funds it: a 5% delivery levy rides on top of
+  VAT while the service is open, logged separately in the Treasury
+
+Needs `migration_delivery.sql`. Wage and levy are tunable from the Presidential
+Admin Panel; school areas live in `SCHOOL_AREAS` in `main.py` — edit that list
+to match your school. Class names are free text.
+
+---
+
 **On the card data.** The player lookup uses TheSportsDB's free API — set
 `SPORTSDB_API_KEY` to use your own key instead of the shared test key. There is
 no open Match Attax card API: Topps publishes none, and card databases like

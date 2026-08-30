@@ -84,6 +84,8 @@ _CONFIG_KEYS = {
     "record_expiry_days": "RECORD_EXPIRY_DAYS",
     "ministry_min_applicants": "MINISTRY_MIN_APPLICANTS",
     "fine_bars_office": "FINE_BARS_OFFICE",
+    "courier_wage": "COURIER_WAGE", "delivery_levy": "DELIVERY_LEVY",
+    "delivery_open": "DELIVERY_OPEN",
 }
 
 # Justice levers. RECORD_EXPIRY_DAYS = 0 means a conviction bars a citizen
@@ -91,6 +93,14 @@ _CONFIG_KEYS = {
 RECORD_EXPIRY_DAYS      = 0
 MINISTRY_MIN_APPLICANTS = 4
 FINE_BARS_OFFICE        = True
+
+# Cyvazon — the national delivery service. Delivery is free to whoever
+# requests it, so the nation funds it: DELIVERY_LEVY rides on top of VAT
+# while the service is open, and couriers draw COURIER_WAGE each salary
+# period. All three are President-tunable from the admin panel.
+COURIER_WAGE   = 500        # CB per salary period — deliberately above a Citizen's
+DELIVERY_LEVY  = 0.05       # extra tax that pays for free delivery
+DELIVERY_OPEN  = True
 
 COMPANY_CATEGORIES = ["Finance", "Selling", "Service", "Technology", "Other"]
 
@@ -320,7 +330,7 @@ def refresh_config():
             v = row.get(col)
             if v is not None:
                 # day/grant fields are whole numbers
-                if name == "FINE_BARS_OFFICE":
+                if name in ("FINE_BARS_OFFICE", "DELIVERY_OPEN"):
                     g[name] = bool(v)
                 elif name.endswith(("_DAYS", "GRANT")) or name in ("LOAN_MAX", "MINISTRY_MIN_APPLICANTS"):
                     g[name] = int(v)
@@ -551,18 +561,31 @@ def _run_economics(user):
     if last_tax is None:
         updates["last_tax"] = now.isoformat()
     elif (now - last_tax).days >= TAX_PERIOD_DAYS:
-        tax_cb = round((user.get("balance")   or 0) * VAT_RATE, 2)
-        tax_pf = round((user.get("pufb")      or 0) * VAT_RATE, 2)
-        tax_aq = round((user.get("aquilines") or 0) * VAT_RATE, 2)
-        tax_cy = round((user.get("cybits")    or 0) * VAT_RATE, 2)
+        # Cyvazon is free to use, so the levy that pays for it is collected
+        # alongside VAT — charged to everyone, whether they posted a parcel
+        # or not, and logged separately so the Treasury shows what it cost.
+        levy = DELIVERY_LEVY if DELIVERY_OPEN else 0
+        rate = VAT_RATE + levy
+        tax_cb = round((user.get("balance")   or 0) * rate, 2)
+        tax_pf = round((user.get("pufb")      or 0) * rate, 2)
+        tax_aq = round((user.get("aquilines") or 0) * rate, 2)
+        tax_cy = round((user.get("cybits")    or 0) * rate, 2)
         if tax_cb: updates["balance"]   = round((user.get("balance")   or 0) - tax_cb, 2)
         if tax_pf: updates["pufb"]      = round((user.get("pufb")      or 0) - tax_pf, 2)
         if tax_aq: updates["aquilines"] = round((user.get("aquilines") or 0) - tax_aq, 2)
         if tax_cy: updates["cybits"]    = round((user.get("cybits")    or 0) - tax_cy, 2)
         if tax_cb or tax_pf or tax_aq or tax_cy:
-            treasury_add(cybucks=tax_cb, pufb=tax_pf, aquilines=tax_aq, cybits=tax_cy,
+            share = (levy / rate) if rate else 0          # portion of the take that is the levy
+            lev_cb = round(tax_cb * share, 2)
+            if lev_cb:
+                treasury_add(cybucks=lev_cb, counterparty=username, kind="delivery_levy")
+            treasury_add(cybucks=round(tax_cb - lev_cb, 2), pufb=tax_pf,
+                         aquilines=tax_aq, cybits=tax_cy,
                          counterparty=username, kind="vat")
-            add_record(username, f"Paid monthly VAT: {tax_cb} CB / {tax_pf} PUFB / {tax_aq} AQ / {tax_cy} CBT to the Treasury.")
+            note = f"Paid monthly VAT: {tax_cb} CB / {tax_pf} PUFB / {tax_aq} AQ / {tax_cy} CBT to the Treasury."
+            if lev_cb:
+                note += f" ({lev_cb} CB of it the Cyvazon delivery levy.)"
+            add_record(username, note)
         updates["last_tax"] = now.isoformat()
 
     # ---- 2. Weekly salary (from Treasury) -------------------
@@ -578,6 +601,30 @@ def _run_economics(user):
             treasury_add(cybucks=-pay, counterparty=username, kind="salary")
             add_record(username, f"Received {pay} CB salary ({user.get('designation','Citizen')}).")
             updates["last_salary"] = now.isoformat()
+
+    # ---- 2a. Courier wage (Cyvazon) -------------------------
+    # Paid on its own clock and on top of the citizen's ordinary salary, so a
+    # Minister who also runs parcels keeps both.
+    if DELIVERY_OPEN and COURIER_WAGE:
+        try:
+            crow = supabase.table("couriers").select("active,status") \
+                .eq("username", username).eq("active", True) \
+                .eq("status", "approved").execute().data
+        except Exception:
+            crow = None
+        if crow:
+            last_cp = _parse(user.get("last_courier_pay"))
+            if last_cp is None:
+                updates["last_courier_pay"] = now.isoformat()
+            else:
+                cw = (now - last_cp).days // SALARY_PERIOD_DAYS
+                if cw >= 1:
+                    pay = round(COURIER_WAGE * cw, 2)
+                    base = updates.get("balance", user.get("balance") or 0)
+                    updates["balance"] = round(base + pay, 2)
+                    treasury_add(cybucks=-pay, counterparty=username, kind="courier_wage")
+                    add_record(username, f"Received {pay:g} CB Cyvazon courier wage.")
+                    updates["last_courier_pay"] = now.isoformat()
 
     # ---- 2b. Monthly savings interest --------------------------
     savings = user.get("savings") or 0
@@ -725,6 +772,12 @@ INTERESTS = [
     {"key": "tech",      "label": "Coding & Tech",       "icon": "fa-code",            "color": "#8b5cf6", "chat": "Techies",
      "recs": [["/ai", "fa-robot", "Cyvathon AI", "Explore & learn how it works"],
               ["/exchange", "fa-chart-line", "Stock Exchange", "Trade the market"]]},
+    {"key": "cards",     "label": "Football & Cards",    "icon": "fa-futbol",          "color": "#1fd6a6", "chat": "Card Collectors",
+     "recs": [["/packet", "fa-futbol", "Card Packets", "Trade Match Attax cards"],
+              ["/marketplace", "fa-store", "Import & Export", "Buy and sell anything"]]},
+    {"key": "delivery",  "label": "Delivery & Logistics", "icon": "fa-truck-fast",     "color": "#ff9900", "chat": "Couriers",
+     "recs": [["/cyvazon", "fa-truck-fast", "Cyvazon", "Deliver parcels, earn 500 CB a week"],
+              ["/jobs", "fa-clipboard-list", "Jobs Board", "Find more paid work"]]},
 ]
 INTEREST_KEYS = {i["key"] for i in INTERESTS}
 INTEREST_BY_KEY = {i["key"]: i for i in INTERESTS}
@@ -1438,7 +1491,7 @@ def sitemap():
              "/leaderboard", "/government", "/ministries", "/legislature",
              "/court", "/gazette", "/states", "/foreign", "/treasury",
              "/exchange", "/company", "/jobs", "/marketplace", "/casino",
-             "/flightsim", "/packet", "/passport", "/login"]
+             "/flightsim", "/packet", "/cyvazon", "/passport", "/login"]
     urls = "".join(f"<url><loc>https://cyvathon.onrender.com{p}</loc></url>"
                    for p in pages)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>'
@@ -2864,7 +2917,21 @@ def market_buy():
 
     supabase.table("market_items").update({"status": "sold", "buyer": user["username"]}) \
         .eq("id", item_id).execute()
-    return jsonify(success=True)
+
+    # Cyvazon: money has already changed hands, so raise a parcel unless the
+    # buyer says they'll collect it themselves. Without a tracked handover
+    # there'd be nothing stopping a seller taking the payment and keeping the
+    # goods — which is exactly what the delivery record is for.
+    d = request.get_json() or {}
+    parcel = None
+    if d.get("collect") is not True:
+        parcel = raise_parcel(
+            "market", item_id, item["title"], item["seller"], user["username"],
+            user["username"],
+            pickup={"class": d.get("pickup_class"), "area": d.get("pickup_area")},
+            dropoff={"class": d.get("dropoff_class"), "area": d.get("dropoff_area")},
+            notes=d.get("delivery_notes"))
+    return jsonify(success=True, delivery=(_delivery_public(parcel) if parcel else None))
 
 
 def _add_cash_currency(username, currency, delta):
@@ -5118,7 +5185,8 @@ def gov():
 # ============================================================
 CONFIG_FIELDS = ["vat_rate", "tax_period_days", "salary_period_days", "savings_rate",
                  "bond_rate", "bond_days", "company_fee", "loan_max", "loan_days",
-                 "starting_grant", "gdp", "gdp_multiplier"]
+                 "starting_grant", "gdp", "gdp_multiplier",
+                 "courier_wage", "delivery_levy"]
 
 
 @app.route("/admin/config", methods=["GET"])
@@ -7071,7 +7139,9 @@ ABOUT CYVATHON — a digital micronation with a live economy and an elected gove
 
 CURRENCIES: The Cybuck (CB) is the main currency. Pegs: 1 CB = 1 Pufferbuck (PUFB) = 10 Aquilines (AQ) = 50 Cybits (CBT). Cybits are the small "change" of a Cybuck — fractional Cybucks are automatically kept as Cybits so Cybuck balances stay whole. New citizens receive 100 of each currency.
 
-MONEY — the Bank (/bank): send money to other citizens, convert between the four currencies, a Savings account (5% monthly interest), Government Bonds (+10% after 30 days), and Loans up to 5000 CB (/loans). A 10% VAT is collected monthly into the Treasury. Borrowed money and your welcome grant can't be transferred away — only money you've earned.
+MONEY — the Bank (/bank): send money to other citizens, convert between the four currencies, a Savings account (5% monthly interest), Government Bonds (+10% after 30 days), and Loans up to 5000 CB (/loans). A 10% VAT is collected monthly into the Treasury, plus a 5% Cyvazon delivery levy on top while the delivery service is running — that levy is what keeps delivery free for everyone. Borrowed money and your welcome grant can't be transferred away — only money you've earned. All these rates are set by the President and can change.
+
+DEBIT CARD (/card): every citizen has a printable Cyvathon debit card with their own card number, a barcode and a QR code. Print it, and another citizen can scan it at /pay to send you money without typing your username. Tap the card on screen to turn it over.
 
 BUSINESS: Found a company for 1000 CB (/company); take it public (IPO) and trade its shares on the Stock Exchange (/exchange); pay dividends to shareholders. The Jobs Board (/jobs) lets you apply to any company for a salaried role. Marketplaces: the national Import & Export hub (/marketplace) and per-state local markets.
 
@@ -7085,7 +7155,13 @@ GOVERNMENT: a President leads the nation; the Prime Minister and Judge are elect
 
 COMMUNITY: Chat (/chat) is a full messenger — public square, group channels, per-state channels and DMs, with @mentions, replies, emoji reactions, typing indicators, online status, GIFs, image sharing and voice messages. Mail (/mail) — reached from the Chat/Mail toggle — is a Gmail-style inbox where you compose to recipients you pick from a list (or broadcast to everyone), with threaded replies. Share Videos (/videos) by YouTube link or uploading from your device, and write Blogs (/blogs) that others can like and comment on. Climb the Leaderboards (/leaderboard) — richest citizens, top founders, top recruiters. Track your cash and investments in the Portfolio (/portfolio). Browse the Citizens directory (/citizens) and National News (/news). You'll get notification pop-ups for DMs, mentions, mail, approvals, news and opened elections.
 
-CASINO (/casino): bet Cybucks against the House (the Treasury) — Coin Flip, Lucky Number dice, and Slots.
+CASINO (/casino): bet Cybucks against the House (the Treasury) — Coin Flip, Lucky Number dice, and Slots. There is also a multiplayer Bluff card game.
+
+CARD PACKETS (/packet): trade real Match Attax football cards with other citizens. Search any footballer in an online football database — their photo, club, position and nationality are pulled in automatically — then record the card you actually pulled: its subset (Base, Captain, 100 Club, Hall of Fame, Jersey Relic and so on) and its finish (Blue Crystal, Black Edge 1:30 packets, Gold Edge 1:35, Goldrush /100, Gold Rainbow 1/1 and more). You can photograph your own copy and that becomes the card face. Tap any card to open it full size and flip it over for the stats. Browse other citizens' packets, wishlist cards you're missing (the owner is notified), mark your own spares "for trade", then offer cards from your packet for theirs. When a trade is accepted the cards swap over and Cyvazon raises a parcel each way so the physical cards actually change hands.
+
+CYVAZON (/cyvazon) — the national delivery service. Delivery is FREE for whoever requests it, anywhere in school: say which class it's collected from and which class it's going to, and a courier runs it. Buying on the marketplace or accepting a card trade raises a parcel automatically, so nobody can take the money or the card and quietly keep the goods. Set your usual class once on the Cyvazon page and deliveries to you are addressed there automatically. Becoming a courier: apply on the Cyvazon page, and the PRESIDENT reviews and approves every applicant before they can carry other citizens' property. Approved couriers earn 500 CB per pay period on top of their normal salary — more than most jobs in Cyvathon — and are paid from the Treasury out of the delivery levy. Only the person RECEIVING a parcel can confirm it arrived; a courier cannot close their own run. Couriers can't carry their own parcels, and can't stand down while still holding one.
+
+JUSTICE: the Court (/court) can fine a citizen and jail them. A jailed citizen can only reach the jail page (/jail) until their sentence is served. Convictions are recorded on a criminal record and bar a citizen from standing for office. Ministry seats are filled by application (/ministries) — once enough eligible citizens apply, an election opens automatically.
 
 GROW CYVATHON: invite friends via /invite — you earn 500 CB for every friend who joins on your link and gets approved by the President. New signups are reviewed and approved by the President before they can log in, to keep bad actors out.
 """
@@ -8120,6 +8196,12 @@ def packet_trade_respond():
     notify(t["from_user"], f"✅ {me} accepted your card trade — you got {gave}.", "/packet")
     log_txn("cards", t["from_user"], me, 0, "cards", f"Card trade: {got} for {gave}")
 
+    # The cards have swapped owner in the database; Cyvazon moves the physical
+    # ones. A parcel each way, so neither side can bank the trade and then
+    # quietly hang on to the cardboard.
+    raise_parcel("card", tid, got, t["from_user"], me, me)
+    raise_parcel("card", tid, gave, me, t["from_user"], me)
+
     # Anyone still wishing for a card that just changed hands is told where it went.
     for cid in offer_ids + want_ids:
         new_owner = me if cid in offer_ids else t["from_user"]
@@ -8160,6 +8242,600 @@ def packet_summary():
                    trading=sum(c.get("quantity") or 1 for c in mine if c.get("for_trade")),
                    up_for_trade=len(market))
 
+
+# ============================================================
+#  CYVAZON — the national delivery service
+# ============================================================
+#  Citizens sign up as couriers and run parcels between classrooms.
+#  Delivery is free to whoever requests it, so the nation pays for it
+#  collectively: DELIVERY_LEVY rides on top of VAT while the service is
+#  open, and couriers draw COURIER_WAGE a week from the Treasury.
+#
+#  Marketplace sales and card trades raise a parcel automatically. That is
+#  the point of it — the money or the card moves the instant a deal is
+#  struck, so without a tracked handover there is nothing stopping someone
+#  pocketing the goods. A parcel makes the physical half of the bargain
+#  visible to both sides and to the courier carrying it.
+
+# Where in the school a parcel can be picked up or dropped off. Classes are
+# free text (every school names them differently); this is the coarse
+# "which part of the building" picker that goes with the class.
+SCHOOL_AREAS = [
+    "Classroom", "Form room", "Library", "Canteen", "Science lab",
+    "Computer lab", "Art room", "Music room", "Sports hall", "Playground",
+    "Field", "Assembly hall", "Reception", "Staff room", "Corridor",
+    "Bus bay", "Gate",
+]
+
+DELIVERY_STATUSES = ("open", "claimed", "picked_up", "delivered", "cancelled")
+
+MAX_OPEN_PARCELS = 20      # per citizen, so nobody floods the board
+
+
+def _delivery_missing():
+    return jsonify(success=False,
+                   error="Cyvazon isn't enabled yet — the database needs a quick update "
+                         "(run migration_delivery.sql)."), 503
+
+
+def _courier_row(username):
+    try:
+        r = supabase.table("couriers").select("*").eq("username", username).execute().data
+    except Exception:
+        return None
+    return r[0] if r else None
+
+
+def is_courier(user):
+    """Only an APPROVED, still-active courier counts. A pending applicant can
+    see that they applied and nothing else — they aren't carrying anyone's
+    property until the President has vetted them."""
+    if not user:
+        return False
+    row = _courier_row(user["username"])
+    return bool(row and row.get("active") and (row.get("status") or "pending") == "approved")
+
+
+def _clean_area(v):
+    v = (v or "").strip()[:40]
+    return v if v in SCHOOL_AREAS else ""
+
+
+def _delivery_public(row):
+    return {
+        "id":            row.get("id"),
+        "kind":          row.get("kind") or "custom",
+        "ref_id":        row.get("ref_id"),
+        "item_label":    row.get("item_label") or "",
+        "sender":        row.get("sender"),
+        "recipient":     row.get("recipient"),
+        "requested_by":  row.get("requested_by"),
+        "pickup_class":  row.get("pickup_class") or "",
+        "pickup_area":   row.get("pickup_area") or "",
+        "dropoff_class": row.get("dropoff_class") or "",
+        "dropoff_area":  row.get("dropoff_area") or "",
+        "notes":         row.get("notes") or "",
+        "status":        row.get("status") or "open",
+        "courier":       row.get("courier"),
+        "created_at":    row.get("created_at"),
+        "claimed_at":    row.get("claimed_at"),
+        "delivered_at":  row.get("delivered_at"),
+    }
+
+
+def _where(cls, area):
+    """'8B (Science lab)' — how a stop reads on the board."""
+    cls, area = (cls or "").strip(), (area or "").strip()
+    if cls and area:
+        return f"{cls} ({area})"
+    return cls or area or "unspecified"
+
+
+def raise_parcel(kind, ref_id, label, sender, recipient, requested_by,
+                 pickup=None, dropoff=None, notes=""):
+    """Put a parcel on the Cyvazon board. Best-effort: a delivery failing to
+    record must never roll back the sale or trade that created it."""
+    if not DELIVERY_OPEN or sender == recipient:
+        return None
+    pickup = pickup or {}
+    dropoff = dropoff or {}
+    # Fall back to wherever each citizen said they're normally found.
+    if not pickup.get("class"):
+        pickup = _home_of(sender)
+    if not dropoff.get("class"):
+        dropoff = _home_of(recipient)
+    row = {
+        "kind": kind, "ref_id": ref_id, "item_label": (label or "")[:140],
+        "sender": sender, "recipient": recipient, "requested_by": requested_by,
+        "pickup_class":  (pickup.get("class") or "")[:40],
+        "pickup_area":   _clean_area(pickup.get("area")),
+        "dropoff_class": (dropoff.get("class") or "")[:40],
+        "dropoff_area":  _clean_area(dropoff.get("area")),
+        "notes": (notes or "")[:200],
+    }
+    try:
+        made = supabase.table("deliveries").insert(row).execute().data[0]
+    except Exception as ex:
+        logging.warning("parcel not raised (%s): %s", kind, ex)
+        return None
+    notify(sender, f"\U0001F4E6 Cyvazon parcel raised: hand '{row['item_label']}' to a courier "
+                   f"at {_where(row['pickup_class'], row['pickup_area'])}.", "/cyvazon")
+    notify(recipient, f"\U0001F4E6 '{row['item_label']}' is coming to you via Cyvazon.", "/cyvazon")
+    return made
+
+
+def _home_of(username):
+    try:
+        r = supabase.table("cybucks").select("home_class,home_area") \
+            .eq("username", username).execute().data
+    except Exception:
+        return {}
+    if not r:
+        return {}
+    return {"class": r[0].get("home_class") or "", "area": r[0].get("home_area") or ""}
+
+
+# ---- routes -----------------------------------------------------------
+@app.route("/cyvazon")
+def cyvazon_page():
+    return app.send_static_file("cyvazon.html")
+
+
+@app.route("/cyvazon/config")
+@limiter.limit("60/minute")
+def cyvazon_config():
+    """Everything the page needs to render its forms."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    row = _courier_row(user["username"])
+    return jsonify(success=True, areas=SCHOOL_AREAS,
+                   open=bool(DELIVERY_OPEN), wage=COURIER_WAGE,
+                   levy=DELIVERY_LEVY, vat=VAT_RATE,
+                   salary_days=SALARY_PERIOD_DAYS,
+                   me=user["username"],
+                   home={"class": user.get("home_class") or "",
+                         "area": user.get("home_area") or ""},
+                   courier=is_courier(user),
+                   courier_status=((row or {}).get("status") or "") if row and row.get("active") else "",
+                   is_admin=is_treasury_admin(user),
+                   deliveries_done=(row or {}).get("deliveries") or 0)
+
+
+@app.route("/cyvazon/home", methods=["POST"])
+@limiter.limit("20/minute")
+def cyvazon_set_home():
+    """Where you're normally found, so parcels can be addressed to you."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json() or {}
+    patch = {"home_class": (d.get("class") or "").strip()[:40],
+             "home_area": _clean_area(d.get("area"))}
+    try:
+        supabase.table("cybucks").update(patch).eq("username", user["username"]).execute()
+    except Exception:
+        return _delivery_missing()
+    return jsonify(success=True, home={"class": patch["home_class"], "area": patch["home_area"]})
+
+
+@app.route("/cyvazon/signup", methods=["POST"])
+@limiter.limit("10/minute")
+def cyvazon_signup():
+    """Sign on as a courier. Pays COURIER_WAGE a week from the Treasury."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not DELIVERY_OPEN:
+        return jsonify(success=False, error="Cyvazon recruitment is closed right now."), 403
+    d = request.get_json() or {}
+    covers = (d.get("covers") or "").strip()[:120]
+    note   = (d.get("note") or "").strip()[:200]
+    me = user["username"]
+
+    existing = _courier_row(me)
+    if existing and existing.get("status") == "approved" and existing.get("active"):
+        return jsonify(success=False, error="You're already a courier"), 400
+
+    try:
+        if existing:
+            # Re-applying after standing down or being turned away goes back
+            # into the queue — approval isn't something you keep forever.
+            supabase.table("couriers").update(
+                {"active": True, "status": "pending", "covers": covers, "note": note,
+                 "left_at": None, "decided_by": None, "decided_at": None}) \
+                .eq("username", me).execute()
+        else:
+            supabase.table("couriers").insert(
+                {"username": me, "covers": covers, "note": note, "status": "pending"}).execute()
+    except Exception:
+        return _delivery_missing()
+    add_record(me, "Applied to join the Cyvazon courier crew.")
+    for boss in sorted(TREASURY_ADMINS):
+        notify(boss, "\U0001F69A " + me + " applied to be a Cyvazon courier.",
+               "/cyvazon?tab=admin")
+    return jsonify(success=True, courier=False, status="pending")
+
+
+@app.route("/cyvazon/resign", methods=["POST"])
+@limiter.limit("10/minute")
+def cyvazon_resign():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    # Don't let someone walk off holding other people's parcels.
+    try:
+        holding = supabase.table("deliveries").select("id").eq("courier", me) \
+            .in_("status", ["claimed", "picked_up"]).execute().data or []
+    except Exception:
+        return _delivery_missing()
+    if holding:
+        return jsonify(success=False,
+                       error=f"Finish or drop your {len(holding)} active parcel(s) first."), 400
+    supabase.table("couriers").update({"active": False, "left_at": _now().isoformat()}) \
+        .eq("username", me).execute()
+    add_record(me, "Stood down as a Cyvazon courier.")
+    return jsonify(success=True, courier=False)
+
+
+@app.route("/cyvazon/couriers")
+@limiter.limit("60/minute")
+def cyvazon_couriers():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        rows = supabase.table("couriers").select("*").eq("active", True) \
+            .eq("status", "approved").execute().data or []
+    except Exception:
+        return _delivery_missing()
+    avatars = {}
+    try:
+        for c in (supabase.table("cybucks").select("username,avatar").execute().data or []):
+            avatars[c["username"]] = c.get("avatar")
+    except Exception:
+        pass
+    out = [{"username": r["username"], "covers": r.get("covers") or "",
+            "note": r.get("note") or "", "deliveries": r.get("deliveries") or 0,
+            "avatar": avatars.get(r["username"]), "me": r["username"] == user["username"]}
+           for r in rows]
+    out.sort(key=lambda c: (-c["deliveries"], c["username"].lower()))
+    return jsonify(success=True, couriers=out, wage=COURIER_WAGE)
+
+
+@app.route("/cyvazon/request", methods=["POST"])
+@limiter.limit("20/minute")
+def cyvazon_request():
+    """Send anything to anyone, anywhere in school. Free."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not DELIVERY_OPEN:
+        return jsonify(success=False, error="Cyvazon is closed right now."), 403
+    me = user["username"]
+    d = request.get_json() or {}
+
+    recipient = (d.get("recipient") or "").strip()[:32]
+    label     = (d.get("item_label") or "").strip()[:140]
+    if not recipient:
+        return jsonify(success=False, error="Who is it going to?"), 400
+    if recipient == me:
+        return jsonify(success=False, error="You can't post something to yourself"), 400
+    if not label:
+        return jsonify(success=False, error="Say what you're sending"), 400
+    if not (d.get("pickup_class") or "").strip():
+        return jsonify(success=False, error="Which class is it being collected from?"), 400
+    if not (d.get("dropoff_class") or "").strip():
+        return jsonify(success=False, error="Which class is it going to?"), 400
+
+    exists = supabase.table("cybucks").select("username").eq("username", recipient).execute().data
+    if not exists:
+        return jsonify(success=False, error="No such citizen"), 404
+
+    try:
+        mine = supabase.table("deliveries").select("id").eq("requested_by", me) \
+            .in_("status", ["open", "claimed", "picked_up"]).execute().data or []
+    except Exception:
+        return _delivery_missing()
+    if len(mine) >= MAX_OPEN_PARCELS:
+        return jsonify(success=False,
+                       error=f"You already have {MAX_OPEN_PARCELS} parcels in flight."), 400
+
+    made = raise_parcel("custom", None, label, me, recipient, me,
+                        pickup={"class": d.get("pickup_class"), "area": d.get("pickup_area")},
+                        dropoff={"class": d.get("dropoff_class"), "area": d.get("dropoff_area")},
+                        notes=d.get("notes"))
+    if not made:
+        return _delivery_missing()
+    return jsonify(success=True, delivery=_delivery_public(made))
+
+
+@app.route("/cyvazon/board")
+@limiter.limit("60/minute")
+def cyvazon_board():
+    """Unclaimed jobs, the runs I'm carrying, and my own parcels."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        rows = supabase.table("deliveries").select("*") \
+            .order("created_at", desc=True).limit(300).execute().data or []
+    except Exception:
+        return _delivery_missing()
+
+    live = [r for r in rows if r.get("status") != "cancelled"]
+    # A courier shouldn't carry their own parcel — that defeats the point.
+    board = [_delivery_public(r) for r in live
+             if r.get("status") == "open" and me not in (r.get("sender"), r.get("recipient"))]
+    carrying = [_delivery_public(r) for r in live
+                if r.get("courier") == me and r.get("status") in ("claimed", "picked_up")]
+    sending = [_delivery_public(r) for r in live if r.get("sender") == me]
+    incoming = [_delivery_public(r) for r in live if r.get("recipient") == me]
+    done = [_delivery_public(r) for r in live
+            if r.get("courier") == me and r.get("status") == "delivered"][:20]
+    return jsonify(success=True, me=me, courier=is_courier(user), open=bool(DELIVERY_OPEN),
+                   board=board, carrying=carrying, sending=sending,
+                   incoming=incoming, completed=done)
+
+
+@app.route("/cyvazon/claim", methods=["POST"])
+@limiter.limit("30/minute")
+def cyvazon_claim():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_courier(user):
+        return jsonify(success=False, error="Sign up as a Cyvazon courier first"), 403
+    me = user["username"]
+    try:
+        did = int((request.get_json() or {}).get("delivery_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad parcel"), 400
+
+    try:
+        r = supabase.table("deliveries").select("*").eq("id", did).execute().data
+    except Exception:
+        return _delivery_missing()
+    if not r:
+        return jsonify(success=False, error="Parcel not found"), 404
+    p = r[0]
+    if p["status"] != "open":
+        return jsonify(success=False, error="Another courier already took that one"), 409
+    if me in (p["sender"], p["recipient"]):
+        return jsonify(success=False, error="You can't carry your own parcel"), 400
+
+    # Claim it conditionally, so two couriers tapping at once can't both win.
+    claimed = supabase.table("deliveries") \
+        .update({"status": "claimed", "courier": me, "claimed_at": _now().isoformat()}) \
+        .eq("id", did).eq("status", "open").execute().data
+    if not claimed:
+        return jsonify(success=False, error="Another courier already took that one"), 409
+
+    notify(p["sender"], f"\U0001F6F5 {me} is collecting '{p['item_label']}' from "
+                        f"{_where(p['pickup_class'], p['pickup_area'])}.", "/cyvazon")
+    notify(p["recipient"], f"\U0001F6F5 {me} is bringing you '{p['item_label']}'.", "/cyvazon")
+    return jsonify(success=True, status="claimed")
+
+
+@app.route("/cyvazon/status", methods=["POST"])
+@limiter.limit("40/minute")
+def cyvazon_status():
+    """Courier marks a parcel collected; the RECIPIENT confirms it arrived.
+    Only the person receiving the goods can close a run — otherwise a courier
+    could mark everything delivered and the whole system means nothing."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    d = request.get_json() or {}
+    action = (d.get("action") or "").strip()
+    if action not in ("picked_up", "delivered", "drop"):
+        return jsonify(success=False, error="Unknown action"), 400
+    try:
+        did = int(d.get("delivery_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad parcel"), 400
+
+    try:
+        r = supabase.table("deliveries").select("*").eq("id", did).execute().data
+    except Exception:
+        return _delivery_missing()
+    if not r:
+        return jsonify(success=False, error="Parcel not found"), 404
+    p = r[0]
+
+    if action == "picked_up":
+        if p.get("courier") != me:
+            return jsonify(success=False, error="That isn't your run"), 403
+        if p["status"] != "claimed":
+            return jsonify(success=False, error="That parcel isn't waiting for collection"), 400
+        supabase.table("deliveries").update({"status": "picked_up"}).eq("id", did).execute()
+        notify(p["recipient"], f"\U0001F4E6 '{p['item_label']}' is on its way to "
+                               f"{_where(p['dropoff_class'], p['dropoff_area'])}.", "/cyvazon")
+        return jsonify(success=True, status="picked_up")
+
+    if action == "drop":
+        if p.get("courier") != me:
+            return jsonify(success=False, error="That isn't your run"), 403
+        if p["status"] not in ("claimed", "picked_up"):
+            return jsonify(success=False, error="Nothing to drop"), 400
+        supabase.table("deliveries").update(
+            {"status": "open", "courier": None, "claimed_at": None}).eq("id", did).execute()
+        return jsonify(success=True, status="open")
+
+    # ---- delivered: only the recipient signs for it ----
+    if p["recipient"] != me:
+        return jsonify(success=False,
+                       error="Only the person receiving the parcel can confirm it arrived."), 403
+    if p["status"] not in ("claimed", "picked_up"):
+        return jsonify(success=False, error="That parcel hasn't been collected yet"), 400
+
+    signed = supabase.table("deliveries") \
+        .update({"status": "delivered", "delivered_at": _now().isoformat()}) \
+        .eq("id", did).in_("status", ["claimed", "picked_up"]).execute().data
+    if not signed:
+        return jsonify(success=False, error="That parcel is already settled"), 400
+
+    courier = p.get("courier")
+    if courier:
+        cas_num("couriers", [("username", courier)], "deliveries", 1, places=0)
+        notify(courier, f"✅ {me} confirmed delivery of '{p['item_label']}'.", "/cyvazon")
+        add_record(courier, f"Delivered '{p['item_label']}' to {me}.")
+    notify(p["sender"], f"✅ '{p['item_label']}' reached {me}.", "/cyvazon")
+    return jsonify(success=True, status="delivered")
+
+
+@app.route("/cyvazon/cancel", methods=["POST"])
+@limiter.limit("20/minute")
+def cyvazon_cancel():
+    """The sender can pull a parcel back, but only before a courier has it."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        did = int((request.get_json() or {}).get("delivery_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad parcel"), 400
+    try:
+        r = supabase.table("deliveries").select("*").eq("id", did).execute().data
+    except Exception:
+        return _delivery_missing()
+    if not r:
+        return jsonify(success=False, error="Parcel not found"), 404
+    p = r[0]
+    if me not in (p["sender"], p["requested_by"]) and not is_treasury_admin(user):
+        return jsonify(success=False, error="That isn't your parcel"), 403
+    if p["status"] not in ("open", "claimed"):
+        return jsonify(success=False, error="Too late — it's already on the move"), 400
+    supabase.table("deliveries").update({"status": "cancelled"}).eq("id", did).execute()
+    if p.get("courier"):
+        notify(p["courier"], f"❌ '{p['item_label']}' was cancelled by {me}.", "/cyvazon")
+    return jsonify(success=True, status="cancelled")
+
+
+@app.route("/cyvazon/admin")
+@limiter.limit("60/minute")
+def cyvazon_admin():
+    """The President's view of the delivery service: who wants to carry
+    parcels, who already does, and what the service is costing."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    try:
+        rows = supabase.table("couriers").select("*").execute().data or []
+        parcels = supabase.table("deliveries").select("status").execute().data or []
+    except Exception:
+        return _delivery_missing()
+
+    def shape(r):
+        return {"username": r["username"], "status": r.get("status") or "pending",
+                "active": bool(r.get("active")), "covers": r.get("covers") or "",
+                "note": r.get("note") or "", "deliveries": r.get("deliveries") or 0,
+                "hired_at": r.get("hired_at"), "decided_by": r.get("decided_by")}
+
+    pending  = [shape(r) for r in rows
+                if r.get("active") and (r.get("status") or "pending") == "pending"]
+    approved = [shape(r) for r in rows if r.get("active") and r.get("status") == "approved"]
+    past     = [shape(r) for r in rows if r.get("status") == "rejected" or not r.get("active")]
+    counts = {}
+    for p in parcels:
+        k = p.get("status") or "open"
+        counts[k] = counts.get(k, 0) + 1
+    return jsonify(success=True, pending=pending, approved=approved, past=past,
+                   parcels=counts, wage=COURIER_WAGE, levy=DELIVERY_LEVY,
+                   open=bool(DELIVERY_OPEN),
+                   weekly_cost=round(COURIER_WAGE * len(approved), 2))
+
+
+@app.route("/cyvazon/admin/decide", methods=["POST"])
+@limiter.limit("30/minute")
+def cyvazon_admin_decide():
+    """Approve, turn away, or revoke a courier."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json() or {}
+    who = (d.get("username") or "").strip()[:32]
+    action = (d.get("action") or "").strip()
+    if action not in ("approve", "reject", "revoke"):
+        return jsonify(success=False, error="Unknown action"), 400
+    row = _courier_row(who)
+    if not row:
+        return jsonify(success=False, error="No such applicant"), 404
+
+    if action == "approve":
+        if row.get("status") == "approved" and row.get("active"):
+            return jsonify(success=True, status="approved")
+        supabase.table("couriers").update(
+            {"status": "approved", "active": True, "decided_by": user["username"],
+             "decided_at": _now().isoformat()}).eq("username", who).execute()
+        # The wage clock starts on approval — nobody is paid for time spent
+        # waiting in the queue.
+        try:
+            supabase.table("cybucks").update({"last_courier_pay": _now().isoformat()}) \
+                .eq("username", who).execute()
+        except Exception:
+            pass
+        add_record(who, "Approved as a Cyvazon courier "
+                        "(" + format(COURIER_WAGE, "g") + " CB per pay period).")
+        notify(who, "✅ You're an approved Cyvazon courier — "
+                    + format(COURIER_WAGE, "g") + " CB per pay period. "
+                    "Open the jobs board to start.", "/cyvazon?tab=jobs")
+        return jsonify(success=True, status="approved")
+
+    # reject / revoke — don't strand parcels the courier is already holding
+    try:
+        holding = supabase.table("deliveries").select("id").eq("courier", who) \
+            .in_("status", ["claimed", "picked_up"]).execute().data or []
+    except Exception:
+        holding = []
+    for h in holding:
+        supabase.table("deliveries").update(
+            {"status": "open", "courier": None, "claimed_at": None}).eq("id", h["id"]).execute()
+
+    supabase.table("couriers").update(
+        {"status": "rejected", "active": False, "decided_by": user["username"],
+         "decided_at": _now().isoformat()}).eq("username", who).execute()
+    if action == "revoke":
+        add_record(who, "Removed from the Cyvazon courier crew.")
+        notify(who, "Your Cyvazon courier licence was withdrawn.", "/cyvazon")
+    else:
+        notify(who, "Your Cyvazon courier application wasn't approved.", "/cyvazon")
+    return jsonify(success=True, status="rejected", released=len(holding))
+
+
+@app.route("/cyvazon/summary")
+@limiter.limit("60/minute")
+def cyvazon_summary():
+    """Counts for the dashboard banner."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        rows = supabase.table("deliveries").select("sender,recipient,courier,status") \
+            .in_("status", ["open", "claimed", "picked_up"]).execute().data or []
+    except Exception:
+        return jsonify(success=True, enabled=False, waiting=0, incoming=0,
+                       carrying=0, to_hand_over=0, courier=False)
+    crow = _courier_row(me)
+    return jsonify(success=True, enabled=True, courier=is_courier(user),
+                   courier_status=((crow or {}).get("status") or "") if crow and crow.get("active") else "",
+                   is_admin=is_treasury_admin(user),
+                   open=bool(DELIVERY_OPEN), wage=COURIER_WAGE,
+                   waiting=sum(1 for r in rows if r["status"] == "open"
+                               and me not in (r["sender"], r["recipient"])),
+                   incoming=sum(1 for r in rows if r["recipient"] == me),
+                   to_hand_over=sum(1 for r in rows if r["sender"] == me
+                                    and r["status"] in ("open", "claimed")),
+                   carrying=sum(1 for r in rows if r.get("courier") == me))
 
 # ============================================================
 #  JUSTICE — jail, criminal records, eligibility for office
