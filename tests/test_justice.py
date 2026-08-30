@@ -70,6 +70,13 @@ ok, why = main.office_eligibility(kabir)
 check("citizen with an unpaid loan is barred", ok, False)
 check("  reason mentions loan", "loan" in why.lower(), True)
 
+# A defaulted loan can never be repaid (/loans/repay refuses them), so counting
+# it as outstanding would bar the citizen from office with no way back.
+db.data["loans"][0]["defaulted"] = True
+check("a defaulted loan does NOT bar office forever",
+      main.office_eligibility(kabir)[0], True)
+db.data["loans"][0]["defaulted"] = False
+
 
 print("\n=== 2. permanent vs expiring records ===")
 check("permanent by default (RECORD_EXPIRY_DAYS=0)",

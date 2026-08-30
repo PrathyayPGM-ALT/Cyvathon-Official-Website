@@ -8921,12 +8921,18 @@ def criminal_records(username, active_only=False):
 
 
 def _has_unpaid_loan(username):
+    """A loan still owed. Defaulted loans are excluded on purpose: the Treasury
+    has already seized the assets and /loans/repay refuses to settle them, so
+    treating one as outstanding would bar the citizen from office permanently
+    with no way back."""
     try:
         rows = supabase.table("loans").select("id,repaid,defaulted") \
             .eq("username", username).eq("repaid", False).execute().data or []
     except Exception:
         return False
-    return bool(rows)
+    # Filter here rather than in the query: on older rows `defaulted` can be
+    # NULL, which an .eq(False) would miss entirely.
+    return any(not r.get("defaulted") for r in rows)
 
 
 def office_eligibility(user):
@@ -9244,12 +9250,35 @@ def ministry_apply():
     if (ministry.get("minister") or "Vacant") != "Vacant":
         return jsonify(success=False, error="That ministry already has a minister."), 400
 
+    # Check for a real duplicate first, so a genuine database problem below
+    # isn't misreported as "you already applied".
+    try:
+        already = supabase.table("ministry_applications").select("id") \
+            .eq("ministry_id", mid).eq("username", user["username"]) \
+            .eq("status", "pending").execute().data
+    except Exception:
+        return jsonify(success=False,
+                       error="Ministry applications aren't enabled yet — the database needs a "
+                             "quick update (run migration_justice_cabinet.sql)."), 503
+    if already:
+        return jsonify(success=False, error="You have already applied for this ministry."), 400
+
     try:
         supabase.table("ministry_applications").insert({
             "ministry_id": mid, "username": user["username"], "statement": statement,
+            "status": "pending",
         }).execute()
-    except Exception:
-        return jsonify(success=False, error="You have already applied for this ministry."), 400
+    except Exception as ex:
+        # A unique-constraint hit here means a stale non-pending row exists;
+        # anything else is a real fault worth surfacing honestly.
+        if "duplicate" in str(ex).lower() or "unique" in str(ex).lower():
+            supabase.table("ministry_applications").update(
+                {"status": "pending", "statement": statement}) \
+                .eq("ministry_id", mid).eq("username", user["username"]).execute()
+        else:
+            logging.exception("ministry application failed")
+            return jsonify(success=False,
+                           error="Couldn't file your application — please try again."), 500
 
     add_record(user["username"], f"Applied for the post of {ministry['name']}.")
 

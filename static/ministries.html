@@ -119,19 +119,31 @@
 
     /* Vacant ministries are open to applications. Once enough citizens have
        applied, the backend opens the election by itself. */
-    let VAC = {}, ELIGIBLE = false, WHY = "", NEEDED = 4;
+    let VAC = {}, ELIGIBLE = false, WHY = "", NEEDED = 4, VAC_ERR = "";
 
     async function loadVacancies(){
       try{
         const d = await api("/ministries/vacancies");
         VAC = {}; (d.vacancies || []).forEach(v => VAC[v.id] = v);
         ELIGIBLE = d.eligible; WHY = d.reason || ""; NEEDED = d.min_applicants || 4;
-      }catch(e){ VAC = {}; }
+        VAC_ERR = "";
+      }catch(e){
+        // Swallowing this used to hide the whole apply form with no
+        // explanation, which looked exactly like "applying is broken".
+        VAC = {}; VAC_ERR = e.message || "Couldn't load vacancies.";
+      }
     }
 
     function vacancyHtml(m){
       const v = VAC[m.id];
-      if (!v) return "";
+      if (!v) {
+        // Only a vacant seat should ever show this block; if the vacancy
+        // lookup itself failed, say so rather than showing nothing.
+        if (VAC_ERR && (m.minister === "Vacant" || !m.minister))
+          return `<div class="vac"><h4><i class="fas fa-triangle-exclamation"></i> This seat is vacant</h4>
+            <p class="inelig">${esc(VAC_ERR)}</p></div>`;
+        return "";
+      }
       const pct = Math.min(100, Math.round(v.applicants / v.needed * 100));
       const short = Math.max(0, v.needed - v.applicants);
       return `<div class="vac">
