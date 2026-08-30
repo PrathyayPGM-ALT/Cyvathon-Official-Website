@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvashield · Cyvathon</title>
+  <!-- social / SEO metadata -->
+  <meta name="description" content="Cyvashield — Cyvathon's national insurance. Free cover for every citizen against theft, lost parcels and scams." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/shield" />
+  <meta name="theme-color" content="#1fd6a6" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="Cyvashield · Cyvathon" />
+  <meta property="og:description" content="Free national insurance for every Cyvathon citizen." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/shield" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Cyvashield · Cyvathon" />
+  <meta name="twitter:description" content="Free national insurance for every Cyvathon citizen." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    /* ============================================================
+       CYVASHIELD — its own livery. Deep green on slate: this is the
+       thing that catches you when something goes wrong, and it should
+       feel steady rather than loud. The Cyvathon nav keeps the site
+       theme so you never lose your bearings.
+       ============================================================ */
+    .sh{
+      --sh-ink:#0d1a1c;
+      --sh-ink-2:#132528;
+      --sh-green:#1fd6a6;
+      --sh-green-2:#5cebc4;
+      --sh-deep:#0e9d78;
+      --sh-line:rgba(255,255,255,.1);
+      --sh-text:#eefaf6;
+      --sh-muted:#9db8b2;
+      --sh-warn:#ffce56;
+      --sh-bad:#ff5d6c;
+    }
+    :root[data-theme="light"] .sh{
+      --sh-ink:#ffffff; --sh-ink-2:#eff7f4;
+      --sh-line:rgba(15,60,50,.14);
+      --sh-text:#0d2a24; --sh-muted:#4f6b64;
+      --sh-green:#0f9d72; --sh-green-2:#0b7d5b;
+    }
+
+    /* ---- hero ---- */
+    .sh-hero{ background:linear-gradient(135deg,var(--sh-ink),var(--sh-ink-2));
+      border:1px solid var(--sh-line); border-radius:20px; padding:2.1rem 2rem 1.9rem;
+      margin-bottom:2rem; position:relative; overflow:hidden; }
+    .sh-hero::after{ content:""; position:absolute; right:-70px; top:-70px; width:260px; height:260px;
+      border-radius:50%; background:radial-gradient(circle,rgba(31,214,166,.2),transparent 68%); }
+    .sh-brand{ display:flex; align-items:center; gap:.85rem; margin-bottom:.5rem; }
+    .sh-brand svg{ width:42px; height:48px; flex:none; }
+    .sh-logo{ font-size:2.35rem; font-weight:800; letter-spacing:-1.2px; color:var(--sh-text); line-height:1; }
+    .sh-logo .g{ color:var(--sh-green); }
+    .sh-hero p{ color:var(--sh-muted); max-width:640px; margin:0; line-height:1.65; font-size:.96rem; }
+    .sh-badges{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.1rem; }
+    .sh-badge{ display:inline-flex; align-items:center; gap:.4rem; padding:.36rem .8rem; border-radius:20px;
+      font-size:.78rem; font-weight:600; background:rgba(31,214,166,.13);
+      border:1px solid rgba(31,214,166,.36); color:var(--sh-green-2); }
+
+    /* ---- panels ---- */
+    .sh-panel{ background:var(--sh-ink); border:1px solid var(--sh-line); border-radius:16px;
+      padding:1.4rem 1.5rem; margin-bottom:1.4rem; color:var(--sh-text); }
+    .sh-panel h3{ display:flex; align-items:center; gap:.55rem; margin-bottom:.35rem; font-size:1.08rem; }
+    .sh-panel h3 i{ color:var(--sh-green); }
+    .sh-panel .sub{ color:var(--sh-muted); font-size:.86rem; margin-bottom:1rem; line-height:1.6; }
+    .sh .lbl{ display:block; font-size:.72rem; color:var(--sh-muted); margin-top:.55rem;
+      text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+    .sh input,.sh select,.sh textarea{ background:var(--sh-ink-2); border:1px solid var(--sh-line);
+      color:var(--sh-text); margin-top:5px; }
+    .sh input:focus,.sh select:focus,.sh textarea:focus{ border-color:var(--sh-green);
+      box-shadow:0 0 0 3px rgba(31,214,166,.16); }
+    .sh button{ background:linear-gradient(135deg,var(--sh-green),var(--sh-deep)); color:#04231a;
+      box-shadow:0 6px 18px rgba(31,214,166,.26); font-weight:700; }
+    .sh button:hover{ box-shadow:0 10px 24px rgba(31,214,166,.36); }
+    .sh button.ghost{ background:transparent; border:1px solid rgba(31,214,166,.5);
+      color:var(--sh-green); box-shadow:none; }
+    .sh button.ghost:hover{ background:rgba(31,214,166,.1); }
+    .sh button.danger{ background:linear-gradient(135deg,#ff6b78,#e03e4d); color:#fff; }
+    .sh button.warn{ background:linear-gradient(135deg,#ffce56,#e0a800); color:#2b2202; }
+    .sh-grid2{ display:grid; gap:.7rem; grid-template-columns:1fr 1fr; }
+    .sh-grid2 .full{ grid-column:1/-1; }
+    @media(max-width:640px){ .sh-grid2{ grid-template-columns:1fr; } }
+
+    /* ---- tabs ---- */
+    .sh-tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.6rem; }
+    .sh-tabs button{ width:auto; margin:0; padding:.55rem 1.1rem; font-size:.86rem;
+      background:var(--sh-ink); color:var(--sh-muted); border:1px solid var(--sh-line); box-shadow:none; }
+    .sh-tabs button.on{ background:linear-gradient(135deg,var(--sh-green),var(--sh-deep));
+      color:#04231a; border-color:transparent; }
+    .sh-tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem;
+      border-radius:20px; background:#e03e4d; color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
+
+    /* ---- plans ---- */
+    .plans{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); }
+    .plan{ background:var(--sh-ink); border:1px solid var(--sh-line); border-top:4px solid var(--pc);
+      border-radius:16px; padding:1.4rem 1.4rem 1.5rem; color:var(--sh-text); position:relative; }
+    .plan.on{ border-color:var(--pc); box-shadow:0 0 0 2px var(--pc) inset, 0 12px 30px rgba(0,0,0,.35); }
+    .plan .free{ position:absolute; top:1rem; right:1.1rem; font-size:.66rem; font-weight:800;
+      letter-spacing:.7px; padding:.2rem .55rem; border-radius:20px;
+      background:rgba(31,214,166,.16); color:var(--sh-green); border:1px solid rgba(31,214,166,.35); }
+    .plan h4{ font-size:1.15rem; margin-bottom:.2rem; color:var(--pc); }
+    .plan .cap{ font-size:1.9rem; font-weight:800; letter-spacing:-1px; line-height:1.1; }
+    .plan .cap small{ font-size:.7rem; font-weight:600; color:var(--sh-muted); display:block;
+      letter-spacing:.4px; text-transform:uppercase; }
+    .plan .blurb{ color:var(--sh-muted); font-size:.84rem; margin:.7rem 0 .9rem; line-height:1.55; min-height:3.2em; }
+    .plan ul{ list-style:none; margin-bottom:1rem; }
+    .plan li{ font-size:.82rem; padding:.24rem 0; display:flex; gap:.5rem; align-items:flex-start; }
+    .plan li i{ color:var(--pc); margin-top:.22rem; font-size:.75rem; }
+    .plan .cur{ text-align:center; font-size:.8rem; font-weight:700; color:var(--sh-green); padding:.5rem 0; }
+
+    /* ---- claims ---- */
+    .claims{ display:grid; gap:1rem; }
+    .claim{ background:var(--sh-ink); border:1px solid var(--sh-line); border-left:4px solid var(--sh-muted);
+      border-radius:14px; padding:1.1rem 1.25rem; color:var(--sh-text); }
+    .claim.open{ border-left-color:var(--sh-warn); }
+    .claim.approved{ border-left-color:var(--sh-green); }
+    .claim.rejected{ border-left-color:var(--sh-muted); opacity:.8; }
+    .claim.fraudulent{ border-left-color:var(--sh-bad); }
+    .claim .top{ display:flex; justify-content:space-between; gap:.8rem; flex-wrap:wrap; align-items:flex-start; }
+    .claim .what{ font-weight:700; font-size:1rem; display:flex; align-items:center; gap:.5rem; }
+    .claim .what i{ color:var(--sh-green); }
+    .claim .amt{ font-size:1.25rem; font-weight:800; color:var(--sh-green); white-space:nowrap; }
+    .claim .meta{ font-size:.78rem; color:var(--sh-muted); margin-top:.15rem; }
+    .claim .desc{ font-size:.88rem; margin:.7rem 0; line-height:1.55; white-space:pre-wrap; }
+    .claim .state{ font-size:.68rem; font-weight:800; letter-spacing:.6px; text-transform:uppercase;
+      padding:.2rem .55rem; border-radius:20px; white-space:nowrap; }
+    .claim .state.open{ background:rgba(255,206,86,.16); color:var(--sh-warn); }
+    .claim .state.approved{ background:rgba(31,214,166,.16); color:var(--sh-green); }
+    .claim .state.rejected{ background:rgba(255,255,255,.08); color:var(--sh-muted); }
+    .claim .state.fraudulent{ background:rgba(255,93,108,.16); color:var(--sh-bad); }
+    .claim .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.9rem; align-items:center; }
+    .claim .acts button{ width:auto; margin:0; padding:.45rem .95rem; font-size:.8rem; }
+    .claim .acts input{ width:120px; margin:0; padding:.45rem .7rem; font-size:.8rem; }
+    .claim .note{ font-size:.82rem; color:var(--sh-muted); font-style:italic; margin-top:.5rem;
+      padding-top:.5rem; border-top:1px solid var(--sh-line); }
+
+    /* ---- the record check ---- */
+    .checks{ margin:.8rem 0 0; padding:.75rem .9rem; border-radius:11px; background:var(--sh-ink-2);
+      border:1px solid var(--sh-line); }
+    .checks h5{ font-size:.68rem; text-transform:uppercase; letter-spacing:.7px; color:var(--sh-muted);
+      margin-bottom:.45rem; font-weight:800; }
+    .chk{ font-size:.82rem; padding:.2rem 0; display:flex; gap:.5rem; align-items:flex-start; line-height:1.5; }
+    .chk i{ margin-top:.22rem; font-size:.78rem; flex:none; }
+    .chk.good i{ color:var(--sh-green); }
+    .chk.bad  i{ color:var(--sh-bad); }
+    .chk.bad  { color:#ffc4c9; }
+    .chk.warn i{ color:var(--sh-warn); }
+    .chk.info i{ color:#7fd0ff; }
+
+    .stats{ display:flex; flex-wrap:wrap; gap:.7rem; }
+    .stat{ flex:1; min-width:120px; padding:.75rem .9rem; border-radius:12px;
+      background:var(--sh-ink-2); border:1px solid var(--sh-line); }
+    .stat b{ display:block; font-size:1.5rem; font-weight:800; }
+    .stat span{ font-size:.7rem; color:var(--sh-muted); text-transform:uppercase; letter-spacing:.5px; }
+    .empty{ color:var(--sh-muted); text-align:center; padding:2.2rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap sh">
+    <!-- HERO -->
+    <div class="sh-hero">
+      <div class="sh-brand">
+        <!-- Our own mark: a shield with a check inside it. -->
+        <svg viewBox="0 0 42 48" fill="none" aria-hidden="true">
+          <path d="M21 3 5 9v14c0 10.5 6.8 18.6 16 22 9.2-3.4 16-11.5 16-22V9L21 3Z"
+                stroke="#1fd6a6" stroke-width="2.6" stroke-linejoin="round"/>
+          <path d="M14 23.5 19 29l10-11" stroke="#1fd6a6" stroke-width="3.2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="sh-logo">Cyva<span class="g">shield</span></div>
+      </div>
+      <p>National insurance for every citizen. If a parcel never turns up, someone takes your
+        Cybucks, a trade goes bad or you get scammed — report it, and the President rules on it.
+        <b style="color:var(--sh-text)">Every plan is free.</b> Pick the cover you want; you can
+        change it whenever you like.</p>
+      <div class="sh-badges" id="heroBadges"></div>
+    </div>
+
+    <div class="sh-tabs" id="tabs"></div>
+    <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
+
+    <!-- PLANS -->
+    <section id="tab-plans" class="shpane">
+      <div class="plans" id="plans"></div>
+      <p class="small" style="text-align:center;margin-top:1.2rem;" id="planNote"></p>
+    </section>
+
+    <!-- FILE A CLAIM -->
+    <section id="tab-file" class="shpane" style="display:none;">
+      <div class="sh-panel" style="max-width:760px;margin:0 auto;">
+        <h3><i class="fas fa-file-circle-exclamation"></i> Report what happened</h3>
+        <p class="sub">Be specific. If it involves a Cyvazon parcel, a marketplace purchase or a
+          card trade, give the number — the President can then check it against the records, which
+          makes a genuine claim much easier to approve.</p>
+        <div class="sh-grid2">
+          <div><label class="lbl">What went wrong</label><select id="cCat"></select></div>
+          <div><label class="lbl">How much did you lose? (CB)</label>
+            <input id="cAmt" type="number" min="1" step="1" placeholder="e.g. 250"></div>
+          <div><label class="lbl">Linked to (optional)</label>
+            <select id="cRefKind">
+              <option value="">Nothing specific</option>
+              <option value="delivery">A Cyvazon parcel</option>
+              <option value="market">A marketplace listing</option>
+              <option value="card_trade">A card trade</option>
+            </select></div>
+          <div><label class="lbl">Its number</label>
+            <input id="cRefId" type="number" min="1" step="1" placeholder="e.g. 42"></div>
+          <div class="full"><label class="lbl">Who was responsible? (optional)</label>
+            <input id="cWho" list="citizenList" placeholder="Citizen's username">
+            <datalist id="citizenList"></datalist></div>
+          <div class="full"><label class="lbl">What happened</label>
+            <textarea id="cDesc" rows="4" placeholder="Tell the President the whole story."></textarea></div>
+          <div class="full"><label class="lbl">Evidence link (optional)</label>
+            <input id="cEvi" placeholder="https://... a screenshot or photo"></div>
+        </div>
+        <button style="margin-top:1.1rem;" onclick="fileClaim()"><i class="fas fa-paper-plane"></i> File the claim</button>
+        <p id="fileMsg" class="small" style="text-align:center;"></p>
+      </div>
+    </section>
+
+    <!-- MY CLAIMS -->
+    <section id="tab-mine" class="shpane" style="display:none;">
+      <div class="claims" id="myClaims"></div>
+    </section>
+
+    <!-- CLAIM DESK (President only) -->
+    <section id="tab-admin" class="shpane" style="display:none;">
+      <div id="adminBody"></div>
+    </section>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, CFG=null, TAB="plans", PLANS=[], CATS=[];
+    const esc=(s)=>(s==null?"":String(s))
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const safeUrl=(u)=>{
+      if(!/^https:\/\/[A-Za-z0-9._~:/?#@!$&*+,;=%-]+$/.test(u||"")) return "";
+      return encodeURI(u).replace(/["'<>]/g, encodeURIComponent);
+    };
+    const msg=(t,ok=false,el="msg")=>{const m=document.getElementById(el);
+      m.textContent=t||""; m.style.color= ok?"var(--sh-green)":"var(--red)";};
+    const plan=(k)=>PLANS.find(p=>p.key===k)||PLANS[0]||{label:"",cap:0,color:"#1fd6a6"};
+
+    /* ---- tabs ---- */
+    function drawTabs(c){
+      c = c || {};
+      const defs = [
+        ["plans","My cover","fa-shield-halved",0],
+        ["file","File a claim","fa-file-circle-exclamation",0],
+        ["mine","My claims","fa-folder-open",c.open_mine||0],
+      ];
+      // The claim desk is the President's alone. Read it from CFG, which comes
+      // from /shield/config and never touches the insurance tables.
+      if(CFG && CFG.is_admin) defs.push(["admin","Claim desk","fa-gavel",c.waiting||0]);
+      document.getElementById("tabs").innerHTML = defs.map(([k,t,i,n])=>
+        `<button class="${k===TAB?"on":""}" onclick="go('${k}')"><i class="fas ${i}"></i> ${t}${
+          n?`<span class="badge">${n}</span>`:""}</button>`).join("");
+    }
+    function go(tab){
+      TAB=tab;
+      document.querySelectorAll(".shpane").forEach(p=>p.style.display="none");
+      document.getElementById("tab-"+tab).style.display="block";
+      const order = ["plans","file","mine"].concat(CFG && CFG.is_admin?["admin"]:[]);
+      document.querySelectorAll("#tabs button").forEach((b,i)=>
+        b.classList.toggle("on", order[i]===tab));
+      msg("");
+      if(tab==="plans") drawPlans();
+      if(tab==="mine")  loadMine();
+      if(tab==="admin") loadAdmin();
+      history.replaceState(null,"","/shield?tab="+tab);
+    }
+
+    /* ---- plans ---- */
+    function drawPlans(){
+      document.getElementById("plans").innerHTML = PLANS.map(p=>{
+        const on = CFG.enrolled && CFG.plan === p.key;
+        const covers = p.covers.map(k=>{
+          const c = CATS.find(x=>x.key===k);
+          return `<li><i class="fas fa-check"></i> ${esc(c?c.label:k)}</li>`;
+        }).join("");
+        return `<div class="plan ${on?"on":""}" style="--pc:${esc(p.color)}">
+          <span class="free">FREE</span>
+          <h4>${esc(p.label)}</h4>
+          <div class="cap">${esc(p.cap)} CB<small>max per claim</small></div>
+          <div class="blurb">${esc(p.blurb)}</div>
+          <ul>${covers}<li><i class="fas fa-rotate"></i> ${esc(p.monthly)} claims a month</li></ul>
+          ${on ? `<div class="cur"><i class="fas fa-circle-check"></i> This is your cover</div>`
+               : `<button onclick="enrol('${esc(p.key)}')">${
+                    CFG.enrolled ? "Switch to " + esc(p.label) : "Choose " + esc(p.label)}</button>`}
+        </div>`;
+      }).join("");
+      const n = document.getElementById("planNote");
+      n.innerHTML = CFG.enrolled
+        ? `Switching is free and instant, but a bigger cap only applies after
+           ${esc(CFG.upgrade_wait_days)} days — so a plan can't be upgraded the moment something
+           goes wrong. You've filed ${esc(CFG.claims_this_month)} claim(s) in the last 30 days.`
+        : `Pick any plan. They're all free, and you can change later.`;
+    }
+    async function enrol(p){
+      try{
+        await api("/shield/enrol",{method:"POST",body:JSON.stringify({plan:p})});
+        CFG = await api("/shield/config");
+        msg("You're covered.",true); drawPlans(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+
+    /* ---- file ---- */
+    async function fileClaim(){
+      const body = {
+        category: document.getElementById("cCat").value,
+        amount: document.getElementById("cAmt").value,
+        ref_kind: document.getElementById("cRefKind").value,
+        ref_id: document.getElementById("cRefId").value || null,
+        accused: document.getElementById("cWho").value.trim(),
+        description: document.getElementById("cDesc").value.trim(),
+        evidence_url: document.getElementById("cEvi").value.trim(),
+      };
+      try{
+        await api("/shield/claim",{method:"POST",body:JSON.stringify(body)});
+        msg("Claim filed — the President will review it.",true,"fileMsg");
+        ["cAmt","cRefId","cWho","cDesc","cEvi"].forEach(id=>document.getElementById(id).value="");
+        CFG = await api("/shield/config");
+        refresh();
+        setTimeout(()=>go("mine"), 800);
+      }catch(e){ msg(e.message,false,"fileMsg"); }
+    }
+
+    /* ---- my claims ---- */
+    function claimCard(c, admin){
+      const ev = safeUrl(c.evidence_url);
+      const ref = c.ref_kind ? `${esc({delivery:"Parcel",market:"Listing",card_trade:"Card trade"}[c.ref_kind]||c.ref_kind)} #${esc(c.ref_id)}` : "";
+      const checks = (c.checks||[]).map(k=>{
+        const ic = {good:"fa-circle-check",bad:"fa-circle-xmark",warn:"fa-triangle-exclamation",info:"fa-circle-info"}[k.tone]||"fa-circle-info";
+        return `<div class="chk ${esc(k.tone)}"><i class="fas ${ic}"></i><span>${esc(k.text)}</span></div>`;
+      }).join("");
+      let acts = "";
+      if(admin && c.status === "open"){
+        acts = `<input id="pay${c.id}" type="number" min="1" step="1" value="${esc(c.amount)}" title="Amount to award">
+          <button onclick="decide(${c.id},'approve')"><i class="fas fa-check"></i> Approve</button>
+          <button class="ghost" onclick="decide(${c.id},'reject')">Reject</button>
+          <button class="danger" onclick="decide(${c.id},'fraud')"><i class="fas fa-ban"></i> Fraudulent</button>`;
+      }
+      return `<div class="claim ${esc(c.status)}">
+        <div class="top">
+          <div>
+            <div class="what"><i class="fas ${esc(c.category_icon)}"></i> ${esc(c.category_label)}</div>
+            <div class="meta">${admin?`<b>${esc(c.username)}</b> · `:""}${esc(c.plan_label)} plan${
+              ref?` · ${ref}`:""}${c.accused?` · blames <b>${esc(c.accused)}</b>`:""}${
+              c.created_at?` · ${esc(new Date(c.created_at).toLocaleDateString())}`:""}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="amt">${esc(c.amount)} CB</div>
+            <span class="state ${esc(c.status)}">${esc(
+              {open:"Awaiting ruling",approved:"Paid",rejected:"Not upheld",fraudulent:"Fraudulent"}[c.status]||c.status)}</span>
+          </div>
+        </div>
+        <div class="desc">${esc(c.description)}</div>
+        ${ev?`<p class="small"><a class="link" href="${ev}" target="_blank" rel="noopener noreferrer">Evidence <i class="fas fa-arrow-up-right-from-square"></i></a></p>`:""}
+        ${checks?`<div class="checks"><h5><i class="fas fa-magnifying-glass"></i> What the records say</h5>${checks}</div>`:""}
+        ${c.status==="approved"&&c.amount_paid?`<div class="note"><i class="fas fa-coins"></i> Paid ${esc(c.amount_paid)} CB${c.decided_by?` by ${esc(c.decided_by)}`:""}.${c.decision_note?` "${esc(c.decision_note)}"`:""}</div>`:""}
+        ${(c.status==="rejected"||c.status==="fraudulent")&&c.decision_note?`<div class="note">"${esc(c.decision_note)}"</div>`:""}
+        ${acts?`<div class="acts">${acts}</div>`:""}
+      </div>`;
+    }
+
+    async function loadMine(){
+      let d;
+      try{ d = await api("/shield/claims"); }catch(e){
+        document.getElementById("myClaims").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
+      document.getElementById("myClaims").innerHTML = d.claims.length
+        ? d.claims.map(c=>claimCard(c,false)).join("")
+        : `<p class="empty">No claims yet — and long may that continue.</p>`;
+    }
+
+    /* ---- claim desk ---- */
+    async function loadAdmin(){
+      let d;
+      try{ d = await api("/shield/admin"); }
+      catch(e){
+        document.getElementById("adminBody").innerHTML =
+          `<div class="sh-panel"><p class="sub">${esc(e.message)}</p></div>`;
+        return;
+      }
+      const byPlan = PLANS.map(p=>`${esc(p.label)}: <b>${esc(d.by_plan[p.key]||0)}</b>`).join(" · ");
+      document.getElementById("adminBody").innerHTML = `
+        <div class="sh-panel">
+          <h3><i class="fas fa-chart-simple"></i> The scheme at a glance</h3>
+          <p class="sub">What Cyvashield has cost the Treasury, and what's waiting on you.</p>
+          <div class="stats">
+            <div class="stat"><b style="color:var(--sh-warn)">${esc(d.open_claims.length)}</b><span>Awaiting your ruling</span></div>
+            <div class="stat"><b style="color:var(--sh-warn)">${esc(d.open_value)} CB</b><span>Value of open claims</span></div>
+            <div class="stat"><b style="color:var(--sh-green)">${esc(d.paid_total)} CB</b><span>Paid out to date</span></div>
+            <div class="stat"><b>${esc(d.covered)}</b><span>Citizens covered</span></div>
+          </div>
+          <p class="sub" style="margin:.9rem 0 0;">${byPlan}</p>
+        </div>
+
+        <div class="sh-panel">
+          <h3><i class="fas fa-gavel"></i> Claims waiting on you${
+            d.open_claims.length?` <span class="sh-badge">${d.open_claims.length}</span>`:""}</h3>
+          <p class="sub">Each claim is checked against what the site already recorded. A red line
+            means the records contradict the story. You can award less than was asked for by
+            changing the amount before approving.</p>
+          <div class="claims">${d.open_claims.length
+            ? d.open_claims.map(c=>claimCard(c,true)).join("")
+            : `<p class="empty">Nothing to rule on. The Republic is behaving itself.</p>`}</div>
+        </div>
+
+        <div class="sh-panel">
+          <h3><i class="fas fa-clock-rotate-left"></i> Settled</h3>
+          <div class="claims">${d.settled.length
+            ? d.settled.map(c=>claimCard(c,false)).join("")
+            : `<p class="empty">Nothing settled yet.</p>`}</div>
+        </div>`;
+    }
+
+    async function decide(id, action){
+      const verb = {approve:"Approve and pay",reject:"Reject",fraud:"Rule fraudulent (this goes on their record)"}[action];
+      const el = document.getElementById("pay"+id);
+      const amount = el ? el.value : null;
+      if(!confirm(verb + " this claim?")) return;
+      const note = prompt(action==="approve"
+        ? "Note for the citizen (optional):"
+        : "Why? This is shown to the citizen:") || "";
+      try{
+        const r = await api("/shield/admin/decide",{method:"POST",
+          body:JSON.stringify({claim_id:id, action, amount, note})});
+        msg(r.paid ? `Paid ${r.paid} CB.` : "Done.", true);
+        loadAdmin(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+
+    function drawHero(){
+      const top = PLANS.length ? PLANS[PLANS.length-1] : {cap:0};
+      document.getElementById("heroBadges").innerHTML = `
+        <span class="sh-badge"><i class="fas fa-gift"></i> Every plan free, forever</span>
+        <span class="sh-badge"><i class="fas fa-coins"></i> Up to ${esc(top.cap)} CB a claim</span>
+        <span class="sh-badge"><i class="fas fa-gavel"></i> Ruled on by the President</span>
+        ${CFG.open?"":`<span class="sh-badge" style="background:rgba(224,62,77,.15);border-color:rgba(224,62,77,.4);color:#ff8f9a"><i class="fas fa-ban"></i> Scheme suspended</span>`}`;
+    }
+
+    async function refresh(){
+      try{ drawTabs(await api("/shield/summary")); }catch{ drawTabs({}); }
+    }
+
+    (async function(){
+      ME = await requireAuth(); if(!ME) return;
+      renderNav("/shield", ME);
+      try{ CFG = await api("/shield/config"); }
+      catch(e){ return msg(e.message); }
+      PLANS = CFG.plans || []; CATS = CFG.categories || [];
+      document.getElementById("cCat").innerHTML =
+        CATS.map(c=>`<option value="${esc(c.key)}">${esc(c.label)}</option>`).join("");
+      drawHero();
+      try{
+        const u = await api("/users");
+        document.getElementById("citizenList").innerHTML =
+          (u.users||[]).map(n=>`<option value="${esc(n)}"></option>`).join("");
+      }catch{}
+      await refresh();
+      const t = new URLSearchParams(location.search).get("tab");
+      go(["plans","file","mine","admin"].includes(t) ? t : "plans");
+    })();
+  </script>
+</body>
+</html>

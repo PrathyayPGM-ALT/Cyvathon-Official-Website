@@ -82,6 +82,27 @@ to match your school. Class names are free text.
 
 ---
 
+### 5. Cyvashield — national insurance
+Free cover for every citizen (`/shield`):
+- Three plans — Basic, Standard, Full Cover — all free. The plan only sets the
+  per-claim cap (500 / 1500 / 5000 CB) and how many claims a month
+- Covers undelivered parcels, marketplace purchases that never arrived, stolen
+  Cybucks, card trades that went bad, and scams
+- A claim can cite a Cyvazon parcel, a marketplace listing or a card trade, and
+  the President's claim desk then **checks the story against the records** —
+  it will say plainly if the claimant already signed for the parcel they say
+  never arrived
+- The President approves (in full or in part), rejects, or rules a claim
+  fraudulent — which files a criminal record and bars them from office
+- Payouts come from the Treasury. Switching to a bigger plan takes 3 days to
+  take effect, so cover can't be upgraded the moment something goes wrong
+
+Needs `migration_insurance.sql`. The insurance levy defaults to 0 — cover is
+genuinely free, funded from general revenue — and is tunable from the
+Presidential Admin Panel if payouts ever outrun the Treasury.
+
+---
+
 **On the card data.** The player lookup uses TheSportsDB's free API — set
 `SPORTSDB_API_KEY` to use your own key instead of the shared test key. There is
 no open Match Attax card API: Topps publishes none, and card databases like

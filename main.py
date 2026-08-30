@@ -86,6 +86,7 @@ _CONFIG_KEYS = {
     "fine_bars_office": "FINE_BARS_OFFICE",
     "courier_wage": "COURIER_WAGE", "delivery_levy": "DELIVERY_LEVY",
     "delivery_open": "DELIVERY_OPEN",
+    "insurance_open": "INSURANCE_OPEN", "insurance_levy": "INSURANCE_LEVY",
 }
 
 # Justice levers. RECORD_EXPIRY_DAYS = 0 means a conviction bars a citizen
@@ -330,7 +331,7 @@ def refresh_config():
             v = row.get(col)
             if v is not None:
                 # day/grant fields are whole numbers
-                if name in ("FINE_BARS_OFFICE", "DELIVERY_OPEN"):
+                if name in ("FINE_BARS_OFFICE", "DELIVERY_OPEN", "INSURANCE_OPEN"):
                     g[name] = bool(v)
                 elif name.endswith(("_DAYS", "GRANT")) or name in ("LOAN_MAX", "MINISTRY_MIN_APPLICANTS"):
                     g[name] = int(v)
@@ -1491,7 +1492,7 @@ def sitemap():
              "/leaderboard", "/government", "/ministries", "/legislature",
              "/court", "/gazette", "/states", "/foreign", "/treasury",
              "/exchange", "/company", "/jobs", "/marketplace", "/casino",
-             "/flightsim", "/packet", "/cyvazon", "/passport", "/login"]
+             "/flightsim", "/packet", "/cyvazon", "/shield", "/passport", "/login"]
     urls = "".join(f"<url><loc>https://cyvathon.onrender.com{p}</loc></url>"
                    for p in pages)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>'
@@ -5186,7 +5187,7 @@ def gov():
 CONFIG_FIELDS = ["vat_rate", "tax_period_days", "salary_period_days", "savings_rate",
                  "bond_rate", "bond_days", "company_fee", "loan_max", "loan_days",
                  "starting_grant", "gdp", "gdp_multiplier",
-                 "courier_wage", "delivery_levy"]
+                 "courier_wage", "delivery_levy", "insurance_levy"]
 
 
 @app.route("/admin/config", methods=["GET"])
@@ -8841,6 +8842,507 @@ def cyvazon_summary():
                    to_hand_over=sum(1 for r in rows if r["sender"] == me
                                     and r["status"] in ("open", "claimed")),
                    carrying=sum(1 for r in rows if r.get("courier") == me))
+
+# ============================================================
+#  CYVASHIELD — national insurance
+# ============================================================
+#  Cover is free for every citizen. The plan a citizen picks doesn't cost
+#  anything; it only sets how much a single claim can be worth and how many
+#  they may file in a month. Payouts come from the Treasury.
+#
+#  Every claim is ruled on by the President. To make that judgement quick
+#  rather than a guess, a claim can cite something the site already knows
+#  about — a Cyvazon parcel, a marketplace sale, a card trade — and the admin
+#  panel then shows what the records actually say next to what the citizen
+#  claims. A parcel the claimant personally signed for is very hard to argue
+#  was never delivered.
+
+INSURANCE_PLANS = [
+    {"key": "basic",    "label": "Basic",      "color": "#58c4ff",
+     "cap": 500,  "monthly": 2,
+     "covers": ["parcel", "market"],
+     "blurb": "Undelivered parcels and marketplace purchases that never arrived."},
+    {"key": "standard", "label": "Standard",   "color": "#1fd6a6",
+     "cap": 1500, "monthly": 3,
+     "covers": ["parcel", "market", "theft", "cards"],
+     "blurb": "Adds stolen Cybucks and Match Attax cards that never changed hands."},
+    {"key": "full",     "label": "Full Cover", "color": "#ffce56",
+     "cap": 5000, "monthly": 4,
+     "covers": ["parcel", "market", "theft", "cards", "scam", "other"],
+     "blurb": "Everything, including scams and anything else the President accepts."},
+]
+PLAN_BY_KEY = {p["key"]: p for p in INSURANCE_PLANS}
+
+CLAIM_CATEGORIES = [
+    {"key": "parcel", "label": "Parcel never arrived",     "icon": "fa-box-open"},
+    {"key": "market", "label": "Marketplace purchase",     "icon": "fa-store"},
+    {"key": "theft",  "label": "Money stolen",             "icon": "fa-sack-dollar"},
+    {"key": "cards",  "label": "Card trade gone wrong",    "icon": "fa-futbol"},
+    {"key": "scam",   "label": "Scammed by a citizen",     "icon": "fa-user-secret"},
+    {"key": "other",  "label": "Something else",           "icon": "fa-circle-question"},
+]
+CATEGORY_BY_KEY = {c["key"]: c for c in CLAIM_CATEGORIES}
+
+# Switching to a richer plan doesn't take effect instantly — otherwise a
+# citizen could upgrade the moment something goes wrong and claim the higher
+# cap for a loss that happened while they were on Basic.
+PLAN_UPGRADE_WAIT_DAYS = 3
+INSURANCE_OPEN = True
+INSURANCE_LEVY = 0.0        # cover is free; raise only if payouts outrun revenue
+
+
+def _insurance_missing():
+    return jsonify(success=False,
+                   error="Cyvashield isn't enabled yet — the database needs a quick update "
+                         "(run migration_insurance.sql)."), 503
+
+
+def _policy_row(username):
+    try:
+        r = supabase.table("insurance_policies").select("*") \
+            .eq("username", username).execute().data
+    except Exception:
+        return None
+    return r[0] if r else None
+
+
+def _plan_of(username):
+    """The plan a citizen is actually covered by right now."""
+    row = _policy_row(username)
+    if not row or not row.get("active"):
+        return None
+    return PLAN_BY_KEY.get(row.get("plan") or "basic", INSURANCE_PLANS[0])
+
+
+def _claims_this_month(username):
+    since = (_now() - timedelta(days=30)).isoformat()
+    try:
+        rows = supabase.table("insurance_claims").select("id,created_at,status") \
+            .eq("username", username).execute().data or []
+    except Exception:
+        return []
+    # Withdrawn/rejected-as-fraud still count — the limit is on filing, not winning.
+    return [r for r in rows if (r.get("created_at") or "") >= since]
+
+
+def _claim_public(row, extra=None):
+    plan = PLAN_BY_KEY.get(row.get("plan") or "basic", INSURANCE_PLANS[0])
+    cat = CATEGORY_BY_KEY.get(row.get("category") or "other", CLAIM_CATEGORIES[-1])
+    out = {
+        "id": row.get("id"), "username": row.get("username"),
+        "plan": plan["key"], "plan_label": plan["label"],
+        "category": cat["key"], "category_label": cat["label"], "category_icon": cat["icon"],
+        "ref_kind": row.get("ref_kind") or "", "ref_id": row.get("ref_id"),
+        "amount": row.get("amount") or 0, "amount_paid": row.get("amount_paid") or 0,
+        "description": row.get("description") or "",
+        "evidence_url": row.get("evidence_url") or "",
+        "accused": row.get("accused") or "",
+        "status": row.get("status") or "open",
+        "decided_by": row.get("decided_by"), "decided_at": row.get("decided_at"),
+        "decision_note": row.get("decision_note") or "",
+        "created_at": row.get("created_at"),
+    }
+    if extra:
+        out.update(extra)
+    return out
+
+
+def _verify_claim(row):
+    """Check the citizen's story against what the site already recorded.
+    Returns a list of {tone, text} notes for the President — `bad` means the
+    records contradict the claim, `good` means they support it."""
+    notes = []
+    kind, rid, who = row.get("ref_kind") or "", row.get("ref_id"), row.get("username")
+
+    if kind == "delivery" and rid:
+        try:
+            d = supabase.table("deliveries").select("*").eq("id", rid).execute().data
+        except Exception:
+            d = None
+        if not d:
+            notes.append({"tone": "bad", "text": f"No Cyvazon parcel #{rid} exists."})
+        else:
+            p = d[0]
+            if p.get("recipient") != who:
+                notes.append({"tone": "bad",
+                              "text": f"Parcel #{rid} was addressed to {p.get('recipient')}, not {who}."})
+            if p.get("status") == "delivered":
+                notes.append({"tone": "bad",
+                              "text": f"{who} already confirmed parcel #{rid} as delivered "
+                                      f"on {(p.get('delivered_at') or '')[:16]}."})
+            elif p.get("status") == "cancelled":
+                notes.append({"tone": "warn", "text": f"Parcel #{rid} was cancelled, not lost."})
+            else:
+                notes.append({"tone": "good",
+                              "text": f"Parcel #{rid} is '{p.get('status')}' and never signed for"
+                                      + (f", carried by {p.get('courier')}." if p.get("courier") else ".")})
+            if p.get("courier") and not (row.get("accused") or ""):
+                notes.append({"tone": "info", "text": f"Courier on that run: {p.get('courier')}."})
+
+    elif kind == "market" and rid:
+        try:
+            m = supabase.table("market_items").select("*").eq("id", rid).execute().data
+        except Exception:
+            m = None
+        if not m:
+            notes.append({"tone": "bad", "text": f"No marketplace listing #{rid} exists."})
+        else:
+            it = m[0]
+            if it.get("buyer") != who:
+                notes.append({"tone": "bad",
+                              "text": f"Listing #{rid} was bought by {it.get('buyer') or 'nobody'}, not {who}."})
+            else:
+                notes.append({"tone": "good",
+                              "text": f"{who} did buy '{it.get('title')}' from {it.get('seller')}."})
+            paid = float(it.get("price") or 0)
+            if float(row.get("amount") or 0) > paid:
+                notes.append({"tone": "warn",
+                              "text": f"Claiming {row.get('amount')} CB but only paid {paid:g} CB."})
+
+    elif kind == "card_trade" and rid:
+        try:
+            t = supabase.table("card_trades").select("*").eq("id", rid).execute().data
+        except Exception:
+            t = None
+        if not t:
+            notes.append({"tone": "bad", "text": f"No card trade #{rid} exists."})
+        else:
+            tr = t[0]
+            if who not in (tr.get("from_user"), tr.get("to_user")):
+                notes.append({"tone": "bad", "text": f"{who} wasn't part of card trade #{rid}."})
+            elif tr.get("status") != "accepted":
+                notes.append({"tone": "warn",
+                              "text": f"Card trade #{rid} was never accepted (status: {tr.get('status')})."})
+            else:
+                other = tr["from_user"] if tr["to_user"] == who else tr["to_user"]
+                notes.append({"tone": "good",
+                              "text": f"Trade #{rid} with {other} was accepted — cards were due both ways."})
+
+    # Cap check, whatever the category.
+    plan = PLAN_BY_KEY.get(row.get("plan") or "basic", INSURANCE_PLANS[0])
+    if float(row.get("amount") or 0) > plan["cap"]:
+        notes.append({"tone": "warn",
+                      "text": f"Claim exceeds the {plan['label']} cap of {plan['cap']} CB."})
+
+    # A citizen who keeps claiming is worth a second look.
+    try:
+        prior = supabase.table("insurance_claims").select("id,status") \
+            .eq("username", who).execute().data or []
+    except Exception:
+        prior = []
+    paid_before = [p for p in prior if p.get("status") == "approved"]
+    if len(paid_before) >= 3:
+        notes.append({"tone": "warn",
+                      "text": f"{who} has already had {len(paid_before)} claims approved."})
+    if any(p.get("status") == "fraudulent" for p in prior):
+        notes.append({"tone": "bad", "text": f"{who} has a claim previously ruled fraudulent."})
+    return notes
+
+
+# ---- routes -----------------------------------------------------------
+@app.route("/shield")
+def shield_page():
+    return app.send_static_file("shield.html")
+
+
+@app.route("/shield/config")
+@limiter.limit("60/minute")
+def shield_config():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    row = _policy_row(user["username"])
+    plan = PLAN_BY_KEY.get((row or {}).get("plan") or "", None)
+    used = len(_claims_this_month(user["username"])) if row else 0
+    return jsonify(success=True, plans=INSURANCE_PLANS, categories=CLAIM_CATEGORIES,
+                   open=bool(INSURANCE_OPEN), me=user["username"],
+                   is_admin=is_treasury_admin(user),
+                   enrolled=bool(row and row.get("active")),
+                   plan=(plan or {}).get("key", ""),
+                   switched_at=(row or {}).get("switched_at"),
+                   upgrade_wait_days=PLAN_UPGRADE_WAIT_DAYS,
+                   claims_this_month=used,
+                   claims_paid=(row or {}).get("claims_paid") or 0)
+
+
+@app.route("/shield/enrol", methods=["POST"])
+@limiter.limit("15/minute")
+def shield_enrol():
+    """Join, or switch plan. Always free."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not INSURANCE_OPEN:
+        return jsonify(success=False, error="Cyvashield is closed to new policies right now."), 403
+    me = user["username"]
+    plan = (request.get_json() or {}).get("plan") or "basic"
+    if plan not in PLAN_BY_KEY:
+        return jsonify(success=False, error="Unknown plan"), 400
+
+    row = _policy_row(me)
+    now = _now()
+    try:
+        if row:
+            supabase.table("insurance_policies").update(
+                {"plan": plan, "active": True, "switched_at": now.isoformat()}) \
+                .eq("username", me).execute()
+        else:
+            supabase.table("insurance_policies").insert(
+                {"username": me, "plan": plan}).execute()
+    except Exception:
+        return _insurance_missing()
+    add_record(me, f"Covered by Cyvashield ({PLAN_BY_KEY[plan]['label']}).")
+    return jsonify(success=True, plan=plan)
+
+
+@app.route("/shield/claim", methods=["POST"])
+@limiter.limit("10/minute")
+def shield_claim():
+    """Report a loss. The President rules on it."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not INSURANCE_OPEN:
+        return jsonify(success=False, error="Cyvashield isn't taking claims right now."), 403
+    me = user["username"]
+
+    row = _policy_row(me)
+    if not row or not row.get("active"):
+        return jsonify(success=False, error="You aren't covered yet — pick a plan first."), 403
+    plan = PLAN_BY_KEY.get(row.get("plan") or "basic", INSURANCE_PLANS[0])
+
+    d = request.get_json() or {}
+    category = (d.get("category") or "").strip()
+    if category not in CATEGORY_BY_KEY:
+        return jsonify(success=False, error="Pick what went wrong"), 400
+    if category not in plan["covers"]:
+        return jsonify(success=False,
+                       error=f"{plan['label']} doesn't cover {CATEGORY_BY_KEY[category]['label'].lower()}. "
+                             "Switch to a higher plan — it's still free."), 403
+
+    description = (d.get("description") or "").strip()[:800]
+    if len(description) < 15:
+        return jsonify(success=False, error="Tell us what happened (at least 15 characters)."), 400
+
+    try:
+        amount = round(float(d.get("amount") or 0), 2)
+    except (TypeError, ValueError):
+        amount = 0
+    if not math.isfinite(amount) or amount <= 0:
+        return jsonify(success=False, error="How much did you lose?"), 400
+    if amount > plan["cap"]:
+        return jsonify(success=False,
+                       error=f"{plan['label']} covers up to {plan['cap']} CB per claim. "
+                             "A higher plan is free if you need more."), 400
+
+    # A plan switch has to settle before its bigger cap applies.
+    sw = _parse(row.get("switched_at"))
+    if sw and (_now() - sw).days < PLAN_UPGRADE_WAIT_DAYS:
+        base = INSURANCE_PLANS[0]
+        if amount > base["cap"]:
+            left = PLAN_UPGRADE_WAIT_DAYS - (_now() - sw).days
+            return jsonify(success=False,
+                           error=f"You changed plan recently — the higher cap applies in {left} day(s). "
+                                 f"Until then you can claim up to {base['cap']} CB."), 403
+
+    used = len(_claims_this_month(me))
+    if used >= plan["monthly"]:
+        return jsonify(success=False,
+                       error=f"{plan['label']} allows {plan['monthly']} claims a month. "
+                             "You've used them all."), 429
+
+    ref_kind = (d.get("ref_kind") or "").strip()
+    if ref_kind not in ("delivery", "market", "card_trade", ""):
+        ref_kind = ""
+    try:
+        ref_id = int(d.get("ref_id")) if d.get("ref_id") else None
+    except (TypeError, ValueError):
+        ref_id = None
+
+    evidence = (d.get("evidence_url") or "").strip()[:500]
+    if evidence and not _card_url_ok(evidence):
+        return jsonify(success=False, error="Evidence must be a direct https:// link."), 400
+
+    accused = (d.get("accused") or "").strip()[:32]
+    if accused == me:
+        return jsonify(success=False, error="You can't report yourself."), 400
+
+    claim = {
+        "username": me, "plan": plan["key"], "category": category,
+        "ref_kind": ref_kind, "ref_id": ref_id, "amount": amount,
+        "description": description, "evidence_url": evidence, "accused": accused,
+    }
+    try:
+        made = supabase.table("insurance_claims").insert(claim).execute().data[0]
+    except Exception:
+        return _insurance_missing()
+
+    add_record(me, f"Filed a Cyvashield claim for {amount:g} CB ({CATEGORY_BY_KEY[category]['label']}).")
+    for boss in sorted(TREASURY_ADMINS):
+        notify(boss, f"\U0001F6E1️ {me} filed a {amount:g} CB Cyvashield claim.",
+               "/shield?tab=admin")
+    return jsonify(success=True, claim=_claim_public(made))
+
+
+@app.route("/shield/claims")
+@limiter.limit("60/minute")
+def shield_claims():
+    """My own claims."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        rows = supabase.table("insurance_claims").select("*") \
+            .eq("username", user["username"]).order("created_at", desc=True) \
+            .limit(60).execute().data or []
+    except Exception:
+        return _insurance_missing()
+    return jsonify(success=True, claims=[_claim_public(r) for r in rows])
+
+
+@app.route("/shield/admin")
+@limiter.limit("60/minute")
+def shield_admin():
+    """The President's claim desk, with the records checked for them."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    try:
+        rows = supabase.table("insurance_claims").select("*") \
+            .order("created_at", desc=True).limit(200).execute().data or []
+        pols = supabase.table("insurance_policies").select("*").execute().data or []
+    except Exception:
+        return _insurance_missing()
+
+    openq = [_claim_public(r, {"checks": _verify_claim(r)}) for r in rows if (r.get("status") or "open") == "open"]
+    settled = [_claim_public(r) for r in rows if (r.get("status") or "open") != "open"][:40]
+    paid_total = sum(float(r.get("amount_paid") or 0) for r in rows if r.get("status") == "approved")
+    by_plan = {}
+    for p in pols:
+        if p.get("active"):
+            k = p.get("plan") or "basic"
+            by_plan[k] = by_plan.get(k, 0) + 1
+    return jsonify(success=True, open_claims=openq, settled=settled,
+                   covered=sum(1 for p in pols if p.get("active")),
+                   by_plan=by_plan, paid_total=round(paid_total, 2),
+                   open_value=round(sum(float(c["amount"]) for c in openq), 2),
+                   plans=INSURANCE_PLANS)
+
+
+@app.route("/shield/admin/decide", methods=["POST"])
+@limiter.limit("30/minute")
+def shield_admin_decide():
+    """Approve (in full or in part), reject, or rule a claim fraudulent."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json() or {}
+    action = (d.get("action") or "").strip()
+    if action not in ("approve", "reject", "fraud"):
+        return jsonify(success=False, error="Unknown action"), 400
+    try:
+        cid = int(d.get("claim_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad claim"), 400
+    note = (d.get("note") or "").strip()[:400]
+
+    try:
+        r = supabase.table("insurance_claims").select("*").eq("id", cid).execute().data
+    except Exception:
+        return _insurance_missing()
+    if not r:
+        return jsonify(success=False, error="Claim not found"), 404
+    c = r[0]
+    if (c.get("status") or "open") != "open":
+        return jsonify(success=False, error="That claim is already settled"), 400
+
+    me = user["username"]
+    now = _now()
+    plan = PLAN_BY_KEY.get(c.get("plan") or "basic", INSURANCE_PLANS[0])
+
+    if action == "approve":
+        # The President may award less than was asked for.
+        try:
+            award = round(float(d.get("amount") if d.get("amount") not in (None, "") else c.get("amount") or 0), 2)
+        except (TypeError, ValueError):
+            return jsonify(success=False, error="Bad payout amount"), 400
+        if not math.isfinite(award) or award <= 0:
+            return jsonify(success=False, error="Payout must be more than zero"), 400
+        if award > float(c.get("amount") or 0):
+            return jsonify(success=False, error="You can't award more than was claimed."), 400
+        if award > plan["cap"]:
+            return jsonify(success=False,
+                           error=f"That exceeds the {plan['label']} cap of {plan['cap']} CB."), 400
+
+        # Claim the row first so a double-click can't pay twice.
+        claimed = supabase.table("insurance_claims").update(
+            {"status": "approved", "amount_paid": award, "decided_by": me,
+             "decided_at": now.isoformat(), "decision_note": note}) \
+            .eq("id", cid).eq("status", "open").execute().data
+        if not claimed:
+            return jsonify(success=False, error="That claim is already settled"), 400
+
+        cas_adjust(c["username"], "balance", award, allow_negative=False)
+        treasury_add(cybucks=-award, counterparty=c["username"], kind="insurance_payout")
+        cas_num("insurance_policies", [("username", c["username"])], "claims_paid", award)
+        cas_num("insurance_policies", [("username", c["username"])], "claims_count", 1, places=0)
+        add_record(c["username"], f"Cyvashield paid out {award:g} CB on a claim.")
+        log_txn("insurance", "Cyvashield", c["username"], award, "cybucks",
+                note or "Insurance claim approved")
+        notify(c["username"], f"✅ Your Cyvashield claim was approved — {award:g} CB paid."
+                              + (f" {note}" if note else ""), "/shield")
+        return jsonify(success=True, status="approved", paid=award)
+
+    if action == "reject":
+        supabase.table("insurance_claims").update(
+            {"status": "rejected", "decided_by": me, "decided_at": now.isoformat(),
+             "decision_note": note}).eq("id", cid).eq("status", "open").execute()
+        notify(c["username"], "Your Cyvashield claim was not upheld."
+                              + (f" {note}" if note else ""), "/shield")
+        return jsonify(success=True, status="rejected")
+
+    # ---- fraud: refused AND recorded against them ----
+    supabase.table("insurance_claims").update(
+        {"status": "fraudulent", "decided_by": me, "decided_at": now.isoformat(),
+         "decision_note": note}).eq("id", cid).eq("status", "open").execute()
+    add_criminal_record(c["username"], me,
+                        note or f"Filed a fraudulent Cyvashield claim for {c.get('amount')} CB.")
+    notify(c["username"], "⚠️ Your Cyvashield claim was ruled fraudulent and recorded "
+                          "against you." + (f" {note}" if note else ""), "/shield")
+    return jsonify(success=True, status="fraudulent")
+
+
+@app.route("/shield/summary")
+@limiter.limit("60/minute")
+def shield_summary():
+    """Counts for the dashboard banner and the tab badges."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    admin = is_treasury_admin(user)
+    try:
+        mine = supabase.table("insurance_claims").select("id,status") \
+            .eq("username", me).execute().data or []
+        waiting = 0
+        if admin:
+            waiting = len(supabase.table("insurance_claims").select("id")
+                          .eq("status", "open").execute().data or [])
+        row = _policy_row(me)
+    except Exception:
+        # Not migrated yet — still answer what doesn't depend on those tables,
+        # so the President keeps the claim desk that explains the problem.
+        return jsonify(success=True, enabled=False, is_admin=admin, enrolled=False,
+                       plan="", open_mine=0, waiting=0, open=bool(INSURANCE_OPEN))
+    return jsonify(success=True, enabled=True, is_admin=admin,
+                   enrolled=bool(row and row.get("active")),
+                   plan=(row or {}).get("plan") or "",
+                   open_mine=sum(1 for c in mine if (c.get("status") or "open") == "open"),
+                   waiting=waiting, open=bool(INSURANCE_OPEN))
 
 # ============================================================
 #  JUSTICE — jail, criminal records, eligibility for office

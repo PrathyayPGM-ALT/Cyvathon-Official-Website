@@ -218,6 +218,16 @@
     .czban h3 i{ color:#ff9900; }
     .czban p{ margin:0; color:var(--muted); font-size:.9rem; }
     .czban .cta{ font-size:.85rem; font-weight:600; color:#ff9900; white-space:nowrap; }
+
+    /* Cyvashield alert — a claim waiting on the President, or cover to pick up. */
+    .shban{ display:flex; flex-wrap:wrap; align-items:center; gap:1rem; justify-content:space-between;
+      border:1px solid rgba(31,214,166,.42); background:rgba(31,214,166,.08);
+      border-radius:16px; padding:1.1rem 1.3rem; margin-bottom:1.8rem; text-decoration:none; color:inherit; }
+    .shban:hover{ border-color:var(--green,#1fd6a6); }
+    .shban h3{ margin:0 0 .3rem; font-size:1.05rem; display:flex; align-items:center; gap:.55rem; }
+    .shban h3 i{ color:var(--green,#1fd6a6); }
+    .shban p{ margin:0; color:var(--muted); font-size:.9rem; }
+    .shban .cta{ font-size:.85rem; font-weight:600; color:var(--green,#1fd6a6); white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -314,6 +324,7 @@
       <div id="vacancyBanner"></div>
       <div id="packetBanner"></div>
       <div id="cyvazonBanner"></div>
+      <div id="shieldBanner"></div>
       <div id="hubGrid"></div>
     </section>
     <section class="wrap" id="hubFeedWrap" style="padding-top:0; display:none;">
@@ -339,6 +350,7 @@
         ["/card","fa-credit-card","Debit Card","Print it, get scanned, get paid"],
         ["/exchange","fa-chart-line","Stock Exchange","Trade company shares"],
         ["/loans","fa-hand-holding-dollar","Loans","Borrow up to 5000 CB"],
+        ["/shield","fa-shield-halved","Cyvashield","Free cover if things go wrong"],
       ]],
       ["Business & Trade", "#1fd6a6", [
         ["/company","fa-briefcase","Companies","Found & work at companies"],
@@ -398,7 +410,7 @@
         ["fa-building-columns","Bank","#58c4ff"], ["fa-chart-line","Stock Exchange","#1fd6a6"],
         ["fa-briefcase","Companies","#22d3ee"], ["fa-landmark","Government","#ffce56"],
         ["fa-video","Videos","#ff5d6c"], ["fa-feather-pointed","Blogs","#a78bfa"],
-        ["fa-comments","Chat","#58c4ff"], ["fa-dice","Casino","#ff8fb0"], ["fa-futbol","Card Packets","#1fd6a6"], ["fa-truck-fast","Cyvazon","#ff9900"],
+        ["fa-comments","Chat","#58c4ff"], ["fa-dice","Casino","#ff8fb0"], ["fa-futbol","Card Packets","#1fd6a6"], ["fa-truck-fast","Cyvazon","#ff9900"], ["fa-shield-halved","Cyvashield","#1fd6a6"],
         ["fa-map-location-dot","States","#a78bfa"], ["fa-passport","Passport","#22d3ee"],
         ["fa-hand-holding-dollar","Loans","#58c4ff"], ["fa-scale-balanced","Legislature","#ffce56"],
       ];
@@ -487,6 +499,7 @@
       loadVacancies();
       loadPacketBanner();
       loadCyvazonBanner();
+      loadShieldBanner();
       loadFeed("hubFeed", "hubFeedWrap", 12);
       loadHubNews();
     }
@@ -613,6 +626,34 @@
         <a class="czban" href="${href}">
           <div><h3><i class="fas fa-truck-fast"></i> ${head}</h3><p>${sub}</p></div>
           <span class="cta">Open Cyvazon &rarr;</span>
+        </a>`;
+    }
+
+    /* Cyvashield: an unruled claim is the President's job queue, and an
+       uncovered citizen is one bad day from losing money for nothing. */
+    async function loadShieldBanner(){
+      let d;
+      try{ d = await api("/shield/summary"); }catch(e){ return; }
+      if(!d.enabled || !d.open) return;
+      let head, sub, href = "/shield";
+      if(d.is_admin && d.waiting){
+        head = `${d.waiting} insurance claim${d.waiting===1?"":"s"} waiting on your ruling`;
+        sub  = "Each one is checked against the records, so you can see what actually happened.";
+        href = "/shield?tab=admin";
+      } else if(d.open_mine){
+        head = `${d.open_mine} of your claims ${d.open_mine===1?"is":"are"} being reviewed`;
+        sub  = "The President will rule on it and you'll be notified either way.";
+        href = "/shield?tab=mine";
+      } else if(!d.enrolled){
+        head = "You aren't covered by Cyvashield";
+        sub  = "Free insurance against lost parcels, stolen Cybucks, bad trades and scams. Pick a plan — they all cost nothing.";
+        href = "/shield?tab=plans";
+      } else return;
+
+      document.getElementById("shieldBanner").innerHTML = `
+        <a class="shban" href="${href}">
+          <div><h3><i class="fas fa-shield-halved"></i> ${head}</h3><p>${sub}</p></div>
+          <span class="cta">Open Cyvashield &rarr;</span>
         </a>`;
     }
 
