@@ -103,6 +103,23 @@ Presidential Admin Panel if payouts ever outrun the Treasury.
 
 ---
 
+### 6. Cyvalend — the lending library
+Borrow what you forgot; lend what you're not using (`/cyvalend`):
+- Put spare things on the shelf — calculator, charger, pen, textbook, sports
+  kit. Set how many days you'll lend for and, optionally, a refundable deposit
+- Ask to borrow; the **owner** approves each request themselves
+- Approving holds the deposit, starts the clock, and can hand the item to a
+  **Cyvazon** courier to carry to the borrower's class
+- The **owner** confirms the return — a borrower can't close their own loan.
+  The deposit comes back either way; a late return is recorded against them
+- Reliability is visible: how many times you've lent, returned, and returned late
+- If something never comes home, **Cyvashield** covers it (Standard plan and up)
+
+Needs `migration_cyvalend.sql`. Deposit cap and opening the library are tunable
+from the Presidential Admin Panel.
+
+---
+
 **On the card data.** The player lookup uses TheSportsDB's free API — set
 `SPORTSDB_API_KEY` to use your own key instead of the shared test key. There is
 no open Match Attax card API: Topps publishes none, and card databases like

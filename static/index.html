@@ -228,6 +228,18 @@
     .shban h3 i{ color:var(--green,#1fd6a6); }
     .shban p{ margin:0; color:var(--muted); font-size:.9rem; }
     .shban .cta{ font-size:.85rem; font-weight:600; color:var(--green,#1fd6a6); white-space:nowrap; }
+
+    /* Cyvalend alert — something due back, or someone waiting on your answer. */
+    .clban{ display:flex; flex-wrap:wrap; align-items:center; gap:1rem; justify-content:space-between;
+      border:1px solid rgba(167,139,250,.42); background:rgba(167,139,250,.08);
+      border-radius:16px; padding:1.1rem 1.3rem; margin-bottom:1.8rem; text-decoration:none; color:inherit; }
+    .clban:hover{ border-color:#a78bfa; }
+    .clban.late{ border-color:rgba(255,93,108,.5); background:rgba(255,93,108,.08); }
+    .clban h3{ margin:0 0 .3rem; font-size:1.05rem; display:flex; align-items:center; gap:.55rem; }
+    .clban h3 i{ color:#a78bfa; }
+    .clban.late h3 i{ color:var(--red,#ff5d6c); }
+    .clban p{ margin:0; color:var(--muted); font-size:.9rem; }
+    .clban .cta{ font-size:.85rem; font-weight:600; color:#a78bfa; white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -325,6 +337,7 @@
       <div id="packetBanner"></div>
       <div id="cyvazonBanner"></div>
       <div id="shieldBanner"></div>
+      <div id="lendBanner"></div>
       <div id="hubGrid"></div>
     </section>
     <section class="wrap" id="hubFeedWrap" style="padding-top:0; display:none;">
@@ -377,6 +390,7 @@
         ["/flightsim","fa-plane-up","Flight Sim","Fly for the high score"],
         ["/casino","fa-dice","Casino","Bet against the House"],
         ["/packet","fa-futbol","Card Packets","Trade Match Attax cards"],
+        ["/cyvalend","fa-hand-holding-heart","Cyvalend","Borrow what you forgot"],
         ["/ai","fa-robot","Cyvathon AI","Ask how anything works"],
         ["/invite","fa-user-plus","Invite Friends","Earn 500 CB per friend"],
         ["/news","fa-newspaper","News","National headlines"],
@@ -410,7 +424,7 @@
         ["fa-building-columns","Bank","#58c4ff"], ["fa-chart-line","Stock Exchange","#1fd6a6"],
         ["fa-briefcase","Companies","#22d3ee"], ["fa-landmark","Government","#ffce56"],
         ["fa-video","Videos","#ff5d6c"], ["fa-feather-pointed","Blogs","#a78bfa"],
-        ["fa-comments","Chat","#58c4ff"], ["fa-dice","Casino","#ff8fb0"], ["fa-futbol","Card Packets","#1fd6a6"], ["fa-truck-fast","Cyvazon","#ff9900"], ["fa-shield-halved","Cyvashield","#1fd6a6"],
+        ["fa-comments","Chat","#58c4ff"], ["fa-dice","Casino","#ff8fb0"], ["fa-futbol","Card Packets","#1fd6a6"], ["fa-truck-fast","Cyvazon","#ff9900"], ["fa-shield-halved","Cyvashield","#1fd6a6"], ["fa-hand-holding-heart","Cyvalend","#a78bfa"],
         ["fa-map-location-dot","States","#a78bfa"], ["fa-passport","Passport","#22d3ee"],
         ["fa-hand-holding-dollar","Loans","#58c4ff"], ["fa-scale-balanced","Legislature","#ffce56"],
       ];
@@ -500,6 +514,7 @@
       loadPacketBanner();
       loadCyvazonBanner();
       loadShieldBanner();
+      loadLendBanner();
       loadFeed("hubFeed", "hubFeedWrap", 12);
       loadHubNews();
     }
@@ -654,6 +669,41 @@
         <a class="shban" href="${href}">
           <div><h3><i class="fas fa-shield-halved"></i> ${head}</h3><p>${sub}</p></div>
           <span class="cta">Open Cyvashield &rarr;</span>
+        </a>`;
+    }
+
+    /* Cyvalend: something you owe back is time-sensitive in a way a menu
+       item isn't, and an overdue item is somebody else's property. */
+    async function loadLendBanner(){
+      let d;
+      try{ d = await api("/cyvalend/summary"); }catch(e){ return; }
+      if(!d.enabled || !d.open) return;
+      let head, sub, href = "/cyvalend?tab=borrowed", late = false;
+      if(d.overdue){
+        head = `${d.overdue} borrowed item${d.overdue===1?" is":"s are"} overdue`;
+        sub  = "Give it back — someone is waiting on their own property.";
+        late = true;
+      } else if(d.requests){
+        head = `${d.requests} citizen${d.requests===1?" wants":"s want"} to borrow from you`;
+        sub  = "Approving holds any deposit and starts the clock.";
+        href = "/cyvalend?tab=lending";
+      } else if(d.due_soon){
+        head = `${d.due_soon} borrowed item${d.due_soon===1?" is":"s are"} due back within a day`;
+        sub  = "Hand it over and the owner confirms it.";
+      } else if(d.awaiting_return){
+        head = `${d.awaiting_return} of your things ${d.awaiting_return===1?"is":"are"} out on loan`;
+        sub  = "Confirm the return when you get it back.";
+        href = "/cyvalend?tab=lending";
+      } else if(d.shelf){
+        head = `${d.shelf} thing${d.shelf===1?"":"s"} on the Cyvalend shelf`;
+        sub  = "Forgot your calculator, pen or charger? Borrow one — it's free.";
+        href = "/cyvalend";
+      } else return;
+
+      document.getElementById("lendBanner").innerHTML = `
+        <a class="clban ${late?"late":""}" href="${href}">
+          <div><h3><i class="fas fa-hand-holding-heart"></i> ${head}</h3><p>${sub}</p></div>
+          <span class="cta">Open Cyvalend &rarr;</span>
         </a>`;
     }
 

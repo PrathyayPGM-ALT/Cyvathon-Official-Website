@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvalend · Cyvathon</title>
+  <!-- social / SEO metadata -->
+  <meta name="description" content="Cyvalend — Cyvathon's lending library. Borrow the calculator you forgot; lend the one you're not using." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/cyvalend" />
+  <meta name="theme-color" content="#a78bfa" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="Cyvalend · Cyvathon" />
+  <meta property="og:description" content="Borrow what you forgot. Lend what you're not using." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/cyvalend" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Cyvalend · Cyvathon" />
+  <meta name="twitter:description" content="Borrow what you forgot. Lend what you're not using." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    /* ============================================================
+       CYVALEND — its own livery. Violet on deep indigo: neither the
+       courier's amber nor the insurer's green, because this is the
+       friendly one — it's neighbours lending each other a pen.
+       ============================================================ */
+    .cl{
+      --cl-ink:#151426;
+      --cl-ink-2:#1e1c35;
+      --cl-violet:#a78bfa;
+      --cl-violet-2:#c4b1ff;
+      --cl-deep:#7c5cff;
+      --cl-line:rgba(255,255,255,.1);
+      --cl-text:#f3f0ff;
+      --cl-muted:#a9a3c4;
+      --cl-green:#1fd6a6;
+      --cl-warn:#ffce56;
+      --cl-bad:#ff5d6c;
+    }
+    :root[data-theme="light"] .cl{
+      --cl-ink:#ffffff; --cl-ink-2:#f4f1fd;
+      --cl-line:rgba(45,25,90,.14);
+      --cl-text:#1d1338; --cl-muted:#5f5680;
+      --cl-violet:#6c4ed9; --cl-violet-2:#5940b8;
+    }
+
+    /* ---- hero ---- */
+    .cl-hero{ background:linear-gradient(135deg,var(--cl-ink),var(--cl-ink-2));
+      border:1px solid var(--cl-line); border-radius:20px; padding:2.1rem 2rem 1.9rem;
+      margin-bottom:2rem; position:relative; overflow:hidden; }
+    .cl-hero::after{ content:""; position:absolute; right:-70px; top:-70px; width:250px; height:250px;
+      border-radius:50%; background:radial-gradient(circle,rgba(167,139,250,.22),transparent 68%); }
+    .cl-brand{ display:flex; align-items:center; gap:.85rem; margin-bottom:.5rem; }
+    .cl-brand svg{ width:46px; height:42px; flex:none; }
+    .cl-logo{ font-size:2.35rem; font-weight:800; letter-spacing:-1.2px; color:var(--cl-text); line-height:1; }
+    .cl-logo .v{ color:var(--cl-violet); }
+    .cl-hero p{ color:var(--cl-muted); max-width:640px; margin:0; line-height:1.65; font-size:.96rem; }
+    .cl-badges{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.1rem; }
+    .cl-badge{ display:inline-flex; align-items:center; gap:.4rem; padding:.36rem .8rem; border-radius:20px;
+      font-size:.78rem; font-weight:600; background:rgba(167,139,250,.14);
+      border:1px solid rgba(167,139,250,.36); color:var(--cl-violet-2); }
+
+    /* ---- panels / forms ---- */
+    .cl-panel{ background:var(--cl-ink); border:1px solid var(--cl-line); border-radius:16px;
+      padding:1.4rem 1.5rem; margin-bottom:1.4rem; color:var(--cl-text); }
+    .cl-panel h3{ display:flex; align-items:center; gap:.55rem; margin-bottom:.35rem; font-size:1.08rem; }
+    .cl-panel h3 i{ color:var(--cl-violet); }
+    .cl-panel .sub{ color:var(--cl-muted); font-size:.86rem; margin-bottom:1rem; line-height:1.6; }
+    .cl .lbl{ display:block; font-size:.72rem; color:var(--cl-muted); margin-top:.55rem;
+      text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+    .cl input,.cl select,.cl textarea{ background:var(--cl-ink-2); border:1px solid var(--cl-line);
+      color:var(--cl-text); margin-top:5px; }
+    .cl input:focus,.cl select:focus,.cl textarea:focus{ border-color:var(--cl-violet);
+      box-shadow:0 0 0 3px rgba(167,139,250,.18); }
+    .cl button{ background:linear-gradient(135deg,var(--cl-violet),var(--cl-deep)); color:#1a1030;
+      box-shadow:0 6px 18px rgba(167,139,250,.28); font-weight:700; }
+    .cl button:hover{ box-shadow:0 10px 24px rgba(167,139,250,.4); }
+    .cl button.ghost{ background:transparent; border:1px solid rgba(167,139,250,.5);
+      color:var(--cl-violet); box-shadow:none; }
+    .cl button.ghost:hover{ background:rgba(167,139,250,.1); }
+    .cl button.danger{ background:linear-gradient(135deg,#ff6b78,#e03e4d); color:#fff; }
+    .cl button.good{ background:linear-gradient(135deg,#2ee0b0,#0fb98a); color:#04231a; }
+    .cl-grid2{ display:grid; gap:.7rem; grid-template-columns:1fr 1fr; }
+    .cl-grid2 .full{ grid-column:1/-1; }
+    @media(max-width:640px){ .cl-grid2{ grid-template-columns:1fr; } }
+
+    /* ---- tabs ---- */
+    .cl-tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.6rem; }
+    .cl-tabs button{ width:auto; margin:0; padding:.55rem 1.1rem; font-size:.86rem;
+      background:var(--cl-ink); color:var(--cl-muted); border:1px solid var(--cl-line); box-shadow:none; }
+    .cl-tabs button.on{ background:linear-gradient(135deg,var(--cl-violet),var(--cl-deep));
+      color:#1a1030; border-color:transparent; }
+    .cl-tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem;
+      border-radius:20px; background:#e03e4d; color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
+
+    /* ---- the shelf ---- */
+    .shelf{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+    .thing{ background:var(--cl-ink); border:1px solid var(--cl-line); border-radius:15px;
+      overflow:hidden; color:var(--cl-text); display:flex; flex-direction:column; transition:.2s; }
+    .thing:hover{ transform:translateY(-4px); border-color:rgba(167,139,250,.4); }
+    .thing .pic{ height:120px; display:grid; place-items:center; background:var(--cl-ink-2);
+      border-bottom:1px solid var(--cl-line); }
+    .thing .pic img{ width:100%; height:100%; object-fit:cover; }
+    .thing .pic i{ font-size:2.4rem; color:var(--cl-violet); opacity:.55; }
+    .thing .body{ padding:.9rem 1rem 1rem; flex:1; display:flex; flex-direction:column; }
+    .thing .nm{ font-weight:700; font-size:.98rem; line-height:1.25; }
+    .thing .by{ font-size:.75rem; color:var(--cl-muted); margin-top:.15rem; }
+    .thing .desc{ font-size:.8rem; color:var(--cl-muted); margin:.5rem 0; line-height:1.5; flex:1; }
+    .thing .facts{ display:flex; flex-wrap:wrap; gap:.35rem; margin-bottom:.7rem; }
+    .fact{ font-size:.68rem; font-weight:700; padding:.18rem .5rem; border-radius:20px;
+      background:var(--cl-ink-2); border:1px solid var(--cl-line); color:var(--cl-muted); }
+    .fact.dep{ color:var(--cl-warn); border-color:rgba(255,206,86,.35); }
+    .fact.cat{ color:var(--cl-violet-2); border-color:rgba(167,139,250,.35); }
+    .thing button{ margin:0; padding:.5rem; font-size:.82rem; }
+    .thing .out{ text-align:center; font-size:.78rem; color:var(--cl-warn); padding:.5rem 0; }
+    .thing .out.late{ color:var(--cl-bad); }
+
+    /* ---- loans ---- */
+    .loans{ display:grid; gap:.9rem; }
+    .loan{ background:var(--cl-ink); border:1px solid var(--cl-line);
+      border-left:4px solid var(--cl-violet); border-radius:14px; padding:1rem 1.15rem; color:var(--cl-text); }
+    .loan.overdue{ border-left-color:var(--cl-bad); }
+    .loan.returned{ border-left-color:var(--cl-green); opacity:.8; }
+    .loan.requested{ border-left-color:var(--cl-warn); }
+    .loan .top{ display:flex; justify-content:space-between; gap:.8rem; flex-wrap:wrap; align-items:flex-start; }
+    .loan .nm{ font-weight:700; font-size:.98rem; }
+    .loan .meta{ font-size:.78rem; color:var(--cl-muted); margin-top:.15rem; }
+    .loan .why{ font-size:.84rem; margin:.6rem 0; font-style:italic; color:var(--cl-muted); }
+    .loan .state{ font-size:.68rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+      padding:.2rem .55rem; border-radius:20px; white-space:nowrap; }
+    .loan .state.requested{ background:rgba(255,206,86,.16); color:var(--cl-warn); }
+    .loan .state.out{ background:rgba(167,139,250,.16); color:var(--cl-violet-2); }
+    .loan .state.overdue{ background:rgba(255,93,108,.16); color:var(--cl-bad); }
+    .loan .state.returned{ background:rgba(31,214,166,.16); color:var(--cl-green); }
+    .loan .state.declined,.loan .state.cancelled{ background:rgba(255,255,255,.07); color:var(--cl-muted); }
+    .loan .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.8rem; align-items:center; }
+    .loan .acts button{ width:auto; margin:0; padding:.44rem .9rem; font-size:.8rem; }
+    .loan .acts label{ display:flex; align-items:center; gap:.35rem; font-size:.78rem;
+      color:var(--cl-muted); margin:0; }
+    .loan .acts label input{ width:auto; margin:0; }
+
+    /* ---- reputation strip ---- */
+    .rep{ display:flex; flex-wrap:wrap; gap:.7rem; margin-bottom:1.4rem; }
+    .rep .r{ flex:1; min-width:110px; padding:.7rem .9rem; border-radius:12px;
+      background:var(--cl-ink); border:1px solid var(--cl-line); }
+    .rep .r b{ display:block; font-size:1.4rem; font-weight:800; }
+    .rep .r span{ font-size:.68rem; color:var(--cl-muted); text-transform:uppercase; letter-spacing:.5px; }
+    .empty{ color:var(--cl-muted); text-align:center; padding:2.2rem 1rem; grid-column:1/-1; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap cl">
+    <!-- HERO -->
+    <div class="cl-hero">
+      <div class="cl-brand">
+        <!-- Our own mark: one hand passing something to another. -->
+        <svg viewBox="0 0 48 42" fill="none" aria-hidden="true">
+          <path d="M3 26c3-3 7-4 11-3l7 2" stroke="#a78bfa" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M45 26c-3-3-7-4-11-3l-7 2" stroke="#a78bfa" stroke-width="2.6" stroke-linecap="round"/>
+          <rect x="17" y="9" width="14" height="14" rx="3" stroke="#a78bfa" stroke-width="2.6"/>
+          <path d="M17 14h14M24 9v14" stroke="#a78bfa" stroke-width="2.2" opacity=".65"/>
+          <path d="M14 33h20" stroke="#a78bfa" stroke-width="2.6" stroke-linecap="round" opacity=".45"/>
+        </svg>
+        <div class="cl-logo">Cyva<span class="v">lend</span></div>
+      </div>
+      <p>The lending library. Forgot your calculator, out of pens, phone on 2%? Borrow it from
+        someone who has a spare — and put your own spares on the shelf so the favour goes both ways.
+        <b style="color:var(--cl-text)">Borrowing is free.</b> Cyvazon can carry it to your class,
+        and Cyvashield covers you if something never comes home.</p>
+      <div class="cl-badges" id="heroBadges"></div>
+    </div>
+
+    <div class="cl-tabs" id="tabs"></div>
+    <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
+
+    <!-- SHELF -->
+    <section id="tab-shelf" class="clpane">
+      <div class="cl-panel" style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:center;">
+        <div>
+          <h3 style="margin:0"><i class="fas fa-boxes-stacked"></i> On the shelf</h3>
+          <p class="sub" style="margin:.25rem 0 0" id="shelfSub"></p>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+          <select id="filter" onchange="drawShelf()" style="width:auto;margin:0;"></select>
+          <button class="ghost" style="width:auto;margin:0" onclick="go('mine')">
+            <i class="fas fa-plus"></i> Lend something</button>
+        </div>
+      </div>
+      <div class="shelf" id="shelf"></div>
+    </section>
+
+    <!-- MY SHELF -->
+    <section id="tab-mine" class="clpane" style="display:none;">
+      <div class="cl-panel">
+        <h3><i class="fas fa-hand-holding-heart"></i> Put something on the shelf</h3>
+        <p class="sub">Anything you'd be happy to lend for a lesson or a day. You approve every
+          request yourself, and you can ask for a refundable deposit if it's something you'd hate
+          to lose.</p>
+        <div class="cl-grid2">
+          <div><label class="lbl">What is it?</label><input id="iName" placeholder="e.g. Casio scientific calculator"></div>
+          <div><label class="lbl">Kind</label><select id="iCat"></select></div>
+          <div><label class="lbl">Condition</label><select id="iCond"></select></div>
+          <div><label class="lbl">Longest loan (days)</label><input id="iDays" type="number" min="1" value="1"></div>
+          <div><label class="lbl">Refundable deposit (CB, optional)</label>
+            <input id="iDep" type="number" min="0" step="1" value="0"></div>
+          <div><label class="lbl">Photo (https://, optional)</label><input id="iImg" placeholder="https://..."></div>
+          <div class="full"><label class="lbl">Anything the borrower should know</label>
+            <input id="iDesc" placeholder="e.g. 'the case is cracked but it works fine'"></div>
+        </div>
+        <button style="margin-top:1rem;" onclick="addItem()"><i class="fas fa-plus"></i> Add to the shelf</button>
+        <p id="addMsg" class="small" style="text-align:center;"></p>
+      </div>
+      <h3 style="margin:2rem 0 .3rem;"><i class="fas fa-box-open" style="color:var(--cl-violet)"></i> My things</h3>
+      <p class="small" style="margin-bottom:1rem;">Take something off the shelf any time — it just stops new requests.</p>
+      <div class="shelf" id="myShelf"></div>
+    </section>
+
+    <!-- BORROWED -->
+    <section id="tab-borrowed" class="clpane" style="display:none;">
+      <div class="rep" id="rep"></div>
+      <h3 style="margin-bottom:.3rem;"><i class="fas fa-hand-holding" style="color:var(--cl-violet)"></i> Things I've borrowed</h3>
+      <p class="small" style="margin-bottom:1rem;">Give them back on time and the owner confirms it here.</p>
+      <div class="loans" id="borrowed"></div>
+    </section>
+
+    <!-- LENDING -->
+    <section id="tab-lending" class="clpane" style="display:none;">
+      <h3 style="margin-bottom:.3rem;"><i class="fas fa-inbox" style="color:var(--cl-violet)"></i> People asking to borrow</h3>
+      <p class="small" style="margin-bottom:1rem;">You decide. Approving holds any deposit and starts the clock.</p>
+      <div class="loans" id="lending"></div>
+    </section>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, CFG=null, TAB="shelf", CATS=[], SHELF=[], MINE=[];
+    const esc=(s)=>(s==null?"":String(s))
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const safeUrl=(u)=>{
+      if(!/^https:\/\/[A-Za-z0-9._~:/?#@!$&*+,;=%-]+$/.test(u||"")) return "";
+      return encodeURI(u).replace(/["'<>]/g, encodeURIComponent);
+    };
+    const msg=(t,ok=false,el="msg")=>{const m=document.getElementById(el);
+      m.textContent=t||""; m.style.color= ok?"var(--cl-green)":"var(--red)";};
+    const cat=(k)=>CATS.find(c=>c.key===k)||CATS[CATS.length-1]||{label:"",icon:"fa-box"};
+
+    function when(iso){
+      if(!iso) return "";
+      const d = new Date(iso); if(isNaN(d)) return "";
+      const days = Math.round((d - Date.now())/86400000);
+      const on = d.toLocaleDateString(undefined,{day:"numeric",month:"short"});
+      if(days < 0)  return `${on} — ${-days} day${days===-1?"":"s"} overdue`;
+      if(days === 0) return `${on} — due today`;
+      if(days === 1) return `${on} — due tomorrow`;
+      return `${on} — ${days} days left`;
+    }
+
+    /* ---- tabs ---- */
+    function drawTabs(c){
+      c = c || {};
+      const defs = [
+        ["shelf","The shelf","fa-boxes-stacked",0],
+        ["mine","My things","fa-hand-holding-heart",0],
+        ["borrowed","Borrowed","fa-hand-holding",(c.overdue||0)+(c.due_soon||0)],
+        ["lending","Requests","fa-inbox",c.requests||0],
+      ];
+      document.getElementById("tabs").innerHTML = defs.map(([k,t,i,n])=>
+        `<button class="${k===TAB?"on":""}" onclick="go('${k}')"><i class="fas ${i}"></i> ${t}${
+          n?`<span class="badge">${n}</span>`:""}</button>`).join("");
+    }
+    function go(tab){
+      TAB=tab;
+      document.querySelectorAll(".clpane").forEach(p=>p.style.display="none");
+      document.getElementById("tab-"+tab).style.display="block";
+      document.querySelectorAll("#tabs button").forEach((b,i)=>
+        b.classList.toggle("on",["shelf","mine","borrowed","lending"][i]===tab));
+      msg("");
+      if(tab==="shelf"||tab==="mine") loadShelf();
+      if(tab==="borrowed"||tab==="lending") loadLoans();
+      history.replaceState(null,"","/cyvalend?tab="+tab);
+    }
+
+    /* ---- shelf ---- */
+    function thingCard(it, mine){
+      const img = safeUrl(it.image_url);
+      const pic = img ? `<div class="pic"><img src="${img}" alt="" loading="lazy"></div>`
+                      : `<div class="pic"><i class="fas ${esc(it.category_icon)}"></i></div>`;
+      const facts = `<div class="facts">
+        <span class="fact cat">${esc(it.category_label)}</span>
+        <span class="fact">${esc(it.condition)}</span>
+        <span class="fact">up to ${esc(it.max_days)} day${it.max_days==1?"":"s"}</span>
+        ${it.deposit>0?`<span class="fact dep">${esc(it.deposit)} CB deposit</span>`:""}
+        ${it.times_lent?`<span class="fact">lent ${esc(it.times_lent)}×</span>`:""}
+      </div>`;
+      let foot;
+      if(mine){
+        if(it.status === "out"){
+          foot = `<div class="out ${it.overdue?"late":""}">
+            <i class="fas fa-arrow-right-from-bracket"></i> With ${esc(it.borrower||"someone")}${
+              it.due_at?` · ${esc(when(it.due_at))}`:""}</div>`;
+        } else {
+          foot = `<div style="display:flex;gap:.4rem;">
+            <button class="ghost" style="flex:1" onclick="setStatus(${it.id},'${it.status==="retired"?"available":"retired"}')">${
+              it.status==="retired" ? "Put back on the shelf" : "Take off the shelf"}</button>
+            <button class="danger" style="width:auto" onclick="removeItem(${it.id})" title="Delete"><i class="fas fa-trash"></i></button>
+          </div>`;
+        }
+      } else {
+        foot = it.asked
+          ? `<div class="out"><i class="fas fa-hourglass-half"></i> You've asked — waiting on ${esc(it.owner)}</div>`
+          : `<button onclick="ask(${it.id},${esc(it.max_days)},'${esc(it.name)}',${esc(it.deposit)})">
+               <i class="fas fa-hand"></i> Ask to borrow</button>`;
+      }
+      return `<div class="thing">${pic}<div class="body">
+        <div class="nm">${esc(it.name)}</div>
+        <div class="by">${mine ? (it.status==="retired"?"Off the shelf":"On the shelf")
+                               : "from " + esc(it.owner) + (it.owner_lent?` · lent ${esc(it.owner_lent)}×`:"")}</div>
+        <div class="desc">${esc(it.description)||"<span style='opacity:.6'>No notes.</span>"}</div>
+        ${facts}${foot}
+      </div></div>`;
+    }
+
+    async function loadShelf(){
+      let d;
+      try{ d = await api("/cyvalend/shelf"); }catch(e){ return msg(e.message); }
+      SHELF = d.shelf; MINE = d.mine;
+      drawShelf();
+      document.getElementById("myShelf").innerHTML = MINE.length
+        ? MINE.map(it=>thingCard(it,true)).join("")
+        : `<p class="empty">Nothing of yours on the shelf yet.</p>`;
+    }
+    function drawShelf(){
+      const f = document.getElementById("filter").value;
+      const list = f ? SHELF.filter(i=>i.category===f) : SHELF;
+      document.getElementById("shelfSub").textContent =
+        `${SHELF.length} thing${SHELF.length===1?"":"s"} other citizens are willing to lend`;
+      document.getElementById("shelf").innerHTML = list.length
+        ? list.map(it=>thingCard(it,false)).join("")
+        : `<p class="empty">${SHELF.length ? "Nothing in that category." :
+             "The shelf is empty — be the first to lend something."}</p>`;
+    }
+
+    async function addItem(){
+      const body = {
+        name: document.getElementById("iName").value.trim(),
+        category: document.getElementById("iCat").value,
+        condition: document.getElementById("iCond").value,
+        max_days: document.getElementById("iDays").value,
+        deposit: document.getElementById("iDep").value,
+        image_url: document.getElementById("iImg").value.trim(),
+        description: document.getElementById("iDesc").value.trim(),
+      };
+      try{
+        await api("/cyvalend/item",{method:"POST",body:JSON.stringify(body)});
+        msg("On the shelf.",true,"addMsg");
+        ["iName","iImg","iDesc"].forEach(id=>document.getElementById(id).value="");
+        document.getElementById("iDep").value = 0;
+        loadShelf(); refresh();
+      }catch(e){ msg(e.message,false,"addMsg"); }
+    }
+    async function setStatus(id, status){
+      try{ await api("/cyvalend/item/update",{method:"POST",body:JSON.stringify({item_id:id,status})});
+        loadShelf();
+      }catch(e){ msg(e.message); }
+    }
+    async function removeItem(id){
+      if(!confirm("Remove this from the shelf for good?")) return;
+      try{ await api("/cyvalend/item/remove",{method:"POST",body:JSON.stringify({item_id:id})});
+        loadShelf(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+
+    async function ask(id, maxDays, name, deposit){
+      const days = prompt(`How many days do you need "${name}"? (up to ${maxDays})`, "1");
+      if(days === null) return;
+      const reason = prompt("Why do you need it? (optional — helps them say yes)") || "";
+      if(deposit > 0 && !confirm(`${name} needs a ${deposit} CB deposit, refunded when you return it. Continue?`)) return;
+      try{
+        await api("/cyvalend/request",{method:"POST",
+          body:JSON.stringify({item_id:id, days, reason})});
+        msg("Asked — the owner decides next.",true);
+        loadShelf(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+
+    /* ---- loans ---- */
+    function loanCard(l, side){
+      const it = l.item || {};
+      const st = l.overdue ? "overdue" : l.status;
+      const label = {requested:"Waiting on the owner", out:"Out on loan",
+                     overdue:"Overdue", returned:"Returned",
+                     declined:"Declined", cancelled:"Withdrawn"}[st] || st;
+      let acts = "";
+      if(side==="lending" && l.status==="requested"){
+        acts = `<label><input type="checkbox" id="dv${l.id}"> send it by Cyvazon</label>
+          <button class="good" onclick="decide(${l.id},'approve')"><i class="fas fa-check"></i> Lend it</button>
+          <button class="ghost" onclick="decide(${l.id},'decline')">Not right now</button>`;
+      } else if(side==="lending" && l.status==="out"){
+        acts = `<button class="good" onclick="confirmReturn(${l.id})"><i class="fas fa-rotate-left"></i> They gave it back</button>`;
+      } else if(side==="borrowed" && l.status==="requested"){
+        acts = `<button class="ghost" onclick="decide(${l.id},'cancel')">Withdraw</button>`;
+      } else if(side==="borrowed" && l.status==="out"){
+        acts = `<span class="small" style="margin:0"><i class="fas fa-circle-info"></i>
+          Hand it back to ${esc(l.owner)} — they confirm it here.</span>`;
+      }
+      const other = side==="borrowed" ? `from ${esc(l.owner)}` : `to ${esc(l.borrower)}`;
+      return `<div class="loan ${esc(st)}">
+        <div class="top">
+          <div>
+            <div class="nm"><i class="fas ${esc(it.category_icon||"fa-box")}" style="color:var(--cl-violet)"></i>
+              ${esc(it.name||"Item")}</div>
+            <div class="meta">${other} · ${esc(l.days)} day${l.days==1?"":"s"}${
+              l.due_at && (l.status==="out") ? ` · ${esc(when(l.due_at))}`:""}${
+              l.deposit_held>0?` · ${esc(l.deposit_held)} CB held`:""}</div>
+          </div>
+          <span class="state ${esc(st)}">${esc(label)}</span>
+        </div>
+        ${l.reason?`<div class="why">"${esc(l.reason)}"</div>`:""}
+        ${l.status==="returned"&&l.late?`<div class="why" style="color:var(--cl-bad)">Returned late.</div>`:""}
+        ${acts?`<div class="acts">${acts}</div>`:""}
+      </div>`;
+    }
+
+    async function loadLoans(){
+      let d;
+      try{ d = await api("/cyvalend/loans"); }catch(e){ return msg(e.message); }
+      const s = d.stats || {};
+      document.getElementById("rep").innerHTML = `
+        <div class="r"><b style="color:var(--cl-violet)">${esc(s.out_now||0)}</b><span>Out with you now</span></div>
+        <div class="r"><b style="color:var(--cl-green)">${esc(s.returned||0)}</b><span>Returned</span></div>
+        <div class="r"><b style="color:${(s.late||0)?"var(--cl-bad)":"var(--cl-text)"}">${esc(s.late||0)}</b><span>Returned late</span></div>
+        <div class="r"><b>${esc(s.lent||0)}</b><span>Times you've lent</span></div>`;
+      const live = l => ["requested","out"].includes(l.status);
+      const order = (a,b)=> (live(b.status?b:b)-0) ;
+      const put = (id, list, side, empty)=>{
+        const sorted = list.slice().sort((a,b)=>(live(b)-live(a)));
+        document.getElementById(id).innerHTML = sorted.length
+          ? sorted.map(l=>loanCard(l,side)).join("") : `<p class="empty">${empty}</p>`;
+      };
+      put("borrowed", d.borrowed, "borrowed", "You haven't borrowed anything yet.");
+      put("lending",  d.lending,  "lending",  "Nobody has asked to borrow from you yet.");
+    }
+
+    async function decide(id, action){
+      const dv = document.getElementById("dv"+id);
+      try{
+        const r = await api("/cyvalend/decide",{method:"POST",
+          body:JSON.stringify({loan_id:id, action, deliver: dv ? dv.checked : false})});
+        msg(action==="approve"
+              ? (r.delivery ? "Lent — Cyvazon is taking it over." : "Lent. Hand it over when you see them.")
+              : "Done.", true);
+        loadLoans(); loadShelf(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+    async function confirmReturn(id){
+      if(!confirm("Confirm you've got it back?")) return;
+      try{
+        const r = await api("/cyvalend/return",{method:"POST",body:JSON.stringify({loan_id:id})});
+        msg(r.deposit_refunded ? `Back on the shelf — ${r.deposit_refunded} CB deposit refunded.`
+                               : "Back on the shelf.", true);
+        loadLoans(); loadShelf(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+
+    function drawHero(){
+      document.getElementById("heroBadges").innerHTML = `
+        <span class="cl-badge"><i class="fas fa-gift"></i> Borrowing is free</span>
+        <span class="cl-badge"><i class="fas fa-truck-fast"></i> Delivered by Cyvazon</span>
+        <span class="cl-badge"><i class="fas fa-shield-halved"></i> Covered by Cyvashield</span>
+        ${CFG.open?"":`<span class="cl-badge" style="background:rgba(224,62,77,.15);border-color:rgba(224,62,77,.4);color:#ff8f9a"><i class="fas fa-ban"></i> Library closed</span>`}`;
+    }
+
+    async function refresh(){
+      try{ drawTabs(await api("/cyvalend/summary")); }catch{ drawTabs({}); }
+    }
+
+    (async function(){
+      ME = await requireAuth(); if(!ME) return;
+      renderNav("/cyvalend", ME);
+      try{ CFG = await api("/cyvalend/config"); }
+      catch(e){ return msg(e.message); }
+      CATS = CFG.categories || [];
+      document.getElementById("iCat").innerHTML =
+        CATS.map(c=>`<option value="${esc(c.key)}">${esc(c.label)}</option>`).join("");
+      document.getElementById("iCond").innerHTML =
+        (CFG.conditions||[]).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+      document.getElementById("filter").innerHTML =
+        `<option value="">All kinds</option>` +
+        CATS.map(c=>`<option value="${esc(c.key)}">${esc(c.label)}</option>`).join("");
+      document.getElementById("iDays").max = CFG.max_days;
+      document.getElementById("iDep").max = CFG.max_deposit;
+      drawHero();
+      await refresh();
+      const t = new URLSearchParams(location.search).get("tab");
+      go(["shelf","mine","borrowed","lending"].includes(t) ? t : "shelf");
+    })();
+  </script>
+</body>
+</html>

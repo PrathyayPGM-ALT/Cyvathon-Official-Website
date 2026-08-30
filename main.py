@@ -87,6 +87,7 @@ _CONFIG_KEYS = {
     "courier_wage": "COURIER_WAGE", "delivery_levy": "DELIVERY_LEVY",
     "delivery_open": "DELIVERY_OPEN",
     "insurance_open": "INSURANCE_OPEN", "insurance_levy": "INSURANCE_LEVY",
+    "lend_open": "LEND_OPEN", "lend_max_deposit": "LEND_MAX_DEPOSIT",
 }
 
 # Justice levers. RECORD_EXPIRY_DAYS = 0 means a conviction bars a citizen
@@ -331,7 +332,8 @@ def refresh_config():
             v = row.get(col)
             if v is not None:
                 # day/grant fields are whole numbers
-                if name in ("FINE_BARS_OFFICE", "DELIVERY_OPEN", "INSURANCE_OPEN"):
+                if name in ("FINE_BARS_OFFICE", "DELIVERY_OPEN", "INSURANCE_OPEN",
+                            "LEND_OPEN"):
                     g[name] = bool(v)
                 elif name.endswith(("_DAYS", "GRANT")) or name in ("LOAN_MAX", "MINISTRY_MIN_APPLICANTS"):
                     g[name] = int(v)
@@ -1492,7 +1494,8 @@ def sitemap():
              "/leaderboard", "/government", "/ministries", "/legislature",
              "/court", "/gazette", "/states", "/foreign", "/treasury",
              "/exchange", "/company", "/jobs", "/marketplace", "/casino",
-             "/flightsim", "/packet", "/cyvazon", "/shield", "/passport", "/login"]
+             "/flightsim", "/packet", "/cyvazon", "/shield", "/cyvalend",
+             "/passport", "/login"]
     urls = "".join(f"<url><loc>https://cyvathon.onrender.com{p}</loc></url>"
                    for p in pages)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>'
@@ -5187,7 +5190,7 @@ def gov():
 CONFIG_FIELDS = ["vat_rate", "tax_period_days", "salary_period_days", "savings_rate",
                  "bond_rate", "bond_days", "company_fee", "loan_max", "loan_days",
                  "starting_grant", "gdp", "gdp_multiplier",
-                 "courier_wage", "delivery_levy", "insurance_levy"]
+                 "courier_wage", "delivery_levy", "insurance_levy", "lend_max_deposit"]
 
 
 @app.route("/admin/config", methods=["GET"])
@@ -8864,11 +8867,11 @@ INSURANCE_PLANS = [
      "blurb": "Undelivered parcels and marketplace purchases that never arrived."},
     {"key": "standard", "label": "Standard",   "color": "#1fd6a6",
      "cap": 1500, "monthly": 3,
-     "covers": ["parcel", "market", "theft", "cards"],
+     "covers": ["parcel", "market", "theft", "cards", "lend"],
      "blurb": "Adds stolen Cybucks and Match Attax cards that never changed hands."},
     {"key": "full",     "label": "Full Cover", "color": "#ffce56",
      "cap": 5000, "monthly": 4,
-     "covers": ["parcel", "market", "theft", "cards", "scam", "other"],
+     "covers": ["parcel", "market", "theft", "cards", "lend", "scam", "other"],
      "blurb": "Everything, including scams and anything else the President accepts."},
 ]
 PLAN_BY_KEY = {p["key"]: p for p in INSURANCE_PLANS}
@@ -8878,6 +8881,7 @@ CLAIM_CATEGORIES = [
     {"key": "market", "label": "Marketplace purchase",     "icon": "fa-store"},
     {"key": "theft",  "label": "Money stolen",             "icon": "fa-sack-dollar"},
     {"key": "cards",  "label": "Card trade gone wrong",    "icon": "fa-futbol"},
+    {"key": "lend",   "label": "Lent item never returned",  "icon": "fa-hand-holding"},
     {"key": "scam",   "label": "Scammed by a citizen",     "icon": "fa-user-secret"},
     {"key": "other",  "label": "Something else",           "icon": "fa-circle-question"},
 ]
@@ -9343,6 +9347,551 @@ def shield_summary():
                    plan=(row or {}).get("plan") or "",
                    open_mine=sum(1 for c in mine if (c.get("status") or "open") == "open"),
                    waiting=waiting, open=bool(INSURANCE_OPEN))
+
+# ============================================================
+#  CYVALEND — the national lending library
+# ============================================================
+#  You forgot your calculator; someone three rooms away has a spare. Put
+#  what you'd lend on the shelf, borrow what you're short of, and get it
+#  back. Cyvazon carries it if the two of you aren't in the same room, and
+#  Cyvashield covers the owner if it never comes home.
+#
+#  Two rules do the real work. The OWNER confirms the return — the person
+#  who is owed something is the one who says it came back, exactly as the
+#  recipient confirms a parcel. And an owner may ask for a deposit, held
+#  from the borrower and refunded on return, so lending something you care
+#  about isn't just an act of faith.
+
+LEND_CATEGORIES = [
+    {"key": "stationery", "label": "Stationery",      "icon": "fa-pen"},
+    {"key": "calculator", "label": "Calculator",      "icon": "fa-calculator"},
+    {"key": "charger",    "label": "Charger or cable", "icon": "fa-plug"},
+    {"key": "book",       "label": "Book or textbook", "icon": "fa-book"},
+    {"key": "sports",     "label": "Sports gear",     "icon": "fa-futbol"},
+    {"key": "art",        "label": "Art supplies",    "icon": "fa-palette"},
+    {"key": "music",      "label": "Instrument",      "icon": "fa-music"},
+    {"key": "tech",       "label": "Tech",            "icon": "fa-laptop"},
+    {"key": "other",      "label": "Something else",  "icon": "fa-box"},
+]
+LEND_CAT_BY_KEY = {c["key"]: c for c in LEND_CATEGORIES}
+
+LEND_CONDITIONS = ["new", "good", "worn"]
+
+LEND_OPEN = True
+LEND_MAX_DEPOSIT = 200        # ceiling on what an owner may ask for
+MAX_LOAN_DAYS = 14
+MAX_SHELF_ITEMS = 30          # per citizen
+MAX_OPEN_BORROWS = 5          # things one citizen may have out at once
+
+
+def _lend_missing():
+    return jsonify(success=False,
+                   error="Cyvalend isn't enabled yet — the database needs a quick update "
+                         "(run migration_cyvalend.sql)."), 503
+
+
+def _item_public(row, extra=None):
+    cat = LEND_CAT_BY_KEY.get(row.get("category") or "other", LEND_CATEGORIES[-1])
+    out = {
+        "id": row.get("id"), "owner": row.get("owner"),
+        "name": row.get("name") or "",
+        "category": cat["key"], "category_label": cat["label"], "category_icon": cat["icon"],
+        "description": row.get("description") or "",
+        "image_url": row.get("image_url") or "",
+        "condition": row.get("condition") or "good",
+        "deposit": row.get("deposit") or 0,
+        "max_days": row.get("max_days") or 1,
+        "status": row.get("status") or "available",
+        "times_lent": row.get("times_lent") or 0,
+        "created_at": row.get("created_at"),
+    }
+    if extra:
+        out.update(extra)
+    return out
+
+
+def _loan_public(row, item=None, extra=None):
+    out = {
+        "id": row.get("id"), "item_id": row.get("item_id"),
+        "owner": row.get("owner"), "borrower": row.get("borrower"),
+        "days": row.get("days") or 1, "reason": row.get("reason") or "",
+        "status": row.get("status") or "requested",
+        "deposit_held": row.get("deposit_held") or 0,
+        "delivery_id": row.get("delivery_id"),
+        "requested_at": row.get("requested_at"), "due_at": row.get("due_at"),
+        "returned_at": row.get("returned_at"), "late": bool(row.get("late")),
+        "note": row.get("note") or "",
+        "overdue": _loan_overdue(row),
+    }
+    if item:
+        out["item"] = _item_public(item)
+    if extra:
+        out.update(extra)
+    return out
+
+
+def _loan_overdue(row):
+    if (row.get("status") or "") != "out":
+        return False
+    due = _parse(row.get("due_at"))
+    return bool(due and _now() > due)
+
+
+def _lend_stats(username):
+    """How reliable is this citizen? Shown next to their name so people can
+    decide whether to hand over something they care about."""
+    try:
+        rows = supabase.table("lend_loans").select("borrower,owner,status,late") \
+            .execute().data or []
+    except Exception:
+        return {"borrowed": 0, "returned": 0, "late": 0, "lent": 0, "out_now": 0}
+    mine_b = [r for r in rows if r.get("borrower") == username]
+    mine_o = [r for r in rows if r.get("owner") == username]
+    return {
+        "borrowed": len([r for r in mine_b if r.get("status") in ("out", "returned")]),
+        "returned": len([r for r in mine_b if r.get("status") == "returned"]),
+        "late":     len([r for r in mine_b if r.get("late")]),
+        "lent":     len([r for r in mine_o if r.get("status") in ("out", "returned")]),
+        "out_now":  len([r for r in mine_b if r.get("status") == "out"]),
+    }
+
+
+# ---- routes -----------------------------------------------------------
+@app.route("/cyvalend")
+def cyvalend_page():
+    return app.send_static_file("cyvalend.html")
+
+
+@app.route("/cyvalend/config")
+@limiter.limit("60/minute")
+def cyvalend_config():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    return jsonify(success=True, categories=LEND_CATEGORIES, conditions=LEND_CONDITIONS,
+                   open=bool(LEND_OPEN), me=user["username"],
+                   max_deposit=LEND_MAX_DEPOSIT, max_days=MAX_LOAN_DAYS,
+                   max_items=MAX_SHELF_ITEMS, max_borrows=MAX_OPEN_BORROWS,
+                   home={"class": user.get("home_class") or "",
+                         "area": user.get("home_area") or ""},
+                   stats=_lend_stats(user["username"]))
+
+
+@app.route("/cyvalend/shelf")
+@limiter.limit("60/minute")
+def cyvalend_shelf():
+    """Everything on offer, plus my own items and how they're doing."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        items = supabase.table("lend_items").select("*") \
+            .order("created_at", desc=True).limit(300).execute().data or []
+        loans = supabase.table("lend_loans").select("*") \
+            .in_("status", ["requested", "out"]).execute().data or []
+    except Exception:
+        return _lend_missing()
+
+    # Who currently holds what, and what I've already asked for.
+    holder = {l["item_id"]: l for l in loans if l["status"] == "out"}
+    asked = {l["item_id"] for l in loans if l["status"] == "requested" and l["borrower"] == me}
+
+    # Owner reliability, computed once rather than per item.
+    rep = {}
+    for it in items:
+        if it["owner"] not in rep:
+            rep[it["owner"]] = _lend_stats(it["owner"])
+
+    shelf, mine = [], []
+    for it in items:
+        h = holder.get(it["id"])
+        extra = {"asked": it["id"] in asked,
+                 "borrower": h["borrower"] if h else None,
+                 "due_at": h["due_at"] if h else None,
+                 "overdue": _loan_overdue(h) if h else False,
+                 "owner_lent": rep.get(it["owner"], {}).get("lent", 0)}
+        pub = _item_public(it, extra)
+        if it["owner"] == me:
+            mine.append(pub)
+        elif it.get("status") == "available":
+            shelf.append(pub)
+    return jsonify(success=True, me=me, shelf=shelf, mine=mine, open=bool(LEND_OPEN))
+
+
+@app.route("/cyvalend/item", methods=["POST"])
+@limiter.limit("20/minute")
+def cyvalend_add_item():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not LEND_OPEN:
+        return jsonify(success=False, error="Cyvalend is closed right now."), 403
+    me = user["username"]
+    d = request.get_json() or {}
+
+    name = (d.get("name") or "").strip()[:80]
+    if not name:
+        return jsonify(success=False, error="What are you lending?"), 400
+    category = (d.get("category") or "other").strip()
+    if category not in LEND_CAT_BY_KEY:
+        return jsonify(success=False, error="Unknown category"), 400
+    condition = (d.get("condition") or "good").strip()
+    if condition not in LEND_CONDITIONS:
+        condition = "good"
+
+    try:
+        deposit = round(float(d.get("deposit") or 0), 2)
+    except (TypeError, ValueError):
+        deposit = 0
+    if not math.isfinite(deposit) or deposit < 0:
+        deposit = 0
+    if deposit > LEND_MAX_DEPOSIT:
+        return jsonify(success=False,
+                       error=f"Deposits are capped at {LEND_MAX_DEPOSIT:g} CB."), 400
+
+    try:
+        max_days = int(d.get("max_days") or 1)
+    except (TypeError, ValueError):
+        max_days = 1
+    max_days = max(1, min(max_days, MAX_LOAN_DAYS))
+
+    image_url = (d.get("image_url") or "").strip()[:500]
+    if image_url and not _card_url_ok(image_url):
+        return jsonify(success=False, error="Use a direct https:// link for the photo."), 400
+
+    try:
+        held = supabase.table("lend_items").select("id").eq("owner", me) \
+            .neq("status", "retired").execute().data or []
+    except Exception:
+        return _lend_missing()
+    if len(held) >= MAX_SHELF_ITEMS:
+        return jsonify(success=False,
+                       error=f"You already have {MAX_SHELF_ITEMS} things on the shelf."), 400
+
+    row = {"owner": me, "name": name, "category": category, "condition": condition,
+           "description": (d.get("description") or "").strip()[:300],
+           "image_url": image_url, "deposit": deposit, "max_days": max_days}
+    try:
+        item = supabase.table("lend_items").insert(row).execute().data[0]
+    except Exception:
+        return _lend_missing()
+    return jsonify(success=True, item=_item_public(item))
+
+
+@app.route("/cyvalend/item/update", methods=["POST"])
+@limiter.limit("30/minute")
+def cyvalend_update_item():
+    """Take something off the shelf, or put it back."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json() or {}
+    try:
+        iid = int(d.get("item_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad item"), 400
+    try:
+        r = supabase.table("lend_items").select("*").eq("id", iid) \
+            .eq("owner", user["username"]).execute().data
+    except Exception:
+        return _lend_missing()
+    if not r:
+        return jsonify(success=False, error="That isn't yours"), 404
+    item = r[0]
+    if item.get("status") == "out":
+        return jsonify(success=False, error="It's out on loan — wait until it's back."), 400
+
+    want = (d.get("status") or "").strip()
+    if want not in ("available", "retired"):
+        return jsonify(success=False, error="Unknown status"), 400
+    supabase.table("lend_items").update({"status": want}).eq("id", iid).execute()
+    return jsonify(success=True, item=_item_public({**item, "status": want}))
+
+
+@app.route("/cyvalend/item/remove", methods=["POST"])
+@limiter.limit("20/minute")
+def cyvalend_remove_item():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        iid = int((request.get_json() or {}).get("item_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad item"), 400
+    try:
+        r = supabase.table("lend_items").select("*").eq("id", iid) \
+            .eq("owner", user["username"]).execute().data
+    except Exception:
+        return _lend_missing()
+    if not r:
+        return jsonify(success=False, error="That isn't yours"), 404
+    if r[0].get("status") == "out":
+        return jsonify(success=False, error="It's out on loan — wait until it's back."), 400
+    supabase.table("lend_loans").delete().eq("item_id", iid).eq("status", "requested").execute()
+    supabase.table("lend_items").delete().eq("id", iid).execute()
+    return jsonify(success=True)
+
+
+@app.route("/cyvalend/request", methods=["POST"])
+@limiter.limit("20/minute")
+def cyvalend_request():
+    """Ask to borrow something. The owner decides."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not LEND_OPEN:
+        return jsonify(success=False, error="Cyvalend is closed right now."), 403
+    me = user["username"]
+    d = request.get_json() or {}
+    try:
+        iid = int(d.get("item_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad item"), 400
+
+    try:
+        r = supabase.table("lend_items").select("*").eq("id", iid).execute().data
+    except Exception:
+        return _lend_missing()
+    if not r:
+        return jsonify(success=False, error="That item is gone"), 404
+    item = r[0]
+    if item["owner"] == me:
+        return jsonify(success=False, error="It's already yours"), 400
+    if item.get("status") != "available":
+        return jsonify(success=False, error="That's not on the shelf right now"), 409
+
+    try:
+        days = int(d.get("days") or 1)
+    except (TypeError, ValueError):
+        days = 1
+    days = max(1, min(days, int(item.get("max_days") or 1)))
+
+    mine = supabase.table("lend_loans").select("id,status,item_id") \
+        .eq("borrower", me).in_("status", ["requested", "out"]).execute().data or []
+    if any(l["item_id"] == iid for l in mine):
+        return jsonify(success=False, error="You've already asked for that one"), 400
+    if len([l for l in mine if l["status"] == "out"]) >= MAX_OPEN_BORROWS:
+        return jsonify(success=False,
+                       error=f"You already have {MAX_OPEN_BORROWS} things out. "
+                             "Return something first."), 400
+
+    # A deposit is only meaningful if the borrower can actually cover it.
+    deposit = float(item.get("deposit") or 0)
+    if deposit > 0 and (user.get("balance") or 0) < deposit:
+        return jsonify(success=False,
+                       error=f"That needs a {deposit:g} CB deposit and you don't have it."), 400
+
+    loan = {"item_id": iid, "owner": item["owner"], "borrower": me, "days": days,
+            "reason": (d.get("reason") or "").strip()[:200]}
+    try:
+        made = supabase.table("lend_loans").insert(loan).execute().data[0]
+    except Exception:
+        return _lend_missing()
+    notify(item["owner"], f"\U0001F91D {me} would like to borrow your {item['name']}.",
+           "/cyvalend?tab=lending")
+    return jsonify(success=True, loan=_loan_public(made, item))
+
+
+@app.route("/cyvalend/decide", methods=["POST"])
+@limiter.limit("30/minute")
+def cyvalend_decide():
+    """The owner says yes or no. Saying yes takes the deposit and starts the clock."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    d = request.get_json() or {}
+    action = (d.get("action") or "").strip()
+    if action not in ("approve", "decline", "cancel"):
+        return jsonify(success=False, error="Unknown action"), 400
+    try:
+        lid = int(d.get("loan_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad request"), 400
+
+    try:
+        r = supabase.table("lend_loans").select("*").eq("id", lid).execute().data
+    except Exception:
+        return _lend_missing()
+    if not r:
+        return jsonify(success=False, error="Request not found"), 404
+    loan = r[0]
+    if loan["status"] != "requested":
+        return jsonify(success=False, error="That request is already settled"), 400
+
+    if action == "cancel":
+        if loan["borrower"] != me:
+            return jsonify(success=False, error="Only the borrower can withdraw"), 403
+        supabase.table("lend_loans").update(
+            {"status": "cancelled", "decided_at": _now().isoformat()}).eq("id", lid).execute()
+        return jsonify(success=True, status="cancelled")
+
+    if loan["owner"] != me:
+        return jsonify(success=False, error="That isn't your item"), 403
+
+    it = supabase.table("lend_items").select("*").eq("id", loan["item_id"]).execute().data
+    item = it[0] if it else None
+    if not item:
+        return jsonify(success=False, error="That item is gone"), 404
+
+    if action == "decline":
+        supabase.table("lend_loans").update(
+            {"status": "declined", "decided_at": _now().isoformat(),
+             "note": (d.get("note") or "").strip()[:200]}).eq("id", lid).execute()
+        notify(loan["borrower"], f"{me} can't lend you the {item['name']} right now.", "/cyvalend")
+        return jsonify(success=True, status="declined")
+
+    # ---- approve ----
+    if item.get("status") != "available":
+        return jsonify(success=False, error="It's already out on loan"), 409
+
+    deposit = float(item.get("deposit") or 0)
+    if deposit > 0 and not cas_adjust(loan["borrower"], "balance", -deposit):
+        return jsonify(success=False,
+                       error=f"{loan['borrower']} can't cover the {deposit:g} CB deposit."), 400
+
+    now = _now()
+    due = now + timedelta(days=float(loan.get("days") or 1))
+    # Claim the item conditionally, so two approvals can't both win.
+    took = supabase.table("lend_items").update({"status": "out"}) \
+        .eq("id", item["id"]).eq("status", "available").execute().data
+    if not took:
+        if deposit > 0:
+            cas_adjust(loan["borrower"], "balance", deposit, allow_negative=True)
+        return jsonify(success=False, error="It's already out on loan"), 409
+
+    supabase.table("lend_loans").update(
+        {"status": "out", "decided_at": now.isoformat(), "due_at": due.isoformat(),
+         "deposit_held": deposit}).eq("id", lid).execute()
+    # Any other outstanding request for the same item is now moot.
+    supabase.table("lend_loans").update({"status": "declined", "decided_at": now.isoformat()}) \
+        .eq("item_id", item["id"]).eq("status", "requested").execute()
+
+    parcel = None
+    if d.get("deliver"):
+        parcel = raise_parcel("lend", lid, item["name"], me, loan["borrower"], me,
+                              notes="Cyvalend loan — please return it by "
+                                    + due.strftime("%d %b"))
+        if parcel:
+            supabase.table("lend_loans").update({"delivery_id": parcel["id"]}).eq("id", lid).execute()
+
+    add_record(loan["borrower"], f"Borrowed {me}'s {item['name']} via Cyvalend.")
+    notify(loan["borrower"],
+           f"✅ {me} lent you the {item['name']}. Due back "
+           f"{due.strftime('%d %b')}." + (f" {deposit:g} CB deposit held." if deposit else ""),
+           "/cyvalend?tab=borrowed")
+    return jsonify(success=True, status="out", due_at=due.isoformat(),
+                   deposit=deposit, delivery=(_delivery_public(parcel) if parcel else None))
+
+
+@app.route("/cyvalend/return", methods=["POST"])
+@limiter.limit("30/minute")
+def cyvalend_return():
+    """The OWNER confirms it came back. Only they can close a loan — otherwise
+    a borrower could mark everything returned and keep the lot."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        lid = int((request.get_json() or {}).get("loan_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad loan"), 400
+
+    try:
+        r = supabase.table("lend_loans").select("*").eq("id", lid).execute().data
+    except Exception:
+        return _lend_missing()
+    if not r:
+        return jsonify(success=False, error="Loan not found"), 404
+    loan = r[0]
+    if loan["owner"] != me:
+        return jsonify(success=False,
+                       error="Only the owner can confirm something came back."), 403
+    if loan["status"] != "out":
+        return jsonify(success=False, error="That loan isn't open"), 400
+
+    now = _now()
+    late = _loan_overdue(loan)
+    closed = supabase.table("lend_loans").update(
+        {"status": "returned", "returned_at": now.isoformat(), "late": late}) \
+        .eq("id", lid).eq("status", "out").execute().data
+    if not closed:
+        return jsonify(success=False, error="That loan is already closed"), 400
+
+    supabase.table("lend_items").update({"status": "available"}).eq("id", loan["item_id"]).execute()
+    cas_num("lend_items", [("id", loan["item_id"])], "times_lent", 1, places=0)
+
+    # The deposit was security, not a fee — it goes back either way.
+    dep = float(loan.get("deposit_held") or 0)
+    if dep > 0:
+        cas_adjust(loan["borrower"], "balance", dep, allow_negative=True)
+
+    notify(loan["borrower"],
+           f"✅ {me} confirmed the return."
+           + (f" Your {dep:g} CB deposit is back." if dep else "")
+           + (" It was late." if late else ""), "/cyvalend")
+    add_record(loan["borrower"],
+               f"Returned {me}'s item via Cyvalend" + (" (late)." if late else "."))
+    return jsonify(success=True, status="returned", late=late, deposit_refunded=dep)
+
+
+@app.route("/cyvalend/loans")
+@limiter.limit("60/minute")
+def cyvalend_loans():
+    """What I've borrowed, and what people want to borrow from me."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        rows = supabase.table("lend_loans").select("*") \
+            .order("requested_at", desc=True).limit(200).execute().data or []
+    except Exception:
+        return _lend_missing()
+    rows = [r for r in rows if me in (r.get("owner"), r.get("borrower"))]
+    ids = list({r["item_id"] for r in rows})
+    items = {}
+    if ids:
+        for it in (supabase.table("lend_items").select("*").in_("id", ids).execute().data or []):
+            items[it["id"]] = it
+
+    borrowed = [_loan_public(r, items.get(r["item_id"])) for r in rows if r["borrower"] == me]
+    lending  = [_loan_public(r, items.get(r["item_id"])) for r in rows if r["owner"] == me]
+    return jsonify(success=True, me=me, borrowed=borrowed, lending=lending,
+                   stats=_lend_stats(me))
+
+
+@app.route("/cyvalend/summary")
+@limiter.limit("60/minute")
+def cyvalend_summary():
+    """Counts for the dashboard banner and the tab badges."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        rows = supabase.table("lend_loans").select("owner,borrower,status,due_at") \
+            .in_("status", ["requested", "out"]).execute().data or []
+        shelf = supabase.table("lend_items").select("id").eq("status", "available") \
+            .neq("owner", me).execute().data or []
+    except Exception:
+        return jsonify(success=True, enabled=False, requests=0, out=0,
+                       overdue=0, due_soon=0, shelf=0, open=bool(LEND_OPEN))
+    mine_out = [r for r in rows if r["borrower"] == me and r["status"] == "out"]
+    soon = 0
+    for r in mine_out:
+        due = _parse(r.get("due_at"))
+        if due and 0 <= (due - _now()).total_seconds() <= 86400:
+            soon += 1
+    return jsonify(success=True, enabled=True, open=bool(LEND_OPEN),
+                   requests=sum(1 for r in rows if r["owner"] == me and r["status"] == "requested"),
+                   out=len(mine_out),
+                   overdue=sum(1 for r in mine_out if _loan_overdue(r)),
+                   awaiting_return=sum(1 for r in rows
+                                       if r["owner"] == me and r["status"] == "out"),
+                   due_soon=soon, shelf=len(shelf))
 
 # ============================================================
 #  JUSTICE — jail, criminal records, eligibility for office
