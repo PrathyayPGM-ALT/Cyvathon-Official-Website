@@ -8823,8 +8823,13 @@ def cyvazon_summary():
         rows = supabase.table("deliveries").select("sender,recipient,courier,status") \
             .in_("status", ["open", "claimed", "picked_up"]).execute().data or []
     except Exception:
+        # Tables not created yet. Still answer the questions that don't depend
+        # on them — above all is_admin, or the President loses the delivery
+        # admin panel precisely when they need it to see what's wrong.
         return jsonify(success=True, enabled=False, waiting=0, incoming=0,
-                       carrying=0, to_hand_over=0, courier=False)
+                       carrying=0, to_hand_over=0, courier=False,
+                       courier_status="", is_admin=is_treasury_admin(user),
+                       open=bool(DELIVERY_OPEN), wage=COURIER_WAGE)
     crow = _courier_row(me)
     return jsonify(success=True, enabled=True, courier=is_courier(user),
                    courier_status=((crow or {}).get("status") or "") if crow and crow.get("active") else "",

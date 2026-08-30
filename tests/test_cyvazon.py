@@ -327,5 +327,27 @@ crew = client_as("Aarav").get("/cyvazon/couriers").get_json()["couriers"]
 check("crew list shows only approved couriers",
       sorted(c["username"] for c in crew), ["Kabir"])
 
+print("\n=== 10. the admin tab survives an un-migrated database ===")
+# Before the delivery tables exist, /cyvazon/summary takes its error path. It
+# must still answer is_admin, or the President loses the very panel that would
+# tell them what is wrong.
+_real_table = db.table
+class _Missing:
+    def __getattr__(self, n): raise Exception("relation does not exist")
+db.table = lambda n: _Missing() if n in ("deliveries", "couriers") else _real_table(n)
+
+s2 = client_as("Prathyay").get("/cyvazon/summary").get_json()
+check("summary still succeeds", s2["success"], True)
+check("  reports the service as not set up", s2["enabled"], False)
+check("  but still flags the President as admin", s2["is_admin"], True)
+check("  and a citizen as not",
+      client_as("Aarav").get("/cyvazon/summary").get_json()["is_admin"], False)
+check("config agrees with summary",
+      client_as("Prathyay").get("/cyvazon/config").get_json()["is_admin"], s2["is_admin"])
+check("the admin panel explains the real problem",
+      client_as("Prathyay").get("/cyvazon/admin").status_code, 503)
+db.table = _real_table
+
+
 print(f"\n{'='*46}\n  {PASS} passed, {FAIL} failed\n{'='*46}")
 sys.exit(1 if FAIL else 0)

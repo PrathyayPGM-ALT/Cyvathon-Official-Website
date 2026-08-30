@@ -319,8 +319,11 @@
         ["jobs","Courier jobs","fa-truck-fast",c.courier?(c.waiting||0)+(c.carrying||0):0],
         ["crew","The crew","fa-people-carry-box",0],
       ];
-      // The delivery admin panel is the President's alone.
-      if(c.is_admin) defs.push(["admin","Delivery admin","fa-user-shield",ADMIN_PENDING]);
+      // The delivery admin panel is the President's alone. Read this from CFG,
+      // which comes from /cyvazon/config and never touches the delivery tables —
+      // go() uses the same source, so the tab list and the tab order can't
+      // disagree about whether the admin tab exists.
+      if(CFG && CFG.is_admin) defs.push(["admin","Delivery admin","fa-user-shield",ADMIN_PENDING]);
       document.getElementById("tabs").innerHTML = defs.map(([k,t,i,n])=>
         `<button class="${k===TAB?"on":""}" onclick="go('${k}')"><i class="fas ${i}"></i> ${t}${
           n?`<span class="badge">${n}</span>`:""}</button>`).join("");
@@ -570,7 +573,9 @@
     }
 
     async function refresh(){
-      try{ drawTabs(await api("/cyvazon/summary")); }catch{}
+      // Draw the tabs even if the summary call fails, so the President can
+      // always reach the admin panel and read the real error there.
+      try{ drawTabs(await api("/cyvazon/summary")); }catch{ drawTabs({}); }
     }
 
     (async function(){
