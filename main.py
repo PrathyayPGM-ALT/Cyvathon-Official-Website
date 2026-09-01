@@ -88,6 +88,7 @@ _CONFIG_KEYS = {
     "delivery_open": "DELIVERY_OPEN",
     "insurance_open": "INSURANCE_OPEN", "insurance_levy": "INSURANCE_LEVY",
     "lend_open": "LEND_OPEN", "lend_max_deposit": "LEND_MAX_DEPOSIT",
+    "pen_rate": "PEN_RATE", "pen_open": "PEN_OPEN",
 }
 
 # Justice levers. RECORD_EXPIRY_DAYS = 0 means a conviction bars a citizen
@@ -333,7 +334,7 @@ def refresh_config():
             if v is not None:
                 # day/grant fields are whole numbers
                 if name in ("FINE_BARS_OFFICE", "DELIVERY_OPEN", "INSURANCE_OPEN",
-                            "LEND_OPEN"):
+                            "LEND_OPEN", "PEN_OPEN"):
                     g[name] = bool(v)
                 elif name.endswith(("_DAYS", "GRANT")) or name in ("LOAN_MAX", "MINISTRY_MIN_APPLICANTS"):
                     g[name] = int(v)
@@ -452,6 +453,9 @@ def compute_gdp():
         t = get_treasury()
         total += (t.get("balance") or 0) + (t.get("pufb") or 0) * vp \
                + (t.get("aquilines") or 0) * va + (t.get("cybits") or 0) * vc
+        # The National Pen Reserve is real property of the state, valued at
+        # what the Reserve pays for a pen.
+        total += (t.get("pens") or 0) * PEN_RATE
         for c in (supabase.table("companies")
                   .select("balance,pufb,aquilines,cybits,shares,last_price,ipo_price,is_public")
                   .execute().data or []):
@@ -1494,7 +1498,7 @@ def sitemap():
              "/leaderboard", "/government", "/ministries", "/legislature",
              "/court", "/gazette", "/states", "/foreign", "/treasury",
              "/exchange", "/company", "/jobs", "/marketplace", "/casino",
-             "/flightsim", "/packet", "/cyvazon", "/shield", "/cyvalend",
+             "/flightsim", "/packet", "/cyvazon", "/shield", "/cyvalend", "/pens",
              "/passport", "/login"]
     urls = "".join(f"<url><loc>https://cyvathon.onrender.com{p}</loc></url>"
                    for p in pages)
@@ -5190,7 +5194,8 @@ def gov():
 CONFIG_FIELDS = ["vat_rate", "tax_period_days", "salary_period_days", "savings_rate",
                  "bond_rate", "bond_days", "company_fee", "loan_max", "loan_days",
                  "starting_grant", "gdp", "gdp_multiplier",
-                 "courier_wage", "delivery_levy", "insurance_levy", "lend_max_deposit"]
+                 "courier_wage", "delivery_levy", "insurance_levy", "lend_max_deposit",
+                 "pen_rate"]
 
 
 @app.route("/admin/config", methods=["GET"])
@@ -9892,6 +9897,381 @@ def cyvalend_summary():
                    awaiting_return=sum(1 for r in rows
                                        if r["owner"] == me and r["status"] == "out"),
                    due_soon=soon, shelf=len(shelf))
+
+# ============================================================
+#  THE NATIONAL PEN RESERVE
+# ============================================================
+#  Why a nation buys pens for 400 CB each:
+#
+#  The Cybuck was floated on nothing but goodwill — every note in
+#  circulation was backed by the promise that other citizens would keep
+#  accepting it. The Republic resolved that a currency ought to stand on
+#  something you can hold, and picked the one object every citizen already
+#  carries: the G2. It is also constitutionally necessary. A decree is only
+#  law once it is signed into the Gazette in G2 ink, so the state must keep
+#  a working stock or it cannot legislate at all.
+#
+#  So the Reserve pays far above what a pen costs. It isn't buying
+#  stationery, it's buying backing: a pen in the national vault is worth
+#  more to Cyvathon than the same pen in a pencil case. Reserve holdings
+#  count toward GDP for exactly that reason.
+#
+#  Nothing is paid on a pledge. A citizen says what they're donating, hands
+#  the pens over (Cyvazon will carry them), and the Registrar confirms what
+#  actually arrived — otherwise "I donated forty pens" would be a money
+#  printer rather than a reserve.
+
+# Every donated pen goes to one person. The Reserve is held by the Registrar
+# in person — a pen has to be physically handed to somebody, and a state
+# account can't take delivery of one.
+PEN_REGISTRAR = (os.environ.get("PEN_REGISTRAR", "Prathyay").strip() or "Prathyay")
+
+PEN_RATE = 400          # CB per working pen — set by the President
+PEN_OPEN = True
+PEN_CONDITIONS = [
+    {"key": "working", "label": "Works fine",        "share": 1.0,
+     "blurb": "Writes. Full rate."},
+    {"key": "dry",     "label": "Out of ink",        "share": 0.25,
+     "blurb": "The barrel is still refillable, so it's worth a quarter."},
+    {"key": "broken",  "label": "Cracked or broken", "share": 0.1,
+     "blurb": "Parts only. Token rate."},
+]
+PEN_COND_BY_KEY = {c["key"]: c for c in PEN_CONDITIONS}
+
+MAX_PENS_PER_PLEDGE = 20
+MAX_OPEN_PLEDGES    = 3
+
+
+def is_pen_registrar(user):
+    """The Registrar keeps the vault. The President can always reach the desk
+    too, so the Reserve doesn't stall if the Registrar is away."""
+    if not user:
+        return False
+    return user["username"] == PEN_REGISTRAR or is_treasury_admin(user)
+
+
+def _pen_missing():
+    return jsonify(success=False,
+                   error="The Pen Reserve isn't enabled yet — the database needs a quick "
+                         "update (run migration_pen_reserve.sql)."), 503
+
+
+def pen_value(count, condition, rate=None):
+    """What the Reserve owes for `count` pens in this condition."""
+    c = PEN_COND_BY_KEY.get(condition or "working", PEN_CONDITIONS[0])
+    return round(max(0, int(count or 0)) * float(rate if rate is not None else PEN_RATE) * c["share"], 2)
+
+
+def _pen_public(row):
+    cond = PEN_COND_BY_KEY.get(row.get("condition") or "working", PEN_CONDITIONS[0])
+    return {
+        "id": row.get("id"), "username": row.get("username"),
+        "count": row.get("count") or 0,
+        "condition": cond["key"], "condition_label": cond["label"], "share": cond["share"],
+        "note": row.get("note") or "", "status": row.get("status") or "pledged",
+        "rate": row.get("rate") or PEN_RATE,
+        "counted": row.get("counted") or 0,
+        "amount_paid": row.get("amount_paid") or 0,
+        "expected": pen_value(row.get("count"), row.get("condition"), row.get("rate")),
+        "delivery_id": row.get("delivery_id"),
+        "decided_by": row.get("decided_by"), "decided_at": row.get("decided_at"),
+        "decision_note": row.get("decision_note") or "",
+        "created_at": row.get("created_at"),
+    }
+
+
+def _reserve_holdings():
+    try:
+        return int(get_treasury().get("pens") or 0)
+    except Exception:
+        return 0
+
+
+# ---- routes -----------------------------------------------------------
+@app.route("/pens")
+def pens_page():
+    return app.send_static_file("pens.html")
+
+
+@app.route("/pens/config")
+@limiter.limit("60/minute")
+def pens_config():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    held = _reserve_holdings()
+    try:
+        rows = supabase.table("pen_donations").select("username,status,counted,amount_paid") \
+            .execute().data or []
+    except Exception:
+        rows = []
+    mine = [r for r in rows if r["username"] == user["username"]]
+    return jsonify(success=True, rate=PEN_RATE, open=bool(PEN_OPEN),
+                   conditions=PEN_CONDITIONS, me=user["username"],
+                   registrar=PEN_REGISTRAR,
+                   is_admin=is_pen_registrar(user),
+                   max_per_pledge=MAX_PENS_PER_PLEDGE, max_open=MAX_OPEN_PLEDGES,
+                   reserve_pens=held,
+                   reserve_value=round(held * PEN_RATE, 2),
+                   donors=len({r["username"] for r in rows if r["status"] == "received"}),
+                   my_pens=sum(r.get("counted") or 0 for r in mine if r["status"] == "received"),
+                   my_earned=round(sum(float(r.get("amount_paid") or 0) for r in mine), 2))
+
+
+@app.route("/pens/pledge", methods=["POST"])
+@limiter.limit("15/minute")
+def pens_pledge():
+    """Declare pens you're donating. Payment follows the Registrar's count."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not PEN_OPEN:
+        return jsonify(success=False, error="The Reserve isn't taking donations right now."), 403
+    me = user["username"]
+    d = request.get_json() or {}
+
+    try:
+        count = int(d.get("count") or 0)
+    except (TypeError, ValueError):
+        count = 0
+    if count < 1:
+        return jsonify(success=False, error="How many pens?"), 400
+    if count > MAX_PENS_PER_PLEDGE:
+        return jsonify(success=False,
+                       error=f"{MAX_PENS_PER_PLEDGE} pens per donation — "
+                             "split a bigger haul across several."), 400
+
+    condition = (d.get("condition") or "working").strip()
+    if condition not in PEN_COND_BY_KEY:
+        return jsonify(success=False, error="Unknown condition"), 400
+
+    try:
+        openp = supabase.table("pen_donations").select("id").eq("username", me) \
+            .eq("status", "pledged").execute().data or []
+    except Exception:
+        return _pen_missing()
+    if len(openp) >= MAX_OPEN_PLEDGES:
+        return jsonify(success=False,
+                       error=f"You already have {MAX_OPEN_PLEDGES} donations waiting to be "
+                             "counted in. Hand those over first."), 400
+
+    row = {"username": me, "count": count, "condition": condition, "rate": PEN_RATE,
+           "note": (d.get("note") or "").strip()[:200]}
+    try:
+        made = supabase.table("pen_donations").insert(row).execute().data[0]
+    except Exception:
+        return _pen_missing()
+
+    parcel = None
+    if d.get("deliver") and me != PEN_REGISTRAR:
+        # Cyvazon carries them straight to the Registrar, so a donor doesn't
+        # have to go and find them.
+        parcel = raise_parcel("pens", made["id"],
+                              f"{count} G2 pen(s) for the National Reserve",
+                              me, PEN_REGISTRAR, me,
+                              notes="Pen Reserve donation — to be counted in.")
+        if parcel:
+            supabase.table("pen_donations").update({"delivery_id": parcel["id"]}) \
+                .eq("id", made["id"]).execute()
+
+    notify(PEN_REGISTRAR,
+           f"\U0001F58A️ {me} pledged {count} G2 pen(s) to the National Reserve.",
+           "/pens?tab=registry")
+    return jsonify(success=True, donation=_pen_public(made),
+                   delivery=(_delivery_public(parcel) if parcel else None))
+
+
+@app.route("/pens/cancel", methods=["POST"])
+@limiter.limit("20/minute")
+def pens_cancel():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        did = int((request.get_json() or {}).get("donation_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad donation"), 400
+    try:
+        r = supabase.table("pen_donations").select("*").eq("id", did).execute().data
+    except Exception:
+        return _pen_missing()
+    if not r:
+        return jsonify(success=False, error="Donation not found"), 404
+    if r[0]["username"] != user["username"]:
+        return jsonify(success=False, error="That isn't your donation"), 403
+    if r[0]["status"] != "pledged":
+        return jsonify(success=False, error="That donation is already settled"), 400
+    supabase.table("pen_donations").update(
+        {"status": "cancelled", "decided_at": _now().isoformat()}).eq("id", did).execute()
+    return jsonify(success=True, status="cancelled")
+
+
+@app.route("/pens/mine")
+@limiter.limit("60/minute")
+def pens_mine():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        rows = supabase.table("pen_donations").select("*").eq("username", user["username"]) \
+            .order("created_at", desc=True).limit(60).execute().data or []
+    except Exception:
+        return _pen_missing()
+    return jsonify(success=True, donations=[_pen_public(r) for r in rows])
+
+
+@app.route("/pens/board")
+@limiter.limit("60/minute")
+def pens_board():
+    """Who has kept the Republic in ink."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        rows = supabase.table("pen_donations").select("username,counted,amount_paid,status") \
+            .eq("status", "received").execute().data or []
+    except Exception:
+        return _pen_missing()
+    tally = {}
+    for r in rows:
+        t = tally.setdefault(r["username"], {"username": r["username"], "pens": 0, "earned": 0})
+        t["pens"] += r.get("counted") or 0
+        t["earned"] += float(r.get("amount_paid") or 0)
+    out = sorted(tally.values(), key=lambda t: (-t["pens"], t["username"].lower()))
+    for t in out:
+        t["earned"] = round(t["earned"], 2)
+        t["me"] = t["username"] == user["username"]
+    return jsonify(success=True, donors=out[:50], reserve_pens=_reserve_holdings())
+
+
+@app.route("/pens/registry")
+@limiter.limit("60/minute")
+def pens_registry():
+    """The Registrar's desk: pens pledged but not yet counted in."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_pen_registrar(user):
+        return jsonify(success=False, error="Registrar only"), 403
+    try:
+        rows = supabase.table("pen_donations").select("*") \
+            .order("created_at", desc=True).limit(200).execute().data or []
+    except Exception:
+        return _pen_missing()
+    pledged = [_pen_public(r) for r in rows if (r.get("status") or "pledged") == "pledged"]
+    settled = [_pen_public(r) for r in rows if (r.get("status") or "pledged") != "pledged"][:40]
+    paid = sum(float(r.get("amount_paid") or 0) for r in rows if r.get("status") == "received")
+    return jsonify(success=True, pledged=pledged, settled=settled,
+                   reserve_pens=_reserve_holdings(), rate=PEN_RATE,
+                   paid_total=round(paid, 2),
+                   owed=round(sum(p["expected"] for p in pledged), 2))
+
+
+@app.route("/pens/registry/decide", methods=["POST"])
+@limiter.limit("30/minute")
+def pens_registry_decide():
+    """Count pens into the vault and pay for them, or turn the donation away.
+    The count is the Registrar's, not the donor's — that is the whole
+    difference between a reserve and a rumour."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_pen_registrar(user):
+        return jsonify(success=False, error="Registrar only"), 403
+    d = request.get_json() or {}
+    action = (d.get("action") or "").strip()
+    if action not in ("receive", "reject"):
+        return jsonify(success=False, error="Unknown action"), 400
+    try:
+        did = int(d.get("donation_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad donation"), 400
+    note = (d.get("note") or "").strip()[:300]
+
+    try:
+        r = supabase.table("pen_donations").select("*").eq("id", did).execute().data
+    except Exception:
+        return _pen_missing()
+    if not r:
+        return jsonify(success=False, error="Donation not found"), 404
+    don = r[0]
+    if (don.get("status") or "pledged") != "pledged":
+        return jsonify(success=False, error="That donation is already settled"), 400
+
+    me, now = user["username"], _now()
+
+    if action == "reject":
+        supabase.table("pen_donations").update(
+            {"status": "rejected", "decided_by": me, "decided_at": now.isoformat(),
+             "decision_note": note}).eq("id", did).eq("status", "pledged").execute()
+        notify(don["username"], "Your pen donation wasn't accepted."
+                                + (f" {note}" if note else ""), "/pens")
+        return jsonify(success=True, status="rejected")
+
+    # ---- receive: the Registrar's count is what gets paid ----
+    try:
+        counted = int(d.get("counted") if d.get("counted") not in (None, "") else don.get("count") or 0)
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad count"), 400
+    if counted < 0:
+        return jsonify(success=False, error="Count can't be negative"), 400
+    if counted > int(don.get("count") or 0):
+        return jsonify(success=False,
+                       error="You can't count in more pens than were pledged."), 400
+
+    condition = (d.get("condition") or don.get("condition") or "working").strip()
+    if condition not in PEN_COND_BY_KEY:
+        condition = don.get("condition") or "working"
+    award = pen_value(counted, condition, don.get("rate"))
+
+    claimed = supabase.table("pen_donations").update(
+        {"status": "received", "counted": counted, "condition": condition,
+         "amount_paid": award, "decided_by": me, "decided_at": now.isoformat(),
+         "decision_note": note}).eq("id", did).eq("status", "pledged").execute().data
+    if not claimed:
+        return jsonify(success=False, error="That donation is already settled"), 400
+
+    if counted:
+        # Into the vault, and out of the Treasury's cash.
+        cas_num("treasury", [("id", 1)], "pens", counted, places=0)
+        _gdp_cache["v"] = None          # the Reserve counts toward national wealth
+    if award:
+        cas_adjust(don["username"], "balance", award, allow_negative=False)
+        treasury_add(cybucks=-award, counterparty=don["username"], kind="pen_reserve")
+        log_txn("pens", "National Pen Reserve", don["username"], award, "cybucks",
+                f"{counted} G2 pen(s) counted into the Reserve")
+    add_record(don["username"],
+               f"Donated {counted} G2 pen(s) to the National Reserve for {award:g} CB.")
+    notify(don["username"],
+           f"\U0001F58A️ The Registrar counted in {counted} pen(s) — {award:g} CB paid."
+           + (f" {note}" if note else ""), "/pens")
+    return jsonify(success=True, status="received", counted=counted, paid=award,
+                   reserve_pens=_reserve_holdings())
+
+
+@app.route("/pens/summary")
+@limiter.limit("60/minute")
+def pens_summary():
+    """Counts for the dashboard banner and the tab badges."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    admin = is_pen_registrar(user)
+    try:
+        rows = supabase.table("pen_donations").select("username,status").execute().data or []
+    except Exception:
+        return jsonify(success=True, enabled=False, is_admin=admin, rate=PEN_RATE,
+                       registrar=PEN_REGISTRAR, waiting=0, mine_open=0,
+                       reserve_pens=0, open=bool(PEN_OPEN))
+    return jsonify(success=True, enabled=True, is_admin=admin, rate=PEN_RATE,
+                   registrar=PEN_REGISTRAR, open=bool(PEN_OPEN),
+                   waiting=sum(1 for r in rows if r["status"] == "pledged") if admin else 0,
+                   mine_open=sum(1 for r in rows
+                                 if r["username"] == me and r["status"] == "pledged"),
+                   donated=sum(1 for r in rows
+                               if r["username"] == me and r["status"] == "received"),
+                   reserve_pens=_reserve_holdings())
 
 # ============================================================
 #  JUSTICE — jail, criminal records, eligibility for office

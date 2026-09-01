@@ -120,6 +120,25 @@ from the Presidential Admin Panel.
 
 ---
 
+### 7. The National Pen Reserve
+The state buys G2 pens at **400 CB each** (`/pens`):
+- The Cybuck is backed by a physical reserve of pens. Reserve holdings count
+  toward national GDP
+- A decree is only law once signed into the Gazette in G2 ink, so the Republic
+  keeps a working stock or it cannot legislate
+- Citizens **pledge** a donation; **Cyvazon delivers it straight to the
+  Registrar** (Prathyay); the Registrar counts in what actually arrived and
+  only then is anything paid
+- The Registrar's count is what gets paid, not the donor's claim — and the
+  condition can be corrected on arrival (working 100%, out of ink 25%,
+  broken 10%)
+
+Needs `migration_pen_reserve.sql`. The rate is tunable from the Presidential
+Admin Panel; set `PEN_REGISTRAR` in the environment to change who holds the
+vault.
+
+---
+
 **On the card data.** The player lookup uses TheSportsDB's free API — set
 `SPORTSDB_API_KEY` to use your own key instead of the shared test key. There is
 no open Match Attax card API: Topps publishes none, and card databases like

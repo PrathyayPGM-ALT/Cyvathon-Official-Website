@@ -69,6 +69,7 @@
           <div class="field"><label>Courier wage (CB per salary period)</label><input id="courier_wage" type="number"><div class="hint">Paid on top of a courier's normal salary.</div></div>
           <div class="field"><label>Delivery levy (0.05 = 5%)</label><input id="delivery_levy" type="number" step="0.01"><div class="hint">Charged with VAT to keep delivery free for everyone. Set 0 to fund it from general revenue.</div></div>
           <div class="field"><label>Insurance levy (0 = free from general revenue)</label><input id="insurance_levy" type="number" step="0.01"><div class="hint">Cyvashield payouts come from the Treasury. Raise this only if claims start outrunning revenue.</div></div>
+          <div class="field"><label>Pen Reserve rate (CB per G2)</label><input id="pen_rate" type="number"><div class="hint">What the state pays for a working pen donated to the national vault. Reserve holdings count toward GDP at this rate.</div></div>
         </div>
       </div>
 
@@ -149,7 +150,7 @@
   <script>
     const FIELDS = ["vat_rate","tax_period_days","salary_period_days","savings_rate",
       "bond_rate","bond_days","company_fee","loan_max","loan_days","starting_grant","gdp_multiplier",
-      "courier_wage","delivery_levy","insurance_levy"];
+      "courier_wage","delivery_levy","insurance_levy","pen_rate"];
     /* ---- Announcements ---- */
     const annOut=(t,err=true)=>{const m=document.getElementById("annMsgOut");
       m.textContent=t; m.style.color=err?"var(--red)":"var(--green)";};

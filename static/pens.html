@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The National Pen Reserve · Cyvathon</title>
+  <!-- social / SEO metadata -->
+  <meta name="description" content="The National Pen Reserve — Cyvathon pays 400 CB for every G2 pen donated to the state." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/pens" />
+  <meta name="theme-color" content="#ffce56" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="The National Pen Reserve · Cyvathon" />
+  <meta property="og:description" content="Donate a G2 to the Republic. The state pays 400 CB a pen." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/pens" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="The National Pen Reserve · Cyvathon" />
+  <meta name="twitter:description" content="Donate a G2 to the Republic. The state pays 400 CB a pen." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    /* ============================================================
+       THE NATIONAL PEN RESERVE — ink and gold leaf. This is a
+       state institution rather than a service, so it reads like a
+       vault: dark, heavy, and slightly ceremonial.
+       ============================================================ */
+    .pn{
+      --pn-ink:#16130c;
+      --pn-ink-2:#221d12;
+      --pn-gold:#ffce56;
+      --pn-gold-2:#ffe08f;
+      --pn-deep:#c99a10;
+      --pn-line:rgba(255,255,255,.1);
+      --pn-text:#fbf6e9;
+      --pn-muted:#b8ac91;
+      --pn-green:#1fd6a6;
+      --pn-bad:#ff5d6c;
+    }
+    :root[data-theme="light"] .pn{
+      --pn-ink:#ffffff; --pn-ink-2:#fbf6e9;
+      --pn-line:rgba(80,60,10,.16);
+      --pn-text:#2a220c; --pn-muted:#6b5f42;
+      --pn-gold:#a37806; --pn-gold-2:#8a6404;
+    }
+
+    /* ---- hero ---- */
+    .pn-hero{ background:linear-gradient(135deg,var(--pn-ink),var(--pn-ink-2));
+      border:1px solid var(--pn-line); border-radius:20px; padding:2.1rem 2rem 1.9rem;
+      margin-bottom:1.4rem; position:relative; overflow:hidden; }
+    .pn-hero::after{ content:""; position:absolute; right:-80px; top:-80px; width:280px; height:280px;
+      border-radius:50%; background:radial-gradient(circle,rgba(255,206,86,.18),transparent 68%); }
+    .pn-brand{ display:flex; align-items:center; gap:.9rem; margin-bottom:.5rem; }
+    .pn-brand svg{ width:38px; height:48px; flex:none; }
+    .pn-logo{ font-size:1.85rem; font-weight:800; letter-spacing:-.8px; color:var(--pn-text); line-height:1.1; }
+    .pn-logo small{ display:block; font-size:.7rem; letter-spacing:2.4px; text-transform:uppercase;
+      color:var(--pn-gold); font-weight:700; margin-bottom:.2rem; }
+    .pn-hero p{ color:var(--pn-muted); max-width:660px; margin:0; line-height:1.7; font-size:.96rem; }
+    .pn-rate{ display:inline-flex; align-items:baseline; gap:.4rem; margin:1rem 0 .2rem; }
+    .pn-rate b{ font-size:2.6rem; font-weight:800; color:var(--pn-gold); letter-spacing:-1.5px; line-height:1; }
+    .pn-rate span{ font-size:.85rem; color:var(--pn-muted); font-weight:600; }
+
+    /* ---- why panel ---- */
+    .why{ background:var(--pn-ink); border:1px solid var(--pn-line); border-left:4px solid var(--pn-gold);
+      border-radius:14px; padding:1.3rem 1.5rem; margin-bottom:2rem; color:var(--pn-text); }
+    .why h3{ font-size:1rem; display:flex; align-items:center; gap:.5rem; margin-bottom:.6rem; }
+    .why h3 i{ color:var(--pn-gold); }
+    .why p{ color:var(--pn-muted); font-size:.9rem; line-height:1.75; margin-bottom:.7rem; }
+    .why p:last-child{ margin-bottom:0; }
+    .why b{ color:var(--pn-text); }
+
+    /* ---- vault counter ---- */
+    .vault{ display:flex; flex-wrap:wrap; gap:.8rem; margin-bottom:1.8rem; }
+    .vault .v{ flex:1; min-width:140px; padding:1rem 1.1rem; border-radius:14px;
+      background:var(--pn-ink); border:1px solid var(--pn-line); }
+    .vault .v b{ display:block; font-size:1.75rem; font-weight:800; letter-spacing:-.8px; color:var(--pn-gold); }
+    .vault .v span{ font-size:.7rem; color:var(--pn-muted); text-transform:uppercase; letter-spacing:.6px; }
+
+    /* ---- panels ---- */
+    .pn-panel{ background:var(--pn-ink); border:1px solid var(--pn-line); border-radius:16px;
+      padding:1.4rem 1.5rem; margin-bottom:1.4rem; color:var(--pn-text); }
+    .pn-panel h3{ display:flex; align-items:center; gap:.55rem; margin-bottom:.35rem; font-size:1.08rem; }
+    .pn-panel h3 i{ color:var(--pn-gold); }
+    .pn-panel .sub{ color:var(--pn-muted); font-size:.86rem; margin-bottom:1rem; line-height:1.6; }
+    .pn .lbl{ display:block; font-size:.72rem; color:var(--pn-muted); margin-top:.55rem;
+      text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+    .pn input,.pn select,.pn textarea{ background:var(--pn-ink-2); border:1px solid var(--pn-line);
+      color:var(--pn-text); margin-top:5px; }
+    .pn input:focus,.pn select:focus,.pn textarea:focus{ border-color:var(--pn-gold);
+      box-shadow:0 0 0 3px rgba(255,206,86,.16); }
+    .pn button{ background:linear-gradient(135deg,var(--pn-gold),var(--pn-deep)); color:#2b2202;
+      box-shadow:0 6px 18px rgba(255,206,86,.24); font-weight:700; }
+    .pn button:hover{ box-shadow:0 10px 24px rgba(255,206,86,.34); }
+    .pn button.ghost{ background:transparent; border:1px solid rgba(255,206,86,.5);
+      color:var(--pn-gold); box-shadow:none; }
+    .pn button.ghost:hover{ background:rgba(255,206,86,.1); }
+    .pn button.danger{ background:linear-gradient(135deg,#ff6b78,#e03e4d); color:#fff; }
+    .pn-grid2{ display:grid; gap:.7rem; grid-template-columns:1fr 1fr; }
+    .pn-grid2 .full{ grid-column:1/-1; }
+    @media(max-width:640px){ .pn-grid2{ grid-template-columns:1fr; } }
+    .payout{ text-align:center; padding:.9rem; border-radius:12px; margin-top:1rem;
+      background:var(--pn-ink-2); border:1px dashed rgba(255,206,86,.4); }
+    .payout b{ font-size:1.7rem; color:var(--pn-gold); font-weight:800; letter-spacing:-.8px; }
+    .payout span{ display:block; font-size:.74rem; color:var(--pn-muted); margin-top:.15rem; }
+
+    /* ---- tabs ---- */
+    .pn-tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.6rem; }
+    .pn-tabs button{ width:auto; margin:0; padding:.55rem 1.1rem; font-size:.86rem;
+      background:var(--pn-ink); color:var(--pn-muted); border:1px solid var(--pn-line); box-shadow:none; }
+    .pn-tabs button.on{ background:linear-gradient(135deg,var(--pn-gold),var(--pn-deep));
+      color:#2b2202; border-color:transparent; }
+    .pn-tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem;
+      border-radius:20px; background:#e03e4d; color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
+
+    /* ---- donation rows ---- */
+    .dons{ display:grid; gap:.85rem; }
+    .don{ background:var(--pn-ink); border:1px solid var(--pn-line);
+      border-left:4px solid var(--pn-muted); border-radius:13px; padding:1rem 1.15rem; color:var(--pn-text); }
+    .don.pledged{ border-left-color:var(--pn-gold); }
+    .don.received{ border-left-color:var(--pn-green); }
+    .don.rejected,.don.cancelled{ border-left-color:var(--pn-muted); opacity:.75; }
+    .don .top{ display:flex; justify-content:space-between; gap:.8rem; flex-wrap:wrap; align-items:flex-start; }
+    .don .n{ font-weight:700; font-size:1rem; display:flex; align-items:center; gap:.5rem; }
+    .don .n i{ color:var(--pn-gold); }
+    .don .meta{ font-size:.78rem; color:var(--pn-muted); margin-top:.15rem; }
+    .don .val{ font-size:1.2rem; font-weight:800; color:var(--pn-gold); white-space:nowrap; }
+    .don .state{ font-size:.66rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+      padding:.2rem .55rem; border-radius:20px; white-space:nowrap; display:inline-block; margin-top:.2rem; }
+    .don .state.pledged{ background:rgba(255,206,86,.16); color:var(--pn-gold); }
+    .don .state.received{ background:rgba(31,214,166,.16); color:var(--pn-green); }
+    .don .state.rejected{ background:rgba(255,93,108,.14); color:var(--pn-bad); }
+    .don .state.cancelled{ background:rgba(255,255,255,.07); color:var(--pn-muted); }
+    .don .note{ font-size:.82rem; color:var(--pn-muted); font-style:italic; margin-top:.5rem; }
+    .don .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.85rem; align-items:center; }
+    .don .acts button{ width:auto; margin:0; padding:.44rem .9rem; font-size:.8rem; }
+    .don .acts input,.don .acts select{ width:auto; margin:0; padding:.44rem .6rem; font-size:.8rem; }
+    .don .acts label{ font-size:.74rem; color:var(--pn-muted); margin:0; }
+
+    /* ---- donor board ---- */
+    .board{ display:grid; gap:.6rem; }
+    .donor{ display:flex; align-items:center; gap:.9rem; padding:.7rem 1rem; border-radius:12px;
+      background:var(--pn-ink); border:1px solid var(--pn-line); color:var(--pn-text); }
+    .donor .rank{ width:28px; font-weight:800; color:var(--pn-muted); text-align:center; flex:none; }
+    .donor.top .rank{ color:var(--pn-gold); }
+    .donor .nm{ flex:1; font-weight:600; font-size:.94rem; }
+    .donor .pens{ font-weight:800; color:var(--pn-gold); }
+    .donor .earned{ font-size:.76rem; color:var(--pn-muted); width:100px; text-align:right; }
+    .empty{ color:var(--pn-muted); text-align:center; padding:2.2rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap pn">
+    <!-- HERO -->
+    <div class="pn-hero">
+      <div class="pn-brand">
+        <!-- A pen nib over a vault line: the asset and the vault. -->
+        <svg viewBox="0 0 38 48" fill="none" aria-hidden="true">
+          <path d="M19 3 29 15v16H9V15L19 3Z" stroke="#ffce56" stroke-width="2.4" stroke-linejoin="round"/>
+          <path d="M19 12v13" stroke="#ffce56" stroke-width="2.4" stroke-linecap="round"/>
+          <circle cx="19" cy="28" r="2.6" fill="#ffce56"/>
+          <path d="M6 38h26M9 44h20" stroke="#ffce56" stroke-width="2.4"
+                stroke-linecap="round" opacity=".55"/>
+        </svg>
+        <div class="pn-logo"><small>Republic of Cyvathon</small>The National Pen Reserve</div>
+      </div>
+      <div class="pn-rate"><b id="rateBig">400</b><span>CB per working G2, paid by the state</span></div>
+      <p class="small" style="margin:0 0 .6rem;color:var(--pn-gold)">
+        <i class="fas fa-truck-fast"></i> Donations are delivered by Cyvazon straight to
+        <b id="regName2">the Registrar</b>.</p>
+      <p>Every G2 pen donated to the Republic is counted into the national vault and paid for
+        out of the Treasury. The Reserve is the hard asset behind the Cybuck — which is why it
+        pays far more than a pen costs.</p>
+    </div>
+
+    <!-- WHY -->
+    <div class="why">
+      <h3><i class="fas fa-scroll"></i> Why the Republic buys pens</h3>
+      <p>The Cybuck was floated on nothing but goodwill. Every note in circulation was backed by
+        the promise that other citizens would keep accepting it — which works right up until the
+        day it doesn't. The Republic resolved that a currency ought to stand on something you can
+        hold.</p>
+      <p>Gold was impractical. What Cyvathon chose instead was the one object every citizen
+        already carries: <b>the G2</b>. It is also constitutionally necessary — a decree is only
+        law once it has been signed into the Gazette in G2 ink, so a Republic without a working
+        stock of pens is a Republic that <b>cannot legislate at all</b>.</p>
+      <p>So the Reserve pays <b>400 CB</b>, far above what a pen is worth on any shelf. It isn't
+        buying stationery. It's buying backing: a pen in the national vault is worth more to
+        Cyvathon than the same pen in a pencil case. Reserve holdings count toward
+        <a class="link" href="/treasury">national GDP</a> for exactly that reason.</p>
+    </div>
+
+    <div class="vault" id="vault"></div>
+
+    <div class="pn-tabs" id="tabs"></div>
+    <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
+
+    <!-- DONATE -->
+    <section id="tab-donate" class="pnpane">
+      <div class="pn-panel" style="max-width:680px;margin:0 auto;">
+        <h3><i class="fas fa-hand-holding-heart"></i> Donate to the Reserve</h3>
+        <p class="sub">Every donated pen goes to <b id="regName" style="color:var(--pn-gold)">the
+          Registrar</b>, who holds the national vault. Nothing is paid until they have the pens in
+          front of them and count them in — a reserve is only a reserve if the asset is actually
+          in the vault. <b>Cyvazon will carry them</b> if you'd rather not go and find them.</p>
+        <div class="pn-grid2">
+          <div><label class="lbl">How many pens</label>
+            <input id="dCount" type="number" min="1" value="1" oninput="quote()"></div>
+          <div><label class="lbl">Condition</label>
+            <select id="dCond" onchange="quote()"></select></div>
+          <div class="full" id="condNote" style="font-size:.8rem;color:var(--pn-muted);margin-top:.4rem;"></div>
+          <div class="full"><label class="lbl">Note for the Registrar (optional)</label>
+            <input id="dNote" placeholder="e.g. 'three blacks and a blue, all barely used'"></div>
+          <label class="full small" style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:var(--pn-muted)">
+            <input type="checkbox" id="dDeliver" style="width:auto;margin:0;" checked>
+            Send them by Cyvazon instead of handing them over myself
+          </label>
+        </div>
+        <div class="payout"><b id="quoteVal">400 CB</b><span id="quoteSub">if all of them are counted in</span></div>
+        <button style="margin-top:1rem;" onclick="pledge()"><i class="fas fa-pen"></i> Pledge the donation</button>
+        <p id="pledgeMsg" class="small" style="text-align:center;"></p>
+      </div>
+    </section>
+
+    <!-- MY DONATIONS -->
+    <section id="tab-mine" class="pnpane" style="display:none;">
+      <div class="dons" id="myDons"></div>
+    </section>
+
+    <!-- DONOR BOARD -->
+    <section id="tab-board" class="pnpane" style="display:none;">
+      <h3 style="margin-bottom:.3rem;"><i class="fas fa-medal" style="color:var(--pn-gold)"></i> Keepers of the Ink</h3>
+      <p class="small" style="margin-bottom:1.2rem;">Citizens who have kept the Republic able to sign its own laws.</p>
+      <div class="board" id="board"></div>
+    </section>
+
+    <!-- REGISTRAR (President only) -->
+    <section id="tab-registry" class="pnpane" style="display:none;">
+      <div id="registryBody"></div>
+    </section>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, CFG=null, TAB="donate", CONDS=[];
+    const esc=(s)=>(s==null?"":String(s))
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const msg=(t,ok=false,el="msg")=>{const m=document.getElementById(el);
+      m.textContent=t||""; m.style.color= ok?"var(--pn-green)":"var(--red)";};
+    const cond=(k)=>CONDS.find(c=>c.key===k)||CONDS[0]||{label:"",share:1,blurb:""};
+    const fmtCB=(n)=>(Math.round((Number(n)||0)*100)/100).toLocaleString()+" CB";
+
+    /* ---- tabs ---- */
+    function drawTabs(c){
+      c = c || {};
+      const defs = [
+        ["donate","Donate","fa-pen",0],
+        ["mine","My donations","fa-receipt",c.mine_open||0],
+        ["board","Keepers of the Ink","fa-medal",0],
+      ];
+      // The Registrar's desk is the President's alone. Read it from CFG, which
+      // comes from /pens/config and never touches the donation table.
+      if(CFG && CFG.is_admin) defs.push(["registry","Registrar","fa-stamp",c.waiting||0]);
+      document.getElementById("tabs").innerHTML = defs.map(([k,t,i,n])=>
+        `<button class="${k===TAB?"on":""}" onclick="go('${k}')"><i class="fas ${i}"></i> ${t}${
+          n?`<span class="badge">${n}</span>`:""}</button>`).join("");
+    }
+    function go(tab){
+      TAB=tab;
+      document.querySelectorAll(".pnpane").forEach(p=>p.style.display="none");
+      document.getElementById("tab-"+tab).style.display="block";
+      const order = ["donate","mine","board"].concat(CFG && CFG.is_admin?["registry"]:[]);
+      document.querySelectorAll("#tabs button").forEach((b,i)=>
+        b.classList.toggle("on", order[i]===tab));
+      msg("");
+      if(tab==="mine")     loadMine();
+      if(tab==="board")    loadBoard();
+      if(tab==="registry") loadRegistry();
+      history.replaceState(null,"","/pens?tab="+tab);
+    }
+
+    /* ---- donate ---- */
+    function quote(){
+      const n = Math.max(0, +document.getElementById("dCount").value || 0);
+      const c = cond(document.getElementById("dCond").value);
+      document.getElementById("quoteVal").textContent = fmtCB(n * CFG.rate * c.share);
+      document.getElementById("quoteSub").textContent =
+        c.share === 1 ? "if all of them are counted in"
+                      : `${n} × ${CFG.rate} CB × ${c.share} — if all of them are counted in`;
+      document.getElementById("condNote").textContent = c.blurb || "";
+    }
+    async function pledge(){
+      const body = {
+        count: document.getElementById("dCount").value,
+        condition: document.getElementById("dCond").value,
+        note: document.getElementById("dNote").value.trim(),
+        deliver: document.getElementById("dDeliver").checked,
+      };
+      try{
+        const r = await api("/pens/pledge",{method:"POST",body:JSON.stringify(body)});
+        msg(r.delivery
+              ? "Pledged — Cyvazon is taking them to the Registrar."
+              : "Pledged. Hand the pens to the Registrar to be counted in.", true, "pledgeMsg");
+        document.getElementById("dNote").value = "";
+        document.getElementById("dCount").value = 1;
+        quote(); refresh(); loadVault();
+        setTimeout(()=>go("mine"), 900);
+      }catch(e){ msg(e.message,false,"pledgeMsg"); }
+    }
+
+    /* ---- rows ---- */
+    function donRow(d, admin){
+      const label = {pledged:"Awaiting the Registrar", received:"Counted in",
+                     rejected:"Turned away", cancelled:"Withdrawn"}[d.status] || d.status;
+      let acts = "";
+      if(admin && d.status === "pledged"){
+        acts = `<label>Counted in:</label>
+          <input id="ct${d.id}" type="number" min="0" max="${esc(d.count)}" value="${esc(d.count)}" style="width:80px">
+          <select id="cd${d.id}">${CONDS.map(c=>
+            `<option value="${esc(c.key)}" ${c.key===d.condition?"selected":""}>${esc(c.label)}</option>`).join("")}</select>
+          <button onclick="decide(${d.id},'receive')"><i class="fas fa-stamp"></i> Count in &amp; pay</button>
+          <button class="danger" onclick="decide(${d.id},'reject')">Turn away</button>`;
+      } else if(!admin && d.status === "pledged"){
+        acts = `<button class="ghost" onclick="cancelDon(${d.id})">Withdraw</button>`;
+      }
+      const val = d.status === "received" ? d.amount_paid : d.expected;
+      return `<div class="don ${esc(d.status)}">
+        <div class="top">
+          <div>
+            <div class="n"><i class="fas fa-pen"></i> ${esc(d.count)} G2 pen${d.count==1?"":"s"}</div>
+            <div class="meta">${admin?`<b>${esc(d.username)}</b> · `:""}${esc(d.condition_label)}${
+              d.status==="received"&&d.counted!==d.count?` · ${esc(d.counted)} of ${esc(d.count)} accepted`:""}${
+              d.delivery_id?` · by Cyvazon`:""}${
+              d.created_at?` · ${esc(new Date(d.created_at).toLocaleDateString())}`:""}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="val">${esc(fmtCB(val))}</div>
+            <span class="state ${esc(d.status)}">${esc(label)}</span>
+          </div>
+        </div>
+        ${d.note?`<div class="note">"${esc(d.note)}"</div>`:""}
+        ${d.decision_note?`<div class="note">Registrar: "${esc(d.decision_note)}"</div>`:""}
+        ${acts?`<div class="acts">${acts}</div>`:""}
+      </div>`;
+    }
+
+    async function loadMine(){
+      let d;
+      try{ d = await api("/pens/mine"); }catch(e){
+        document.getElementById("myDons").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
+      document.getElementById("myDons").innerHTML = d.donations.length
+        ? d.donations.map(x=>donRow(x,false)).join("")
+        : `<p class="empty">You haven't donated to the Reserve yet.</p>`;
+    }
+    async function cancelDon(id){
+      if(!confirm("Withdraw this donation?")) return;
+      try{ await api("/pens/cancel",{method:"POST",body:JSON.stringify({donation_id:id})});
+        loadMine(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+
+    async function loadBoard(){
+      let d;
+      try{ d = await api("/pens/board"); }catch(e){
+        document.getElementById("board").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
+      document.getElementById("board").innerHTML = d.donors.length
+        ? d.donors.map((x,i)=>`<div class="donor ${i<3?"top":""}">
+            <div class="rank">${i+1}</div>
+            <div class="nm">${esc(x.username)}${x.me?" (you)":""}</div>
+            <div class="pens">${esc(x.pens)} pen${x.pens==1?"":"s"}</div>
+            <div class="earned">${esc(fmtCB(x.earned))}</div>
+          </div>`).join("")
+        : `<p class="empty">The vault is empty. Be the first to keep the Republic in ink.</p>`;
+    }
+
+    /* ---- registrar ---- */
+    async function loadRegistry(){
+      let d;
+      try{ d = await api("/pens/registry"); }
+      catch(e){
+        document.getElementById("registryBody").innerHTML =
+          `<div class="pn-panel"><p class="sub">${esc(e.message)}</p></div>`;
+        return;
+      }
+      document.getElementById("registryBody").innerHTML = `
+        <div class="pn-panel">
+          <h3><i class="fas fa-vault"></i> The vault</h3>
+          <p class="sub">Count in what has actually been handed over. Your count is what gets
+            paid, not the donor's — adjust it if fewer pens turned up, or if they're in worse
+            shape than pledged.</p>
+          <div class="vault" style="margin:0">
+            <div class="v"><b>${esc(d.reserve_pens)}</b><span>Pens in the vault</span></div>
+            <div class="v"><b>${esc(fmtCB(d.reserve_pens * d.rate))}</b><span>Reserve value</span></div>
+            <div class="v"><b>${esc(fmtCB(d.paid_total))}</b><span>Paid to donors</span></div>
+            <div class="v"><b>${esc(fmtCB(d.owed))}</b><span>Pledged, not yet counted</span></div>
+          </div>
+        </div>
+        <div class="pn-panel">
+          <h3><i class="fas fa-stamp"></i> Waiting to be counted in${
+            d.pledged.length?` <span class="state pledged" style="font-size:.66rem">${d.pledged.length}</span>`:""}</h3>
+          <div class="dons">${d.pledged.length
+            ? d.pledged.map(x=>donRow(x,true)).join("")
+            : `<p class="empty">Nothing waiting. The vault is up to date.</p>`}</div>
+        </div>
+        <div class="pn-panel">
+          <h3><i class="fas fa-clock-rotate-left"></i> Settled</h3>
+          <div class="dons">${d.settled.length
+            ? d.settled.map(x=>donRow(x,false)).join("")
+            : `<p class="empty">Nothing settled yet.</p>`}</div>
+        </div>`;
+    }
+
+    async function decide(id, action){
+      const ct = document.getElementById("ct"+id), cd = document.getElementById("cd"+id);
+      const verb = action==="receive" ? "Count these in and pay for them" : "Turn this donation away";
+      if(!confirm(verb + "?")) return;
+      const note = prompt(action==="receive"
+        ? "Note for the donor (optional):" : "Why? This is shown to the donor:") || "";
+      try{
+        const r = await api("/pens/registry/decide",{method:"POST",body:JSON.stringify({
+          donation_id:id, action, note,
+          counted: ct?ct.value:null, condition: cd?cd.value:null})});
+        msg(r.paid !== undefined ? `Counted in ${r.counted} pen(s) — ${fmtCB(r.paid)} paid.` : "Done.", true);
+        loadRegistry(); loadVault(); refresh();
+      }catch(e){ msg(e.message); }
+    }
+
+    async function loadVault(){
+      try{
+        const c = await api("/pens/config");
+        CFG = c;
+        document.getElementById("rateBig").textContent = c.rate;
+        document.getElementById("vault").innerHTML = `
+          <div class="v"><b>${esc(c.reserve_pens)}</b><span>Pens in the national vault</span></div>
+          <div class="v"><b>${esc(fmtCB(c.reserve_value))}</b><span>Backing the Cybuck</span></div>
+          <div class="v"><b>${esc(c.donors)}</b><span>Citizens who've donated</span></div>
+          <div class="v"><b>${esc(c.my_pens)}</b><span>Your pens in the vault</span></div>
+          <div class="v"><b>${esc(fmtCB(c.my_earned))}</b><span>What you've earned</span></div>`;
+      }catch{}
+    }
+
+    async function refresh(){
+      try{ drawTabs(await api("/pens/summary")); }catch{ drawTabs({}); }
+    }
+
+    (async function(){
+      ME = await requireAuth(); if(!ME) return;
+      renderNav("/pens", ME);
+      try{ CFG = await api("/pens/config"); }
+      catch(e){ return msg(e.message); }
+      CONDS = CFG.conditions || [];
+      document.getElementById("dCond").innerHTML =
+        CONDS.map(c=>`<option value="${esc(c.key)}">${esc(c.label)}</option>`).join("");
+      document.getElementById("dCount").max = CFG.max_per_pledge;
+      document.getElementById("rateBig").textContent = CFG.rate;
+      [ "regName", "regName2" ].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.textContent = CFG.registrar || "the Registrar";
+      });
+      quote();
+      await loadVault();
+      await refresh();
+      const t = new URLSearchParams(location.search).get("tab");
+      go(["donate","mine","board","registry"].includes(t) ? t : "donate");
+    })();
+  </script>
+</body>
+</html>
