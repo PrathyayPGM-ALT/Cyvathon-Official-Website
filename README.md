@@ -120,22 +120,25 @@ from the Presidential Admin Panel.
 
 ---
 
-### 7. The National Pen Reserve
-The state buys G2 pens at **400 CB each** (`/pens`):
-- The Cybuck is backed by a physical reserve of pens. Reserve holdings count
-  toward national GDP
-- A decree is only law once signed into the Gazette in G2 ink, so the Republic
-  keeps a working stock or it cannot legislate
-- Citizens **pledge** a donation; **Cyvazon delivers it straight to the
-  Registrar** (Prathyay); the Registrar counts in what actually arrived and
+### 7. The Armoury — support the Corps
+The Republic buys G2 pens as **ammunition**, at 400 CB a round (`/pens`):
+- Cyvathon fields no conventional weapons. Its defence rests on the **pen
+  launcher**, and the G2 is the standard munition — right gauge, the clip gives
+  it spin, and it flies true
+- There is no pen foundry and no import route, so the only supply line is the
+  citizens themselves
+- Citizens **hand in** rounds; **Cyvazon carries them straight to the
+  Quartermaster** (Prathyay); the Quartermaster logs what actually arrived and
   only then is anything paid
-- The Registrar's count is what gets paid, not the donor's claim — and the
-  condition can be corrected on arrival (working 100%, out of ink 25%,
-  broken 10%)
+- The Quartermaster's count is what gets paid, not the citizen's claim — and
+  the grade can be corrected on arrival: **live round** 100%, **drill round**
+  (out of ink) 25%, **salvage** 10%
+- Armoury stock counts toward national GDP, because materiel is national
+  property. Doctrine is unchanged: defence, not invasion
 
 Needs `migration_pen_reserve.sql`. The rate is tunable from the Presidential
 Admin Panel; set `PEN_REGISTRAR` in the environment to change who holds the
-vault.
+armoury.
 
 ---
 

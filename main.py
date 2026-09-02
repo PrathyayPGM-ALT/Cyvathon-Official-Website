@@ -453,8 +453,8 @@ def compute_gdp():
         t = get_treasury()
         total += (t.get("balance") or 0) + (t.get("pufb") or 0) * vp \
                + (t.get("aquilines") or 0) * va + (t.get("cybits") or 0) * vc
-        # The National Pen Reserve is real property of the state, valued at
-        # what the Reserve pays for a pen.
+        # Armoury stock is national materiel, valued at what the Republic
+        # pays for a round.
         total += (t.get("pens") or 0) * PEN_RATE
         for c in (supabase.table("companies")
                   .select("balance,pufb,aquilines,cybits,shares,last_price,ipo_price,is_public")
@@ -9899,42 +9899,46 @@ def cyvalend_summary():
                    due_soon=soon, shelf=len(shelf))
 
 # ============================================================
-#  THE NATIONAL PEN RESERVE
+#  THE ARMOURY — ordnance for the Cyvathon Armed Forces
 # ============================================================
-#  Why a nation buys pens for 400 CB each:
+#  Why the Republic pays 400 CB for a G2:
 #
-#  The Cybuck was floated on nothing but goodwill — every note in
-#  circulation was backed by the promise that other citizens would keep
-#  accepting it. The Republic resolved that a currency ought to stand on
-#  something you can hold, and picked the one object every citizen already
-#  carries: the G2. It is also constitutionally necessary. A decree is only
-#  law once it is signed into the Gazette in G2 ink, so the state must keep
-#  a working stock or it cannot legislate at all.
+#  Cyvathon fields no conventional weapons. Its entire defensive posture
+#  rests on the pen launcher, and the standard munition is the G2 — the
+#  barrel is the right gauge, the clip gives it spin, and it flies true.
+#  The Republic has no pen foundry and cannot import under present trade
+#  terms, so every round in the armoury came out of a citizen's pencil
+#  case. An unarmed Corps is the one thing the War Room cannot plan
+#  around.
 #
-#  So the Reserve pays far above what a pen costs. It isn't buying
-#  stationery, it's buying backing: a pen in the national vault is worth
-#  more to Cyvathon than the same pen in a pencil case. Reserve holdings
-#  count toward GDP for exactly that reason.
+#  So the rate is a war-effort rate, not a market one. The Republic would
+#  far rather overpay its own citizens than send the Corps out short of
+#  ammunition. Doctrine remains "Defence, not invasion" — the armoury
+#  exists to make invading Cyvathon a bad idea, nothing more.
 #
-#  Nothing is paid on a pledge. A citizen says what they're donating, hands
-#  the pens over (Cyvazon will carry them), and the Registrar confirms what
-#  actually arrived — otherwise "I donated forty pens" would be a money
-#  printer rather than a reserve.
+#  Armoury stock counts toward GDP because materiel is national property.
+#
+#  Nothing is paid on a pledge. A citizen says what they're handing in,
+#  the rounds go to the Quartermaster (Cyvazon will carry them), and the
+#  Quartermaster logs what actually arrived — otherwise "I donated forty
+#  pens" would be a money printer rather than an armoury.
 
-# Every donated pen goes to one person. The Reserve is held by the Registrar
-# in person — a pen has to be physically handed to somebody, and a state
-# account can't take delivery of one.
+# Every round goes to one person: the Quartermaster, who holds the armoury.
+# Ordnance has to be physically handed to somebody, and a state account
+# can't take delivery of a pen.
 PEN_REGISTRAR = (os.environ.get("PEN_REGISTRAR", "Prathyay").strip() or "Prathyay")
 
-PEN_RATE = 400          # CB per working pen — set by the President
+PEN_RATE = 400          # CB per live round — the war-effort rate, set by the President
 PEN_OPEN = True
+# Ordnance grades. A pen that still writes is a live round; a dry one flies
+# perfectly well but can't sign a field order, so it's issued for drill.
 PEN_CONDITIONS = [
-    {"key": "working", "label": "Works fine",        "share": 1.0,
-     "blurb": "Writes. Full rate."},
-    {"key": "dry",     "label": "Out of ink",        "share": 0.25,
-     "blurb": "The barrel is still refillable, so it's worth a quarter."},
-    {"key": "broken",  "label": "Cracked or broken", "share": 0.1,
-     "blurb": "Parts only. Token rate."},
+    {"key": "working", "label": "Live round",  "share": 1.0,
+     "blurb": "Writes and flies. Full front-line rate."},
+    {"key": "dry",     "label": "Drill round", "share": 0.25,
+     "blurb": "Out of ink but still flies true — issued for training."},
+    {"key": "broken",  "label": "Salvage",     "share": 0.1,
+     "blurb": "Cracked barrel or missing clip. Stripped for spares."},
 ]
 PEN_COND_BY_KEY = {c["key"]: c for c in PEN_CONDITIONS}
 
@@ -9943,8 +9947,8 @@ MAX_OPEN_PLEDGES    = 3
 
 
 def is_pen_registrar(user):
-    """The Registrar keeps the vault. The President can always reach the desk
-    too, so the Reserve doesn't stall if the Registrar is away."""
+    """The Quartermaster holds the armoury. The President can always reach the
+    desk too, so resupply doesn't stall if the Quartermaster is away."""
     if not user:
         return False
     return user["username"] == PEN_REGISTRAR or is_treasury_admin(user)
@@ -9952,12 +9956,12 @@ def is_pen_registrar(user):
 
 def _pen_missing():
     return jsonify(success=False,
-                   error="The Pen Reserve isn't enabled yet — the database needs a quick "
+                   error="The Armoury isn't enabled yet — the database needs a quick "
                          "update (run migration_pen_reserve.sql)."), 503
 
 
 def pen_value(count, condition, rate=None):
-    """What the Reserve owes for `count` pens in this condition."""
+    """What the Armoury owes for `count` rounds of this grade."""
     c = PEN_COND_BY_KEY.get(condition or "working", PEN_CONDITIONS[0])
     return round(max(0, int(count or 0)) * float(rate if rate is not None else PEN_RATE) * c["share"], 2)
 
@@ -10021,12 +10025,12 @@ def pens_config():
 @app.route("/pens/pledge", methods=["POST"])
 @limiter.limit("15/minute")
 def pens_pledge():
-    """Declare pens you're donating. Payment follows the Registrar's count."""
+    """Declare rounds you're handing in. Payment follows the Quartermaster's count."""
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     if not PEN_OPEN:
-        return jsonify(success=False, error="The Reserve isn't taking donations right now."), 403
+        return jsonify(success=False, error="The Armoury isn't taking handovers right now."), 403
     me = user["username"]
     d = request.get_json() or {}
 
@@ -10035,10 +10039,10 @@ def pens_pledge():
     except (TypeError, ValueError):
         count = 0
     if count < 1:
-        return jsonify(success=False, error="How many pens?"), 400
+        return jsonify(success=False, error="How many rounds?"), 400
     if count > MAX_PENS_PER_PLEDGE:
         return jsonify(success=False,
-                       error=f"{MAX_PENS_PER_PLEDGE} pens per donation — "
+                       error=f"{MAX_PENS_PER_PLEDGE} rounds per handover — "
                              "split a bigger haul across several."), 400
 
     condition = (d.get("condition") or "working").strip()
@@ -10052,8 +10056,8 @@ def pens_pledge():
         return _pen_missing()
     if len(openp) >= MAX_OPEN_PLEDGES:
         return jsonify(success=False,
-                       error=f"You already have {MAX_OPEN_PLEDGES} donations waiting to be "
-                             "counted in. Hand those over first."), 400
+                       error=f"You already have {MAX_OPEN_PLEDGES} handovers waiting to be "
+                             "logged in. Deliver those first."), 400
 
     row = {"username": me, "count": count, "condition": condition, "rate": PEN_RATE,
            "note": (d.get("note") or "").strip()[:200]}
@@ -10067,15 +10071,15 @@ def pens_pledge():
         # Cyvazon carries them straight to the Registrar, so a donor doesn't
         # have to go and find them.
         parcel = raise_parcel("pens", made["id"],
-                              f"{count} G2 pen(s) for the National Reserve",
+                              f"{count} G2 round(s) for the Armoury",
                               me, PEN_REGISTRAR, me,
-                              notes="Pen Reserve donation — to be counted in.")
+                              notes="Ordnance for the Corps — to be logged in.")
         if parcel:
             supabase.table("pen_donations").update({"delivery_id": parcel["id"]}) \
                 .eq("id", made["id"]).execute()
 
     notify(PEN_REGISTRAR,
-           f"\U0001F58A️ {me} pledged {count} G2 pen(s) to the National Reserve.",
+           f"\U0001F58A️ {me} is handing in {count} G2 round(s) for the Armoury.",
            "/pens?tab=registry")
     return jsonify(success=True, donation=_pen_public(made),
                    delivery=(_delivery_public(parcel) if parcel else None))
@@ -10123,7 +10127,7 @@ def pens_mine():
 @app.route("/pens/board")
 @limiter.limit("60/minute")
 def pens_board():
-    """Who has kept the Republic in ink."""
+    """Who has kept the Corps supplied."""
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
@@ -10147,12 +10151,12 @@ def pens_board():
 @app.route("/pens/registry")
 @limiter.limit("60/minute")
 def pens_registry():
-    """The Registrar's desk: pens pledged but not yet counted in."""
+    """The Quartermaster's desk: rounds pledged but not yet logged in."""
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     if not is_pen_registrar(user):
-        return jsonify(success=False, error="Registrar only"), 403
+        return jsonify(success=False, error="Quartermaster only"), 403
     try:
         rows = supabase.table("pen_donations").select("*") \
             .order("created_at", desc=True).limit(200).execute().data or []
@@ -10170,14 +10174,14 @@ def pens_registry():
 @app.route("/pens/registry/decide", methods=["POST"])
 @limiter.limit("30/minute")
 def pens_registry_decide():
-    """Count pens into the vault and pay for them, or turn the donation away.
-    The count is the Registrar's, not the donor's — that is the whole
-    difference between a reserve and a rumour."""
+    """Log rounds into the armoury and pay for them, or turn the handover away.
+    The count is the Quartermaster's, not the donor's — that is the whole
+    difference between an armoury and a rumour."""
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     if not is_pen_registrar(user):
-        return jsonify(success=False, error="Registrar only"), 403
+        return jsonify(success=False, error="Quartermaster only"), 403
     d = request.get_json() or {}
     action = (d.get("action") or "").strip()
     if action not in ("receive", "reject"):
@@ -10204,11 +10208,11 @@ def pens_registry_decide():
         supabase.table("pen_donations").update(
             {"status": "rejected", "decided_by": me, "decided_at": now.isoformat(),
              "decision_note": note}).eq("id", did).eq("status", "pledged").execute()
-        notify(don["username"], "Your pen donation wasn't accepted."
+        notify(don["username"], "The Quartermaster didn't accept your handover."
                                 + (f" {note}" if note else ""), "/pens")
         return jsonify(success=True, status="rejected")
 
-    # ---- receive: the Registrar's count is what gets paid ----
+    # ---- receive: the Quartermaster's count is what gets paid ----
     try:
         counted = int(d.get("counted") if d.get("counted") not in (None, "") else don.get("count") or 0)
     except (TypeError, ValueError):
@@ -10217,7 +10221,7 @@ def pens_registry_decide():
         return jsonify(success=False, error="Count can't be negative"), 400
     if counted > int(don.get("count") or 0):
         return jsonify(success=False,
-                       error="You can't count in more pens than were pledged."), 400
+                       error="You can't log in more rounds than were handed in."), 400
 
     condition = (d.get("condition") or don.get("condition") or "working").strip()
     if condition not in PEN_COND_BY_KEY:
@@ -10232,19 +10236,19 @@ def pens_registry_decide():
         return jsonify(success=False, error="That donation is already settled"), 400
 
     if counted:
-        # Into the vault, and out of the Treasury's cash.
+        # Into the armoury, and out of the Treasury's cash.
         cas_num("treasury", [("id", 1)], "pens", counted, places=0)
-        _gdp_cache["v"] = None          # the Reserve counts toward national wealth
+        _gdp_cache["v"] = None          # materiel counts toward national wealth
     if award:
         cas_adjust(don["username"], "balance", award, allow_negative=False)
         treasury_add(cybucks=-award, counterparty=don["username"], kind="pen_reserve")
-        log_txn("pens", "National Pen Reserve", don["username"], award, "cybucks",
-                f"{counted} G2 pen(s) counted into the Reserve")
+        log_txn("pens", "Cyvathon Armoury", don["username"], award, "cybucks",
+                f"{counted} G2 round(s) logged into the Armoury")
     add_record(don["username"],
-               f"Donated {counted} G2 pen(s) to the National Reserve for {award:g} CB.")
+               f"Armed the Republic with {counted} G2 round(s) for {award:g} CB.")
     notify(don["username"],
-           f"\U0001F58A️ The Registrar counted in {counted} pen(s) — {award:g} CB paid."
-           + (f" {note}" if note else ""), "/pens")
+           f"\U0001F58A️ The Quartermaster logged in {counted} round(s) — {award:g} CB paid. "
+           "The Corps thanks you." + (f" {note}" if note else ""), "/pens")
     return jsonify(success=True, status="received", counted=counted, paid=award,
                    reserve_pens=_reserve_holdings())
 

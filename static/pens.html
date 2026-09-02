@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The National Pen Reserve · Cyvathon</title>
+  <title>The Armoury · Cyvathon Armed Forces</title>
   <!-- social / SEO metadata -->
-  <meta name="description" content="The National Pen Reserve — Cyvathon pays 400 CB for every G2 pen donated to the state." />
+  <meta name="description" content="Arm the Republic — Cyvathon pays 400 CB for every G2 handed in as ordnance for the Corps." />
   <link rel="canonical" href="https://cyvathon.onrender.com/pens" />
   <meta name="theme-color" content="#ffce56" />
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
@@ -13,30 +13,31 @@
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
-  <meta property="og:title" content="The National Pen Reserve · Cyvathon" />
-  <meta property="og:description" content="Donate a G2 to the Republic. The state pays 400 CB a pen." />
+  <meta property="og:title" content="The Armoury · Cyvathon Armed Forces" />
+  <meta property="og:description" content="Every G2 is a round. Arm the Republic — 400 CB apiece." />
   <meta property="og:url" content="https://cyvathon.onrender.com/pens" />
   <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="The National Pen Reserve · Cyvathon" />
-  <meta name="twitter:description" content="Donate a G2 to the Republic. The state pays 400 CB a pen." />
+  <meta name="twitter:title" content="The Armoury · Cyvathon Armed Forces" />
+  <meta name="twitter:description" content="Every G2 is a round. Arm the Republic — 400 CB apiece." />
   <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
   <style>
     /* ============================================================
-       THE NATIONAL PEN RESERVE — ink and gold leaf. This is a
-       state institution rather than a service, so it reads like a
-       vault: dark, heavy, and slightly ceremonial.
+       THE ARMOURY — field olive and brass. This is a military
+       requisition, not a shop: stencilled, functional, and a little
+       severe. Brass because that's what a round is made of.
        ============================================================ */
     .pn{
-      --pn-ink:#16130c;
-      --pn-ink-2:#221d12;
-      --pn-gold:#ffce56;
-      --pn-gold-2:#ffe08f;
-      --pn-deep:#c99a10;
+      --pn-ink:#12160e;
+      --pn-ink-2:#1b2114;
+      --pn-gold:#d9b45c;          /* brass */
+      --pn-gold-2:#f0d493;
+      --pn-olive:#8a9a5b;
+      --pn-deep:#a8842e;
       --pn-line:rgba(255,255,255,.1);
       --pn-text:#fbf6e9;
       --pn-muted:#b8ac91;
@@ -44,10 +45,10 @@
       --pn-bad:#ff5d6c;
     }
     :root[data-theme="light"] .pn{
-      --pn-ink:#ffffff; --pn-ink-2:#fbf6e9;
-      --pn-line:rgba(80,60,10,.16);
-      --pn-text:#2a220c; --pn-muted:#6b5f42;
-      --pn-gold:#a37806; --pn-gold-2:#8a6404;
+      --pn-ink:#ffffff; --pn-ink-2:#f5f6ee;
+      --pn-line:rgba(50,60,20,.16);
+      --pn-text:#1f2612; --pn-muted:#5c6547;
+      --pn-gold:#8a6a12; --pn-gold-2:#6d5309; --pn-olive:#5f6b38;
     }
 
     /* ---- hero ---- */
@@ -55,7 +56,10 @@
       border:1px solid var(--pn-line); border-radius:20px; padding:2.1rem 2rem 1.9rem;
       margin-bottom:1.4rem; position:relative; overflow:hidden; }
     .pn-hero::after{ content:""; position:absolute; right:-80px; top:-80px; width:280px; height:280px;
-      border-radius:50%; background:radial-gradient(circle,rgba(255,206,86,.18),transparent 68%); }
+      border-radius:50%; background:radial-gradient(circle,rgba(217,180,92,.18),transparent 68%); }
+    /* stencilled service stripes, like a crate marking */
+    .pn-hero::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:6px;
+      background:repeating-linear-gradient(180deg,var(--pn-gold) 0 14px,transparent 14px 28px); opacity:.5; }
     .pn-brand{ display:flex; align-items:center; gap:.9rem; margin-bottom:.5rem; }
     .pn-brand svg{ width:38px; height:48px; flex:none; }
     .pn-logo{ font-size:1.85rem; font-weight:800; letter-spacing:-.8px; color:var(--pn-text); line-height:1.1; }
@@ -161,40 +165,40 @@
     <!-- HERO -->
     <div class="pn-hero">
       <div class="pn-brand">
-        <!-- A pen nib over a vault line: the asset and the vault. -->
+        <!-- A G2 loaded nose-up, over the two service bars of the Corps. -->
         <svg viewBox="0 0 38 48" fill="none" aria-hidden="true">
-          <path d="M19 3 29 15v16H9V15L19 3Z" stroke="#ffce56" stroke-width="2.4" stroke-linejoin="round"/>
-          <path d="M19 12v13" stroke="#ffce56" stroke-width="2.4" stroke-linecap="round"/>
-          <circle cx="19" cy="28" r="2.6" fill="#ffce56"/>
-          <path d="M6 38h26M9 44h20" stroke="#ffce56" stroke-width="2.4"
-                stroke-linecap="round" opacity=".55"/>
+          <path d="M19 2 25 13H13L19 2Z" fill="#d9b45c"/>
+          <rect x="13" y="13" width="12" height="19" rx="1.6" stroke="#d9b45c" stroke-width="2.3"/>
+          <path d="M27 15v9" stroke="#d9b45c" stroke-width="2.3" stroke-linecap="round"/>
+          <path d="M6 38h26M10 44h18" stroke="#d9b45c" stroke-width="2.6"
+                stroke-linecap="round" opacity=".6"/>
         </svg>
-        <div class="pn-logo"><small>Republic of Cyvathon</small>The National Pen Reserve</div>
+        <div class="pn-logo"><small>Cyvathon Armed Forces · Ordnance</small>The Armoury</div>
       </div>
-      <div class="pn-rate"><b id="rateBig">400</b><span>CB per working G2, paid by the state</span></div>
+      <div class="pn-rate"><b id="rateBig">400</b><span>CB per live round, paid by the Republic</span></div>
       <p class="small" style="margin:0 0 .6rem;color:var(--pn-gold)">
-        <i class="fas fa-truck-fast"></i> Donations are delivered by Cyvazon straight to
-        <b id="regName2">the Registrar</b>.</p>
-      <p>Every G2 pen donated to the Republic is counted into the national vault and paid for
-        out of the Treasury. The Reserve is the hard asset behind the Cybuck — which is why it
-        pays far more than a pen costs.</p>
+        <i class="fas fa-truck-fast"></i> Cyvazon carries your rounds straight to
+        <b id="regName2">the Quartermaster</b>.</p>
+      <p><b style="color:var(--pn-text)">Every G2 is a round.</b> The Corps fires pen launchers
+        and nothing else, and the Republic has no foundry to make the ammunition. Every round in
+        the armoury came out of a citizen's pencil case. Hand yours in and the Republic pays you
+        for it — because a Corps without ordnance is a border nobody has to respect.</p>
     </div>
 
     <!-- WHY -->
     <div class="why">
-      <h3><i class="fas fa-scroll"></i> Why the Republic buys pens</h3>
-      <p>The Cybuck was floated on nothing but goodwill. Every note in circulation was backed by
-        the promise that other citizens would keep accepting it — which works right up until the
-        day it doesn't. The Republic resolved that a currency ought to stand on something you can
-        hold.</p>
-      <p>Gold was impractical. What Cyvathon chose instead was the one object every citizen
-        already carries: <b>the G2</b>. It is also constitutionally necessary — a decree is only
-        law once it has been signed into the Gazette in G2 ink, so a Republic without a working
-        stock of pens is a Republic that <b>cannot legislate at all</b>.</p>
-      <p>So the Reserve pays <b>400 CB</b>, far above what a pen is worth on any shelf. It isn't
-        buying stationery. It's buying backing: a pen in the national vault is worth more to
-        Cyvathon than the same pen in a pencil case. Reserve holdings count toward
-        <a class="link" href="/treasury">national GDP</a> for exactly that reason.</p>
+      <h3><i class="fas fa-shield-halved"></i> Why the Corps needs your pens</h3>
+      <p>Cyvathon fields no conventional weapons. The whole of its defensive posture rests on the
+        <b>pen launcher</b>, and the standard munition is the G2 — the barrel is the right gauge,
+        the clip gives it spin, and it flies true. Nothing else in a school does all three.</p>
+      <p>The Republic has <b>no pen foundry</b> and cannot import under present trade terms. That
+        leaves exactly one supply line: its own citizens. Every round the Corps has ever fired came
+        out of somebody's pencil case, handed in at the Armoury and logged by the Quartermaster.</p>
+      <p>So <b>400 CB</b> is a war-effort rate, not a market one. The Republic would far rather
+        overpay its own people than send the Corps out short. Doctrine is unchanged —
+        <a class="link" href="/warroom">defence, not invasion</a> — the armoury exists to make
+        invading Cyvathon a bad idea, and nothing more. Stock counts toward
+        <a class="link" href="/treasury">national GDP</a> because materiel is national property.</p>
     </div>
 
     <div class="vault" id="vault"></div>
@@ -205,26 +209,26 @@
     <!-- DONATE -->
     <section id="tab-donate" class="pnpane">
       <div class="pn-panel" style="max-width:680px;margin:0 auto;">
-        <h3><i class="fas fa-hand-holding-heart"></i> Donate to the Reserve</h3>
-        <p class="sub">Every donated pen goes to <b id="regName" style="color:var(--pn-gold)">the
-          Registrar</b>, who holds the national vault. Nothing is paid until they have the pens in
-          front of them and count them in — a reserve is only a reserve if the asset is actually
-          in the vault. <b>Cyvazon will carry them</b> if you'd rather not go and find them.</p>
+        <h3><i class="fas fa-box-open"></i> Hand in ordnance</h3>
+        <p class="sub">Every round goes to <b id="regName" style="color:var(--pn-gold)">the
+          Quartermaster</b>, who holds the armoury. Nothing is paid until they have the rounds in
+          front of them and log them in — an armoury is only an armoury if the ammunition is
+          actually in it. <b>Cyvazon will carry them</b> so you don't have to go and find them.</p>
         <div class="pn-grid2">
-          <div><label class="lbl">How many pens</label>
+          <div><label class="lbl">How many rounds</label>
             <input id="dCount" type="number" min="1" value="1" oninput="quote()"></div>
-          <div><label class="lbl">Condition</label>
+          <div><label class="lbl">Grade</label>
             <select id="dCond" onchange="quote()"></select></div>
           <div class="full" id="condNote" style="font-size:.8rem;color:var(--pn-muted);margin-top:.4rem;"></div>
-          <div class="full"><label class="lbl">Note for the Registrar (optional)</label>
+          <div class="full"><label class="lbl">Note for the Quartermaster (optional)</label>
             <input id="dNote" placeholder="e.g. 'three blacks and a blue, all barely used'"></div>
           <label class="full small" style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:var(--pn-muted)">
             <input type="checkbox" id="dDeliver" style="width:auto;margin:0;" checked>
-            Send them by Cyvazon instead of handing them over myself
+            Send them by Cyvazon instead of delivering them myself
           </label>
         </div>
-        <div class="payout"><b id="quoteVal">400 CB</b><span id="quoteSub">if all of them are counted in</span></div>
-        <button style="margin-top:1rem;" onclick="pledge()"><i class="fas fa-pen"></i> Pledge the donation</button>
+        <div class="payout"><b id="quoteVal">400 CB</b><span id="quoteSub">if all of them are logged in</span></div>
+        <button style="margin-top:1rem;" onclick="pledge()"><i class="fas fa-shield-halved"></i> Arm the Republic</button>
         <p id="pledgeMsg" class="small" style="text-align:center;"></p>
       </div>
     </section>
@@ -236,8 +240,8 @@
 
     <!-- DONOR BOARD -->
     <section id="tab-board" class="pnpane" style="display:none;">
-      <h3 style="margin-bottom:.3rem;"><i class="fas fa-medal" style="color:var(--pn-gold)"></i> Keepers of the Ink</h3>
-      <p class="small" style="margin-bottom:1.2rem;">Citizens who have kept the Republic able to sign its own laws.</p>
+      <h3 style="margin-bottom:.3rem;"><i class="fas fa-medal" style="color:var(--pn-gold)"></i> Roll of Honour</h3>
+      <p class="small" style="margin-bottom:1.2rem;">Citizens who have kept the Corps supplied. The Republic remembers.</p>
       <div class="board" id="board"></div>
     </section>
 
@@ -262,13 +266,13 @@
     function drawTabs(c){
       c = c || {};
       const defs = [
-        ["donate","Donate","fa-pen",0],
-        ["mine","My donations","fa-receipt",c.mine_open||0],
-        ["board","Keepers of the Ink","fa-medal",0],
+        ["donate","Hand in rounds","fa-shield-halved",0],
+        ["mine","My handovers","fa-receipt",c.mine_open||0],
+        ["board","Roll of Honour","fa-medal",0],
       ];
-      // The Registrar's desk is the President's alone. Read it from CFG, which
-      // comes from /pens/config and never touches the donation table.
-      if(CFG && CFG.is_admin) defs.push(["registry","Registrar","fa-stamp",c.waiting||0]);
+      // The Quartermaster's desk is theirs alone. Read it from CFG, which comes
+      // from /pens/config and never touches the donation table.
+      if(CFG && CFG.is_admin) defs.push(["registry","Quartermaster","fa-stamp",c.waiting||0]);
       document.getElementById("tabs").innerHTML = defs.map(([k,t,i,n])=>
         `<button class="${k===TAB?"on":""}" onclick="go('${k}')"><i class="fas ${i}"></i> ${t}${
           n?`<span class="badge">${n}</span>`:""}</button>`).join("");
@@ -293,8 +297,8 @@
       const c = cond(document.getElementById("dCond").value);
       document.getElementById("quoteVal").textContent = fmtCB(n * CFG.rate * c.share);
       document.getElementById("quoteSub").textContent =
-        c.share === 1 ? "if all of them are counted in"
-                      : `${n} × ${CFG.rate} CB × ${c.share} — if all of them are counted in`;
+        c.share === 1 ? "if all of them are logged in"
+                      : `${n} × ${CFG.rate} CB × ${c.share} — if all of them are logged in`;
       document.getElementById("condNote").textContent = c.blurb || "";
     }
     async function pledge(){
@@ -307,8 +311,8 @@
       try{
         const r = await api("/pens/pledge",{method:"POST",body:JSON.stringify(body)});
         msg(r.delivery
-              ? "Pledged — Cyvazon is taking them to the Registrar."
-              : "Pledged. Hand the pens to the Registrar to be counted in.", true, "pledgeMsg");
+              ? "Declared — Cyvazon is taking them to the Quartermaster."
+              : "Declared. Hand the rounds to the Quartermaster to be logged in.", true, "pledgeMsg");
         document.getElementById("dNote").value = "";
         document.getElementById("dCount").value = 1;
         quote(); refresh(); loadVault();
@@ -318,15 +322,15 @@
 
     /* ---- rows ---- */
     function donRow(d, admin){
-      const label = {pledged:"Awaiting the Registrar", received:"Counted in",
+      const label = {pledged:"Awaiting the Quartermaster", received:"Logged in",
                      rejected:"Turned away", cancelled:"Withdrawn"}[d.status] || d.status;
       let acts = "";
       if(admin && d.status === "pledged"){
-        acts = `<label>Counted in:</label>
+        acts = `<label>Logged in:</label>
           <input id="ct${d.id}" type="number" min="0" max="${esc(d.count)}" value="${esc(d.count)}" style="width:80px">
           <select id="cd${d.id}">${CONDS.map(c=>
             `<option value="${esc(c.key)}" ${c.key===d.condition?"selected":""}>${esc(c.label)}</option>`).join("")}</select>
-          <button onclick="decide(${d.id},'receive')"><i class="fas fa-stamp"></i> Count in &amp; pay</button>
+          <button onclick="decide(${d.id},'receive')"><i class="fas fa-stamp"></i> Log in &amp; pay</button>
           <button class="danger" onclick="decide(${d.id},'reject')">Turn away</button>`;
       } else if(!admin && d.status === "pledged"){
         acts = `<button class="ghost" onclick="cancelDon(${d.id})">Withdraw</button>`;
@@ -335,7 +339,7 @@
       return `<div class="don ${esc(d.status)}">
         <div class="top">
           <div>
-            <div class="n"><i class="fas fa-pen"></i> ${esc(d.count)} G2 pen${d.count==1?"":"s"}</div>
+            <div class="n"><i class="fas fa-pen"></i> ${esc(d.count)} G2 round${d.count==1?"":"s"}</div>
             <div class="meta">${admin?`<b>${esc(d.username)}</b> · `:""}${esc(d.condition_label)}${
               d.status==="received"&&d.counted!==d.count?` · ${esc(d.counted)} of ${esc(d.count)} accepted`:""}${
               d.delivery_id?` · by Cyvazon`:""}${
@@ -347,7 +351,7 @@
           </div>
         </div>
         ${d.note?`<div class="note">"${esc(d.note)}"</div>`:""}
-        ${d.decision_note?`<div class="note">Registrar: "${esc(d.decision_note)}"</div>`:""}
+        ${d.decision_note?`<div class="note">Quartermaster: "${esc(d.decision_note)}"</div>`:""}
         ${acts?`<div class="acts">${acts}</div>`:""}
       </div>`;
     }
@@ -358,10 +362,10 @@
         document.getElementById("myDons").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
       document.getElementById("myDons").innerHTML = d.donations.length
         ? d.donations.map(x=>donRow(x,false)).join("")
-        : `<p class="empty">You haven't donated to the Reserve yet.</p>`;
+        : `<p class="empty">You haven't armed the Republic yet.</p>`;
     }
     async function cancelDon(id){
-      if(!confirm("Withdraw this donation?")) return;
+      if(!confirm("Withdraw this handover?")) return;
       try{ await api("/pens/cancel",{method:"POST",body:JSON.stringify({donation_id:id})});
         loadMine(); refresh();
       }catch(e){ msg(e.message); }
@@ -375,10 +379,10 @@
         ? d.donors.map((x,i)=>`<div class="donor ${i<3?"top":""}">
             <div class="rank">${i+1}</div>
             <div class="nm">${esc(x.username)}${x.me?" (you)":""}</div>
-            <div class="pens">${esc(x.pens)} pen${x.pens==1?"":"s"}</div>
+            <div class="pens">${esc(x.pens)} round${x.pens==1?"":"s"}</div>
             <div class="earned">${esc(fmtCB(x.earned))}</div>
           </div>`).join("")
-        : `<p class="empty">The vault is empty. Be the first to keep the Republic in ink.</p>`;
+        : `<p class="empty">The armoury is empty. Be the first to arm the Republic.</p>`;
     }
 
     /* ---- registrar ---- */
@@ -392,23 +396,23 @@
       }
       document.getElementById("registryBody").innerHTML = `
         <div class="pn-panel">
-          <h3><i class="fas fa-vault"></i> The vault</h3>
-          <p class="sub">Count in what has actually been handed over. Your count is what gets
-            paid, not the donor's — adjust it if fewer pens turned up, or if they're in worse
-            shape than pledged.</p>
+          <h3><i class="fas fa-warehouse"></i> Armoury state</h3>
+          <p class="sub">Log in what has actually been handed over. Your count is what gets paid,
+            not the donor's — adjust it if fewer rounds turned up, or if they're a lower grade
+            than declared.</p>
           <div class="vault" style="margin:0">
-            <div class="v"><b>${esc(d.reserve_pens)}</b><span>Pens in the vault</span></div>
-            <div class="v"><b>${esc(fmtCB(d.reserve_pens * d.rate))}</b><span>Reserve value</span></div>
-            <div class="v"><b>${esc(fmtCB(d.paid_total))}</b><span>Paid to donors</span></div>
-            <div class="v"><b>${esc(fmtCB(d.owed))}</b><span>Pledged, not yet counted</span></div>
+            <div class="v"><b>${esc(d.reserve_pens)}</b><span>Rounds in the armoury</span></div>
+            <div class="v"><b>${esc(fmtCB(d.reserve_pens * d.rate))}</b><span>Materiel value</span></div>
+            <div class="v"><b>${esc(fmtCB(d.paid_total))}</b><span>Paid to citizens</span></div>
+            <div class="v"><b>${esc(fmtCB(d.owed))}</b><span>Declared, not yet logged</span></div>
           </div>
         </div>
         <div class="pn-panel">
-          <h3><i class="fas fa-stamp"></i> Waiting to be counted in${
+          <h3><i class="fas fa-stamp"></i> Waiting to be logged in${
             d.pledged.length?` <span class="state pledged" style="font-size:.66rem">${d.pledged.length}</span>`:""}</h3>
           <div class="dons">${d.pledged.length
             ? d.pledged.map(x=>donRow(x,true)).join("")
-            : `<p class="empty">Nothing waiting. The vault is up to date.</p>`}</div>
+            : `<p class="empty">Nothing waiting. The armoury is up to date.</p>`}</div>
         </div>
         <div class="pn-panel">
           <h3><i class="fas fa-clock-rotate-left"></i> Settled</h3>
@@ -420,15 +424,15 @@
 
     async function decide(id, action){
       const ct = document.getElementById("ct"+id), cd = document.getElementById("cd"+id);
-      const verb = action==="receive" ? "Count these in and pay for them" : "Turn this donation away";
+      const verb = action==="receive" ? "Log these into the armoury and pay for them" : "Turn this handover away";
       if(!confirm(verb + "?")) return;
       const note = prompt(action==="receive"
-        ? "Note for the donor (optional):" : "Why? This is shown to the donor:") || "";
+        ? "Note for the citizen (optional):" : "Why? This is shown to the citizen:") || "";
       try{
         const r = await api("/pens/registry/decide",{method:"POST",body:JSON.stringify({
           donation_id:id, action, note,
           counted: ct?ct.value:null, condition: cd?cd.value:null})});
-        msg(r.paid !== undefined ? `Counted in ${r.counted} pen(s) — ${fmtCB(r.paid)} paid.` : "Done.", true);
+        msg(r.paid !== undefined ? `Logged in ${r.counted} round(s) — ${fmtCB(r.paid)} paid.` : "Done.", true);
         loadRegistry(); loadVault(); refresh();
       }catch(e){ msg(e.message); }
     }
@@ -439,10 +443,10 @@
         CFG = c;
         document.getElementById("rateBig").textContent = c.rate;
         document.getElementById("vault").innerHTML = `
-          <div class="v"><b>${esc(c.reserve_pens)}</b><span>Pens in the national vault</span></div>
-          <div class="v"><b>${esc(fmtCB(c.reserve_value))}</b><span>Backing the Cybuck</span></div>
-          <div class="v"><b>${esc(c.donors)}</b><span>Citizens who've donated</span></div>
-          <div class="v"><b>${esc(c.my_pens)}</b><span>Your pens in the vault</span></div>
+          <div class="v"><b>${esc(c.reserve_pens)}</b><span>Rounds in the armoury</span></div>
+          <div class="v"><b>${esc(fmtCB(c.reserve_value))}</b><span>Materiel value</span></div>
+          <div class="v"><b>${esc(c.donors)}</b><span>Citizens who've armed the Corps</span></div>
+          <div class="v"><b>${esc(c.my_pens)}</b><span>Your rounds in the armoury</span></div>
           <div class="v"><b>${esc(fmtCB(c.my_earned))}</b><span>What you've earned</span></div>`;
       }catch{}
     }
@@ -463,7 +467,7 @@
       document.getElementById("rateBig").textContent = CFG.rate;
       [ "regName", "regName2" ].forEach(id=>{
         const el = document.getElementById(id);
-        if(el) el.textContent = CFG.registrar || "the Registrar";
+        if(el) el.textContent = CFG.registrar || "the Quartermaster";
       });
       quote();
       await loadVault();

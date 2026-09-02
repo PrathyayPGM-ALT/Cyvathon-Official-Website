@@ -1,4 +1,4 @@
-"""Exercise the National Pen Reserve — pledges, the Registrar's count, payouts."""
+"""Exercise the Armoury — handovers, the Quartermaster's count, payouts."""
 import logging, warnings, os, sys
 logging.disable(logging.CRITICAL); warnings.filterwarnings("ignore")
 os.environ.update(
@@ -53,19 +53,22 @@ def vault(): return db.data["treasury"][0].get("pens") or 0
 def dons(): return db.data.get("pen_donations", [])
 
 
-print("\n=== 1. the rate and the Registrar ===")
-check("the Reserve pays 400 CB a pen", main.PEN_RATE, 400)
-check("and the Registrar is Prathyay", main.PEN_REGISTRAR, "Prathyay")
+print("\n=== 1. the rate and the Quartermaster ===")
+check("the Armoury pays 400 CB a round", main.PEN_RATE, 400)
+check("and the Quartermaster is Prathyay", main.PEN_REGISTRAR, "Prathyay")
 d = client_as("Aarav").get("/pens/config").get_json()
 check("config advertises the rate", d["rate"], 400)
-check("  names the Registrar", d["registrar"], "Prathyay")
+check("  names the Quartermaster", d["registrar"], "Prathyay")
 check("  an ordinary citizen doesn't hold the desk", d["is_admin"], False)
-check("  the vault starts empty", d["reserve_pens"], 0)
+check("  the armoury starts empty", d["reserve_pens"], 0)
 check("Prathyay holds the desk",
       client_as("Prathyay").get("/pens/config").get_json()["is_admin"], True)
-check("a working pen is worth full rate", main.pen_value(3, "working"), 1200)
-check("  a dry one is worth a quarter", main.pen_value(4, "dry"), 400)
-check("  a broken one is token", main.pen_value(10, "broken"), 400)
+check("a live round is worth full rate", main.pen_value(3, "working"), 1200)
+check("  a drill round is worth a quarter", main.pen_value(4, "dry"), 400)
+check("  salvage is token", main.pen_value(10, "broken"), 400)
+grades = [c["label"] for c in main.PEN_CONDITIONS]
+check("  and the grades read as ordnance", grades,
+      ["Live round", "Drill round", "Salvage"])
 
 
 print("\n=== 2. pledging ===")
@@ -86,9 +89,9 @@ don = r.get_json()["donation"]
 check("  it starts as a pledge", don["status"], "pledged")
 check("  it quotes what's expected", don["expected"], 1200)
 check("  NOTHING is paid on a pledge", cyb("Aarav")["balance"], before)
-check("  and nothing enters the vault", vault(), 0)
-check("  the Registrar is told",
-      any("pledged 3 G2 pen" in n["message"] and n["username"] == "Prathyay"
+check("  and nothing enters the armoury", vault(), 0)
+check("  the Quartermaster is told",
+      any("handing in 3 G2 round" in n["message"] and n["username"] == "Prathyay"
           for n in db.data.get("notifications", [])), True)
 
 
@@ -101,100 +104,100 @@ check("  and linked to the donation",
       [x["delivery_id"] for x in dons() if x["id"] == don["id"]], [p["id"]])
 
 
-print("\n=== 4. only the Registrar counts pens in ===")
+print("\n=== 4. only the Quartermaster logs rounds in ===")
 did = don["id"]
 r = client_as("Meera").get("/pens/registry")
 check("a citizen cannot open the desk", r.status_code, 403)
 r = client_as("Meera").post("/pens/registry/decide",
                             json={"donation_id": did, "action": "receive"})
-check("a citizen cannot count pens in", r.status_code, 403)
+check("a citizen cannot log rounds in", r.status_code, 403)
 r = client_as("Aarav").post("/pens/registry/decide",
                             json={"donation_id": did, "action": "receive"})
 check("nor can the donor themselves", r.status_code, 403)
 
 d = client_as("Prathyay").get("/pens/registry").get_json()
-check("the Registrar sees the pledge", len(d["pledged"]), 1)
+check("the Quartermaster sees the handover", len(d["pledged"]), 1)
 check("  and what it will cost", d["owed"], 1200)
 check("  with nothing paid yet", d["paid_total"], 0)
 
 
-print("\n=== 5. the Registrar's count is what gets paid ===")
+print("\n=== 5. the Quartermaster's count is what gets paid ===")
 r = client_as("Prathyay").post("/pens/registry/decide",
     json={"donation_id": did, "action": "receive", "counted": 9})
-check("cannot count in more than was pledged", r.status_code, 400)
+check("cannot log in more than was handed in", r.status_code, 400)
 
 before = cyb("Aarav")["balance"]
 r = client_as("Prathyay").post("/pens/registry/decide",
     json={"donation_id": did, "action": "receive", "counted": 2,
           "note": "Only two turned up."})
-check("the Registrar can count in fewer", r.get_json()["counted"], 2)
+check("the Quartermaster can log in fewer", r.get_json()["counted"], 2)
 check("  and pays for what arrived", r.get_json()["paid"], 800)
 check("  the donor was paid", cyb("Aarav")["balance"], before + 800)
-check("  the pens entered the vault", vault(), 2)
+check("  the rounds entered the armoury", vault(), 2)
 check("  from the Treasury",
       any(f["kind"] == "pen_reserve" for f in db.data.get("treasury_flows", [])), True)
-check("  and the donor was told",
-      any("counted in 2 pen" in n["message"] for n in db.data["notifications"]), True)
+check("  and the citizen was told",
+      any("logged in 2 round" in n["message"] for n in db.data["notifications"]), True)
 r = client_as("Prathyay").post("/pens/registry/decide",
     json={"donation_id": did, "action": "receive"})
-check("a settled donation can't be paid twice", r.status_code, 400)
+check("a settled handover can't be paid twice", r.status_code, 400)
 
 
-print("\n=== 6. condition can be corrected on arrival ===")
+print("\n=== 6. grade can be corrected on arrival ===")
 r = client_as("Meera").post("/pens/pledge", json={"count": 4, "condition": "working"})
 d2 = r.get_json()["donation"]["id"]
 before = cyb("Meera")["balance"]
 r = client_as("Prathyay").post("/pens/registry/decide",
     json={"donation_id": d2, "action": "receive", "condition": "dry",
           "note": "All four were dry."})
-check("downgrading the condition cuts the payout", r.get_json()["paid"], 400)
+check("downgrading the grade cuts the payout", r.get_json()["paid"], 400)
 check("  the citizen got the lower amount", cyb("Meera")["balance"], before + 400)
-check("  but all four pens still went in", vault(), 6)
+check("  but all four rounds still went in", vault(), 6)
 
 
-print("\n=== 7. turning a donation away ===")
+print("\n=== 7. turning a handover away ===")
 r = client_as("Aarav").post("/pens/pledge", json={"count": 1})
 d3 = r.get_json()["donation"]["id"]
 before, penned = cyb("Aarav")["balance"], vault()
 r = client_as("Prathyay").post("/pens/registry/decide",
     json={"donation_id": d3, "action": "reject", "note": "That's a biro."})
-check("the Registrar can turn one away", r.get_json()["status"], "rejected")
+check("the Quartermaster can turn one away", r.get_json()["status"], "rejected")
 check("  nothing was paid", cyb("Aarav")["balance"], before)
-check("  and nothing entered the vault", vault(), penned)
+check("  and nothing entered the armoury", vault(), penned)
 
 
-print("\n=== 8. withdrawing your own pledge ===")
+print("\n=== 8. withdrawing your own handover ===")
 r = client_as("Aarav").post("/pens/pledge", json={"count": 2})
 d4 = r.get_json()["donation"]["id"]
 r = client_as("Meera").post("/pens/cancel", json={"donation_id": d4})
-check("cannot withdraw someone else's pledge", r.status_code, 403)
+check("cannot withdraw someone else's handover", r.status_code, 403)
 r = client_as("Aarav").post("/pens/cancel", json={"donation_id": d4})
-check("the donor can withdraw", r.get_json()["status"], "cancelled")
+check("the citizen can withdraw", r.get_json()["status"], "cancelled")
 r = client_as("Aarav").post("/pens/cancel", json={"donation_id": d4})
 check("  but only once", r.status_code, 400)
 
 for _ in range(3):
     client_as("Aarav").post("/pens/pledge", json={"count": 1})
 r = client_as("Aarav").post("/pens/pledge", json={"count": 1})
-check("open pledges are capped", r.status_code, 400)
+check("open handovers are capped", r.status_code, 400)
 
 
-print("\n=== 9. the vault backs the currency ===")
+print("\n=== 9. the armoury is national materiel ===")
 d = client_as("Aarav").get("/pens/config").get_json()
 check("holdings are reported", d["reserve_pens"], 6)
-check("  valued at the Reserve rate", d["reserve_value"], 2400)
-check("  and the donor's own tally is shown", d["my_pens"], 2)
+check("  valued at the Armoury rate", d["reserve_value"], 2400)
+check("  and the citizen's own tally is shown", d["my_pens"], 2)
 main._gdp_cache["v"] = None
 gdp_with = main.compute_gdp()
 db.data["treasury"][0]["pens"] = 0
 main._gdp_cache["v"] = None
 gdp_without = main.compute_gdp()
-check("pens in the vault raise GDP", round(gdp_with - gdp_without, 2), 2400)
+check("rounds in the armoury raise GDP", round(gdp_with - gdp_without, 2), 2400)
 db.data["treasury"][0]["pens"] = 6
 main._gdp_cache["v"] = None
 
 d = client_as("Aarav").get("/pens/board").get_json()
-check("the donor board ranks by pens",
+check("the roll of honour ranks by rounds",
       [(x["username"], x["pens"]) for x in d["donors"]], [("Meera", 4), ("Aarav", 2)])
 
 
@@ -206,7 +209,7 @@ db.table = lambda n: _Missing() if n == "pen_donations" else _real(n)
 s = client_as("Prathyay").get("/pens/summary").get_json()
 check("summary still succeeds", s["success"], True)
 check("  reports it as not set up", s["enabled"], False)
-check("  but keeps the Registrar's flag", s["is_admin"], True)
+check("  but keeps the Quartermaster's flag", s["is_admin"], True)
 r = client_as("Prathyay").get("/pens/registry")
 check("the desk explains the real problem", r.status_code, 503)
 check("  naming the migration",
