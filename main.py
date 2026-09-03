@@ -1505,7 +1505,7 @@ def sitemap():
              "/court", "/gazette", "/states", "/foreign", "/treasury",
              "/exchange", "/company", "/jobs", "/marketplace", "/casino",
              "/flightsim", "/packet", "/cyvazon", "/shield", "/cyvalend", "/pens",
-             "/cabinet", "/passport", "/login"]
+             "/cabinet", "/timeline", "/passport", "/login"]
     urls = "".join(f"<url><loc>https://cyvathon.onrender.com{p}</loc></url>"
                    for p in pages)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>'
@@ -7150,7 +7150,9 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 CYVATHON_GUIDE = """You are Cyvathon AI, the friendly in-app guide for Cyvathon — a cyber micronation web app. Your job is to help citizens understand the website and the nation. Be warm, concise and practical, and point people to the right page (e.g. "head to the Bank at /bank"). Only discuss Cyvathon; if asked something unrelated, gently steer back. Never invent features that don't exist. Use short paragraphs or bullet points.
 
-ABOUT CYVATHON — a digital micronation with a live economy and an elected government.
+ABOUT CYVATHON — a micronation with a live economy and an elected government, founded on 26 May 2025.
+
+HISTORY & TERRITORY: Cyvathon was founded on 26 May 2025 and its website went live five days later, on 31 May 2025. It signed a treaty with Crystonia on 14 June 2026. On 2 September 2026 the Treaty of Anti-Anarchism placed class 8E at TISB under Cyvathonian rule — agreed unanimously by everyone in the class — so Cyvathon now holds REAL territory and is no longer a nation of the web alone. The full record is at /timeline, and the President can add to it. (Note: the five in-world states — Neonhaven, Cryptvale, Silica Plains, Portus Mare and Aetheris — are separate from this; 8E is the nation's actual ground.)
 
 CURRENCIES: The Cybuck (CB) is the main currency. Pegs: 1 CB = 1 Pufferbuck (PUFB) = 10 Aquilines (AQ) = 50 Cybits (CBT). Cybits are the small "change" of a Cybuck — fractional Cybucks are automatically kept as Cybits so Cybuck balances stay whole. New citizens receive 100 of each currency.
 
@@ -7175,6 +7177,8 @@ CASINO (/casino): bet Cybucks against the House (the Treasury) — Coin Flip, Lu
 CARD PACKETS (/packet): trade real Match Attax football cards with other citizens. Search any footballer in an online football database — their photo, club, position and nationality are pulled in automatically — then record the card you actually pulled: its subset (Base, Captain, 100 Club, Hall of Fame, Jersey Relic and so on) and its finish (Blue Crystal, Black Edge 1:30 packets, Gold Edge 1:35, Goldrush /100, Gold Rainbow 1/1 and more). You can photograph your own copy and that becomes the card face. Tap any card to open it full size and flip it over for the stats. Browse other citizens' packets, wishlist cards you're missing (the owner is notified), mark your own spares "for trade", then offer cards from your packet for theirs. When a trade is accepted the cards swap over and Cyvazon raises a parcel each way so the physical cards actually change hands.
 
 CYVAZON (/cyvazon) — the national delivery service. Delivery is FREE for whoever requests it, anywhere in school: say which class it's collected from and which class it's going to, and a courier runs it. Buying on the marketplace or accepting a card trade raises a parcel automatically, so nobody can take the money or the card and quietly keep the goods. Set your usual class once on the Cyvazon page and deliveries to you are addressed there automatically. Becoming a courier: apply on the Cyvazon page, and the PRESIDENT reviews and approves every applicant before they can carry other citizens' property. Approved couriers earn 500 CB per pay period on top of their normal salary — more than most jobs in Cyvathon — and are paid from the Treasury out of the delivery levy. Only the person RECEIVING a parcel can confirm it arrived; a courier cannot close their own run. Couriers can't carry their own parcels, and can't stand down while still holding one.
+
+CABINET POWERS (/cabinet): ministers hold real authority, split two ways. DUTIES are delegated outright — the Defence Minister works the Armoury desk, the Transport Minister vets Cyvazon couriers, the Justice Minister rules on Cyvashield claims — and need no approval. POLICY is proposed, never imposed: a minister who wants to move a national lever (tax rate, GDP multiplier, courier wage, Armoury rate, insurance levy…) raises a proposal, and nothing changes until the President assents. A ministry picks up its brief from its name. Weekly salary: Prime Minister 1000 CB, Minister/Judge 900, Founder 800, Employee 500, Citizen 100; the President draws nothing because they hold the Treasury and spend it on the nation. Couriers draw 500 CB on top of their salary.
 
 JUSTICE: the Court (/court) can fine a citizen and jail them. A jailed citizen can only reach the jail page (/jail) until their sentence is served. Convictions are recorded on a criminal record and bar a citizen from standing for office. Ministry seats are filled by application (/ministries) — once enough eligible citizens apply, an election opens automatically.
 
@@ -10682,6 +10686,159 @@ def cabinet_summary():
                    awaiting=sum(1 for r in rows if r["status"] == "pending") if prez else 0,
                    mine_open=sum(1 for r in rows
                                  if r["minister"] == me and r["status"] == "pending"))
+
+# ============================================================
+#  THE NATIONAL TIMELINE
+# ============================================================
+#  The founding events live here in code rather than in the database.
+#  They are the canonical record of how the Republic came to exist, they
+#  are the same for every deployment, and nobody can delete them by
+#  accident. Anything that happens from here on is added by the President
+#  and stored in `timeline_events`; the page merges the two.
+
+TIMELINE_KINDS = {
+    "founding":    {"label": "Founding",    "icon": "fa-flag",            "color": "#ffce56"},
+    "website":     {"label": "The website", "icon": "fa-code",            "color": "#58c4ff"},
+    "treaty":      {"label": "Treaty",      "icon": "fa-file-signature",  "color": "#a78bfa"},
+    "territory":   {"label": "Territory",   "icon": "fa-map-location-dot", "color": "#1fd6a6"},
+    "institution": {"label": "Institution", "icon": "fa-landmark-dome",   "color": "#22d3ee"},
+    "election":    {"label": "Election",    "icon": "fa-check-to-slot",   "color": "#ff9f43"},
+    "conflict":    {"label": "Conflict",    "icon": "fa-shield-halved",   "color": "#ff5d6c"},
+    "event":       {"label": "Event",       "icon": "fa-circle-dot",      "color": "#9db0c6"},
+}
+
+TIMELINE_FOUNDING = [
+    {
+        "on": "2025-05-26", "kind": "founding",
+        "title": "Cyvathon is founded",
+        "body": "The Republic of Cyvathon is declared — a micronation built around coding, "
+                "creativity and community. Code. Conquer. Cause Creativity. At founding it "
+                "held no territory: a nation of citizens and ideas, and nothing on a map.",
+    },
+    {
+        "on": "2025-05-31", "kind": "website",
+        "title": "The website goes live",
+        "body": "Five days after the founding, Cyvathon gets its own soil in the only place "
+                "it had one — the web. The site launches with the Cybucks banking system, "
+                "and everything since has been built on top of it.",
+    },
+    {
+        "on": "2026-06-14", "kind": "treaty",
+        "title": "Treaty with Crystonia",
+        "body": "Cyvathon and Crystonia sign a treaty of recognition and friendship, "
+                "establishing formal relations between the two micronations.",
+    },
+    {
+        "on": "2026-09-02", "kind": "territory",
+        "title": "The Treaty of Anti-Anarchism — Cyvathon gains true land",
+        "body": "Class 8E at TISB is placed under Cyvathonian rule by the Treaty of "
+                "Anti-Anarchism, agreed unanimously by everyone in the class. Cyvathon "
+                "stops being a nation of the web alone and becomes a nation with ground "
+                "under it — its first true territory, held by consent rather than conquest.",
+        "highlight": True,
+    },
+]
+
+
+def _timeline_public(row, added_by=None):
+    kind = TIMELINE_KINDS.get(row.get("kind") or "event", TIMELINE_KINDS["event"])
+    on = row.get("on") or row.get("happened_on") or ""
+    return {
+        "id": row.get("id"),
+        "on": str(on)[:10],
+        "title": row.get("title") or "",
+        "body": row.get("body") or "",
+        "kind": row.get("kind") or "event",
+        "kind_label": kind["label"], "icon": kind["icon"], "color": kind["color"],
+        "highlight": bool(row.get("highlight")),
+        "added_by": added_by if added_by is not None else row.get("added_by"),
+        "founding": added_by is None and row.get("id") is None,
+    }
+
+
+@app.route("/timeline")
+def timeline_page():
+    return app.send_static_file("timeline.html")
+
+
+@app.route("/timeline/data")
+@limiter.limit("60/minute")
+def timeline_data():
+    """The founding record plus everything the President has added since."""
+    user = get_current_user(run_economics=False)
+    events = [_timeline_public(e) for e in TIMELINE_FOUNDING]
+    try:
+        rows = supabase.table("timeline_events").select("*") \
+            .order("happened_on").limit(300).execute().data or []
+        events += [_timeline_public(r, r.get("added_by")) for r in rows]
+    except Exception:
+        pass        # not migrated yet — the founding record still stands
+    events.sort(key=lambda e: (e["on"], e["title"]))
+
+    # How long the Republic has stood, counted from the founding.
+    born = _parse(TIMELINE_FOUNDING[0]["on"] + "T00:00:00+00:00")
+    days = (_now() - born).days if born else 0
+    return jsonify(success=True, events=events, kinds=TIMELINE_KINDS,
+                   founded=TIMELINE_FOUNDING[0]["on"], days_old=days,
+                   is_president=is_treasury_admin(user) if user else False,
+                   me=(user or {}).get("username"))
+
+
+@app.route("/timeline/add", methods=["POST"])
+@limiter.limit("20/minute")
+def timeline_add():
+    """The President writes a new line into the national record."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="Only the President writes the record"), 403
+    d = request.get_json() or {}
+
+    title = (d.get("title") or "").strip()[:140]
+    if not title:
+        return jsonify(success=False, error="What happened?"), 400
+    on = (d.get("on") or "").strip()[:10]
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", on):
+        return jsonify(success=False, error="Give the date as YYYY-MM-DD"), 400
+    if on < TIMELINE_FOUNDING[0]["on"]:
+        return jsonify(success=False,
+                       error=f"Nothing happened before the founding on "
+                             f"{TIMELINE_FOUNDING[0]['on']}."), 400
+    kind = (d.get("kind") or "event").strip()
+    if kind not in TIMELINE_KINDS:
+        kind = "event"
+
+    row = {"happened_on": on, "title": title, "kind": kind,
+           "body": (d.get("body") or "").strip()[:800], "added_by": user["username"]}
+    try:
+        made = supabase.table("timeline_events").insert(row).execute().data[0]
+    except Exception:
+        return jsonify(success=False,
+                       error="The timeline isn't enabled yet — the database needs a quick "
+                             "update (run migration_timeline.sql)."), 503
+    return jsonify(success=True, event=_timeline_public(made, made.get("added_by")))
+
+
+@app.route("/timeline/remove", methods=["POST"])
+@limiter.limit("20/minute")
+def timeline_remove():
+    """Strike a line from the record. The founding events aren't in the
+    database at all, so they can't be struck."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="Only the President writes the record"), 403
+    try:
+        eid = int((request.get_json() or {}).get("event_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad entry"), 400
+    try:
+        supabase.table("timeline_events").delete().eq("id", eid).execute()
+    except Exception:
+        return jsonify(success=False, error="Couldn't strike that entry"), 500
+    return jsonify(success=True)
 
 # ============================================================
 #  JUSTICE — jail, criminal records, eligibility for office

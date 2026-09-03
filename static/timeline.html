@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>National Timeline · Cyvathon</title>
+  <!-- social / SEO metadata -->
+  <meta name="description" content="The history of Cyvathon — founded 26 May 2025, and every treaty, institution and territory since." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/timeline" />
+  <meta name="theme-color" content="#58c4ff" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="National Timeline · Cyvathon" />
+  <meta property="og:description" content="Founded 26 May 2025. From a nation of the web to a nation with ground under it." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/timeline" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="National Timeline · Cyvathon" />
+  <meta name="twitter:description" content="Founded 26 May 2025. From a nation of the web to a nation with ground under it." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    /* The timeline keeps the national livery — this is the country's own
+       record, not a service with a brand of its own. */
+    .tl-hero{ text-align:center; margin-bottom:2.6rem; }
+    .tl-hero .since{ display:inline-flex; align-items:center; gap:.55rem; padding:.45rem 1.1rem;
+      border-radius:30px; font-size:.85rem; font-weight:600; margin-top:.6rem;
+      background:rgba(255,206,86,.12); border:1px solid rgba(255,206,86,.35); color:var(--gold); }
+
+    /* ---- the rail ---- */
+    .rail{ position:relative; max-width:820px; margin:0 auto; padding-left:2.6rem; }
+    .rail::before{ content:""; position:absolute; left:11px; top:.6rem; bottom:.6rem; width:2px;
+      background:linear-gradient(180deg, var(--gold), var(--accent) 30%, var(--cyan) 70%, transparent); }
+
+    .ev{ position:relative; margin-bottom:2.1rem; }
+    .ev::before{ content:""; position:absolute; left:-2.6rem; top:.35rem; width:24px; height:24px;
+      margin-left:0; border-radius:50%; background:var(--bg-soft);
+      border:2px solid var(--ec); box-shadow:0 0 0 4px rgba(7,12,24,.9); }
+    .ev > .dot{ position:absolute; left:-2.6rem; top:.35rem; width:24px; height:24px;
+      display:grid; place-items:center; font-size:.68rem; color:var(--ec); z-index:2; }
+    .ev .when{ font-size:.78rem; font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+      color:var(--ec); margin-bottom:.25rem; }
+    .ev .card2{ background:linear-gradient(165deg,rgba(120,170,255,.085),rgba(120,170,255,.022));
+      border:1px solid var(--panel-border); border-left:3px solid var(--ec);
+      border-radius:14px; padding:1.1rem 1.3rem; }
+    .ev h3{ font-size:1.08rem; line-height:1.3; margin-bottom:.35rem; }
+    .ev p{ color:var(--muted); font-size:.9rem; line-height:1.7; margin:0; }
+    .ev .tag2{ display:inline-block; font-size:.64rem; font-weight:800; letter-spacing:.7px;
+      text-transform:uppercase; padding:.16rem .5rem; border-radius:20px; margin-bottom:.5rem;
+      background:color-mix(in srgb, var(--ec) 18%, transparent); color:var(--ec);
+      border:1px solid color-mix(in srgb, var(--ec) 40%, transparent); }
+    .ev .by{ font-size:.74rem; color:var(--muted); margin-top:.6rem; }
+    .ev .strike{ background:none; border:none; color:var(--muted); cursor:pointer; padding:0;
+      width:auto; margin:0; font-size:.74rem; box-shadow:none; }
+    .ev .strike:hover{ color:var(--red); transform:none; box-shadow:none; }
+
+    /* the moment the nation got ground under it */
+    .ev.big .card2{ border-width:1px 1px 1px 4px;
+      background:linear-gradient(165deg, color-mix(in srgb, var(--ec) 16%, transparent),
+                 rgba(120,170,255,.02));
+      box-shadow:0 0 0 1px color-mix(in srgb, var(--ec) 30%, transparent), var(--shadow-card); }
+    .ev.big h3{ font-size:1.28rem; }
+    .ev.big .card2 p{ color:var(--text-dim); }
+
+    /* ---- add form ---- */
+    .addbox{ max-width:820px; margin:2.4rem auto 0; }
+    .addgrid{ display:grid; gap:.7rem; grid-template-columns:150px 190px 1fr; }
+    .addgrid .full{ grid-column:1/-1; }
+    @media(max-width:700px){ .addgrid{ grid-template-columns:1fr; } }
+    .empty{ color:var(--muted); text-align:center; padding:2rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <div class="tl-hero">
+      <h2 class="section-title" style="margin-bottom:.4rem;">National Timeline</h2>
+      <p class="section-sub" style="margin-bottom:0;">How the Republic came to exist, and
+        everything it has done since.</p>
+      <div id="since"></div>
+    </div>
+
+    <div class="rail" id="rail"></div>
+
+    <div class="addbox" id="addBox" style="display:none;">
+      <div class="panel">
+        <h3><i class="fas fa-feather-pointed"></i> Write a new line into the record</h3>
+        <p class="small" style="margin-bottom:1rem;">The founding events are fixed and can't be
+          struck. Everything else is yours to write.</p>
+        <div class="addgrid">
+          <div><label>Date</label><input id="eOn" type="date"></div>
+          <div><label>Kind</label><select id="eKind"></select></div>
+          <div><label>What happened</label><input id="eTitle" placeholder="e.g. Treaty with Aquilithia"></div>
+          <div class="full"><label>The detail</label>
+            <textarea id="eBody" rows="3" placeholder="A sentence or two for the record."></textarea></div>
+        </div>
+        <button style="margin-top:1rem;" onclick="addEvent()"><i class="fas fa-plus"></i> Add to the timeline</button>
+        <p id="addMsg" class="small" style="text-align:center;"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let D=null;
+    const esc=(s)=>(s==null?"":String(s))
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const msg=(t,ok=false,el="addMsg")=>{const m=document.getElementById(el);
+      m.textContent=t||""; m.style.color= ok?"var(--green)":"var(--red)";};
+
+    /* "26 May 2025" reads like history; "2025-05-26" reads like a database. */
+    function pretty(iso){
+      const [y,m,dd] = (iso||"").split("-").map(Number);
+      if(!y) return iso||"";
+      const MON = ["January","February","March","April","May","June",
+                   "July","August","September","October","November","December"];
+      return `${dd} ${MON[(m||1)-1]} ${y}`;
+    }
+
+    function render(){
+      const rail = document.getElementById("rail");
+      rail.innerHTML = D.events.map(e=>`
+        <div class="ev ${e.highlight?"big":""}" style="--ec:${esc(e.color)}">
+          <div class="dot"><i class="fas ${esc(e.icon)}"></i></div>
+          <div class="when">${esc(pretty(e.on))}</div>
+          <div class="card2">
+            <span class="tag2">${esc(e.kind_label)}</span>
+            <h3>${esc(e.title)}</h3>
+            ${e.body?`<p>${esc(e.body)}</p>`:""}
+            ${e.founding
+              ? `<div class="by"><i class="fas fa-lock"></i> Founding record</div>`
+              : (e.added_by ? `<div class="by">Entered by ${esc(e.added_by)}${
+                   D.is_president?` · <button class="strike" onclick="strike(${e.id})">strike from the record</button>`:""}</div>` : "")}
+          </div>
+        </div>`).join("") || `<p class="empty">The record is empty.</p>`;
+
+      const yrs = Math.floor(D.days_old / 365), rem = D.days_old % 365;
+      document.getElementById("since").innerHTML = `
+        <span class="since"><i class="fas fa-flag"></i>
+          Founded ${esc(pretty(D.founded))} — ${esc(D.days_old.toLocaleString())} days ago${
+            yrs ? ` (${yrs} year${yrs===1?"":"s"}, ${rem} day${rem===1?"":"s"})` : ""}</span>`;
+    }
+
+    async function addEvent(){
+      const body = {
+        on: document.getElementById("eOn").value,
+        kind: document.getElementById("eKind").value,
+        title: document.getElementById("eTitle").value.trim(),
+        body: document.getElementById("eBody").value.trim(),
+      };
+      try{
+        await api("/timeline/add",{method:"POST",body:JSON.stringify(body)});
+        msg("Written into the record.", true);
+        ["eTitle","eBody"].forEach(id=>document.getElementById(id).value="");
+        D = await api("/timeline/data"); render();
+      }catch(e){ msg(e.message); }
+    }
+
+    async function strike(id){
+      if(!confirm("Strike this from the national record?")) return;
+      try{
+        await api("/timeline/remove",{method:"POST",body:JSON.stringify({event_id:id})});
+        D = await api("/timeline/data"); render();
+      }catch(e){ msg(e.message); }
+    }
+
+    (async function(){
+      const me = await currentUser();
+      renderNav("/timeline", me);
+      try{ D = await api("/timeline/data"); }
+      catch(e){ document.getElementById("rail").innerHTML =
+        `<p class="empty">${esc(e.message)}</p>`; return; }
+      render();
+      if(D.is_president){
+        document.getElementById("addBox").style.display = "block";
+        document.getElementById("eKind").innerHTML = Object.entries(D.kinds)
+          .map(([k,v])=>`<option value="${esc(k)}">${esc(v.label)}</option>`).join("");
+        document.getElementById("eOn").value = new Date().toISOString().slice(0,10);
+      }
+    })();
+  </script>
+</body>
+</html>

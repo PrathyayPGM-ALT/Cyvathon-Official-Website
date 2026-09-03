@@ -177,6 +177,23 @@ Couriers draw 500 CB on their own clock, on top of the above.
 
 ---
 
+### 9. National Timeline
+The Republic's own record, at `/timeline` — public, so visitors can read it too.
+
+| | |
+|---|---|
+| **26 May 2025** | Cyvathon is founded — a nation of citizens and ideas, no territory |
+| **31 May 2025** | The website goes live, with the Cybucks banking system |
+| **14 June 2026** | Treaty with Crystonia |
+| **2 September 2026** | **The Treaty of Anti-Anarchism** — class 8E at TISB placed under Cyvathonian rule, agreed unanimously by everyone in the class. Cyvathon's first true territory |
+
+The founding events live in `main.py` as the canonical record: they are the same
+for every deployment and cannot be deleted. Everything after is written by the
+President and stored in `timeline_events` — needs `migration_timeline.sql`,
+though the founding record still renders without it.
+
+---
+
 **On the card data.** The player lookup uses TheSportsDB's free API — set
 `SPORTSDB_API_KEY` to use your own key instead of the shared test key. There is
 no open Match Attax card API: Topps publishes none, and card databases like
