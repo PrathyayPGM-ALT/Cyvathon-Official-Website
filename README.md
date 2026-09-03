@@ -187,6 +187,11 @@ The Republic's own record, at `/timeline` — public, so visitors can read it to
 | **14 June 2026** | Treaty with Crystonia |
 | **2 September 2026** | **The Treaty of Anti-Anarchism** — class 8E at TISB placed under Cyvathonian rule, agreed unanimously by everyone in the class. Cyvathon's first true territory |
 
+The Treaty of Anti-Anarchism is published as a readable PDF at
+`/static/cyvathon-treaty-of-anti-anarchism.pdf`, linked from its timeline entry.
+Rebuild it with `python build_treaty_anti_anarchism.py` (needs `reportlab`,
+which is build-time only and deliberately not in `requirements.txt`).
+
 The founding events live in `main.py` as the canonical record: they are the same
 for every deployment and cannot be deleted. Everything after is written by the
 President and stored in `timeline_events` — needs `migration_timeline.sql`,

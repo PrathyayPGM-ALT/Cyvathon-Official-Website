@@ -10736,6 +10736,8 @@ TIMELINE_FOUNDING = [
                 "stops being a nation of the web alone and becomes a nation with ground "
                 "under it — its first true territory, held by consent rather than conquest.",
         "highlight": True,
+        "doc": "/static/cyvathon-treaty-of-anti-anarchism.pdf",
+        "doc_label": "Read the Treaty",
     },
 ]
 
@@ -10751,6 +10753,7 @@ def _timeline_public(row, added_by=None):
         "kind": row.get("kind") or "event",
         "kind_label": kind["label"], "icon": kind["icon"], "color": kind["color"],
         "highlight": bool(row.get("highlight")),
+        "doc": row.get("doc") or "", "doc_label": row.get("doc_label") or "Read the document",
         "added_by": added_by if added_by is not None else row.get("added_by"),
         "founding": added_by is None and row.get("id") is None,
     }

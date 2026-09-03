@@ -135,6 +135,9 @@
             <span class="tag2">${esc(e.kind_label)}</span>
             <h3>${esc(e.title)}</h3>
             ${e.body?`<p>${esc(e.body)}</p>`:""}
+            ${e.doc?`<p style="margin-top:.75rem"><a class="link" href="${esc(e.doc)}"
+              target="_blank" rel="noopener"><i class="fas fa-file-pdf"></i>
+              ${esc(e.doc_label)} <i class="fas fa-arrow-up-right-from-square" style="font-size:.75em"></i></a></p>`:""}
             ${e.founding
               ? `<div class="by"><i class="fas fa-lock"></i> Founding record</div>`
               : (e.added_by ? `<div class="by">Entered by ${esc(e.added_by)}${
