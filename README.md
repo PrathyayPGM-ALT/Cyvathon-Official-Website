@@ -142,6 +142,41 @@ armoury.
 
 ---
 
+### 8. Cabinet Powers
+Ministers get real authority, split two ways (`/cabinet`):
+
+**Duties** are delegated outright — no approval needed, because making the
+President countersign every logged pen would only move the bottleneck:
+| Brief | Carries out |
+|---|---|
+| Defence | Works the Armoury desk — logs G2 rounds in and pays for them |
+| Transport & Logistics | Vets Cyvazon couriers |
+| Justice & Home Affairs | Rules on Cyvashield claims |
+
+**Policy is proposed, never imposed.** A minister who wants to move a national
+lever raises a proposal and *nothing changes until the President assents*.
+Finance covers VAT, the GDP multiplier, savings and bond rates, loans, the
+company fee and the citizen grant; Defence the Armoury rate; Transport the
+courier wage and delivery levy; Justice the insurance levy and deposit cap.
+Assent applies the change immediately and records it in the Gazette.
+
+A ministry picks up a brief **from its name** — call one "Ministry of Defence"
+and whoever holds it works the Armoury. Needs `migration_cabinet_powers.sql`.
+
+### Weekly salary
+| Designation | CB / week |
+|---|---|
+| Prime Minister | 1000 |
+| Minister · Judge · Security Minister | 900 |
+| Founder · Head of Coding · Head of Hacking | 800 |
+| Employee | 500 |
+| Citizen | 100 |
+| **President** | **0** — holds the Treasury and spends it on the nation |
+
+Couriers draw 500 CB on their own clock, on top of the above.
+
+---
+
 **On the card data.** The player lookup uses TheSportsDB's free API — set
 `SPORTSDB_API_KEY` to use your own key instead of the shared test key. There is
 no open Match Attax card API: Topps publishes none, and card databases like

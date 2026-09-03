@@ -107,19 +107,22 @@ DELIVERY_OPEN  = True
 
 COMPANY_CATEGORIES = ["Finance", "Selling", "Service", "Technology", "Other"]
 
-# Weekly salary (Cybucks) by designation
+# Weekly salary (Cybucks) by designation.
+# The President draws nothing: they hold the Treasury and spend it on the
+# nation, so paying themselves a wage out of it would be circular.
 SALARY_TABLE = {
-    "President":         1000,
-    "Prime Minister":    800,
-    "Judge":             700,
-    "Minister":          650,
-    "Security Minister": 600,
-    "Head of Coding":    600,
-    "Head of Hacking":   600,
-    "Founder":           500,
-    "Employee":          300,
+    "President":         0,
+    "Prime Minister":    1000,
+    "Judge":             900,
+    "Minister":          900,
+    "Security Minister": 900,
+    "Head of Coding":    800,
+    "Head of Hacking":   800,
+    "Founder":           800,
+    "Employee":          500,
     "Citizen":           100,
 }
+# Couriers draw COURIER_WAGE on their own clock, on top of the above.
 
 # Accounts allowed to open/view the national Treasury
 TREASURY_ADMINS = {"Prathyay", "Cyvathon"}
@@ -603,10 +606,13 @@ def _run_economics(user):
         weeks = (now - last_salary).days // SALARY_PERIOD_DAYS
         if weeks >= 1:
             pay = SALARY_TABLE.get(user.get("designation", "Citizen"), 100) * weeks
-            base = updates.get("balance", user.get("balance") or 0)
-            updates["balance"] = round(base + pay, 2)
-            treasury_add(cybucks=-pay, counterparty=username, kind="salary")
-            add_record(username, f"Received {pay} CB salary ({user.get('designation','Citizen')}).")
+            if pay:
+                base = updates.get("balance", user.get("balance") or 0)
+                updates["balance"] = round(base + pay, 2)
+                treasury_add(cybucks=-pay, counterparty=username, kind="salary")
+                add_record(username,
+                           f"Received {pay} CB salary ({user.get('designation','Citizen')}).")
+            # Advance the clock either way, or an unpaid post re-checks forever.
             updates["last_salary"] = now.isoformat()
 
     # ---- 2a. Courier wage (Cyvazon) -------------------------
@@ -1499,7 +1505,7 @@ def sitemap():
              "/court", "/gazette", "/states", "/foreign", "/treasury",
              "/exchange", "/company", "/jobs", "/marketplace", "/casino",
              "/flightsim", "/packet", "/cyvazon", "/shield", "/cyvalend", "/pens",
-             "/passport", "/login"]
+             "/cabinet", "/passport", "/login"]
     urls = "".join(f"<url><loc>https://cyvathon.onrender.com{p}</loc></url>"
                    for p in pages)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>'
@@ -8407,7 +8413,7 @@ def cyvazon_config():
                          "area": user.get("home_area") or ""},
                    courier=is_courier(user),
                    courier_status=((row or {}).get("status") or "") if row and row.get("active") else "",
-                   is_admin=is_treasury_admin(user),
+                   is_admin=has_power(user, "couriers"),
                    deliveries_done=(row or {}).get("deliveries") or 0)
 
 
@@ -8728,13 +8734,13 @@ def cyvazon_cancel():
 @app.route("/cyvazon/admin")
 @limiter.limit("60/minute")
 def cyvazon_admin():
-    """The President's view of the delivery service: who wants to carry
-    parcels, who already does, and what the service is costing."""
+    """The delivery service at a glance: who wants to carry parcels, who
+    already does, and what the service is costing."""
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-    if not is_treasury_admin(user):
-        return jsonify(success=False, error="President only"), 403
+    if not has_power(user, "couriers"):
+        return jsonify(success=False, error="President or Transport Minister only"), 403
     try:
         rows = supabase.table("couriers").select("*").execute().data or []
         parcels = supabase.table("deliveries").select("status").execute().data or []
@@ -8768,8 +8774,8 @@ def cyvazon_admin_decide():
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-    if not is_treasury_admin(user):
-        return jsonify(success=False, error="President only"), 403
+    if not has_power(user, "couriers"):
+        return jsonify(success=False, error="President or Transport Minister only"), 403
     d = request.get_json() or {}
     who = (d.get("username") or "").strip()[:32]
     action = (d.get("action") or "").strip()
@@ -8837,12 +8843,12 @@ def cyvazon_summary():
         # admin panel precisely when they need it to see what's wrong.
         return jsonify(success=True, enabled=False, waiting=0, incoming=0,
                        carrying=0, to_hand_over=0, courier=False,
-                       courier_status="", is_admin=is_treasury_admin(user),
+                       courier_status="", is_admin=has_power(user, "couriers"),
                        open=bool(DELIVERY_OPEN), wage=COURIER_WAGE)
     crow = _courier_row(me)
     return jsonify(success=True, enabled=True, courier=is_courier(user),
                    courier_status=((crow or {}).get("status") or "") if crow and crow.get("active") else "",
-                   is_admin=is_treasury_admin(user),
+                   is_admin=has_power(user, "couriers"),
                    open=bool(DELIVERY_OPEN), wage=COURIER_WAGE,
                    waiting=sum(1 for r in rows if r["status"] == "open"
                                and me not in (r["sender"], r["recipient"])),
@@ -9065,7 +9071,7 @@ def shield_config():
     used = len(_claims_this_month(user["username"])) if row else 0
     return jsonify(success=True, plans=INSURANCE_PLANS, categories=CLAIM_CATEGORIES,
                    open=bool(INSURANCE_OPEN), me=user["username"],
-                   is_admin=is_treasury_admin(user),
+                   is_admin=has_power(user, "claims"),
                    enrolled=bool(row and row.get("active")),
                    plan=(plan or {}).get("key", ""),
                    switched_at=(row or {}).get("switched_at"),
@@ -9212,12 +9218,12 @@ def shield_claims():
 @app.route("/shield/admin")
 @limiter.limit("60/minute")
 def shield_admin():
-    """The President's claim desk, with the records checked for them."""
+    """The claim desk, with the records checked for whoever is ruling."""
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-    if not is_treasury_admin(user):
-        return jsonify(success=False, error="President only"), 403
+    if not has_power(user, "claims"):
+        return jsonify(success=False, error="President or Justice Minister only"), 403
     try:
         rows = supabase.table("insurance_claims").select("*") \
             .order("created_at", desc=True).limit(200).execute().data or []
@@ -9247,8 +9253,8 @@ def shield_admin_decide():
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-    if not is_treasury_admin(user):
-        return jsonify(success=False, error="President only"), 403
+    if not has_power(user, "claims"):
+        return jsonify(success=False, error="President or Justice Minister only"), 403
     d = request.get_json() or {}
     action = (d.get("action") or "").strip()
     if action not in ("approve", "reject", "fraud"):
@@ -9333,7 +9339,7 @@ def shield_summary():
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
     me = user["username"]
-    admin = is_treasury_admin(user)
+    admin = has_power(user, "claims")
     try:
         mine = supabase.table("insurance_claims").select("id,status") \
             .eq("username", me).execute().data or []
@@ -9947,11 +9953,14 @@ MAX_OPEN_PLEDGES    = 3
 
 
 def is_pen_registrar(user):
-    """The Quartermaster holds the armoury. The President can always reach the
-    desk too, so resupply doesn't stall if the Quartermaster is away."""
+    """The Quartermaster holds the armoury. The Defence Minister works the desk
+    as a delegated duty, and the President can always reach it, so resupply
+    doesn't stall if the Quartermaster is away."""
     if not user:
         return False
-    return user["username"] == PEN_REGISTRAR or is_treasury_admin(user)
+    return (user["username"] == PEN_REGISTRAR
+            or is_treasury_admin(user)
+            or has_power(user, "armoury"))
 
 
 def _pen_missing():
@@ -10276,6 +10285,403 @@ def pens_summary():
                    donated=sum(1 for r in rows
                                if r["username"] == me and r["status"] == "received"),
                    reserve_pens=_reserve_holdings())
+
+# ============================================================
+#  CABINET POWERS — what a minister may actually do
+# ============================================================
+#  Two kinds of authority, and the distinction matters.
+#
+#  DUTIES are delegated outright. The Defence Minister works the Armoury
+#  desk; the Transport Minister vets couriers; the Justice Minister rules
+#  on insurance claims. These are jobs, not decisions — making the
+#  President countersign every logged pen would just move the bottleneck
+#  rather than share the load.
+#
+#  POLICY is proposed, never imposed. A minister who wants to move a
+#  national lever — the tax rate, the GDP multiplier, what the Armoury
+#  pays — raises a proposal, and nothing changes until the President
+#  assents. That keeps the levers in one pair of hands while still
+#  letting a minister govern their own brief.
+#
+#  Ministries are named freely by the President, so a portfolio is matched
+#  on the name: anything called "Ministry of Defence", "War Office" or
+#  "Defence & Security" picks up the defence brief.
+
+# Every lever a minister may ask to move, with the bounds the President's
+# own admin panel would enforce anyway.
+LEVER_SPECS = {
+    "vat_rate":        {"label": "VAT rate",              "min": 0,   "max": 0.5,  "pct": True},
+    "gdp_multiplier":  {"label": "GDP multiplier",        "min": 0.1, "max": 20},
+    "savings_rate":    {"label": "Savings interest",      "min": 0,   "max": 0.5,  "pct": True},
+    "bond_rate":       {"label": "Bond return",           "min": 0,   "max": 1,    "pct": True},
+    "bond_days":       {"label": "Bond maturity (days)",  "min": 1,   "max": 365},
+    "company_fee":     {"label": "Company founding fee",  "min": 0,   "max": 100000},
+    "loan_max":        {"label": "Maximum loan",          "min": 0,   "max": 100000},
+    "loan_days":       {"label": "Loan term (days)",      "min": 1,   "max": 365},
+    "starting_grant":  {"label": "New citizen grant",     "min": 0,   "max": 100000},
+    "tax_period_days": {"label": "Tax period (days)",     "min": 1,   "max": 365},
+    "salary_period_days": {"label": "Salary period (days)", "min": 1, "max": 365},
+    "courier_wage":    {"label": "Courier wage",          "min": 0,   "max": 100000},
+    "delivery_levy":   {"label": "Delivery levy",         "min": 0,   "max": 0.5,  "pct": True},
+    "insurance_levy":  {"label": "Insurance levy",        "min": 0,   "max": 0.5,  "pct": True},
+    "lend_max_deposit": {"label": "Cyvalend deposit cap", "min": 0,   "max": 100000},
+    "pen_rate":        {"label": "Armoury rate per round", "min": 0,  "max": 100000},
+}
+
+# The portfolios. `duties` are carried out directly; `levers` may only be
+# proposed. Order matters: the first name match wins.
+PORTFOLIOS = [
+    {"key": "defence", "label": "Defence", "icon": "fa-shield-halved", "color": "#d9b45c",
+     "match": ["defence", "defense", "war", "military", "army", "armed forces", "ordnance"],
+     "duties": [{"key": "armoury", "label": "Work the Armoury desk",
+                 "blurb": "Log G2 rounds into the armoury and pay citizens for them, "
+                          "or turn a handover away.", "href": "/pens?tab=registry"}],
+     "levers": ["pen_rate"]},
+
+    {"key": "finance", "label": "Finance", "icon": "fa-coins", "color": "#58c4ff",
+     "match": ["finance", "treasury", "economy", "economic", "exchequer", "revenue"],
+     "duties": [],
+     "levers": ["vat_rate", "gdp_multiplier", "savings_rate", "bond_rate", "bond_days",
+                "company_fee", "loan_max", "loan_days", "starting_grant",
+                "tax_period_days", "salary_period_days"]},
+
+    {"key": "transport", "label": "Transport & Logistics", "icon": "fa-truck-fast", "color": "#ff9900",
+     "match": ["transport", "logistic", "delivery", "post", "infrastructure", "cyvazon"],
+     "duties": [{"key": "couriers", "label": "Vet Cyvazon couriers",
+                 "blurb": "Approve, turn away and revoke couriers on the delivery "
+                          "admin panel.", "href": "/cyvazon?tab=admin"}],
+     "levers": ["courier_wage", "delivery_levy"]},
+
+    {"key": "justice", "label": "Justice & Home Affairs", "icon": "fa-scale-balanced", "color": "#1fd6a6",
+     "match": ["justice", "home", "interior", "insurance", "welfare", "citizen"],
+     "duties": [{"key": "claims", "label": "Rule on Cyvashield claims",
+                 "blurb": "Approve, reduce, reject or rule fraudulent on national "
+                          "insurance claims.", "href": "/shield?tab=admin"}],
+     "levers": ["insurance_levy", "lend_max_deposit"]},
+]
+PORTFOLIO_BY_KEY = {p["key"]: p for p in PORTFOLIOS}
+
+
+def _portfolio_for_name(name):
+    n = (name or "").lower()
+    for p in PORTFOLIOS:
+        if any(m in n for m in p["match"]):
+            return p
+    return None
+
+
+_portfolio_cache = {}       # username -> (portfolio_key_or_None, ministry_name, ts)
+
+
+def ministry_portfolio(user):
+    """The brief this citizen holds, or None. Cached briefly — this is
+    checked on every gated request."""
+    if not user:
+        return None, None
+    u = user["username"]
+    hit = _portfolio_cache.get(u)
+    if hit and time() - hit[2] < FLAG_TTL:
+        return (PORTFOLIO_BY_KEY.get(hit[0]) if hit[0] else None), hit[1]
+    port, mname = None, None
+    try:
+        rows = supabase.table("ministries").select("name,minister") \
+            .eq("minister", u).execute().data or []
+    except Exception:
+        rows = []
+    for r in rows:
+        p = _portfolio_for_name(r.get("name"))
+        if p:
+            port, mname = p, r.get("name")
+            break
+    _portfolio_cache[u] = (port["key"] if port else None, mname, time())
+    return port, mname
+
+
+def has_power(user, duty):
+    """Can this citizen carry out `duty`? The President always can."""
+    if not user:
+        return False
+    if is_treasury_admin(user):
+        return True
+    port, _ = ministry_portfolio(user)
+    return bool(port and any(d["key"] == duty for d in port["duties"]))
+
+
+def _lever_now(field):
+    """Current value of a lever, read from the live globals."""
+    name = _CONFIG_KEYS.get(field)
+    return globals().get(name) if name else None
+
+
+def _proposal_public(row):
+    spec = LEVER_SPECS.get(row.get("field") or "", {})
+    return {
+        "id": row.get("id"), "ministry": row.get("ministry") or "",
+        "portfolio": row.get("portfolio") or "", "minister": row.get("minister"),
+        "field": row.get("field"), "field_label": spec.get("label") or row.get("field"),
+        "is_pct": bool(spec.get("pct")),
+        "current_value": row.get("current_value"),
+        "proposed_value": row.get("proposed_value"),
+        "reason": row.get("reason") or "", "status": row.get("status") or "pending",
+        "decided_by": row.get("decided_by"), "decided_at": row.get("decided_at"),
+        "decision_note": row.get("decision_note") or "",
+        "created_at": row.get("created_at"),
+    }
+
+
+def _cabinet_missing():
+    return jsonify(success=False,
+                   error="Cabinet powers aren't enabled yet — the database needs a quick "
+                         "update (run migration_cabinet_powers.sql)."), 503
+
+
+# ---- routes -----------------------------------------------------------
+@app.route("/cabinet")
+def cabinet_page():
+    return app.send_static_file("cabinet.html")
+
+
+@app.route("/cabinet/powers")
+@limiter.limit("60/minute")
+def cabinet_powers():
+    """What this citizen may do, and which levers they may ask to move."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    port, mname = ministry_portfolio(user)
+    prez = is_treasury_admin(user)
+
+    levers = []
+    for f in (port["levers"] if port else []):
+        spec = LEVER_SPECS.get(f) or {}
+        levers.append({"field": f, "label": spec.get("label") or f,
+                       "min": spec.get("min"), "max": spec.get("max"),
+                       "pct": bool(spec.get("pct")), "current": _lever_now(f)})
+
+    return jsonify(success=True, me=user["username"], is_president=prez,
+                   portfolio=(port["key"] if port else ""),
+                   portfolio_label=(port["label"] if port else ""),
+                   portfolio_icon=(port["icon"] if port else ""),
+                   portfolio_color=(port["color"] if port else ""),
+                   ministry=mname or "",
+                   duties=(port["duties"] if port else []),
+                   levers=levers,
+                   all_portfolios=[{"key": p["key"], "label": p["label"], "icon": p["icon"],
+                                    "color": p["color"],
+                                    "duties": [d["label"] for d in p["duties"]],
+                                    "levers": [LEVER_SPECS.get(f, {}).get("label") or f
+                                               for f in p["levers"]]}
+                                   for p in PORTFOLIOS])
+
+
+@app.route("/cabinet/propose", methods=["POST"])
+@limiter.limit("15/minute")
+def cabinet_propose():
+    """A minister asks to move a lever in their own brief."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    port, mname = ministry_portfolio(user)
+    if not port:
+        return jsonify(success=False,
+                       error="You don't hold a ministry with policy powers."), 403
+
+    d = request.get_json() or {}
+    field = (d.get("field") or "").strip()
+    if field not in port["levers"]:
+        return jsonify(success=False,
+                       error=f"The {port['label']} brief doesn't cover that lever."), 403
+    spec = LEVER_SPECS[field]
+
+    try:
+        value = round(float(d.get("value")), 4)
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Give a number"), 400
+    if not math.isfinite(value):
+        return jsonify(success=False, error="Give a real number"), 400
+    if value < spec["min"] or value > spec["max"]:
+        return jsonify(success=False,
+                       error=f"{spec['label']} must be between {spec['min']} and {spec['max']}."), 400
+
+    reason = (d.get("reason") or "").strip()[:400]
+    if len(reason) < 10:
+        return jsonify(success=False,
+                       error="Tell the President why (at least 10 characters)."), 400
+
+    current = _lever_now(field)
+    if current is not None and abs(float(current) - value) < 1e-9:
+        return jsonify(success=False, error=f"{spec['label']} is already that."), 400
+
+    try:
+        openp = supabase.table("policy_proposals").select("id,field") \
+            .eq("minister", me).eq("status", "pending").execute().data or []
+    except Exception:
+        return _cabinet_missing()
+    if any(p["field"] == field for p in openp):
+        return jsonify(success=False,
+                       error=f"You already have a proposal on {spec['label']} awaiting assent."), 400
+    if len(openp) >= 5:
+        return jsonify(success=False,
+                       error="You have five proposals awaiting assent already."), 400
+
+    row = {"ministry": mname or "", "portfolio": port["key"], "minister": me,
+           "field": field, "current_value": current, "proposed_value": value,
+           "reason": reason}
+    try:
+        made = supabase.table("policy_proposals").insert(row).execute().data[0]
+    except Exception:
+        return _cabinet_missing()
+
+    add_record(me, f"Proposed moving {spec['label']} to {value:g}.")
+    for boss in sorted(TREASURY_ADMINS):
+        notify(boss, f"\U0001F3DB️ {me} ({port['label']}) proposes {spec['label']} "
+                     f"→ {value:g}. Your assent is needed.", "/cabinet?tab=assent")
+    return jsonify(success=True, proposal=_proposal_public(made))
+
+
+@app.route("/cabinet/proposals")
+@limiter.limit("60/minute")
+def cabinet_proposals():
+    """My proposals, and — for the President — everything awaiting assent."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me, prez = user["username"], is_treasury_admin(user)
+    try:
+        rows = supabase.table("policy_proposals").select("*") \
+            .order("created_at", desc=True).limit(150).execute().data or []
+    except Exception:
+        return _cabinet_missing()
+    mine = [_proposal_public(r) for r in rows if r.get("minister") == me]
+    pending = [_proposal_public(r) for r in rows
+               if (r.get("status") or "pending") == "pending"] if prez else []
+    settled = [_proposal_public(r) for r in rows
+               if (r.get("status") or "pending") != "pending"][:30] if prez else []
+    return jsonify(success=True, me=me, is_president=prez,
+                   mine=mine, pending=pending, settled=settled)
+
+
+@app.route("/cabinet/decide", methods=["POST"])
+@limiter.limit("30/minute")
+def cabinet_decide():
+    """The President assents to a proposal, or refuses it. A minister may
+    withdraw their own before it is decided."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    d = request.get_json() or {}
+    action = (d.get("action") or "").strip()
+    if action not in ("approve", "reject", "withdraw"):
+        return jsonify(success=False, error="Unknown action"), 400
+    try:
+        pid = int(d.get("proposal_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad proposal"), 400
+    note = (d.get("note") or "").strip()[:300]
+
+    try:
+        r = supabase.table("policy_proposals").select("*").eq("id", pid).execute().data
+    except Exception:
+        return _cabinet_missing()
+    if not r:
+        return jsonify(success=False, error="Proposal not found"), 404
+    prop = r[0]
+    if (prop.get("status") or "pending") != "pending":
+        return jsonify(success=False, error="That proposal is already settled"), 400
+
+    now = _now()
+    spec = LEVER_SPECS.get(prop["field"], {"label": prop["field"]})
+
+    if action == "withdraw":
+        if prop["minister"] != me:
+            return jsonify(success=False, error="Only the minister can withdraw it"), 403
+        supabase.table("policy_proposals").update(
+            {"status": "withdrawn", "decided_at": now.isoformat()}).eq("id", pid).execute()
+        return jsonify(success=True, status="withdrawn")
+
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="Only the President can assent"), 403
+
+    if action == "reject":
+        supabase.table("policy_proposals").update(
+            {"status": "rejected", "decided_by": me, "decided_at": now.isoformat(),
+             "decision_note": note}).eq("id", pid).eq("status", "pending").execute()
+        notify(prop["minister"],
+               f"The President did not assent to your {spec['label']} proposal."
+               + (f" {note}" if note else ""), "/cabinet")
+        return jsonify(success=True, status="rejected")
+
+    # ---- assent: this is the moment the lever actually moves ----
+    claimed = supabase.table("policy_proposals").update(
+        {"status": "approved", "decided_by": me, "decided_at": now.isoformat(),
+         "decision_note": note}).eq("id", pid).eq("status", "pending").execute().data
+    if not claimed:
+        return jsonify(success=False, error="That proposal is already settled"), 400
+
+    try:
+        refresh_config()
+        supabase.table("config").update(
+            {prop["field"]: prop["proposed_value"]}).eq("id", 1).execute()
+        refresh_config()
+        _gdp_cache["v"] = None
+    except Exception:
+        logging.exception("policy assent failed to apply")
+        return jsonify(success=False,
+                       error="Assent recorded but the change didn't apply — check the config table."), 500
+
+    add_record(prop["minister"],
+               f"{spec['label']} moved to {prop['proposed_value']:g} with Presidential assent.")
+    _gazette_the_assent(prop, spec, me, note)
+    notify(prop["minister"],
+           f"✅ The President assented — {spec['label']} is now {prop['proposed_value']:g}.",
+           "/cabinet")
+    return jsonify(success=True, status="approved",
+                   field=prop["field"], value=prop["proposed_value"])
+
+
+def _gazette_the_assent(prop, spec, president, note):
+    """Record the assent in the Gazette. A change to national policy belongs in
+    the public record — but a Gazette failure must never undo an assent that
+    has already been applied, so this is strictly best-effort."""
+    try:
+        no = _next_gazette_no("decree")
+        supabase.table("gazette").insert({
+            "ref": f"Decree No. {no} of {_now().year}",
+            "kind": "decree",
+            "title": f"{spec['label']} set to {prop['proposed_value']:g}",
+            "body": (f"On the proposal of {prop['minister']} "
+                     f"({prop.get('ministry') or 'the Cabinet'}), {spec['label']} is moved "
+                     f"from {prop.get('current_value')} to {prop['proposed_value']:g}."
+                     + (f" {note}" if note else "")),
+            "issued_by": president,
+        }).execute()
+    except Exception as ex:
+        logging.warning("assent not gazetted: %s", ex)
+
+
+@app.route("/cabinet/summary")
+@limiter.limit("60/minute")
+def cabinet_summary():
+    """Counts for the dashboard banner and the tab badges."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me, prez = user["username"], is_treasury_admin(user)
+    port, mname = ministry_portfolio(user)
+    try:
+        rows = supabase.table("policy_proposals").select("minister,status").execute().data or []
+    except Exception:
+        return jsonify(success=True, enabled=False, is_president=prez,
+                       portfolio=(port["key"] if port else ""), awaiting=0, mine_open=0)
+    return jsonify(success=True, enabled=True, is_president=prez,
+                   portfolio=(port["key"] if port else ""),
+                   portfolio_label=(port["label"] if port else ""),
+                   ministry=mname or "",
+                   awaiting=sum(1 for r in rows if r["status"] == "pending") if prez else 0,
+                   mine_open=sum(1 for r in rows
+                                 if r["minister"] == me and r["status"] == "pending"))
 
 # ============================================================
 #  JUSTICE — jail, criminal records, eligibility for office

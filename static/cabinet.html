@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cabinet Powers · Cyvathon</title>
+  <!-- social / SEO metadata -->
+  <meta name="description" content="What each Cyvathon minister may do — duties they carry out themselves, and policy that needs Presidential assent." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/cabinet" />
+  <meta name="theme-color" content="#ffce56" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="Cabinet Powers · Cyvathon" />
+  <meta property="og:description" content="Ministers govern their brief; the President assents to policy." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/cabinet" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Cabinet Powers · Cyvathon" />
+  <meta name="twitter:description" content="Ministers govern their brief; the President assents to policy." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    /* Cabinet keeps the national livery — this is the government proper,
+       not a service with its own brand. Gold for office. */
+    .cab-hero{ background:linear-gradient(165deg,rgba(255,206,86,.10),rgba(120,170,255,.03));
+      border:1px solid rgba(255,206,86,.28); border-radius:20px;
+      padding:1.9rem 2rem; margin-bottom:1.8rem; }
+    .cab-hero h2{ font-size:1.75rem; font-weight:800; letter-spacing:-.8px; margin-bottom:.4rem; }
+    .cab-hero p{ color:var(--muted); max-width:660px; margin:0; line-height:1.7; font-size:.95rem; }
+    .cab-hero .seat{ display:inline-flex; align-items:center; gap:.5rem; margin-top:1rem;
+      padding:.45rem 1rem; border-radius:30px; font-weight:700; font-size:.88rem;
+      background:rgba(255,255,255,.06); border:1px solid var(--panel-border); }
+
+    .tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.6rem; }
+    .tabs button{ width:auto; margin:0; padding:.55rem 1.1rem; font-size:.86rem;
+      background:var(--panel-2); color:var(--muted); border:1px solid var(--panel-border); box-shadow:none; }
+    .tabs button.on{ background:var(--grad-warm); color:#2b2202; border-color:transparent; }
+    .tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem;
+      border-radius:20px; background:var(--red); color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
+
+    /* ---- duty cards ---- */
+    .duties{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+    .duty{ background:var(--panel); border:1px solid var(--panel-border);
+      border-left:4px solid var(--pc,var(--gold)); border-radius:14px; padding:1.2rem 1.3rem; }
+    .duty h4{ font-size:1rem; margin-bottom:.35rem; display:flex; align-items:center; gap:.5rem; }
+    .duty h4 i{ color:var(--pc,var(--gold)); }
+    .duty p{ color:var(--muted); font-size:.86rem; line-height:1.6; margin-bottom:.9rem; }
+    .duty a button{ margin:0; width:auto; padding:.45rem 1rem; font-size:.82rem; }
+
+    /* ---- lever rows ---- */
+    .levers{ display:grid; gap:.7rem; }
+    .lever{ display:flex; flex-wrap:wrap; align-items:center; gap:.7rem;
+      background:var(--panel); border:1px solid var(--panel-border); border-radius:12px;
+      padding:.8rem 1rem; }
+    .lever .nm{ flex:1; min-width:170px; font-weight:600; font-size:.92rem; }
+    .lever .nm span{ display:block; font-size:.75rem; color:var(--muted); font-weight:400; }
+    .lever input{ width:120px; margin:0; padding:.45rem .7rem; font-size:.86rem; }
+    .lever button{ width:auto; margin:0; padding:.45rem 1rem; font-size:.82rem; }
+
+    /* ---- proposals ---- */
+    .props{ display:grid; gap:.9rem; }
+    .prop{ background:var(--panel); border:1px solid var(--panel-border);
+      border-left:4px solid var(--muted); border-radius:14px; padding:1.05rem 1.2rem; }
+    .prop.pending{ border-left-color:var(--gold); }
+    .prop.approved{ border-left-color:var(--green); }
+    .prop.rejected,.prop.withdrawn{ border-left-color:var(--muted); opacity:.8; }
+    .prop .top{ display:flex; justify-content:space-between; gap:.9rem; flex-wrap:wrap; align-items:flex-start; }
+    .prop .nm{ font-weight:700; font-size:1rem; }
+    .prop .meta{ font-size:.78rem; color:var(--muted); margin-top:.15rem; }
+    .prop .move{ display:flex; align-items:center; gap:.6rem; margin:.7rem 0; font-size:1.05rem; }
+    .prop .move .from{ color:var(--muted); text-decoration:line-through; }
+    .prop .move .to{ font-weight:800; color:var(--gold); }
+    .prop .move i{ color:var(--accent); font-size:.85rem; }
+    .prop .why{ font-size:.86rem; color:var(--text-dim); font-style:italic; }
+    .prop .state{ font-size:.66rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+      padding:.2rem .55rem; border-radius:20px; white-space:nowrap; }
+    .prop .state.pending{ background:rgba(255,206,86,.16); color:var(--gold); }
+    .prop .state.approved{ background:rgba(31,214,166,.16); color:var(--green); }
+    .prop .state.rejected,.prop .state.withdrawn{ background:rgba(255,255,255,.07); color:var(--muted); }
+    .prop .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.9rem; }
+    .prop .acts button{ width:auto; margin:0; padding:.44rem .95rem; font-size:.8rem; }
+    .prop .note{ font-size:.82rem; color:var(--muted); font-style:italic; margin-top:.5rem;
+      padding-top:.5rem; border-top:1px solid var(--panel-border); }
+
+    /* ---- the portfolio index ---- */
+    .ports{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+    .port{ background:var(--panel); border:1px solid var(--panel-border);
+      border-top:4px solid var(--pc); border-radius:14px; padding:1.2rem 1.3rem; }
+    .port h4{ font-size:1.02rem; margin-bottom:.5rem; display:flex; align-items:center; gap:.5rem; }
+    .port h4 i{ color:var(--pc); }
+    .port .lbl{ font-size:.68rem; text-transform:uppercase; letter-spacing:.7px;
+      color:var(--muted); font-weight:800; margin:.7rem 0 .3rem; }
+    .port ul{ list-style:none; }
+    .port li{ font-size:.83rem; padding:.16rem 0; display:flex; gap:.5rem; align-items:flex-start; }
+    .port li i{ color:var(--pc); font-size:.7rem; margin-top:.3rem; }
+    .empty{ color:var(--muted); text-align:center; padding:2.2rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <div class="cab-hero">
+      <h2><i class="fas fa-landmark-dome" style="color:var(--gold)"></i> Cabinet Powers</h2>
+      <p>Ministers govern their own brief. Some things are <b>duties</b> — delegated outright,
+        carried out without asking, because making the President countersign every logged pen
+        would only move the bottleneck. Everything that moves a <b>national lever</b> is proposed,
+        not imposed: the minister asks, and nothing changes until the President assents.</p>
+      <div id="seat"></div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+    <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
+
+    <!-- MY BRIEF -->
+    <section id="tab-brief" class="cabpane">
+      <div id="briefBody"></div>
+    </section>
+
+    <!-- MY PROPOSALS -->
+    <section id="tab-mine" class="cabpane" style="display:none;">
+      <div class="props" id="myProps"></div>
+    </section>
+
+    <!-- ASSENT (President only) -->
+    <section id="tab-assent" class="cabpane" style="display:none;">
+      <div id="assentBody"></div>
+    </section>
+
+    <!-- THE CABINET -->
+    <section id="tab-all" class="cabpane" style="display:none;">
+      <p class="section-sub" style="margin-bottom:1.4rem;">Every brief in the Cabinet and what it
+        carries. A ministry picks up a brief from its name — call one "Ministry of Defence" and
+        whoever holds it works the Armoury.</p>
+      <div class="ports" id="allPorts"></div>
+    </section>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, P=null, TAB="brief";
+    const esc=(s)=>(s==null?"":String(s))
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const msg=(t,ok=false,el="msg")=>{const m=document.getElementById(el);
+      m.textContent=t||""; m.style.color= ok?"var(--green)":"var(--red)";};
+    /* A rate reads better as a percentage than as 0.05. */
+    const show=(v,pct)=>v===null||v===undefined ? "—"
+      : (pct ? (Math.round(v*10000)/100)+"%" : (Math.round(v*1000)/1000).toLocaleString());
+
+    function drawTabs(c){
+      c = c || {};
+      const defs = [["brief","My brief","fa-user-tie",0],
+                    ["mine","My proposals","fa-file-signature",c.mine_open||0]];
+      if(P && P.is_president) defs.push(["assent","Awaiting assent","fa-stamp",c.awaiting||0]);
+      defs.push(["all","The Cabinet","fa-sitemap",0]);
+      document.getElementById("tabs").innerHTML = defs.map(([k,t,i,n])=>
+        `<button class="${k===TAB?"on":""}" onclick="go('${k}')"><i class="fas ${i}"></i> ${t}${
+          n?`<span class="badge">${n}</span>`:""}</button>`).join("");
+    }
+    function go(tab){
+      TAB=tab;
+      document.querySelectorAll(".cabpane").forEach(p=>p.style.display="none");
+      document.getElementById("tab-"+tab).style.display="block";
+      const order = ["brief","mine"].concat(P && P.is_president?["assent"]:[]).concat(["all"]);
+      document.querySelectorAll("#tabs button").forEach((b,i)=>
+        b.classList.toggle("on", order[i]===tab));
+      msg("");
+      if(tab==="mine"||tab==="assent") loadProposals();
+      history.replaceState(null,"","/cabinet?tab="+tab);
+    }
+
+    /* ---- my brief ---- */
+    function drawBrief(){
+      const box = document.getElementById("briefBody");
+      if(!P.portfolio && !P.is_president){
+        box.innerHTML = `<p class="empty">You don't hold a ministry with powers.
+          Seats are filled at <a class="link" href="/ministries">Ministries</a> —
+          apply for one and the brief comes with it.</p>`;
+        return;
+      }
+      const col = P.portfolio_color || "var(--gold)";
+      let html = "";
+
+      if(P.duties.length){
+        html += `<h3 style="margin-bottom:.3rem;"><i class="fas fa-gavel" style="color:${esc(col)}"></i> Duties you carry out yourself</h3>
+          <p class="small" style="margin-bottom:1rem;">No approval needed — these are delegated to you outright.</p>
+          <div class="duties" style="margin-bottom:2.2rem;">${P.duties.map(d=>`
+            <div class="duty" style="--pc:${esc(col)}">
+              <h4><i class="fas fa-circle-check"></i> ${esc(d.label)}</h4>
+              <p>${esc(d.blurb)}</p>
+              <a href="${esc(d.href)}"><button>Open the desk</button></a>
+            </div>`).join("")}</div>`;
+      }
+
+      if(P.levers.length){
+        html += `<h3 style="margin-bottom:.3rem;"><i class="fas fa-sliders" style="color:${esc(col)}"></i> Levers you may propose moving</h3>
+          <p class="small" style="margin-bottom:1rem;">Set a value and say why. Nothing changes until
+            the President assents.</p>
+          <div class="levers">${P.levers.map(l=>`
+            <div class="lever">
+              <div class="nm">${esc(l.label)}<span>currently <b>${esc(show(l.current,l.pct))}</b>${
+                l.pct?` · enter a decimal, e.g. 0.12 for 12%`:""} · range ${esc(l.min)}–${esc(l.max)}</span></div>
+              <input id="lv_${esc(l.field)}" type="number" step="any"
+                     min="${esc(l.min)}" max="${esc(l.max)}" placeholder="${esc(l.current)}">
+              <button onclick="propose('${esc(l.field)}')">Propose</button>
+            </div>`).join("")}</div>`;
+      }
+
+      if(!P.duties.length && !P.levers.length){
+        html = `<p class="empty">${P.is_president
+          ? "You're the President — every lever is yours directly in the <a class='link' href='/admin'>Admin Panel</a>."
+          : "This ministry doesn't carry a brief yet."}</p>`;
+      } else if(P.is_president && !P.portfolio){
+        html = `<p class="empty">You're the President. Every lever is yours directly in the
+          <a class="link" href="/admin">Admin Panel</a> — this page is where you assent to what
+          your ministers ask for.</p>`;
+      }
+      box.innerHTML = html;
+    }
+
+    async function propose(field){
+      const el = document.getElementById("lv_"+field);
+      const value = el.value;
+      if(value === "") return msg("Enter a value first");
+      const reason = prompt("Why should the President agree to this? (at least 10 characters)");
+      if(reason === null) return;
+      try{
+        await api("/cabinet/propose",{method:"POST",
+          body:JSON.stringify({field, value, reason})});
+        msg("Proposed — it's with the President now.", true);
+        el.value = "";
+        refresh();
+        setTimeout(()=>go("mine"), 700);
+      }catch(e){ msg(e.message); }
+    }
+
+    /* ---- proposals ---- */
+    function propCard(p, mode){
+      const label = {pending:"Awaiting assent", approved:"Assented",
+                     rejected:"Refused", withdrawn:"Withdrawn"}[p.status] || p.status;
+      let acts = "";
+      if(p.status === "pending" && mode === "assent")
+        acts = `<button onclick="decide(${p.id},'approve')"><i class="fas fa-stamp"></i> Assent</button>
+                <button class="danger" onclick="decide(${p.id},'reject')">Refuse</button>`;
+      else if(p.status === "pending" && mode === "mine")
+        acts = `<button class="ghost" onclick="decide(${p.id},'withdraw')">Withdraw</button>`;
+      return `<div class="prop ${esc(p.status)}">
+        <div class="top">
+          <div>
+            <div class="nm">${esc(p.field_label)}</div>
+            <div class="meta">${mode==="assent"?`<b>${esc(p.minister)}</b> · `:""}${
+              esc(p.ministry||p.portfolio)}${p.created_at?` · ${esc(new Date(p.created_at).toLocaleDateString())}`:""}</div>
+          </div>
+          <span class="state ${esc(p.status)}">${esc(label)}</span>
+        </div>
+        <div class="move">
+          <span class="from">${esc(show(p.current_value,p.is_pct))}</span>
+          <i class="fas fa-arrow-right-long"></i>
+          <span class="to">${esc(show(p.proposed_value,p.is_pct))}</span>
+        </div>
+        ${p.reason?`<div class="why">"${esc(p.reason)}"</div>`:""}
+        ${p.decision_note?`<div class="note">President: "${esc(p.decision_note)}"</div>`:""}
+        ${acts?`<div class="acts">${acts}</div>`:""}
+      </div>`;
+    }
+
+    async function loadProposals(){
+      let d;
+      try{ d = await api("/cabinet/proposals"); }
+      catch(e){
+        document.getElementById("myProps").innerHTML = `<p class="empty">${esc(e.message)}</p>`;
+        document.getElementById("assentBody").innerHTML = `<p class="empty">${esc(e.message)}</p>`;
+        return;
+      }
+      document.getElementById("myProps").innerHTML = d.mine.length
+        ? d.mine.map(p=>propCard(p,"mine")).join("")
+        : `<p class="empty">You haven't proposed anything yet.</p>`;
+      if(d.is_president){
+        document.getElementById("assentBody").innerHTML = `
+          <h3 style="margin-bottom:.3rem;"><i class="fas fa-stamp" style="color:var(--gold)"></i>
+            Awaiting your assent${d.pending.length?` (${d.pending.length})`:""}</h3>
+          <p class="small" style="margin-bottom:1.2rem;">Assenting applies the change immediately
+            and records it in the <a class="link" href="/gazette">Gazette</a>.</p>
+          <div class="props">${d.pending.length
+            ? d.pending.map(p=>propCard(p,"assent")).join("")
+            : `<p class="empty">Nothing waiting. Your ministers are behaving.</p>`}</div>
+          <h3 style="margin:2.2rem 0 1rem;"><i class="fas fa-clock-rotate-left"></i> Settled</h3>
+          <div class="props">${d.settled.length
+            ? d.settled.map(p=>propCard(p,"settled")).join("")
+            : `<p class="empty">Nothing settled yet.</p>`}</div>`;
+      }
+    }
+
+    async function decide(id, action){
+      const verb = {approve:"Assent to this and apply it now",
+                    reject:"Refuse this proposal", withdraw:"Withdraw your proposal"}[action];
+      if(!confirm(verb + "?")) return;
+      let note = "";
+      if(action !== "withdraw")
+        note = prompt(action==="approve" ? "Note for the minister (optional):"
+                                         : "Why? This is shown to the minister:") || "";
+      try{
+        const r = await api("/cabinet/decide",{method:"POST",
+          body:JSON.stringify({proposal_id:id, action, note})});
+        msg(r.status==="approved" ? "Assented — the change is live." : "Done.", true);
+        loadProposals(); refresh();
+        if(r.status==="approved"){ P = await api("/cabinet/powers"); drawBrief(); }
+      }catch(e){ msg(e.message); }
+    }
+
+    /* ---- the whole cabinet ---- */
+    function drawAll(){
+      document.getElementById("allPorts").innerHTML = (P.all_portfolios||[]).map(p=>`
+        <div class="port" style="--pc:${esc(p.color)}">
+          <h4><i class="fas ${esc(p.icon)}"></i> ${esc(p.label)}${
+            p.key===P.portfolio?` <span class="tag good">yours</span>`:""}</h4>
+          ${p.duties.length?`<div class="lbl">Carries out</div><ul>${
+            p.duties.map(x=>`<li><i class="fas fa-circle-check"></i> ${esc(x)}</li>`).join("")}</ul>`:""}
+          ${p.levers.length?`<div class="lbl">May propose</div><ul>${
+            p.levers.map(x=>`<li><i class="fas fa-sliders"></i> ${esc(x)}</li>`).join("")}</ul>`:""}
+        </div>`).join("");
+    }
+
+    function drawSeat(){
+      const el = document.getElementById("seat");
+      if(P.portfolio)
+        el.innerHTML = `<span class="seat" style="color:${esc(P.portfolio_color)}">
+          <i class="fas ${esc(P.portfolio_icon)}"></i> ${esc(P.ministry||P.portfolio_label)}
+          — the ${esc(P.portfolio_label)} brief</span>`;
+      else if(P.is_president)
+        el.innerHTML = `<span class="seat" style="color:var(--gold)">
+          <i class="fas fa-crown"></i> President — you assent to everything here</span>`;
+      else el.innerHTML = "";
+    }
+
+    async function refresh(){
+      try{ drawTabs(await api("/cabinet/summary")); }catch{ drawTabs({}); }
+    }
+
+    (async function(){
+      ME = await requireAuth(); if(!ME) return;
+      renderNav("/cabinet", ME);
+      try{ P = await api("/cabinet/powers"); }
+      catch(e){ return msg(e.message); }
+      drawSeat(); drawBrief(); drawAll();
+      await refresh();
+      const t = new URLSearchParams(location.search).get("tab");
+      go(["brief","mine","assent","all"].includes(t) ? t : "brief");
+    })();
+  </script>
+</body>
+</html>
