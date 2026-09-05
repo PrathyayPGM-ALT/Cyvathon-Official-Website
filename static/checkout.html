@@ -6,7 +6,7 @@
   <title>Cyvapay Checkout · Cyvathon</title>
   <meta name="description" content="Pay in Cybucks through Cyvapay, the Cyvathon payment gateway." />
   <meta name="robots" content="noindex" />
-  <meta name="theme-color" content="#1fd6a6" />
+  <meta name="theme-color" content="#22d3ee" />
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -20,44 +20,57 @@
       margin-bottom:1.1rem; }
     .brand svg{ width:26px; height:26px; }
     .brand b{ font-size:1.15rem; font-weight:800; letter-spacing:-.4px; }
-    .brand b span{ color:var(--green); }
+    .brand b span{ color:var(--cyan); }
 
-    .sheet{ background:linear-gradient(165deg,rgba(120,170,255,.09),rgba(120,170,255,.025));
+    .sheet{ position:relative; background:linear-gradient(165deg,rgba(120,170,255,.09),rgba(120,170,255,.025));
       border:1px solid var(--panel-border); border-radius:20px; overflow:hidden;
       box-shadow:var(--shadow); }
+    /* One lit hairline across the top, the same detail the service pages use. */
+    .sheet::before{ content:""; position:absolute; left:0; right:0; top:0; height:1px;
+      background:linear-gradient(90deg,transparent,rgba(34,211,238,.85) 25%,rgba(34,211,238,.85) 75%,transparent); }
     .top{ padding:1.5rem 1.6rem 1.3rem; text-align:center;
       border-bottom:1px dashed var(--panel-border); }
     .to{ font-size:.76rem; color:var(--muted); text-transform:uppercase;
       letter-spacing:1px; font-weight:700; }
     .who{ font-size:1.12rem; font-weight:700; margin:.25rem 0 .9rem; }
-    .amt{ font-size:2.5rem; font-weight:800; letter-spacing:-1.6px; line-height:1;
-      color:var(--green); }
+    .face{ width:46px; height:46px; border-radius:50%; margin:0 auto .55rem; display:grid;
+      place-items:center; font-size:1.15rem; font-weight:800; color:#04222b;
+      background:var(--grad-cyan); box-shadow:0 8px 20px rgba(34,211,238,.28); }
+    .amt{ font-size:2.6rem; font-weight:800; letter-spacing:-1.6px; line-height:1;
+      background:var(--grad-cyan); -webkit-background-clip:text; background-clip:text;
+      color:transparent; }
     .amt small{ font-size:.95rem; font-weight:700; letter-spacing:0; margin-left:.2rem; }
+    /* A row of dots where the receipt would tear. */
+    .top{ position:relative; }
+    .top::after{ content:""; position:absolute; left:1.4rem; right:1.4rem; bottom:-1px; height:2px;
+      background:repeating-linear-gradient(90deg,rgba(34,211,238,.5) 0 6px,transparent 6px 12px); }
     .what{ font-size:.95rem; font-weight:600; margin-top:.9rem; }
     .desc{ font-size:.86rem; color:var(--muted); margin-top:.3rem; line-height:1.6; }
 
     .body2{ padding:1.4rem 1.6rem 1.6rem; }
     .body2 label{ margin-bottom:.2rem; }
-    .row2{ display:flex; justify-content:space-between; font-size:.86rem; padding:.4rem 0; }
+    .row2{ display:flex; justify-content:space-between; font-size:.86rem; padding:.42rem 0; }
     .row2 span{ color:var(--muted); }
     .row2 b{ font-weight:600; }
 
-    .paybtn{ background:var(--grad-green); color:#04231a; font-size:1rem; font-weight:800;
-      padding:14px; box-shadow:0 8px 24px rgba(31,214,166,.3); }
-    .paybtn:hover{ box-shadow:0 12px 30px rgba(31,214,166,.42); }
+    .paybtn{ background:var(--grad-cyan); color:#04222b; font-size:1rem; font-weight:800;
+      padding:14px; box-shadow:0 8px 24px rgba(34,211,238,.3); }
+    .paybtn:hover{ box-shadow:0 12px 30px rgba(34,211,238,.42); }
 
     .guest{ text-align:center; }
     .guest .lead{ font-size:.92rem; color:var(--text-dim); line-height:1.65; margin-bottom:1rem; }
     .guest .safe{ display:flex; align-items:flex-start; gap:.6rem; text-align:left;
-      background:rgba(31,214,166,.08); border:1px solid rgba(31,214,166,.3);
-      border-radius:12px; padding:.8rem .9rem; margin:1rem 0; font-size:.82rem;
+      background:rgba(34,211,238,.08); border:1px solid rgba(34,211,238,.3);
+      border-radius:12px; padding:.85rem .95rem; margin:1rem 0; font-size:.82rem;
       color:var(--text-dim); line-height:1.6; }
-    .guest .safe i{ color:var(--green); margin-top:.15rem; }
+    .guest .safe i{ color:var(--cyan); margin-top:.15rem; font-size:1rem; }
 
     .done{ text-align:center; padding:1.8rem 1.6rem 1.7rem; }
-    .done .tick{ width:62px; height:62px; border-radius:50%; margin:0 auto 1rem;
-      display:grid; place-items:center; font-size:1.8rem; color:#04231a;
-      background:var(--grad-green); box-shadow:0 8px 24px rgba(31,214,166,.35); }
+    .done .tick{ width:64px; height:64px; border-radius:50%; margin:0 auto 1rem;
+      display:grid; place-items:center; font-size:1.85rem; color:#04222b;
+      background:var(--grad-cyan); box-shadow:0 8px 24px rgba(34,211,238,.35);
+      animation:coPop .42s cubic-bezier(.2,.9,.3,1.4) both; }
+    @keyframes coPop{ from{ transform:scale(.6); opacity:0; } to{ transform:none; opacity:1; } }
     .done h3{ font-size:1.25rem; margin-bottom:.3rem; }
     .done .ref{ font-family:Consolas,monospace; font-size:.86rem; color:var(--muted);
       background:var(--panel-2); border:1px solid var(--panel-border);
@@ -71,15 +84,18 @@
       line-height:1.7; }
     .foot a{ color:var(--muted); }
     .msg{ text-align:center; font-size:.86rem; margin-top:.8rem; min-height:1.2em; }
+    /* The one line of reassurance that belongs under a Pay button. */
+    .locked{ display:flex; align-items:center; justify-content:center; gap:.4rem;
+      font-size:.74rem; color:var(--muted); margin-top:.7rem; }
   </style>
 </head>
 <body>
   <div class="co">
     <div class="brand">
       <svg viewBox="0 0 28 28" fill="none" aria-hidden="true">
-        <rect x="2" y="6" width="24" height="17" rx="3.5" stroke="#1fd6a6" stroke-width="2.2"/>
-        <path d="M2 11.5h24" stroke="#1fd6a6" stroke-width="2.2"/>
-        <path d="M6.5 17.5h5" stroke="#1fd6a6" stroke-width="2.2" stroke-linecap="round"/>
+        <rect x="2" y="6" width="24" height="17" rx="3.5" stroke="#22d3ee" stroke-width="2.2"/>
+        <path d="M2 11.5h24" stroke="#22d3ee" stroke-width="2.2"/>
+        <path d="M6.5 17.5h5" stroke="#22d3ee" stroke-width="2.2" stroke-linecap="round"/>
       </svg>
       <b>Cyva<span>pay</span></b>
     </div>
@@ -125,6 +141,7 @@
       const head = `
         <div class="top">
           <div class="to">Paying</div>
+          <div class="face">${esc((String(L.payee||"?")[0]||"?").toUpperCase())}</div>
           <div class="who">${esc(L.payee)}</div>
           <div class="amt">${L.flexible ? "You choose" : money(L.amount)}<small>${
             L.flexible ? "" : " " + esc(unit)}</small></div>
@@ -174,6 +191,8 @@
             <b>${money(D.balance)} ${esc(unit)}</b></div>
           <button class="paybtn" style="margin-top:1rem" onclick="pay()">
             <i class="fas fa-lock"></i> Pay ${L.flexible?"":money(L.amount)+" "+esc(unit)}</button>
+          <div class="locked"><i class="fas fa-shield-halved"></i>
+            Nothing leaves your account until you press Pay</div>
           <p class="msg" id="msg"></p>
         </div>`;
     }

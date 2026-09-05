@@ -25,11 +25,13 @@
   <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/service.css">
   <style>
     /* ============================================================
-       THE ARMOURY — field olive and brass. This is a military
-       requisition, not a shop: stencilled, functional, and a little
-       severe. Brass because that's what a round is made of.
+       THE ARMOURY — field olive and brass, on the shared service
+       chassis (service.css). This is a military requisition, not a
+       shop: stencilled, functional and a little severe. Brass
+       because that is what a round is made of.
        ============================================================ */
     .pn{
       --pn-ink:#12160e;
@@ -43,127 +45,132 @@
       --pn-muted:#b8ac91;
       --pn-green:#1fd6a6;
       --pn-bad:#ff5d6c;
+
+      /* hand the livery to the shared chassis */
+      --sv-ink:var(--pn-ink); --sv-ink-2:var(--pn-ink-2); --sv-line:var(--pn-line);
+      --sv-text:var(--pn-text); --sv-muted:var(--pn-muted);
+      --sv-accent:var(--pn-gold); --sv-accent-2:var(--pn-gold-2);
+      --sv-accent-deep:var(--pn-deep); --sv-accent-rgb:217,180,92;
+      --sv-on-accent:#2b2202; --sv-good:var(--pn-green);
     }
     :root[data-theme="light"] .pn{
       --pn-ink:#ffffff; --pn-ink-2:#f5f6ee;
       --pn-line:rgba(50,60,20,.16);
       --pn-text:#1f2612; --pn-muted:#5c6547;
-      --pn-gold:#8a6a12; --pn-gold-2:#6d5309; --pn-olive:#5f6b38;
+      --pn-gold:#8a6a12; --pn-gold-2:#6d5309; --pn-olive:#5f6b38; --pn-deep:#6d5309;
+      --sv-accent-rgb:138,106,18; --sv-on-accent:#fffdf5;
     }
 
     /* ---- hero ---- */
-    .pn-hero{ background:linear-gradient(135deg,var(--pn-ink),var(--pn-ink-2));
-      border:1px solid var(--pn-line); border-radius:20px; padding:2.1rem 2rem 1.9rem;
-      margin-bottom:1.4rem; position:relative; overflow:hidden; }
-    .pn-hero::after{ content:""; position:absolute; right:-80px; top:-80px; width:280px; height:280px;
-      border-radius:50%; background:radial-gradient(circle,rgba(217,180,92,.18),transparent 68%); }
-    /* stencilled service stripes, like a crate marking */
-    .pn-hero::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:6px;
-      background:repeating-linear-gradient(180deg,var(--pn-gold) 0 14px,transparent 14px 28px); opacity:.5; }
+    /* Stencilled service stripes down the edge, like a crate marking. */
+    .pn-hero::after{ content:""; position:absolute; left:0; top:0; bottom:0; width:6px;
+      background:repeating-linear-gradient(180deg,var(--pn-gold) 0 14px,transparent 14px 28px);
+      opacity:.5; }
     .pn-brand{ display:flex; align-items:center; gap:.9rem; margin-bottom:.5rem; }
     .pn-brand svg{ width:38px; height:48px; flex:none; }
-    .pn-logo{ font-size:1.85rem; font-weight:800; letter-spacing:-.8px; color:var(--pn-text); line-height:1.1; }
+    .pn-logo{ font-size:clamp(1.55rem,4.5vw,1.95rem); font-weight:800; letter-spacing:-.8px;
+      color:var(--pn-text); line-height:1.1; }
     .pn-logo small{ display:block; font-size:.7rem; letter-spacing:2.4px; text-transform:uppercase;
       color:var(--pn-gold); font-weight:700; margin-bottom:.2rem; }
-    .pn-hero p{ color:var(--pn-muted); max-width:660px; margin:0; line-height:1.7; font-size:.96rem; }
-    .pn-rate{ display:inline-flex; align-items:baseline; gap:.4rem; margin:1rem 0 .2rem; }
-    .pn-rate b{ font-size:2.6rem; font-weight:800; color:var(--pn-gold); letter-spacing:-1.5px; line-height:1; }
+    .pn-rate{ display:inline-flex; align-items:baseline; gap:.5rem; margin:1.1rem 0 .3rem; }
+    .pn-rate b{ font-size:clamp(2.2rem,7vw,2.9rem); font-weight:800; letter-spacing:-1.6px; line-height:1;
+      background:linear-gradient(135deg,var(--pn-gold-2),var(--pn-gold));
+      -webkit-background-clip:text; background-clip:text; color:transparent; }
     .pn-rate span{ font-size:.85rem; color:var(--pn-muted); font-weight:600; }
+    /* Its own line under the rate, not trailing off the end of it. */
+    .pn-ship{ display:flex; align-items:center; gap:.45rem; margin:.15rem 0 .9rem;
+      font-size:.8rem; color:var(--pn-gold); font-weight:600; }
 
-    /* ---- why panel ---- */
-    .why{ background:var(--pn-ink); border:1px solid var(--pn-line); border-left:4px solid var(--pn-gold);
-      border-radius:14px; padding:1.3rem 1.5rem; margin-bottom:2rem; color:var(--pn-text); }
-    .why h3{ font-size:1rem; display:flex; align-items:center; gap:.5rem; margin-bottom:.6rem; }
-    .why h3 i{ color:var(--pn-gold); }
-    .why p{ color:var(--pn-muted); font-size:.9rem; line-height:1.75; margin-bottom:.7rem; }
-    .why p:last-child{ margin-bottom:0; }
-    .why b{ color:var(--pn-text); }
+    /* ---- the brief ---- */
+    /* Three points, not three paragraphs. The case for handing over your pens
+       is an argument, and an argument reads better in numbered pieces. */
+    .brief{ display:grid; gap:.85rem; grid-template-columns:repeat(auto-fit,minmax(255px,1fr)); }
+    .brief .b{ padding:1rem 1.1rem; border-radius:14px; background:var(--pn-ink-2);
+      border:1px solid var(--pn-line); }
+    .brief .b .h{ display:flex; align-items:center; gap:.5rem; font-weight:700; font-size:.93rem;
+      margin-bottom:.4rem; color:var(--pn-text); }
+    .brief .b .h i{ color:var(--pn-gold); }
+    .brief .b p{ font-size:.85rem; color:var(--pn-muted); line-height:1.7; margin:0; }
+    .brief .b b{ color:var(--pn-text); }
 
-    /* ---- vault counter ---- */
-    .vault{ display:flex; flex-wrap:wrap; gap:.8rem; margin-bottom:1.8rem; }
-    .vault .v{ flex:1; min-width:140px; padding:1rem 1.1rem; border-radius:14px;
-      background:var(--pn-ink); border:1px solid var(--pn-line); }
-    .vault .v b{ display:block; font-size:1.75rem; font-weight:800; letter-spacing:-.8px; color:var(--pn-gold); }
-    .vault .v span{ font-size:.7rem; color:var(--pn-muted); text-transform:uppercase; letter-spacing:.6px; }
+    /* ---- the quote ---- */
+    .payout{ position:relative; text-align:center; padding:1.05rem; border-radius:14px; margin-top:1.1rem;
+      background:radial-gradient(130% 150% at 50% 0%, rgba(217,180,92,.15), transparent 70%), var(--pn-ink-2);
+      border:1px dashed rgba(217,180,92,.45); }
+    .payout b{ font-size:1.9rem; font-weight:800; letter-spacing:-.9px; line-height:1.15;
+      background:linear-gradient(135deg,var(--pn-gold-2),var(--pn-gold));
+      -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .payout span{ display:block; font-size:.74rem; color:var(--pn-muted); margin-top:.2rem; }
 
-    /* ---- panels ---- */
-    .pn-panel{ background:var(--pn-ink); border:1px solid var(--pn-line); border-radius:16px;
-      padding:1.4rem 1.5rem; margin-bottom:1.4rem; color:var(--pn-text); }
-    .pn-panel h3{ display:flex; align-items:center; gap:.55rem; margin-bottom:.35rem; font-size:1.08rem; }
-    .pn-panel h3 i{ color:var(--pn-gold); }
-    .pn-panel .sub{ color:var(--pn-muted); font-size:.86rem; margin-bottom:1rem; line-height:1.6; }
-    .pn .lbl{ display:block; font-size:.72rem; color:var(--pn-muted); margin-top:.55rem;
-      text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
-    .pn input,.pn select,.pn textarea{ background:var(--pn-ink-2); border:1px solid var(--pn-line);
-      color:var(--pn-text); margin-top:5px; }
-    .pn input:focus,.pn select:focus,.pn textarea:focus{ border-color:var(--pn-gold);
-      box-shadow:0 0 0 3px rgba(255,206,86,.16); }
-    .pn button{ background:linear-gradient(135deg,var(--pn-gold),var(--pn-deep)); color:#2b2202;
-      box-shadow:0 6px 18px rgba(255,206,86,.24); font-weight:700; }
-    .pn button:hover{ box-shadow:0 10px 24px rgba(255,206,86,.34); }
-    .pn button.ghost{ background:transparent; border:1px solid rgba(255,206,86,.5);
-      color:var(--pn-gold); box-shadow:none; }
-    .pn button.ghost:hover{ background:rgba(255,206,86,.1); }
-    .pn button.danger{ background:linear-gradient(135deg,#ff6b78,#e03e4d); color:#fff; }
-    .pn-grid2{ display:grid; gap:.7rem; grid-template-columns:1fr 1fr; }
-    .pn-grid2 .full{ grid-column:1/-1; }
-    @media(max-width:640px){ .pn-grid2{ grid-template-columns:1fr; } }
-    .payout{ text-align:center; padding:.9rem; border-radius:12px; margin-top:1rem;
-      background:var(--pn-ink-2); border:1px dashed rgba(255,206,86,.4); }
-    .payout b{ font-size:1.7rem; color:var(--pn-gold); font-weight:800; letter-spacing:-.8px; }
-    .payout span{ display:block; font-size:.74rem; color:var(--pn-muted); margin-top:.15rem; }
-
-    /* ---- tabs ---- */
-    .pn-tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.6rem; }
-    .pn-tabs button{ width:auto; margin:0; padding:.55rem 1.1rem; font-size:.86rem;
-      background:var(--pn-ink); color:var(--pn-muted); border:1px solid var(--pn-line); box-shadow:none; }
-    .pn-tabs button.on{ background:linear-gradient(135deg,var(--pn-gold),var(--pn-deep));
-      color:#2b2202; border-color:transparent; }
-    .pn-tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem;
-      border-radius:20px; background:#e03e4d; color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
-
-    /* ---- donation rows ---- */
-    .dons{ display:grid; gap:.85rem; }
-    .don{ background:var(--pn-ink); border:1px solid var(--pn-line);
-      border-left:4px solid var(--pn-muted); border-radius:13px; padding:1rem 1.15rem; color:var(--pn-text); }
-    .don.pledged{ border-left-color:var(--pn-gold); }
-    .don.received{ border-left-color:var(--pn-green); }
-    .don.rejected,.don.cancelled{ border-left-color:var(--pn-muted); opacity:.75; }
+    /* ---- handover rows ---- */
+    .dons{ display:grid; gap:.9rem; }
+    .don{ position:relative; overflow:hidden; color:var(--pn-text);
+      background:linear-gradient(165deg,var(--pn-ink),var(--pn-ink-2));
+      border:1px solid var(--pn-line); border-radius:16px; padding:1.05rem 1.15rem;
+      transition:transform .2s ease, border-color .2s, box-shadow .2s; }
+    .don::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+      background:var(--pn-line); }
+    .don:hover{ transform:translateY(-2px); border-color:rgba(217,180,92,.4);
+      box-shadow:0 14px 30px rgba(3,8,20,.4); }
+    .don.pledged::before{ background:linear-gradient(180deg,var(--pn-gold-2),var(--pn-deep)); }
+    .don.received::before{ background:linear-gradient(180deg,#2ee0b0,#0fb98a); }
+    .don.rejected::before{ background:linear-gradient(180deg,#ff8f9a,#e03e4d); }
+    .don.rejected,.don.cancelled{ opacity:.78; }
     .don .top{ display:flex; justify-content:space-between; gap:.8rem; flex-wrap:wrap; align-items:flex-start; }
     .don .n{ font-weight:700; font-size:1rem; display:flex; align-items:center; gap:.5rem; }
     .don .n i{ color:var(--pn-gold); }
-    .don .meta{ font-size:.78rem; color:var(--pn-muted); margin-top:.15rem; }
-    .don .val{ font-size:1.2rem; font-weight:800; color:var(--pn-gold); white-space:nowrap; }
-    .don .state{ font-size:.66rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
-      padding:.2rem .55rem; border-radius:20px; white-space:nowrap; display:inline-block; margin-top:.2rem; }
-    .don .state.pledged{ background:rgba(255,206,86,.16); color:var(--pn-gold); }
+    .don .meta{ font-size:.78rem; color:var(--pn-muted); margin-top:.2rem; }
+    .don .val{ font-size:1.25rem; font-weight:800; color:var(--pn-gold); white-space:nowrap;
+      letter-spacing:-.5px; }
+    .don .state{ font-size:.65rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+      padding:.22rem .6rem; border-radius:20px; white-space:nowrap; display:inline-block; margin-top:.25rem; }
+    .don .state.pledged{ background:rgba(217,180,92,.18); color:var(--pn-gold); }
     .don .state.received{ background:rgba(31,214,166,.16); color:var(--pn-green); }
     .don .state.rejected{ background:rgba(255,93,108,.14); color:var(--pn-bad); }
     .don .state.cancelled{ background:rgba(255,255,255,.07); color:var(--pn-muted); }
-    .don .note{ font-size:.82rem; color:var(--pn-muted); font-style:italic; margin-top:.5rem; }
-    .don .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.85rem; align-items:center; }
-    .don .acts button{ width:auto; margin:0; padding:.44rem .9rem; font-size:.8rem; }
-    .don .acts input,.don .acts select{ width:auto; margin:0; padding:.44rem .6rem; font-size:.8rem; }
-    .don .acts label{ font-size:.74rem; color:var(--pn-muted); margin:0; }
+    :root[data-theme="light"] .don .state.cancelled{ background:rgba(50,60,20,.08); }
+    .don .note{ font-size:.82rem; color:var(--pn-muted); font-style:italic; margin-top:.55rem;
+      padding-left:.7rem; border-left:2px solid var(--pn-line); }
+    .don .acts{ display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.9rem; align-items:center; }
+    .don .acts button{ width:auto; margin:0; padding:.45rem .95rem; font-size:.8rem; }
+    .don .acts input,.don .acts select{ width:auto; margin:0; padding:.45rem .6rem; font-size:.8rem; }
+    .don .acts label{ font-size:.73rem; color:var(--pn-muted); margin:0;
+      text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
 
-    /* ---- donor board ---- */
+    /* ---- roll of honour ---- */
     .board{ display:grid; gap:.6rem; }
-    .donor{ display:flex; align-items:center; gap:.9rem; padding:.7rem 1rem; border-radius:12px;
-      background:var(--pn-ink); border:1px solid var(--pn-line); color:var(--pn-text); }
-    .donor .rank{ width:28px; font-weight:800; color:var(--pn-muted); text-align:center; flex:none; }
-    .donor.top .rank{ color:var(--pn-gold); }
-    .donor .nm{ flex:1; font-weight:600; font-size:.94rem; }
-    .donor .pens{ font-weight:800; color:var(--pn-gold); }
+    .donor{ display:flex; align-items:center; gap:.9rem; padding:.75rem 1rem; border-radius:13px;
+      background:linear-gradient(165deg,var(--pn-ink),var(--pn-ink-2));
+      border:1px solid var(--pn-line); color:var(--pn-text);
+      transition:transform .18s ease, border-color .18s, box-shadow .18s; }
+    .donor:hover{ transform:translateX(3px); border-color:rgba(217,180,92,.42);
+      box-shadow:0 10px 24px rgba(3,8,20,.34); }
+    .donor.me{ border-color:rgba(217,180,92,.5); }
+    /* The first three get real medal metal. Everyone else gets a plain plate —
+       a leaderboard where every row looks the same is just a list. */
+    .donor .rank{ width:30px; height:30px; flex:none; display:grid; place-items:center; border-radius:9px;
+      font-weight:800; font-size:.85rem; color:var(--pn-muted);
+      background:rgba(255,255,255,.05); border:1px solid var(--pn-line); }
+    :root[data-theme="light"] .donor .rank{ background:rgba(50,60,20,.06); }
+    .donor.g1 .rank{ color:#2b2202; background:linear-gradient(135deg,#f7e7a1,#d9b45c); border-color:transparent; }
+    .donor.g2 .rank{ color:#22262b; background:linear-gradient(135deg,#eaeff5,#b6c2cf); border-color:transparent; }
+    .donor.g3 .rank{ color:#2b1a06; background:linear-gradient(135deg,#e8bd8d,#c07f43); border-color:transparent; }
+    .donor .nm{ flex:1; min-width:0; font-weight:600; font-size:.94rem; }
+    .donor .nm b{ display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    /* Share of the armoury, drawn rather than stated. */
+    .donor .bar{ display:block; height:4px; border-radius:4px; margin-top:.4rem; max-width:230px;
+      background:linear-gradient(90deg,var(--pn-gold),var(--pn-deep)); }
+    .donor .pens{ font-weight:800; color:var(--pn-gold); white-space:nowrap; }
     .donor .earned{ font-size:.76rem; color:var(--pn-muted); width:100px; text-align:right; }
-    .empty{ color:var(--pn-muted); text-align:center; padding:2.2rem 1rem; }
+    @media(max-width:540px){ .donor .earned{ display:none; } }
   </style>
 </head>
 <body>
   <div id="nav"></div>
 
-  <div class="wrap pn">
+  <div class="wrap svc pn">
     <!-- HERO -->
-    <div class="pn-hero">
+    <div class="svc-hero pn-hero">
       <div class="pn-brand">
         <!-- A G2 loaded nose-up, over the two service bars of the Corps. -->
         <svg viewBox="0 0 38 48" fill="none" aria-hidden="true">
@@ -176,45 +183,55 @@
         <div class="pn-logo"><small>Cyvathon Armed Forces · Ordnance</small>The Armoury</div>
       </div>
       <div class="pn-rate"><b id="rateBig">400</b><span>CB per live round, paid by the Republic</span></div>
-      <p class="small" style="margin:0 0 .6rem;color:var(--pn-gold)">
-        <i class="fas fa-truck-fast"></i> Cyvazon carries your rounds straight to
-        <b id="regName2">the Quartermaster</b>.</p>
-      <p><b style="color:var(--pn-text)">Every G2 is a round.</b> The Corps fires pen launchers
+      <p class="pn-ship"><i class="fas fa-truck-fast"></i>
+        <span>Cyvazon carries your rounds straight to <b id="regName2">the Quartermaster</b>.</span></p>
+      <p><b>Every G2 is a round.</b> The Corps fires pen launchers
         and nothing else, and the Republic has no foundry to make the ammunition. Every round in
         the armoury came out of a citizen's pencil case. Hand yours in and the Republic pays you
         for it — because a Corps without ordnance is a border nobody has to respect.</p>
     </div>
 
     <!-- WHY -->
-    <div class="why">
+    <div class="svc-panel">
       <h3><i class="fas fa-shield-halved"></i> Why the Corps needs your pens</h3>
-      <p>Cyvathon fields no conventional weapons. The whole of its defensive posture rests on the
-        <b>pen launcher</b>, and the standard munition is the G2 — the barrel is the right gauge,
-        the clip gives it spin, and it flies true. Nothing else in a school does all three.</p>
-      <p>The Republic has <b>no pen foundry</b> and cannot import under present trade terms. That
-        leaves exactly one supply line: its own citizens. Every round the Corps has ever fired came
-        out of somebody's pencil case, handed in at the Armoury and logged by the Quartermaster.</p>
-      <p>So <b>400 CB</b> is a war-effort rate, not a market one. The Republic would far rather
-        overpay its own people than send the Corps out short. Doctrine is unchanged —
-        <a class="link" href="/warroom">defence, not invasion</a> — the armoury exists to make
-        invading Cyvathon a bad idea, and nothing more. Stock counts toward
-        <a class="link" href="/treasury">national GDP</a> because materiel is national property.</p>
+      <p class="sub">The whole case, in three points.</p>
+      <div class="brief">
+        <div class="b">
+          <div class="h"><i class="fas fa-crosshairs"></i> One weapon, one round</div>
+          <p>Cyvathon fields no conventional weapons. The whole defensive posture rests on the
+            <b>pen launcher</b>, and the standard munition is the G2 — right gauge, the clip gives
+            it spin, and it flies true. Nothing else in a school does all three.</p>
+        </div>
+        <div class="b">
+          <div class="h"><i class="fas fa-industry"></i> No foundry, one supply line</div>
+          <p>The Republic cannot make pens and cannot import them under present trade terms. That
+            leaves its own citizens. <b>Every round the Corps has ever fired</b> came out of
+            somebody's pencil case and was logged in by the Quartermaster.</p>
+        </div>
+        <div class="b">
+          <div class="h"><i class="fas fa-scale-balanced"></i> Why the rate is high</div>
+          <p><b>400 CB</b> is a war-effort rate, not a market one — the Republic would rather
+            overpay its own people than send the Corps out short. Doctrine is unchanged:
+            <a class="link" href="/warroom">defence, not invasion</a>. Stock counts toward
+            <a class="link" href="/treasury">national GDP</a>, because materiel is national property.</p>
+        </div>
+      </div>
     </div>
 
-    <div class="vault" id="vault"></div>
+    <div class="svc-stats" id="vault"></div>
 
-    <div class="pn-tabs" id="tabs"></div>
-    <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
+    <div class="svc-tabs" id="tabs" role="tablist"></div>
+    <p id="msg" class="svc-alert"></p>
 
     <!-- DONATE -->
     <section id="tab-donate" class="pnpane">
-      <div class="pn-panel" style="max-width:680px;margin:0 auto;">
+      <div class="svc-panel" style="max-width:680px;margin:0 auto;">
         <h3><i class="fas fa-box-open"></i> Hand in ordnance</h3>
         <p class="sub">Every round goes to <b id="regName" style="color:var(--pn-gold)">the
           Quartermaster</b>, who holds the armoury. Nothing is paid until they have the rounds in
           front of them and log them in — an armoury is only an armoury if the ammunition is
           actually in it. <b>Cyvazon will carry them</b> so you don't have to go and find them.</p>
-        <div class="pn-grid2">
+        <div class="svc-grid2">
           <div><label class="lbl">How many rounds</label>
             <input id="dCount" type="number" min="1" value="1" oninput="quote()"></div>
           <div><label class="lbl">Grade</label>
@@ -222,27 +239,27 @@
           <div class="full" id="condNote" style="font-size:.8rem;color:var(--pn-muted);margin-top:.4rem;"></div>
           <div class="full"><label class="lbl">Note for the Quartermaster (optional)</label>
             <input id="dNote" placeholder="e.g. 'three blacks and a blue, all barely used'"></div>
-          <label class="full small" style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;color:var(--pn-muted)">
-            <input type="checkbox" id="dDeliver" style="width:auto;margin:0;" checked>
+          <label class="full chk">
+            <input type="checkbox" id="dDeliver" checked>
             Send them by Cyvazon instead of delivering them myself
           </label>
         </div>
         <div class="payout"><b id="quoteVal">400 CB</b><span id="quoteSub">if all of them are logged in</span></div>
         <button style="margin-top:1rem;" onclick="pledge()"><i class="fas fa-shield-halved"></i> Arm the Republic</button>
-        <p id="pledgeMsg" class="small" style="text-align:center;"></p>
+        <p id="pledgeMsg" class="svc-alert"></p>
       </div>
     </section>
 
     <!-- MY DONATIONS -->
     <section id="tab-mine" class="pnpane" style="display:none;">
-      <div class="dons" id="myDons"></div>
+      <div class="dons svc-anim" id="myDons"></div>
     </section>
 
     <!-- DONOR BOARD -->
     <section id="tab-board" class="pnpane" style="display:none;">
-      <h3 style="margin-bottom:.3rem;"><i class="fas fa-medal" style="color:var(--pn-gold)"></i> Roll of Honour</h3>
-      <p class="small" style="margin-bottom:1.2rem;">Citizens who have kept the Corps supplied. The Republic remembers.</p>
-      <div class="board" id="board"></div>
+      <h3 class="svc-head"><i class="fas fa-medal"></i> Roll of Honour</h3>
+      <p class="svc-note">Citizens who have kept the Corps supplied. The Republic remembers.</p>
+      <div class="board svc-anim" id="board"></div>
     </section>
 
     <!-- REGISTRAR (President only) -->
@@ -257,8 +274,7 @@
     const esc=(s)=>(s==null?"":String(s))
       .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
       .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-    const msg=(t,ok=false,el="msg")=>{const m=document.getElementById(el);
-      m.textContent=t||""; m.style.color= ok?"var(--pn-green)":"var(--red)";};
+    const msg=(t,ok=false,el="msg")=>svcAlert(el,t,ok);
     const cond=(k)=>CONDS.find(c=>c.key===k)||CONDS[0]||{label:"",share:1,blurb:""};
     const fmtCB=(n)=>(Math.round((Number(n)||0)*100)/100).toLocaleString()+" CB";
 
@@ -358,11 +374,14 @@
 
     async function loadMine(){
       let d;
+      const host = document.getElementById("myDons");
+      if(!host.innerHTML) host.innerHTML = svcSkeleton(2,"row");
       try{ d = await api("/pens/mine"); }catch(e){
-        document.getElementById("myDons").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
-      document.getElementById("myDons").innerHTML = d.donations.length
+        host.innerHTML = svcEmpty("fa-triangle-exclamation","Could not reach the Armoury",e.message); return; }
+      host.innerHTML = d.donations.length
         ? d.donations.map(x=>donRow(x,false)).join("")
-        : `<p class="empty">You haven't armed the Republic yet.</p>`;
+        : svcEmpty("fa-shield-halved","You haven't armed the Republic yet",
+                   "Hand in a G2 and the Quartermaster pays you the moment it is logged in.");
     }
     async function cancelDon(id){
       if(!confirm("Withdraw this handover?")) return;
@@ -373,16 +392,23 @@
 
     async function loadBoard(){
       let d;
+      const host = document.getElementById("board");
+      if(!host.innerHTML) host.innerHTML = svcSkeleton(4,"line");
       try{ d = await api("/pens/board"); }catch(e){
-        document.getElementById("board").innerHTML = `<p class="empty">${esc(e.message)}</p>`; return; }
-      document.getElementById("board").innerHTML = d.donors.length
-        ? d.donors.map((x,i)=>`<div class="donor ${i<3?"top":""}">
-            <div class="rank">${i+1}</div>
-            <div class="nm">${esc(x.username)}${x.me?" (you)":""}</div>
+        host.innerHTML = svcEmpty("fa-triangle-exclamation","Could not reach the Armoury",e.message); return; }
+      // Bars are drawn against the top donor, so the board shows the shape of
+      // the supply and not just an ordered list of names.
+      const top = Math.max(1, ...d.donors.map(x=>+x.pens||0));
+      host.innerHTML = d.donors.length
+        ? d.donors.map((x,i)=>`<div class="donor ${i<3?"g"+(i+1):""} ${x.me?"me":""}">
+            <div class="rank">${i<3?`<i class="fas fa-medal"></i>`:(i+1)}</div>
+            <div class="nm"><b>${esc(x.username)}${x.me?" (you)":""}</b>
+              <span class="bar" style="width:${Math.round((+x.pens||0)/top*100)}%"></span></div>
             <div class="pens">${esc(x.pens)} round${x.pens==1?"":"s"}</div>
             <div class="earned">${esc(fmtCB(x.earned))}</div>
           </div>`).join("")
-        : `<p class="empty">The armoury is empty. Be the first to arm the Republic.</p>`;
+        : svcEmpty("fa-medal","The armoury is empty",
+                   "Be the first to arm the Republic and the roll starts with you.");
     }
 
     /* ---- registrar ---- */
@@ -391,34 +417,38 @@
       try{ d = await api("/pens/registry"); }
       catch(e){
         document.getElementById("registryBody").innerHTML =
-          `<div class="pn-panel"><p class="sub">${esc(e.message)}</p></div>`;
+          `<div class="svc-panel">${svcEmpty("fa-triangle-exclamation","The desk is closed to you",e.message)}</div>`;
         return;
       }
       document.getElementById("registryBody").innerHTML = `
-        <div class="pn-panel">
+        <div class="svc-panel">
           <h3><i class="fas fa-warehouse"></i> Armoury state</h3>
           <p class="sub">Log in what has actually been handed over. Your count is what gets paid,
             not the donor's — adjust it if fewer rounds turned up, or if they're a lower grade
             than declared.</p>
-          <div class="vault" style="margin:0">
-            <div class="v"><b>${esc(d.reserve_pens)}</b><span>Rounds in the armoury</span></div>
-            <div class="v"><b>${esc(fmtCB(d.reserve_pens * d.rate))}</b><span>Materiel value</span></div>
-            <div class="v"><b>${esc(fmtCB(d.paid_total))}</b><span>Paid to citizens</span></div>
-            <div class="v"><b>${esc(fmtCB(d.owed))}</b><span>Declared, not yet logged</span></div>
+          <div class="svc-stats" style="margin:0">
+            <div class="svc-stat"><i class="fas fa-boxes-stacked"></i>
+              <b>${esc(d.reserve_pens)}</b><span>Rounds in the armoury</span></div>
+            <div class="svc-stat"><i class="fas fa-scale-balanced"></i>
+              <b>${esc(fmtCB(d.reserve_pens * d.rate))}</b><span>Materiel value</span></div>
+            <div class="svc-stat good"><i class="fas fa-hand-holding-dollar"></i>
+              <b>${esc(fmtCB(d.paid_total))}</b><span>Paid to citizens</span></div>
+            <div class="svc-stat plain"><i class="fas fa-hourglass-half"></i>
+              <b>${esc(fmtCB(d.owed))}</b><span>Declared, not yet logged</span></div>
           </div>
         </div>
-        <div class="pn-panel">
+        <div class="svc-panel">
           <h3><i class="fas fa-stamp"></i> Waiting to be logged in${
-            d.pledged.length?` <span class="state pledged" style="font-size:.66rem">${d.pledged.length}</span>`:""}</h3>
+            d.pledged.length?` <span class="svc-badge">${d.pledged.length} waiting</span>`:""}</h3>
           <div class="dons">${d.pledged.length
             ? d.pledged.map(x=>donRow(x,true)).join("")
-            : `<p class="empty">Nothing waiting. The armoury is up to date.</p>`}</div>
+            : svcEmpty("fa-stamp","Nothing waiting","The armoury is up to date.")}</div>
         </div>
-        <div class="pn-panel">
+        <div class="svc-panel">
           <h3><i class="fas fa-clock-rotate-left"></i> Settled</h3>
           <div class="dons">${d.settled.length
             ? d.settled.map(x=>donRow(x,false)).join("")
-            : `<p class="empty">Nothing settled yet.</p>`}</div>
+            : svcEmpty("fa-clock-rotate-left","Nothing settled yet","Logged and turned-away handovers land here.")}</div>
         </div>`;
     }
 
@@ -443,11 +473,16 @@
         CFG = c;
         document.getElementById("rateBig").textContent = c.rate;
         document.getElementById("vault").innerHTML = `
-          <div class="v"><b>${esc(c.reserve_pens)}</b><span>Rounds in the armoury</span></div>
-          <div class="v"><b>${esc(fmtCB(c.reserve_value))}</b><span>Materiel value</span></div>
-          <div class="v"><b>${esc(c.donors)}</b><span>Citizens who've armed the Corps</span></div>
-          <div class="v"><b>${esc(c.my_pens)}</b><span>Your rounds in the armoury</span></div>
-          <div class="v"><b>${esc(fmtCB(c.my_earned))}</b><span>What you've earned</span></div>`;
+          <div class="svc-stat"><i class="fas fa-boxes-stacked"></i>
+            <b>${esc(c.reserve_pens)}</b><span>Rounds in the armoury</span></div>
+          <div class="svc-stat"><i class="fas fa-scale-balanced"></i>
+            <b>${esc(fmtCB(c.reserve_value))}</b><span>Materiel value</span></div>
+          <div class="svc-stat plain"><i class="fas fa-users"></i>
+            <b>${esc(c.donors)}</b><span>Citizens who've armed the Corps</span></div>
+          <div class="svc-stat"><i class="fas fa-pen"></i>
+            <b>${esc(c.my_pens)}</b><span>Your rounds in the armoury</span></div>
+          <div class="svc-stat good"><i class="fas fa-sack-dollar"></i>
+            <b>${esc(fmtCB(c.my_earned))}</b><span>What you've earned</span></div>`;
       }catch{}
     }
 

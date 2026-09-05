@@ -601,10 +601,10 @@
 
     function drawHero(){
       document.getElementById("heroBadges").innerHTML = `
-        <span class="svc-badge free"><i class="fas fa-gift"></i> Delivery always free</span>
+        <span class="svc-badge good"><i class="fas fa-gift"></i> Delivery always free</span>
         <span class="svc-badge"><i class="fas fa-sack-dollar"></i> Couriers earn ${esc(CFG.wage)} CB / ${esc(CFG.salary_days)} days</span>
         <span class="svc-badge"><i class="fas fa-receipt"></i> Funded by a ${(CFG.levy*100).toFixed(0)}% delivery levy</span>
-        ${CFG.open?"":`<span class="svc-badge" style="background:rgba(224,62,77,.15);border-color:rgba(224,62,77,.4);color:#ff8f9a"><i class="fas fa-ban"></i> Service suspended</span>`}`;
+        ${CFG.open?"":`<span class="svc-badge bad"><i class="fas fa-ban"></i> Service suspended</span>`}`;
     }
 
     async function refresh(){

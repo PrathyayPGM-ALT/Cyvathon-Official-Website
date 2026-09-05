@@ -58,27 +58,6 @@
 .svc-badge.good{ background:rgba(31,214,166,.13); border-color:rgba(31,214,166,.36); color:var(--sv-good); }
 .svc-badge.bad{ background:rgba(255,93,108,.14); border-color:rgba(255,93,108,.4); color:#ff8f9a; }
 
-/* ---------------- TABS ---------------- */
-/* One track holding four pills, rather than four loose buttons. On a phone it
-   scrolls sideways instead of wrapping into a ragged second row. */
-.svc-tabs{ display:flex; gap:.3rem; margin-bottom:1.5rem; padding:.34rem;
-  background:var(--sv-ink); border:1px solid var(--sv-line); border-radius:16px;
-  overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
-.svc-tabs::-webkit-scrollbar{ display:none; }
-.svc-tabs button{ flex:none; width:auto; margin:0; padding:.6rem 1.05rem; font-size:.87rem;
-  font-weight:600; border-radius:12px; white-space:nowrap; border:none; box-shadow:none;
-  display:inline-flex; align-items:center; gap:.45rem;
-  background:transparent; color:var(--sv-muted); }
-.svc-tabs button:hover{ background:rgba(var(--sv-accent-rgb),.10); color:var(--sv-text);
-  transform:none; box-shadow:none; filter:none; }
-.svc-tabs button.on{ background:linear-gradient(135deg,var(--sv-accent),var(--sv-accent-deep));
-  color:var(--sv-on-accent); box-shadow:0 6px 16px rgba(var(--sv-accent-rgb),.3); }
-.svc-tabs button.on:hover{ filter:brightness(1.06); }
-.svc-tabs .badge{ display:inline-block; min-width:19px; padding:0 5px; border-radius:20px;
-  background:var(--sv-bad); color:#fff; font-size:.7rem; font-weight:800; line-height:19px;
-  text-align:center; box-shadow:0 2px 8px rgba(255,93,108,.4); }
-.svc-tabs button.on .badge{ background:rgba(0,0,0,.28); color:#fff; box-shadow:none; }
-
 /* ---------------- PANELS ---------------- */
 .svc-panel{ background:linear-gradient(165deg,var(--sv-ink),var(--sv-ink-2));
   border:1px solid var(--sv-line); border-radius:18px; color:var(--sv-text);
@@ -121,9 +100,37 @@
   box-shadow:0 6px 18px rgba(224,62,77,.28); }
 .svc button.good{ background:linear-gradient(135deg,#2ee0b0,#0fb98a); color:#04231a;
   box-shadow:0 6px 18px rgba(31,214,166,.26); }
+/* A checkbox and its label on one line. Without this the global
+   label{display:block} and input{width:100%} stack them into a mess. */
+.svc label.chk{ display:flex; align-items:center; gap:.55rem; margin-top:.7rem;
+  font-size:.84rem; font-weight:500; color:var(--sv-muted);
+  text-transform:none; letter-spacing:0; }
+.svc label.chk input{ width:auto; margin:0; flex:none; accent-color:var(--sv-accent); }
+
 .svc-grid2{ display:grid; gap:.75rem; grid-template-columns:1fr 1fr; }
 .svc-grid2 .full{ grid-column:1/-1; }
 @media(max-width:640px){ .svc-grid2{ grid-template-columns:1fr; } }
+
+/* ---------------- TABS ---------------- */
+/* One track holding four pills, rather than four loose buttons. On a phone it
+   scrolls sideways instead of wrapping into a ragged second row. */
+.svc-tabs{ display:flex; gap:.3rem; margin-bottom:1.5rem; padding:.34rem;
+  background:var(--sv-ink); border:1px solid var(--sv-line); border-radius:16px;
+  overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+.svc-tabs::-webkit-scrollbar{ display:none; }
+.svc-tabs button{ flex:none; width:auto; margin:0; padding:.6rem 1.05rem; font-size:.87rem;
+  font-weight:600; border-radius:12px; white-space:nowrap; border:none; box-shadow:none;
+  display:inline-flex; align-items:center; gap:.45rem;
+  background:transparent; color:var(--sv-muted); }
+.svc-tabs button:hover{ background:rgba(var(--sv-accent-rgb),.10); color:var(--sv-text);
+  transform:none; box-shadow:none; filter:none; }
+.svc-tabs button.on{ background:linear-gradient(135deg,var(--sv-accent),var(--sv-accent-deep));
+  color:var(--sv-on-accent); box-shadow:0 6px 16px rgba(var(--sv-accent-rgb),.3); }
+.svc-tabs button.on:hover{ filter:brightness(1.06); }
+.svc-tabs .badge{ display:inline-block; min-width:19px; padding:0 5px; border-radius:20px;
+  background:var(--sv-bad); color:#fff; font-size:.7rem; font-weight:800; line-height:19px;
+  text-align:center; box-shadow:0 2px 8px rgba(255,93,108,.4); }
+.svc-tabs button.on .badge{ background:rgba(0,0,0,.28); color:#fff; box-shadow:none; }
 
 /* ---------------- STAT TILES ---------------- */
 .svc-stats{ display:grid; gap:.8rem; margin-bottom:1.7rem;
@@ -180,10 +187,10 @@
    blank panel that reads as broken. */
 .svc-skel{ border-radius:15px; border:1px solid var(--sv-line);
   background-image:linear-gradient(100deg,
-    rgba(var(--sv-accent-rgb),.05) 28%,
-    rgba(var(--sv-accent-rgb),.13) 48%,
-    rgba(var(--sv-accent-rgb),.05) 68%);
-  background-color:var(--sv-ink); background-size:260% 100%;
+    rgba(255,255,255,0) 26%,
+    rgba(255,255,255,.11) 46%,
+    rgba(255,255,255,0) 66%);
+  background-color:var(--sv-ink-2); background-size:260% 100%;
   animation:svcShimmer 1.3s linear infinite; }
 .svc-skel.card{ height:250px; }
 .svc-skel.row{ height:104px; }
@@ -222,7 +229,9 @@
 :root[data-theme="light"] .svc-stat,
 :root[data-theme="light"] .svc-step{ box-shadow:0 1px 2px rgba(20,45,90,.05), 0 8px 24px rgba(20,45,90,.07); }
 :root[data-theme="light"] .svc-tabs{ box-shadow:inset 0 1px 2px rgba(20,45,90,.05); }
-:root[data-theme="light"] .svc-skel{ background-color:#f3f6fb; }
+:root[data-theme="light"] .svc-skel{ background-color:#eef2f8;
+  background-image:linear-gradient(100deg,
+    rgba(20,45,90,0) 26%, rgba(20,45,90,.09) 46%, rgba(20,45,90,0) 66%); }
 
 @media(max-width:600px){
   .svc-stat b{ font-size:1.45rem; }

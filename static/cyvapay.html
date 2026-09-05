@@ -7,7 +7,7 @@
   <!-- social / SEO metadata -->
   <meta name="description" content="Cyvapay — take Cybucks payments on any website. Make a link, paste the button, get paid." />
   <link rel="canonical" href="https://cyvathon.onrender.com/cyvapay" />
-  <meta name="theme-color" content="#1fd6a6" />
+  <meta name="theme-color" content="#22d3ee" />
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
@@ -25,172 +25,186 @@
   <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/service.css">
   <style>
     /* ============================================================
-       CYVAPAY — its own livery. Teal on deep slate, the colour of a
-       receipt stamp. A payment gateway should feel calm and exact,
-       not like a shop.
+       CYVAPAY — its own livery on the shared service chassis
+       (service.css). Cyan on deep slate: a payment gateway should
+       feel calm and exact, not like a shop. Cyan rather than the
+       green it started with, because Cyvashield already owns green
+       and two services in the same colour is one service in a wig.
+       Only the links, the embed box and the receipts live here.
        ============================================================ */
     .cp{
-      --cp-ink:#0e1a1a;
-      --cp-ink-2:#14262a;
-      --cp-teal:#1fd6a6;
-      --cp-teal-2:#5cebc4;
-      --cp-deep:#0e9d78;
+      --cp-ink:#0d1a1f;
+      --cp-ink-2:#132831;
+      --cp-teal:#22d3ee;
+      --cp-teal-2:#7ce7f7;
+      --cp-deep:#0e9fc4;
       --cp-line:rgba(255,255,255,.1);
-      --cp-text:#eefaf6;
-      --cp-muted:#9db8b2;
+      --cp-text:#ecf9fc;
+      --cp-muted:#9db4bd;
       --cp-warn:#ffce56;
       --cp-bad:#ff5d6c;
+
+      /* hand the livery to the shared chassis */
+      --sv-ink:var(--cp-ink); --sv-ink-2:var(--cp-ink-2); --sv-line:var(--cp-line);
+      --sv-text:var(--cp-text); --sv-muted:var(--cp-muted);
+      --sv-accent:var(--cp-teal); --sv-accent-2:var(--cp-teal-2);
+      --sv-accent-deep:var(--cp-deep); --sv-accent-rgb:34,211,238;
+      --sv-on-accent:#04222b; --sv-warn:var(--cp-warn);
     }
     :root[data-theme="light"] .cp{
-      --cp-ink:#ffffff; --cp-ink-2:#eef7f4;
-      --cp-line:rgba(15,60,50,.14);
-      --cp-text:#0d2a24; --cp-muted:#4f6b64;
-      --cp-teal:#0f9d72; --cp-teal-2:#0b7d5b;
+      --cp-ink:#ffffff; --cp-ink-2:#eef6f9;
+      --cp-line:rgba(15,55,70,.14);
+      --cp-text:#0c2630; --cp-muted:#4f6670;
+      --cp-teal:#0e8fb5; --cp-teal-2:#0a6f8f; --cp-deep:#0a6f8f;
+      --cp-warn:#a5730a;
+      --sv-accent-rgb:14,143,181; --sv-on-accent:#ffffff;
     }
 
     /* ---- hero ---- */
-    .cp-hero{ background:linear-gradient(135deg,var(--cp-ink),var(--cp-ink-2));
-      border:1px solid var(--cp-line); border-radius:20px; padding:2.1rem 2rem 1.9rem;
-      margin-bottom:2rem; position:relative; overflow:hidden; }
-    .cp-hero::after{ content:""; position:absolute; right:-70px; top:-70px; width:260px; height:260px;
-      border-radius:50%; background:radial-gradient(circle,rgba(31,214,166,.2),transparent 68%); }
-    .cp-brand{ display:flex; align-items:center; gap:.85rem; margin-bottom:.5rem; }
+    /* A perforated tear-off edge along the foot of the banner. */
+    .cp-hero::after{ content:""; position:absolute; left:0; right:0; bottom:0; height:5px;
+      background:repeating-linear-gradient(90deg,transparent 0 9px,var(--cp-teal) 9px 11px);
+      opacity:.4; }
+    .cp-brand{ display:flex; align-items:center; gap:.85rem; margin-bottom:.6rem; }
     .cp-brand svg{ width:44px; height:44px; flex:none; }
-    .cp-logo{ font-size:2.35rem; font-weight:800; letter-spacing:-1.2px; color:var(--cp-text); line-height:1; }
+    .cp-logo{ font-weight:800; font-size:clamp(1.85rem,5.5vw,2.4rem); letter-spacing:-1.2px;
+      color:var(--cp-text); line-height:1; }
     .cp-logo .t{ color:var(--cp-teal); }
-    .cp-hero p{ color:var(--cp-muted); max-width:640px; margin:0; line-height:1.65; font-size:.96rem; }
-    .cp-badges{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.1rem; }
-    .cp-badge{ display:inline-flex; align-items:center; gap:.4rem; padding:.36rem .8rem; border-radius:20px;
-      font-size:.78rem; font-weight:600; background:rgba(31,214,166,.13);
-      border:1px solid rgba(31,214,166,.36); color:var(--cp-teal-2); }
 
-    /* ---- panels ---- */
-    .cp-panel{ background:var(--cp-ink); border:1px solid var(--cp-line); border-radius:16px;
-      padding:1.4rem 1.5rem; margin-bottom:1.4rem; color:var(--cp-text); }
-    .cp-panel h3{ display:flex; align-items:center; gap:.55rem; margin-bottom:.35rem; font-size:1.08rem; }
-    .cp-panel h3 i{ color:var(--cp-teal); }
-    .cp-panel .sub{ color:var(--cp-muted); font-size:.86rem; margin-bottom:1rem; line-height:1.6; }
-    .cp .lbl{ display:block; font-size:.72rem; color:var(--cp-muted); margin-top:.55rem;
-      text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
-    .cp input,.cp select,.cp textarea{ background:var(--cp-ink-2); border:1px solid var(--cp-line);
-      color:var(--cp-text); margin-top:5px; }
-    .cp input:focus,.cp select:focus,.cp textarea:focus{ border-color:var(--cp-teal);
-      box-shadow:0 0 0 3px rgba(31,214,166,.16); }
-    .cp button{ background:linear-gradient(135deg,var(--cp-teal),var(--cp-deep)); color:#04231a;
-      box-shadow:0 6px 18px rgba(31,214,166,.26); font-weight:700; }
-    .cp button:hover{ box-shadow:0 10px 24px rgba(31,214,166,.36); }
-    .cp button.ghost{ background:transparent; border:1px solid rgba(31,214,166,.5);
-      color:var(--cp-teal); box-shadow:none; }
-    .cp button.ghost:hover{ background:rgba(31,214,166,.1); }
-    .cp button.danger{ background:linear-gradient(135deg,#ff6b78,#e03e4d); color:#fff; }
-    .cp-grid2{ display:grid; gap:.7rem; grid-template-columns:1fr 1fr; }
-    .cp-grid2 .full{ grid-column:1/-1; }
-    @media(max-width:640px){ .cp-grid2{ grid-template-columns:1fr; } }
-    .cp label.chk{ display:flex; align-items:center; gap:.5rem; font-size:.84rem;
-      color:var(--cp-muted); margin-top:.6rem; }
-    .cp label.chk input{ width:auto; margin:0; }
-
-    /* ---- tabs ---- */
-    .cp-tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.6rem; }
-    .cp-tabs button{ width:auto; margin:0; padding:.55rem 1.1rem; font-size:.86rem;
-      background:var(--cp-ink); color:var(--cp-muted); border:1px solid var(--cp-line); box-shadow:none; }
-    .cp-tabs button.on{ background:linear-gradient(135deg,var(--cp-teal),var(--cp-deep));
-      color:#04231a; border-color:transparent; }
-    .cp-tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem;
-      border-radius:20px; background:#e03e4d; color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
-
-    /* ---- stats ---- */
-    .stats{ display:flex; flex-wrap:wrap; gap:.7rem; margin-bottom:1.4rem; }
-    .stat{ flex:1; min-width:130px; padding:.8rem 1rem; border-radius:12px;
-      background:var(--cp-ink); border:1px solid var(--cp-line); color:var(--cp-text); }
-    .stat b{ display:block; font-size:1.5rem; font-weight:800; letter-spacing:-.6px; color:var(--cp-teal); }
-    .stat span{ font-size:.7rem; color:var(--cp-muted); text-transform:uppercase; letter-spacing:.5px; }
-
-    /* ---- link cards ---- */
+    /* ---- payment links ---- */
     .links{ display:grid; gap:1rem; }
-    .lnk{ background:var(--cp-ink); border:1px solid var(--cp-line); border-left:4px solid var(--cp-teal);
-      border-radius:14px; padding:1.1rem 1.25rem; color:var(--cp-text); }
-    .lnk.off{ border-left-color:var(--cp-muted); opacity:.75; }
+    .lnk{ position:relative; overflow:hidden; color:var(--cp-text);
+      background:linear-gradient(165deg,var(--cp-ink),var(--cp-ink-2));
+      border:1px solid var(--cp-line); border-radius:16px; padding:1.15rem 1.3rem;
+      transition:transform .2s ease, border-color .2s, box-shadow .2s; }
+    .lnk::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+      background:linear-gradient(180deg,var(--cp-teal-2),var(--cp-deep)); }
+    .lnk:hover{ transform:translateY(-2px); border-color:rgba(34,211,238,.38);
+      box-shadow:0 14px 30px rgba(0,0,0,.35); }
+    .lnk.off{ opacity:.72; }
+    .lnk.off::before{ background:var(--cp-line); }
     .lnk .top{ display:flex; justify-content:space-between; gap:.8rem; flex-wrap:wrap; align-items:flex-start; }
-    .lnk .nm{ font-weight:700; font-size:1.02rem; }
-    .lnk .meta{ font-size:.78rem; color:var(--cp-muted); margin-top:.15rem; }
-    .lnk .amt{ font-size:1.3rem; font-weight:800; color:var(--cp-teal); white-space:nowrap; }
-    .lnk .amt small{ font-size:.72rem; color:var(--cp-muted); font-weight:600; display:block; text-align:right; }
-    .lnk .urlbox{ display:flex; gap:.4rem; margin-top:.8rem; }
-    .lnk .urlbox input{ margin:0; font-family:Consolas,monospace; font-size:.8rem; padding:.5rem .7rem; }
-    .lnk .urlbox button{ width:auto; margin:0; padding:.5rem .9rem; font-size:.8rem; flex:none; }
-    .lnk .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.75rem; }
-    .lnk .acts button{ width:auto; margin:0; padding:.42rem .85rem; font-size:.78rem; }
-    .lnk .state{ font-size:.64rem; font-weight:800; letter-spacing:.6px; text-transform:uppercase;
-      padding:.18rem .5rem; border-radius:20px; }
-    .lnk .state.on{ background:rgba(31,214,166,.16); color:var(--cp-teal); }
-    .lnk .state.off{ background:rgba(255,255,255,.07); color:var(--cp-muted); }
+    .lnk .nm{ font-weight:700; font-size:1.04rem; letter-spacing:-.2px; }
+    .lnk .meta{ font-size:.78rem; color:var(--cp-muted); margin-top:.2rem; }
+    .lnk .meta b{ color:var(--cp-text); }
+    .lnk .amt{ font-size:1.35rem; font-weight:800; letter-spacing:-.6px; white-space:nowrap;
+      text-align:right;
+      background:linear-gradient(135deg,var(--cp-teal-2),var(--cp-teal));
+      -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .lnk .amt small{ display:block; font-size:.72rem; font-weight:600; color:var(--cp-muted);
+      -webkit-text-fill-color:var(--cp-muted); margin-top:.2rem; }
+    .lnk .state{ font-size:.63rem; font-weight:800; letter-spacing:.6px; text-transform:uppercase;
+      padding:.18rem .55rem; border-radius:20px; display:inline-flex; align-items:center; gap:.3rem;
+      -webkit-text-fill-color:currentColor; }
+    .lnk .state::before{ content:""; width:5px; height:5px; border-radius:50%; background:currentColor; }
+    .lnk .state.on{ background:rgba(34,211,238,.16); color:var(--cp-teal); }
+    .lnk .state.off{ background:rgba(255,255,255,.08); color:var(--cp-muted); }
+    :root[data-theme="light"] .lnk .state.off{ background:rgba(15,55,70,.08); }
 
-    /* ---- embed ---- */
-    .embed{ margin-top:.8rem; }
-    .embed .tabs2{ display:flex; gap:.35rem; margin-bottom:.4rem; }
-    .embed .tabs2 button{ width:auto; margin:0; padding:.3rem .7rem; font-size:.72rem;
-      background:var(--cp-ink-2); color:var(--cp-muted); box-shadow:none; border:1px solid var(--cp-line); }
-    .embed .tabs2 button.on{ color:var(--cp-teal); border-color:rgba(31,214,166,.5); }
-    .embed textarea{ font-family:Consolas,monospace; font-size:.76rem; line-height:1.5;
-      margin:0; min-height:88px; resize:vertical; }
-    .embed .prev{ margin-top:.6rem; padding:.9rem; border-radius:10px; text-align:center;
-      background:#f4f6f8; border:1px dashed #c9d3dc; }
+    /* The URL is the product — it should look like something you copy. */
+    .lnk .urlbox{ display:flex; gap:.4rem; margin-top:.9rem; }
+    .lnk .urlbox input{ margin:0; padding:.55rem .75rem; font-size:.8rem;
+      font-family:Consolas,"SF Mono",monospace; color:var(--cp-teal-2);
+      background:rgba(0,0,0,.25); border-color:rgba(34,211,238,.2); }
+    :root[data-theme="light"] .lnk .urlbox input{ background:var(--cp-ink-2); color:var(--cp-teal-2); }
+    .lnk .urlbox button{ width:auto; margin:0; padding:.55rem .95rem; font-size:.8rem; flex:none; }
+    .lnk .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.8rem; align-items:center; }
+    .lnk .acts button{ width:auto; margin:0; padding:.44rem .9rem; font-size:.78rem; }
+    .lnk .acts a{ text-decoration:none; }
+
+    /* ---- embed box ---- */
+    .embed{ margin-top:.9rem; padding:.9rem 1rem 1rem; border-radius:13px;
+      background:rgba(0,0,0,.2); border:1px solid var(--cp-line); }
+    :root[data-theme="light"] .embed{ background:var(--cp-ink-2); }
+    .embed .tabs2{ display:inline-flex; gap:.2rem; margin-bottom:.6rem; padding:.22rem;
+      border-radius:11px; background:var(--cp-ink-2); border:1px solid var(--cp-line); }
+    :root[data-theme="light"] .embed .tabs2{ background:#fff; }
+    .embed .tabs2 button{ width:auto; margin:0; padding:.32rem .75rem; font-size:.73rem;
+      border-radius:8px; background:transparent; color:var(--cp-muted); border:none; box-shadow:none; }
+    .embed .tabs2 button:hover{ background:rgba(34,211,238,.1); color:var(--cp-text); box-shadow:none; }
+    .embed .tabs2 button.on{ background:rgba(34,211,238,.16); color:var(--cp-teal);
+      box-shadow:none; }
+    .embed textarea{ font-family:Consolas,"SF Mono",monospace; font-size:.76rem; line-height:1.55;
+      margin:0; min-height:92px; resize:vertical; }
+    /* The preview is deliberately light: it is showing you the button on
+       somebody else's white page, not on this one. */
+    .embed .prevlbl{ font-size:.66rem; text-transform:uppercase; letter-spacing:.7px;
+      font-weight:800; color:var(--cp-muted); margin:.85rem 0 .35rem; }
+    .embed .prev{ padding:1.1rem; border-radius:11px; text-align:center;
+      background:#f4f6f8; border:1px dashed #c9d3dc; color:#0d2a24; }
 
     /* ---- receipts ---- */
     .rcpts{ display:grid; gap:.6rem; }
-    .rc{ display:flex; align-items:center; gap:.9rem; padding:.75rem 1rem; border-radius:12px;
-      background:var(--cp-ink); border:1px solid var(--cp-line); color:var(--cp-text); }
-    .rc .ic{ width:36px; height:36px; border-radius:10px; flex:none; display:grid; place-items:center;
+    .rc{ display:flex; align-items:center; gap:.9rem; padding:.8rem 1rem; border-radius:13px;
+      background:linear-gradient(165deg,var(--cp-ink),var(--cp-ink-2));
+      border:1px solid var(--cp-line); color:var(--cp-text);
+      transition:transform .18s ease, border-color .18s, box-shadow .18s; }
+    .rc:hover{ transform:translateX(3px); border-color:rgba(34,211,238,.35);
+      box-shadow:0 10px 24px rgba(0,0,0,.3); }
+    .rc .ic{ width:38px; height:38px; border-radius:11px; flex:none; display:grid; place-items:center;
       font-size:.85rem; }
-    .rc .ic.in{ background:rgba(31,214,166,.15); color:var(--cp-teal); }
-    .rc .ic.out{ background:rgba(255,206,86,.15); color:var(--cp-warn); }
+    .rc .ic.in{ background:rgba(34,211,238,.15); color:var(--cp-teal); border:1px solid rgba(34,211,238,.3); }
+    .rc .ic.out{ background:rgba(255,206,86,.15); color:var(--cp-warn); border:1px solid rgba(255,206,86,.3); }
     .rc .mid{ flex:1; min-width:0; }
-    .rc .mid b{ display:block; font-size:.92rem; }
-    .rc .mid span{ font-size:.75rem; color:var(--cp-muted); }
-    .rc .amt{ font-weight:800; white-space:nowrap; }
+    .rc .mid b{ display:block; font-size:.93rem; }
+    .rc .mid span{ display:block; font-size:.75rem; color:var(--cp-muted);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rc .amt{ font-weight:800; white-space:nowrap; letter-spacing:-.3px; }
     .rc .amt.in{ color:var(--cp-teal); }
     .rc .amt.out{ color:var(--cp-warn); }
-    .rc .ref{ font-family:Consolas,monospace; font-size:.7rem; color:var(--cp-muted); }
-    .empty{ color:var(--cp-muted); text-align:center; padding:2.2rem 1rem; }
+    .rc .ref{ font-family:Consolas,"SF Mono",monospace; font-size:.7rem; color:var(--cp-muted);
+      margin-top:.15rem; }
+
+    /* ---- the rules ---- */
+    /* Six identical ticks made these read as decoration. One icon per rule
+       makes the list scannable, which is the point of publishing it. */
+    .rules{ display:grid; gap:.75rem; grid-template-columns:repeat(auto-fit,minmax(285px,1fr)); }
+    .rule{ display:flex; gap:.8rem; padding:1rem 1.1rem; border-radius:14px;
+      background:var(--cp-ink-2); border:1px solid var(--cp-line); }
+    .rule > i{ display:grid; place-items:center; width:32px; height:32px; flex:none;
+      border-radius:10px; font-size:.85rem; color:var(--cp-teal);
+      background:rgba(34,211,238,.12); border:1px solid rgba(34,211,238,.28); }
+    .rule b{ display:block; font-size:.91rem; margin-bottom:.25rem; line-height:1.4; }
+    .rule p{ font-size:.82rem; color:var(--cp-muted); line-height:1.65; margin:0; }
   </style>
 </head>
 <body>
   <div id="nav"></div>
 
-  <div class="wrap cp">
+  <div class="wrap svc cp">
     <!-- HERO -->
-    <div class="cp-hero">
+    <div class="svc-hero cp-hero">
       <div class="cp-brand">
         <!-- Our own mark: a card with a receipt line. -->
         <svg viewBox="0 0 44 44" fill="none" aria-hidden="true">
-          <rect x="4" y="10" width="36" height="25" rx="5" stroke="#1fd6a6" stroke-width="2.6"/>
-          <path d="M4 18h36" stroke="#1fd6a6" stroke-width="2.6"/>
-          <path d="M11 27h8" stroke="#1fd6a6" stroke-width="2.6" stroke-linecap="round"/>
-          <circle cx="32" cy="27" r="2.4" fill="#1fd6a6"/>
+          <rect x="4" y="10" width="36" height="25" rx="5" stroke="#22d3ee" stroke-width="2.6"/>
+          <path d="M4 18h36" stroke="#22d3ee" stroke-width="2.6"/>
+          <path d="M11 27h8" stroke="#22d3ee" stroke-width="2.6" stroke-linecap="round"/>
+          <circle cx="32" cy="27" r="2.4" fill="#22d3ee"/>
         </svg>
         <div class="cp-logo">Cyva<span class="t">pay</span></div>
       </div>
-      <p>Take Cybucks payments on <b style="color:var(--cp-text)">any website</b>. Make a
+      <p>Take Cybucks payments on <b>any website</b>. Make a
         payment link, paste the button into your page, and the money lands in your Cyvathon
         account. Anyone who clicks it gets a hosted checkout — and if they don't have an
         account yet, they're offered a free one and come straight back to pay.</p>
-      <div class="cp-badges" id="heroBadges"></div>
+      <div class="svc-badges" id="heroBadges"></div>
     </div>
 
-    <div class="cp-tabs" id="tabs"></div>
-    <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
+    <div class="svc-tabs" id="tabs" role="tablist"></div>
+    <p id="msg" class="svc-alert"></p>
 
     <!-- LINKS -->
     <section id="tab-links" class="cppane">
-      <div class="stats" id="stats"></div>
-      <div class="cp-panel">
+      <div class="svc-stats" id="stats"></div>
+      <div class="svc-panel">
         <h3><i class="fas fa-link"></i> Make a payment link</h3>
         <p class="sub">Give it a name and a price. You'll get a link and a button you can put
           anywhere — a website, a blog, a message.</p>
-        <div class="cp-grid2">
+        <div class="svc-grid2">
           <div><label class="lbl">What is it for?</label>
             <input id="lTitle" placeholder="e.g. Poster print, Tutoring session, Club membership"></div>
           <div><label class="lbl">Collect as</label><select id="lCompany"></select></div>
@@ -204,7 +218,7 @@
           <div id="fixedWrap"><label class="lbl">Price</label>
             <input id="lAmount" type="number" min="1" step="any" placeholder="e.g. 50"></div>
           <div id="flexWrap" style="display:none;grid-column:1/-1;">
-            <div class="cp-grid2">
+            <div class="svc-grid2">
               <div><label class="lbl">Minimum</label><input id="lMin" type="number" min="1" value="1"></div>
               <div><label class="lbl">Maximum</label><input id="lMax" type="number" min="1" value="1000"></div>
             </div>
@@ -223,52 +237,55 @@
           </div>
         </div>
         <button style="margin-top:1rem;" onclick="createLink()"><i class="fas fa-plus"></i> Create link</button>
-        <p id="createMsg" class="small" style="text-align:center;"></p>
+        <p id="createMsg" class="svc-alert"></p>
       </div>
 
-      <h3 style="margin:2rem 0 .3rem;"><i class="fas fa-list" style="color:var(--cp-teal)"></i> Your links</h3>
-      <p class="small" style="margin-bottom:1rem;">Copy the link, or grab the button to embed.</p>
-      <div class="links" id="links"></div>
+      <h3 class="svc-head" style="margin-top:2rem;"><i class="fas fa-list"></i> Your links</h3>
+      <p class="svc-note">Copy the link, or grab the button to embed.</p>
+      <div class="links svc-anim" id="links"></div>
     </section>
 
     <!-- PAYMENTS -->
     <section id="tab-payments" class="cppane" style="display:none;">
-      <h3 style="margin-bottom:.3rem;"><i class="fas fa-arrow-down" style="color:var(--cp-teal)"></i> Received</h3>
-      <p class="small" style="margin-bottom:1rem;">Every payment that came in through your links, with its receipt number.</p>
-      <div class="rcpts" id="received"></div>
-      <h3 style="margin:2.2rem 0 .3rem;"><i class="fas fa-arrow-up" style="color:var(--cp-warn)"></i> Sent</h3>
-      <p class="small" style="margin-bottom:1rem;">Things you've paid for through Cyvapay.</p>
-      <div class="rcpts" id="sent"></div>
+      <h3 class="svc-head"><i class="fas fa-arrow-down"></i> Received</h3>
+      <p class="svc-note">Every payment that came in through your links, with its receipt number.</p>
+      <div class="rcpts svc-anim" id="received"></div>
+      <h3 class="svc-head" style="margin-top:2.2rem;"><i class="fas fa-arrow-up" style="color:var(--cp-warn)"></i> Sent</h3>
+      <p class="svc-note">Things you've paid for through Cyvapay.</p>
+      <div class="rcpts svc-anim" id="sent"></div>
     </section>
 
     <!-- HOW IT WORKS -->
     <section id="tab-how" class="cppane" style="display:none;">
-      <div class="cp-panel">
+      <div class="svc-panel">
         <h3><i class="fas fa-shield-halved"></i> How it keeps everyone safe</h3>
         <p class="sub">A payment gateway is only worth using if it can't be abused. These are the
           rules, and none of them can be switched off.</p>
-        <ul style="list-style:none;display:grid;gap:.8rem;">
-          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+        <div class="rules">
+          <div class="rule"><i class="fas fa-lock"></i>
             <div><b>The amount comes from the link, never the request.</b>
-              <div class="small" style="margin:0">A fixed link charges what you set. Nobody can be talked into paying more — or less.</div></div></li>
-          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+              <p>A fixed link charges what you set. Nobody can be talked into paying more — or less.</p></div></div>
+          <div class="rule"><i class="fas fa-hand-pointer"></i>
             <div><b>Nothing moves without a signed-in payer pressing Pay.</b>
-              <div class="small" style="margin:0">Loading a URL can't charge anyone. A link on a hostile page can't either.</div></div></li>
-          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+              <p>Loading a URL can't charge anyone. A link on a hostile page can't either.</p></div></div>
+          <div class="rule"><i class="fas fa-arrow-up-right-from-square"></i>
             <div><b>Return links are shown, never followed automatically.</b>
-              <div class="small" style="margin:0">After paying, the payer sees where they'd be sent and chooses to go — so a checkout can't be used to bounce people somewhere nasty.</div></div></li>
-          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+              <p>After paying, the payer sees where they'd be sent and chooses to go — so a checkout
+                 can't be used to bounce people somewhere nasty.</p></div></div>
+          <div class="rule"><i class="fas fa-coins"></i>
             <div><b>Only earned Cybucks can be paid out.</b>
-              <div class="small" style="margin:0">Same rule as a bank transfer. The welcome grant stays put, so a payment link can't be used to farm free money into one account.</div></div></li>
-          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+              <p>Same rule as a bank transfer. The welcome grant stays put, so a payment link can't
+                 be used to farm free money into one account.</p></div></div>
+          <div class="rule"><i class="fas fa-receipt"></i>
             <div><b>Every payment has a receipt number both sides can see.</b>
-              <div class="small" style="margin:0">Deleting a link never deletes its receipts.</div></div></li>
-          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+              <p>Deleting a link never deletes its receipts.</p></div></div>
+          <div class="rule"><i class="fas fa-ban"></i>
             <div><b>Cyvathon never asks for real money.</b>
-              <div class="small" style="margin:0">Signing up needs a username and a password. No card details, no real currency, ever — and the checkout says so.</div></div></li>
-        </ul>
+              <p>Signing up needs a username and a password. No card details, no real currency,
+                 ever — and the checkout says so.</p></div></div>
+        </div>
       </div>
-      <div class="cp-panel">
+      <div class="svc-panel">
         <h3><i class="fas fa-code"></i> Putting it on your website</h3>
         <p class="sub">Every link has a ready-made button under "Embed". It's plain HTML — no script
           to load, nothing that runs on your page — so it works on any site, blog or page builder
@@ -283,8 +300,7 @@
     const esc=(s)=>(s==null?"":String(s))
       .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
       .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-    const msg=(t,ok=false,el="msg")=>{const m=document.getElementById(el);
-      m.textContent=t||""; m.style.color= ok?"var(--cp-teal)":"var(--red)";};
+    const msg=(t,ok=false,el="msg")=>svcAlert(el,t,ok);
     const CUR = {cybucks:"CB", pufb:"PUFB", aquilines:"AQ", cybit:"CBT"};
     const money=(n)=>(Math.round((Number(n)||0)*100)/100).toLocaleString();
 
@@ -320,7 +336,7 @@
       // Plain HTML only: no script, nothing that runs on the host page.
       return `<a href="${esc(l.url)}" target="_blank" rel="noopener"
    style="display:inline-flex;align-items:center;gap:.5em;padding:.7em 1.3em;
-          background:#1fd6a6;color:#04231a;border-radius:10px;font:600 15px system-ui,sans-serif;
+          background:#22d3ee;color:#04222b;border-radius:10px;font:600 15px system-ui,sans-serif;
           text-decoration:none">
   Pay ${l.flexible ? "" : money(l.amount) + " " + (CUR[l.currency]||l.currency) + " "}with Cybucks
 </a>`;
@@ -356,6 +372,7 @@
             <button onclick="embedMode('${esc(l.code)}','url')">Just the link</button>
           </div>
           <textarea id="embt_${esc(l.code)}" readonly onclick="this.select()"></textarea>
+          <div class="prevlbl">How it looks on your page</div>
           <div class="prev" id="embp_${esc(l.code)}"></div>
           <button class="ghost" style="width:auto;margin-top:.5rem;padding:.4rem .9rem;font-size:.78rem"
                   onclick="copyText(document.getElementById('embt_${esc(l.code)}').value)">
@@ -387,20 +404,27 @@
     }
 
     async function loadLinks(){
+      const host = document.getElementById("links");
+      if(!host.innerHTML) host.innerHTML = svcSkeleton(2,"row");
       try{ D = await api("/cyvapay/links"); }catch(e){ return msg(e.message); }
       const sel = document.getElementById("lCompany");
       sel.innerHTML = `<option value="">Myself (${esc(D.me)})</option>` +
         (D.companies||[]).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
-      document.getElementById("links").innerHTML = D.links.length
+      host.innerHTML = D.links.length
         ? D.links.map(linkCard).join("")
-        : `<p class="empty">No links yet — make one above.</p>`;
+        : svcEmpty("fa-link","No payment links yet",
+                   "Make one above and you'll get a link and a button you can paste anywhere.");
       const live = D.links.filter(l=>l.active).length;
       const taken = D.links.reduce((a,l)=>a+(l.currency==="cybucks"?Number(l.total_taken||0):0),0);
       document.getElementById("stats").innerHTML = `
-        <div class="stat"><b>${esc(D.links.length)}</b><span>Payment links</span></div>
-        <div class="stat"><b>${esc(live)}</b><span>Live right now</span></div>
-        <div class="stat"><b>${esc(D.links.reduce((a,l)=>a+(l.uses||0),0))}</b><span>Payments taken</span></div>
-        <div class="stat"><b>${esc(money(taken))} CB</b><span>Collected in Cybucks</span></div>`;
+        <div class="svc-stat plain"><i class="fas fa-link"></i>
+          <b>${esc(D.links.length)}</b><span>Payment links</span></div>
+        <div class="svc-stat"><i class="fas fa-circle-dot"></i>
+          <b>${esc(live)}</b><span>Live right now</span></div>
+        <div class="svc-stat plain"><i class="fas fa-receipt"></i>
+          <b>${esc(D.links.reduce((a,l)=>a+(l.uses||0),0))}</b><span>Payments taken</span></div>
+        <div class="svc-stat"><i class="fas fa-sack-dollar"></i>
+          <b>${esc(money(taken))} CB</b><span>Collected in Cybucks</span></div>`;
     }
     async function createLink(){
       const flex = document.getElementById("lFlex").checked;
@@ -451,19 +475,27 @@
     }
     async function loadPayments(){
       let d;
+      ["received","sent"].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el && !el.innerHTML) el.innerHTML = svcSkeleton(2,"line");
+      });
       try{ d = await api("/cyvapay/payments"); }catch(e){ return msg(e.message); }
       document.getElementById("received").innerHTML = d.received.length
-        ? d.received.map(r=>receipt(r,"in")).join("") : `<p class="empty">Nothing received yet.</p>`;
+        ? d.received.map(r=>receipt(r,"in")).join("")
+        : svcEmpty("fa-arrow-down","Nothing received yet",
+                   "The moment somebody pays one of your links, the receipt lands here.");
       document.getElementById("sent").innerHTML = d.sent.length
-        ? d.sent.map(r=>receipt(r,"out")).join("") : `<p class="empty">You haven't paid through Cyvapay yet.</p>`;
+        ? d.sent.map(r=>receipt(r,"out")).join("")
+        : svcEmpty("fa-arrow-up","You haven't paid through Cyvapay yet",
+                   "Anything you buy through a Cyvapay link is receipted here.");
     }
 
     function drawHero(c){
       document.getElementById("heroBadges").innerHTML = `
-        <span class="cp-badge"><i class="fas fa-gift"></i> Free to use</span>
-        <span class="cp-badge"><i class="fas fa-globe"></i> Works on any website</span>
-        <span class="cp-badge"><i class="fas fa-lock"></i> Amount fixed by you, never the payer</span>
-        ${c && c.open===false?`<span class="cp-badge" style="background:rgba(224,62,77,.15);border-color:rgba(224,62,77,.4);color:#ff8f9a"><i class="fas fa-ban"></i> Gateway closed</span>`:""}`;
+        <span class="svc-badge good"><i class="fas fa-gift"></i> Free to use</span>
+        <span class="svc-badge"><i class="fas fa-globe"></i> Works on any website</span>
+        <span class="svc-badge"><i class="fas fa-lock"></i> Amount fixed by you, never the payer</span>
+        ${c && c.open===false?`<span class="svc-badge bad"><i class="fas fa-ban"></i> Gateway closed</span>`:""}`;
     }
     async function refresh(){
       try{ const c = await api("/cyvapay/summary"); drawTabs(c); drawHero(c); }

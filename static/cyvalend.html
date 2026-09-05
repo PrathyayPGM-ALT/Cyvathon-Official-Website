@@ -25,11 +25,14 @@
   <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/service.css">
   <style>
     /* ============================================================
-       CYVALEND — its own livery. Violet on deep indigo: neither the
-       courier's amber nor the insurer's green, because this is the
-       friendly one — it's neighbours lending each other a pen.
+       CYVALEND — its own livery on the shared service chassis
+       (service.css). Violet on deep indigo: neither the courier's
+       amber nor the insurer's green, because this is the friendly
+       one — it's neighbours lending each other a pen. Only the
+       shelf, the loan rows and the wordmark live here.
        ============================================================ */
     .cl{
       --cl-ink:#151426;
@@ -43,124 +46,118 @@
       --cl-green:#1fd6a6;
       --cl-warn:#ffce56;
       --cl-bad:#ff5d6c;
+
+      /* hand the livery to the shared chassis */
+      --sv-ink:var(--cl-ink); --sv-ink-2:var(--cl-ink-2); --sv-line:var(--cl-line);
+      --sv-text:var(--cl-text); --sv-muted:var(--cl-muted);
+      --sv-accent:var(--cl-violet); --sv-accent-2:var(--cl-violet-2);
+      --sv-accent-deep:var(--cl-deep); --sv-accent-rgb:167,139,250;
+      --sv-on-accent:#1a1030; --sv-good:var(--cl-green); --sv-warn:var(--cl-warn);
     }
     :root[data-theme="light"] .cl{
       --cl-ink:#ffffff; --cl-ink-2:#f4f1fd;
       --cl-line:rgba(45,25,90,.14);
       --cl-text:#1d1338; --cl-muted:#5f5680;
-      --cl-violet:#6c4ed9; --cl-violet-2:#5940b8;
+      --cl-violet:#6c4ed9; --cl-violet-2:#5940b8; --cl-deep:#5940b8;
+      --cl-warn:#a5730a;
+      --sv-accent-rgb:108,78,217; --sv-on-accent:#ffffff;
     }
 
     /* ---- hero ---- */
-    .cl-hero{ background:linear-gradient(135deg,var(--cl-ink),var(--cl-ink-2));
-      border:1px solid var(--cl-line); border-radius:20px; padding:2.1rem 2rem 1.9rem;
-      margin-bottom:2rem; position:relative; overflow:hidden; }
-    .cl-hero::after{ content:""; position:absolute; right:-70px; top:-70px; width:250px; height:250px;
-      border-radius:50%; background:radial-gradient(circle,rgba(167,139,250,.22),transparent 68%); }
-    .cl-brand{ display:flex; align-items:center; gap:.85rem; margin-bottom:.5rem; }
+    .cl-brand{ display:flex; align-items:center; gap:.85rem; margin-bottom:.6rem; }
     .cl-brand svg{ width:46px; height:42px; flex:none; }
-    .cl-logo{ font-size:2.35rem; font-weight:800; letter-spacing:-1.2px; color:var(--cl-text); line-height:1; }
+    .cl-logo{ font-weight:800; font-size:clamp(1.85rem,5.5vw,2.4rem); letter-spacing:-1.2px;
+      color:var(--cl-text); line-height:1; }
     .cl-logo .v{ color:var(--cl-violet); }
-    .cl-hero p{ color:var(--cl-muted); max-width:640px; margin:0; line-height:1.65; font-size:.96rem; }
-    .cl-badges{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.1rem; }
-    .cl-badge{ display:inline-flex; align-items:center; gap:.4rem; padding:.36rem .8rem; border-radius:20px;
-      font-size:.78rem; font-weight:600; background:rgba(167,139,250,.14);
-      border:1px solid rgba(167,139,250,.36); color:var(--cl-violet-2); }
-
-    /* ---- panels / forms ---- */
-    .cl-panel{ background:var(--cl-ink); border:1px solid var(--cl-line); border-radius:16px;
-      padding:1.4rem 1.5rem; margin-bottom:1.4rem; color:var(--cl-text); }
-    .cl-panel h3{ display:flex; align-items:center; gap:.55rem; margin-bottom:.35rem; font-size:1.08rem; }
-    .cl-panel h3 i{ color:var(--cl-violet); }
-    .cl-panel .sub{ color:var(--cl-muted); font-size:.86rem; margin-bottom:1rem; line-height:1.6; }
-    .cl .lbl{ display:block; font-size:.72rem; color:var(--cl-muted); margin-top:.55rem;
-      text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
-    .cl input,.cl select,.cl textarea{ background:var(--cl-ink-2); border:1px solid var(--cl-line);
-      color:var(--cl-text); margin-top:5px; }
-    .cl input:focus,.cl select:focus,.cl textarea:focus{ border-color:var(--cl-violet);
-      box-shadow:0 0 0 3px rgba(167,139,250,.18); }
-    .cl button{ background:linear-gradient(135deg,var(--cl-violet),var(--cl-deep)); color:#1a1030;
-      box-shadow:0 6px 18px rgba(167,139,250,.28); font-weight:700; }
-    .cl button:hover{ box-shadow:0 10px 24px rgba(167,139,250,.4); }
-    .cl button.ghost{ background:transparent; border:1px solid rgba(167,139,250,.5);
-      color:var(--cl-violet); box-shadow:none; }
-    .cl button.ghost:hover{ background:rgba(167,139,250,.1); }
-    .cl button.danger{ background:linear-gradient(135deg,#ff6b78,#e03e4d); color:#fff; }
-    .cl button.good{ background:linear-gradient(135deg,#2ee0b0,#0fb98a); color:#04231a; }
-    .cl-grid2{ display:grid; gap:.7rem; grid-template-columns:1fr 1fr; }
-    .cl-grid2 .full{ grid-column:1/-1; }
-    @media(max-width:640px){ .cl-grid2{ grid-template-columns:1fr; } }
-
-    /* ---- tabs ---- */
-    .cl-tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.6rem; }
-    .cl-tabs button{ width:auto; margin:0; padding:.55rem 1.1rem; font-size:.86rem;
-      background:var(--cl-ink); color:var(--cl-muted); border:1px solid var(--cl-line); box-shadow:none; }
-    .cl-tabs button.on{ background:linear-gradient(135deg,var(--cl-violet),var(--cl-deep));
-      color:#1a1030; border-color:transparent; }
-    .cl-tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem;
-      border-radius:20px; background:#e03e4d; color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
 
     /* ---- the shelf ---- */
-    .shelf{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
-    .thing{ background:var(--cl-ink); border:1px solid var(--cl-line); border-radius:15px;
-      overflow:hidden; color:var(--cl-text); display:flex; flex-direction:column; transition:.2s; }
-    .thing:hover{ transform:translateY(-4px); border-color:rgba(167,139,250,.4); }
-    .thing .pic{ height:120px; display:grid; place-items:center; background:var(--cl-ink-2);
-      border-bottom:1px solid var(--cl-line); }
-    .thing .pic img{ width:100%; height:100%; object-fit:cover; }
-    .thing .pic i{ font-size:2.4rem; color:var(--cl-violet); opacity:.55; }
-    .thing .body{ padding:.9rem 1rem 1rem; flex:1; display:flex; flex-direction:column; }
-    .thing .nm{ font-weight:700; font-size:.98rem; line-height:1.25; }
-    .thing .by{ font-size:.75rem; color:var(--cl-muted); margin-top:.15rem; }
-    .thing .desc{ font-size:.8rem; color:var(--cl-muted); margin:.5rem 0; line-height:1.5; flex:1; }
-    .thing .facts{ display:flex; flex-wrap:wrap; gap:.35rem; margin-bottom:.7rem; }
-    .fact{ font-size:.68rem; font-weight:700; padding:.18rem .5rem; border-radius:20px;
-      background:var(--cl-ink-2); border:1px solid var(--cl-line); color:var(--cl-muted); }
-    .fact.dep{ color:var(--cl-warn); border-color:rgba(255,206,86,.35); }
-    .fact.cat{ color:var(--cl-violet-2); border-color:rgba(167,139,250,.35); }
-    .thing button{ margin:0; padding:.5rem; font-size:.82rem; }
+    .shelf{ display:grid; gap:1.1rem; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); }
+    .thing{ position:relative; display:flex; flex-direction:column; overflow:hidden;
+      border-radius:18px; color:var(--cl-text);
+      background:linear-gradient(165deg,var(--cl-ink),var(--cl-ink-2));
+      border:1px solid var(--cl-line);
+      transition:transform .22s ease, border-color .22s, box-shadow .22s; }
+    .thing:hover{ transform:translateY(-5px); border-color:rgba(167,139,250,.45);
+      box-shadow:0 18px 38px rgba(3,8,20,.45); }
+    /* A fixed ratio rather than a fixed height: a shelf of mismatched photo
+       crops is what made this look like a spreadsheet with pictures. */
+    .thing .pic{ position:relative; aspect-ratio:16/10; display:grid; place-items:center;
+      overflow:hidden; border-bottom:1px solid var(--cl-line);
+      background:radial-gradient(120% 120% at 50% 0%, rgba(167,139,250,.18), transparent 70%),
+                 var(--cl-ink-2); }
+    .thing .pic img{ width:100%; height:100%; object-fit:cover; transition:transform .35s ease; }
+    .thing:hover .pic img{ transform:scale(1.05); }
+    .thing .pic > i{ font-size:2.5rem; color:var(--cl-violet); opacity:.5; }
+    /* A deposit is the one thing you want to know before you tap "ask", so it
+       sits on the photo instead of down among the other chips. */
+    .thing .dep-tag{ position:absolute; top:.6rem; right:.6rem; font-size:.67rem; font-weight:800;
+      padding:.24rem .6rem; border-radius:20px; background:rgba(255,206,86,.18);
+      color:var(--cl-warn); border:1px solid rgba(255,206,86,.42); }
+    .thing .body{ padding:.95rem 1.05rem 1.05rem; flex:1; display:flex; flex-direction:column; }
+    .thing .nm{ font-weight:700; font-size:1rem; line-height:1.3; }
+    .thing .by{ display:flex; align-items:center; gap:.4rem; font-size:.76rem;
+      color:var(--cl-muted); margin-top:.3rem; }
+    .thing .by .av{ width:19px; height:19px; border-radius:50%; flex:none; display:grid;
+      place-items:center; font-size:.6rem; font-weight:800; color:var(--sv-on-accent);
+      background:linear-gradient(135deg,var(--cl-violet),var(--cl-deep)); }
+    .thing .desc{ font-size:.82rem; color:var(--cl-muted); margin:.6rem 0; line-height:1.55; flex:1; }
+    .thing .facts{ display:flex; flex-wrap:wrap; gap:.35rem; margin-bottom:.8rem; }
+    .fact{ font-size:.68rem; font-weight:700; padding:.2rem .55rem; border-radius:20px;
+      background:rgba(255,255,255,.05); border:1px solid var(--cl-line); color:var(--cl-muted); }
+    :root[data-theme="light"] .fact{ background:rgba(45,25,90,.05); }
+    .fact.cat{ color:var(--cl-violet-2); border-color:rgba(167,139,250,.35);
+      background:rgba(167,139,250,.1); }
+    .thing button{ margin:0; padding:.55rem; font-size:.83rem; }
     .thing .out{ text-align:center; font-size:.78rem; color:var(--cl-warn); padding:.5rem 0; }
     .thing .out.late{ color:var(--cl-bad); }
 
     /* ---- loans ---- */
-    .loans{ display:grid; gap:.9rem; }
-    .loan{ background:var(--cl-ink); border:1px solid var(--cl-line);
-      border-left:4px solid var(--cl-violet); border-radius:14px; padding:1rem 1.15rem; color:var(--cl-text); }
-    .loan.overdue{ border-left-color:var(--cl-bad); }
-    .loan.returned{ border-left-color:var(--cl-green); opacity:.8; }
-    .loan.requested{ border-left-color:var(--cl-warn); }
+    .loans{ display:grid; gap:.95rem; }
+    .loan{ position:relative; overflow:hidden; color:var(--cl-text);
+      background:linear-gradient(165deg,var(--cl-ink),var(--cl-ink-2));
+      border:1px solid var(--cl-line); border-radius:16px; padding:1.05rem 1.15rem;
+      transition:transform .2s ease, border-color .2s, box-shadow .2s; }
+    .loan::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+      background:linear-gradient(180deg,var(--cl-violet),var(--cl-deep)); }
+    .loan:hover{ transform:translateY(-2px); border-color:rgba(167,139,250,.4);
+      box-shadow:0 14px 30px rgba(3,8,20,.4); }
+    .loan.overdue::before{ background:linear-gradient(180deg,#ff8f9a,#e03e4d); }
+    .loan.returned::before{ background:linear-gradient(180deg,#2ee0b0,#0fb98a); }
+    .loan.requested::before{ background:linear-gradient(180deg,#ffce56,#e0a020); }
+    .loan.returned,.loan.declined,.loan.cancelled{ opacity:.84; }
+    .loan.declined::before,.loan.cancelled::before{ background:var(--cl-line); }
     .loan .top{ display:flex; justify-content:space-between; gap:.8rem; flex-wrap:wrap; align-items:flex-start; }
-    .loan .nm{ font-weight:700; font-size:.98rem; }
-    .loan .meta{ font-size:.78rem; color:var(--cl-muted); margin-top:.15rem; }
-    .loan .why{ font-size:.84rem; margin:.6rem 0; font-style:italic; color:var(--cl-muted); }
-    .loan .state{ font-size:.68rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
-      padding:.2rem .55rem; border-radius:20px; white-space:nowrap; }
+    .loan .nm{ display:flex; align-items:center; gap:.5rem; font-weight:700; font-size:1rem; }
+    .loan .nm i{ color:var(--cl-violet); }
+    .loan .meta{ font-size:.78rem; color:var(--cl-muted); margin-top:.2rem; }
+    .loan .why{ font-size:.84rem; margin:.65rem 0 0; color:var(--cl-muted);
+      padding-left:.7rem; border-left:2px solid var(--cl-line); font-style:italic; }
+    .loan .state{ font-size:.66rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+      padding:.24rem .6rem; border-radius:20px; white-space:nowrap; flex:none;
+      display:inline-flex; align-items:center; gap:.35rem; }
+    .loan .state::before{ content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
     .loan .state.requested{ background:rgba(255,206,86,.16); color:var(--cl-warn); }
     .loan .state.out{ background:rgba(167,139,250,.16); color:var(--cl-violet-2); }
     .loan .state.overdue{ background:rgba(255,93,108,.16); color:var(--cl-bad); }
+    .loan .state.overdue::before{ animation:clPulse 1.5s ease-in-out infinite; }
     .loan .state.returned{ background:rgba(31,214,166,.16); color:var(--cl-green); }
     .loan .state.declined,.loan .state.cancelled{ background:rgba(255,255,255,.07); color:var(--cl-muted); }
-    .loan .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.8rem; align-items:center; }
-    .loan .acts button{ width:auto; margin:0; padding:.44rem .9rem; font-size:.8rem; }
-    .loan .acts label{ display:flex; align-items:center; gap:.35rem; font-size:.78rem;
-      color:var(--cl-muted); margin:0; }
+    :root[data-theme="light"] .loan .state.declined,
+    :root[data-theme="light"] .loan .state.cancelled{ background:rgba(45,25,90,.07); }
+    @keyframes clPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.25; } }
+    .loan .acts{ display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.9rem; align-items:center; }
+    .loan .acts button{ width:auto; margin:0; padding:.45rem .95rem; font-size:.8rem; }
+    .loan .acts label{ display:flex; align-items:center; gap:.4rem; font-size:.78rem;
+      color:var(--cl-muted); margin:0; text-transform:none; letter-spacing:0; }
     .loan .acts label input{ width:auto; margin:0; }
-
-    /* ---- reputation strip ---- */
-    .rep{ display:flex; flex-wrap:wrap; gap:.7rem; margin-bottom:1.4rem; }
-    .rep .r{ flex:1; min-width:110px; padding:.7rem .9rem; border-radius:12px;
-      background:var(--cl-ink); border:1px solid var(--cl-line); }
-    .rep .r b{ display:block; font-size:1.4rem; font-weight:800; }
-    .rep .r span{ font-size:.68rem; color:var(--cl-muted); text-transform:uppercase; letter-spacing:.5px; }
-    .empty{ color:var(--cl-muted); text-align:center; padding:2.2rem 1rem; grid-column:1/-1; }
   </style>
 </head>
 <body>
   <div id="nav"></div>
 
-  <div class="wrap cl">
+  <div class="wrap svc cl">
     <!-- HERO -->
-    <div class="cl-hero">
+    <div class="svc-hero">
       <div class="cl-brand">
         <!-- Our own mark: one hand passing something to another. -->
         <svg viewBox="0 0 48 42" fill="none" aria-hidden="true">
@@ -174,17 +171,28 @@
       </div>
       <p>The lending library. Forgot your calculator, out of pens, phone on 2%? Borrow it from
         someone who has a spare — and put your own spares on the shelf so the favour goes both ways.
-        <b style="color:var(--cl-text)">Borrowing is free.</b> Cyvazon can carry it to your class,
+        <b>Borrowing is free.</b> Cyvazon can carry it to your class,
         and Cyvashield covers you if something never comes home.</p>
-      <div class="cl-badges" id="heroBadges"></div>
+      <div class="svc-badges" id="heroBadges"></div>
     </div>
 
-    <div class="cl-tabs" id="tabs"></div>
-    <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
+    <div class="svc-tabs" id="tabs" role="tablist"></div>
+    <p id="msg" class="svc-alert"></p>
 
     <!-- SHELF -->
     <section id="tab-shelf" class="clpane">
-      <div class="cl-panel" style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:center;">
+      <!-- Borrowing a stranger's calculator takes a bit of trust, so say how
+           it works before asking anyone to tap the button. -->
+      <div class="svc-steps">
+        <div class="svc-step"><div class="n">1</div><b>Ask for it</b>
+          <span>Pick something off the shelf and say how long you need it.</span></div>
+        <div class="svc-step"><div class="n">2</div><b>They say yes</b>
+          <span>The owner approves, any deposit is held, and the clock starts.</span></div>
+        <div class="svc-step"><div class="n">3</div><b>Give it back</b>
+          <span>Hand it over, they confirm, your deposit comes straight back.</span></div>
+      </div>
+
+      <div class="svc-panel" style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:center;">
         <div>
           <h3 style="margin:0"><i class="fas fa-boxes-stacked"></i> On the shelf</h3>
           <p class="sub" style="margin:.25rem 0 0" id="shelfSub"></p>
@@ -195,17 +203,17 @@
             <i class="fas fa-plus"></i> Lend something</button>
         </div>
       </div>
-      <div class="shelf" id="shelf"></div>
+      <div class="shelf svc-anim" id="shelf"></div>
     </section>
 
     <!-- MY SHELF -->
     <section id="tab-mine" class="clpane" style="display:none;">
-      <div class="cl-panel">
+      <div class="svc-panel">
         <h3><i class="fas fa-hand-holding-heart"></i> Put something on the shelf</h3>
         <p class="sub">Anything you'd be happy to lend for a lesson or a day. You approve every
           request yourself, and you can ask for a refundable deposit if it's something you'd hate
           to lose.</p>
-        <div class="cl-grid2">
+        <div class="svc-grid2">
           <div><label class="lbl">What is it?</label><input id="iName" placeholder="e.g. Casio scientific calculator"></div>
           <div><label class="lbl">Kind</label><select id="iCat"></select></div>
           <div><label class="lbl">Condition</label><select id="iCond"></select></div>
@@ -217,26 +225,26 @@
             <input id="iDesc" placeholder="e.g. 'the case is cracked but it works fine'"></div>
         </div>
         <button style="margin-top:1rem;" onclick="addItem()"><i class="fas fa-plus"></i> Add to the shelf</button>
-        <p id="addMsg" class="small" style="text-align:center;"></p>
+        <p id="addMsg" class="svc-alert"></p>
       </div>
-      <h3 style="margin:2rem 0 .3rem;"><i class="fas fa-box-open" style="color:var(--cl-violet)"></i> My things</h3>
-      <p class="small" style="margin-bottom:1rem;">Take something off the shelf any time — it just stops new requests.</p>
-      <div class="shelf" id="myShelf"></div>
+      <h3 class="svc-head" style="margin-top:2rem;"><i class="fas fa-box-open"></i> My things</h3>
+      <p class="svc-note">Take something off the shelf any time — it just stops new requests.</p>
+      <div class="shelf svc-anim" id="myShelf"></div>
     </section>
 
     <!-- BORROWED -->
     <section id="tab-borrowed" class="clpane" style="display:none;">
-      <div class="rep" id="rep"></div>
-      <h3 style="margin-bottom:.3rem;"><i class="fas fa-hand-holding" style="color:var(--cl-violet)"></i> Things I've borrowed</h3>
-      <p class="small" style="margin-bottom:1rem;">Give them back on time and the owner confirms it here.</p>
-      <div class="loans" id="borrowed"></div>
+      <div class="svc-stats" id="rep"></div>
+      <h3 class="svc-head"><i class="fas fa-hand-holding"></i> Things I've borrowed</h3>
+      <p class="svc-note">Give them back on time and the owner confirms it here.</p>
+      <div class="loans svc-anim" id="borrowed"></div>
     </section>
 
     <!-- LENDING -->
     <section id="tab-lending" class="clpane" style="display:none;">
-      <h3 style="margin-bottom:.3rem;"><i class="fas fa-inbox" style="color:var(--cl-violet)"></i> People asking to borrow</h3>
-      <p class="small" style="margin-bottom:1rem;">You decide. Approving holds any deposit and starts the clock.</p>
-      <div class="loans" id="lending"></div>
+      <h3 class="svc-head"><i class="fas fa-inbox"></i> People asking to borrow</h3>
+      <p class="svc-note">You decide. Approving holds any deposit and starts the clock.</p>
+      <div class="loans svc-anim" id="lending"></div>
     </section>
   </div>
 
@@ -250,8 +258,7 @@
       if(!/^https:\/\/[A-Za-z0-9._~:/?#@!$&*+,;=%-]+$/.test(u||"")) return "";
       return encodeURI(u).replace(/["'<>]/g, encodeURIComponent);
     };
-    const msg=(t,ok=false,el="msg")=>{const m=document.getElementById(el);
-      m.textContent=t||""; m.style.color= ok?"var(--cl-green)":"var(--red)";};
+    const msg=(t,ok=false,el="msg")=>svcAlert(el,t,ok);
     const cat=(k)=>CATS.find(c=>c.key===k)||CATS[CATS.length-1]||{label:"",icon:"fa-box"};
 
     function when(iso){
@@ -293,13 +300,16 @@
     /* ---- shelf ---- */
     function thingCard(it, mine){
       const img = safeUrl(it.image_url);
-      const pic = img ? `<div class="pic"><img src="${img}" alt="" loading="lazy"></div>`
-                      : `<div class="pic"><i class="fas ${esc(it.category_icon)}"></i></div>`;
+      // The deposit rides on the photo — it is the one fact that decides
+      // whether somebody taps "ask" at all.
+      const dep = it.deposit>0
+        ? `<span class="dep-tag">${esc(it.deposit)} CB deposit</span>` : "";
+      const pic = img ? `<div class="pic"><img src="${img}" alt="" loading="lazy">${dep}</div>`
+                      : `<div class="pic"><i class="fas ${esc(it.category_icon)}"></i>${dep}</div>`;
       const facts = `<div class="facts">
         <span class="fact cat">${esc(it.category_label)}</span>
         <span class="fact">${esc(it.condition)}</span>
         <span class="fact">up to ${esc(it.max_days)} day${it.max_days==1?"":"s"}</span>
-        ${it.deposit>0?`<span class="fact dep">${esc(it.deposit)} CB deposit</span>`:""}
         ${it.times_lent?`<span class="fact">lent ${esc(it.times_lent)}×</span>`:""}
       </div>`;
       let foot;
@@ -321,10 +331,18 @@
           : `<button onclick="ask(${it.id},${esc(it.max_days)},'${esc(it.name)}',${esc(it.deposit)})">
                <i class="fas fa-hand"></i> Ask to borrow</button>`;
       }
+      // Three states, not two: an item that is out with somebody is neither
+      // on the shelf nor retired.
+      const state = it.status==="retired" ? ["eye-slash","Off the shelf"]
+                  : it.status==="out"     ? ["arrow-right-from-bracket","Out on loan"]
+                                          : ["circle-check","On the shelf"];
+      const owner = mine
+        ? `<i class="fas fa-${state[0]}"></i> ${state[1]}`
+        : `<span class="av">${esc((String(it.owner||"?")[0]||"?").toUpperCase())}</span>
+           ${esc(it.owner)}${it.owner_lent?` · lent ${esc(it.owner_lent)}×`:""}`;
       return `<div class="thing">${pic}<div class="body">
         <div class="nm">${esc(it.name)}</div>
-        <div class="by">${mine ? (it.status==="retired"?"Off the shelf":"On the shelf")
-                               : "from " + esc(it.owner) + (it.owner_lent?` · lent ${esc(it.owner_lent)}×`:"")}</div>
+        <div class="by">${owner}</div>
         <div class="desc">${esc(it.description)||"<span style='opacity:.6'>No notes.</span>"}</div>
         ${facts}${foot}
       </div></div>`;
@@ -332,12 +350,17 @@
 
     async function loadShelf(){
       let d;
+      ["shelf","myShelf"].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el && !el.innerHTML) el.innerHTML = svcSkeleton(3,"card");
+      });
       try{ d = await api("/cyvalend/shelf"); }catch(e){ return msg(e.message); }
       SHELF = d.shelf; MINE = d.mine;
       drawShelf();
       document.getElementById("myShelf").innerHTML = MINE.length
         ? MINE.map(it=>thingCard(it,true)).join("")
-        : `<p class="empty">Nothing of yours on the shelf yet.</p>`;
+        : svcEmpty("fa-hand-holding-heart","Nothing of yours on the shelf",
+                   "Put up a spare pen, a calculator, a charger — anything you would lend for a lesson.");
     }
     function drawShelf(){
       const f = document.getElementById("filter").value;
@@ -346,8 +369,9 @@
         `${SHELF.length} thing${SHELF.length===1?"":"s"} other citizens are willing to lend`;
       document.getElementById("shelf").innerHTML = list.length
         ? list.map(it=>thingCard(it,false)).join("")
-        : `<p class="empty">${SHELF.length ? "Nothing in that category." :
-             "The shelf is empty — be the first to lend something."}</p>`;
+        : (SHELF.length
+            ? svcEmpty("fa-filter","Nothing in that category","Try another kind, or clear the filter to see the whole shelf.")
+            : svcEmpty("fa-boxes-stacked","The shelf is empty","Be the first to lend something — the favour tends to come back."));
     }
 
     async function addItem(){
@@ -436,19 +460,25 @@
       try{ d = await api("/cyvalend/loans"); }catch(e){ return msg(e.message); }
       const s = d.stats || {};
       document.getElementById("rep").innerHTML = `
-        <div class="r"><b style="color:var(--cl-violet)">${esc(s.out_now||0)}</b><span>Out with you now</span></div>
-        <div class="r"><b style="color:var(--cl-green)">${esc(s.returned||0)}</b><span>Returned</span></div>
-        <div class="r"><b style="color:${(s.late||0)?"var(--cl-bad)":"var(--cl-text)"}">${esc(s.late||0)}</b><span>Returned late</span></div>
-        <div class="r"><b>${esc(s.lent||0)}</b><span>Times you've lent</span></div>`;
+        <div class="svc-stat"><i class="fas fa-hand-holding"></i>
+          <b>${esc(s.out_now||0)}</b><span>Out with you now</span></div>
+        <div class="svc-stat good"><i class="fas fa-rotate-left"></i>
+          <b>${esc(s.returned||0)}</b><span>Returned</span></div>
+        <div class="svc-stat ${(s.late||0)?"bad":"plain"}"><i class="fas fa-clock"></i>
+          <b>${esc(s.late||0)}</b><span>Returned late</span></div>
+        <div class="svc-stat plain"><i class="fas fa-hand-holding-heart"></i>
+          <b>${esc(s.lent||0)}</b><span>Times you've lent</span></div>`;
       const live = l => ["requested","out"].includes(l.status);
       const order = (a,b)=> (live(b.status?b:b)-0) ;
-      const put = (id, list, side, empty)=>{
+      const put = (id, list, side, icon, title, hint)=>{
         const sorted = list.slice().sort((a,b)=>(live(b)-live(a)));
         document.getElementById(id).innerHTML = sorted.length
-          ? sorted.map(l=>loanCard(l,side)).join("") : `<p class="empty">${empty}</p>`;
+          ? sorted.map(l=>loanCard(l,side)).join("") : svcEmpty(icon,title,hint);
       };
-      put("borrowed", d.borrowed, "borrowed", "You haven't borrowed anything yet.");
-      put("lending",  d.lending,  "lending",  "Nobody has asked to borrow from you yet.");
+      put("borrowed", d.borrowed, "borrowed", "fa-hand-holding", "You haven't borrowed anything yet",
+          "The shelf is free to use — ask for something and the owner decides.");
+      put("lending",  d.lending,  "lending",  "fa-inbox", "No one has asked yet",
+          "Put more on the shelf and requests turn up here for you to approve.");
     }
 
     async function decide(id, action){
@@ -474,10 +504,10 @@
 
     function drawHero(){
       document.getElementById("heroBadges").innerHTML = `
-        <span class="cl-badge"><i class="fas fa-gift"></i> Borrowing is free</span>
-        <span class="cl-badge"><i class="fas fa-truck-fast"></i> Delivered by Cyvazon</span>
-        <span class="cl-badge"><i class="fas fa-shield-halved"></i> Covered by Cyvashield</span>
-        ${CFG.open?"":`<span class="cl-badge" style="background:rgba(224,62,77,.15);border-color:rgba(224,62,77,.4);color:#ff8f9a"><i class="fas fa-ban"></i> Library closed</span>`}`;
+        <span class="svc-badge good"><i class="fas fa-gift"></i> Borrowing is free</span>
+        <span class="svc-badge"><i class="fas fa-truck-fast"></i> Delivered by Cyvazon</span>
+        <span class="svc-badge"><i class="fas fa-shield-halved"></i> Covered by Cyvashield</span>
+        ${CFG.open?"":`<span class="svc-badge bad"><i class="fas fa-ban"></i> Library closed</span>`}`;
     }
 
     async function refresh(){
