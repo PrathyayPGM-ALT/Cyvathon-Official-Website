@@ -76,6 +76,12 @@
           <textarea id="cDesc" rows="2" placeholder="What does your company do?"></textarea>
           <button onclick="found()">Found Company (1000 CB)</button>
           <p id="msg" class="small" style="text-align:center;"></p>
+          <p class="small" style="margin-top:.9rem;padding-top:.8rem;border-top:1px solid var(--panel-border);">
+            <i class="fas fa-money-bill-transfer" style="color:var(--green)"></i>
+            <b>Companies can earn from anywhere.</b> Once founded, a company can take
+            <b>Cybucks payments on its own website</b> through
+            <a class="link" href="/cyvapay">Cyvapay</a> — make a payment link collected as the
+            company, paste the button on the site, and the money lands in the company's balance.</p>
         </div>
 
         <h2 class="section-title" style="font-size:1.4rem;">Existing Companies</h2>
@@ -167,6 +173,18 @@
 
         ${c.is_public?`<div class="panel" style="margin:1.2rem 0;"><h3>Price History &amp; Market Value</h3>${priceChart(c.history, c)}
           <p style="margin-top:.6rem;"><a class="link" href="/exchange?company=${cid}">Trade this stock on the Exchange →</a></p></div>`:''}`;
+
+      // Founder: get paid through Cyvapay
+      if(d.is_founder){
+        html += `<div class="panel" style="margin:1.2rem 0;border-left:4px solid var(--green);">
+          <h3><i class="fas fa-money-bill-transfer" style="color:var(--green)"></i> Get paid on your website</h3>
+          <p class="small">${NAME(c.name)} can take <b>Cybucks payments from any website</b> through
+            Cyvapay. Make a payment link, choose <b>Collect as: ${NAME(c.name)}</b>, and paste the
+            button — a plain HTML link, no script — into your site. Every payment lands in the
+            company's balance with a receipt number, and you can see it in the Cyvapay ledger.</p>
+          <a href="/cyvapay"><button class="ghost" style="width:auto;margin-top:.4rem;">
+            <i class="fas fa-link"></i> Make a payment link for ${NAME(c.name)}</button></a></div>`;
+      }
 
       // Founder: add a co-founder
       if(d.is_founder){
