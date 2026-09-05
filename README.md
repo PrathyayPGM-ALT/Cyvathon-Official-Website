@@ -199,6 +199,33 @@ though the founding record still renders without it.
 
 ---
 
+### 10. Cyvapay — take payments on any website
+A payment gateway for Cybucks (`/cyvapay`, under Money):
+- Make a **payment link** — fixed price, or "payer chooses" within your bounds,
+  reusable or single-use, collected as yourself or as your company
+- Paste the ready-made **button** (plain HTML, no script) or the bare link into
+  any website, blog or page builder
+- Anyone who clicks lands on a **hosted checkout** at `/cyvapay/checkout/<code>`.
+  No account? They're offered a free one and return to the same checkout
+- Every payment gets a receipt number both sides can see
+
+The rules that make it safe, none of them switchable:
+- **The amount comes from the link, never the request** — a fixed link charges
+  what the merchant set, whatever the payer sends
+- **Paying is a POST by a signed-in payer who pressed Pay** — loading a URL
+  can never move money
+- **Return links are shown as a button, never followed automatically** — no
+  open redirect
+- **Only earned Cybucks can be paid out**, same as a bank transfer, so a link
+  can't be used to farm the welcome grant
+- Deleting a link never deletes its receipts
+
+Needs `migration_cyvapay.sql`. The Treasury fee defaults to 0 (free to use) and
+is tunable from the Presidential Admin Panel. Login now honours a `?next=`
+path (same-site only) so signups return to where they started.
+
+---
+
 **On the card data.** The player lookup uses TheSportsDB's free API — set
 `SPORTSDB_API_KEY` to use your own key instead of the shared test key. There is
 no open Match Attax card API: Topps publishes none, and card databases like

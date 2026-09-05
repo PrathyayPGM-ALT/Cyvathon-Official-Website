@@ -25,125 +25,147 @@
   <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/service.css">
   <style>
     /* ============================================================
-       CYVAZON — its own livery. Warm amber on deep slate: this is a
-       courier service, not the Treasury, and it should feel like one.
-       Only the page body is re-skinned; the Cyvathon nav keeps the
-       site theme so you never lose your bearings.
+       CYVAZON — its own livery on the shared service chassis
+       (service.css). Warm amber on deep slate: this is a courier
+       service, not the Treasury, and it should feel like one.
+       Everything below is the part that is *only* Cyvazon — the
+       wordmark, the route line, the progress rail, the crew.
        ============================================================ */
     .cz{
       --cz-ink:#131a22;          /* deep slate, the Cyvazon "shelf" colour */
       --cz-ink-2:#1b2530;
       --cz-amber:#ff9900;
       --cz-amber-2:#ffb340;
+      --cz-deep:#c26f00;
       --cz-line:rgba(255,255,255,.1);
       --cz-text:#f2f6fa;
       --cz-muted:#9fb0c2;
       --cz-green:#1fd6a6;
+
+      /* hand the livery to the shared chassis */
+      --sv-ink:var(--cz-ink); --sv-ink-2:var(--cz-ink-2); --sv-line:var(--cz-line);
+      --sv-text:var(--cz-text); --sv-muted:var(--cz-muted);
+      --sv-accent:var(--cz-amber); --sv-accent-2:var(--cz-amber-2);
+      --sv-accent-deep:var(--cz-deep); --sv-accent-rgb:255,153,0;
+      --sv-on-accent:#191d21; --sv-good:var(--cz-green);
     }
     :root[data-theme="light"] .cz{
       --cz-ink:#ffffff; --cz-ink-2:#f4f7fb;
       --cz-line:rgba(15,40,80,.14);
       --cz-text:#10243f; --cz-muted:#5a6b80;
+      /* Bright amber on white is unreadable, so on light the livery drops to
+         the same colour a road sign would use. */
+      --cz-amber:#b96d00; --cz-amber-2:#8a5200; --cz-deep:#8a5200;
+      --sv-accent-rgb:185,109,0; --sv-on-accent:#fffaf2;
     }
 
     /* ---- banner ---- */
-    .cz-hero{ background:linear-gradient(135deg,var(--cz-ink),var(--cz-ink-2));
-      border:1px solid var(--cz-line); border-radius:20px; padding:2.1rem 2rem 1.9rem;
-      margin-bottom:2rem; position:relative; overflow:hidden; }
-    .cz-hero::after{ content:""; position:absolute; right:-60px; top:-60px; width:230px; height:230px;
-      border-radius:50%; background:radial-gradient(circle,rgba(255,153,0,.22),transparent 68%); }
-    .cz-logo{ display:flex; align-items:center; gap:.15rem; font-size:2.5rem; font-weight:800;
-      letter-spacing:-1.4px; color:var(--cz-text); line-height:1; }
+    /* A dashed road running along the foot of the banner. */
+    .cz-hero::after{ content:""; position:absolute; left:0; right:0; bottom:0; height:3px;
+      background:repeating-linear-gradient(90deg,var(--cz-amber) 0 15px,transparent 15px 27px);
+      opacity:.45; }
+    .cz-logo{ display:flex; align-items:center; gap:.15rem; font-weight:800;
+      font-size:clamp(1.95rem,6vw,2.55rem); letter-spacing:-1.4px;
+      color:var(--cz-text); line-height:1; }
     .cz-logo .zn{ color:var(--cz-amber); }
     /* our own delivery mark — a parcel on a route, not a swoosh */
-    .cz-mark{ width:152px; height:29px; margin:.4rem 0 .95rem 2px; display:block; }
-    .cz-hero p{ color:var(--cz-muted); max-width:620px; margin:0; line-height:1.65; font-size:.96rem; }
-    .cz-badges{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.1rem; }
-    .cz-badge{ display:inline-flex; align-items:center; gap:.4rem; padding:.36rem .8rem; border-radius:20px;
-      font-size:.78rem; font-weight:600; background:rgba(255,153,0,.13);
-      border:1px solid rgba(255,153,0,.36); color:var(--cz-amber-2); }
-    .cz-badge.free{ background:rgba(31,214,166,.13); border-color:rgba(31,214,166,.36); color:var(--cz-green); }
-
-    /* ---- panels ---- */
-    .cz-panel{ background:var(--cz-ink); border:1px solid var(--cz-line); border-radius:16px;
-      padding:1.4rem 1.5rem; margin-bottom:1.4rem; color:var(--cz-text); }
-    .cz-panel h3{ display:flex; align-items:center; gap:.55rem; margin-bottom:.35rem; font-size:1.08rem; }
-    .cz-panel h3 i{ color:var(--cz-amber); }
-    .cz-panel .sub{ color:var(--cz-muted); font-size:.86rem; margin-bottom:1rem; line-height:1.6; }
-    .cz .lbl{ display:block; font-size:.72rem; color:var(--cz-muted); margin-top:.55rem;
-      text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
-    .cz input, .cz select, .cz textarea{ background:var(--cz-ink-2); border:1px solid var(--cz-line);
-      color:var(--cz-text); margin-top:5px; }
-    .cz input:focus,.cz select:focus,.cz textarea:focus{ border-color:var(--cz-amber); box-shadow:0 0 0 3px rgba(255,153,0,.16); }
-    .cz button{ background:linear-gradient(135deg,var(--cz-amber),#e07f00); color:#191d21;
-      box-shadow:0 6px 18px rgba(255,153,0,.26); font-weight:700; }
-    .cz button:hover{ box-shadow:0 10px 24px rgba(255,153,0,.36); }
-    .cz button.ghost{ background:transparent; border:1px solid rgba(255,153,0,.5);
-      color:var(--cz-amber); box-shadow:none; }
-    .cz button.ghost:hover{ background:rgba(255,153,0,.1); }
-    .cz button.danger{ background:linear-gradient(135deg,#ff6b78,#e03e4d); color:#fff; }
-    .cz-grid2{ display:grid; gap:.7rem; grid-template-columns:1fr 1fr; }
-    .cz-grid2 .full{ grid-column:1/-1; }
-    @media(max-width:640px){ .cz-grid2{ grid-template-columns:1fr; } }
-
-    /* ---- tabs ---- */
-    .cz-tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.6rem; }
-    .cz-tabs button{ width:auto; margin:0; padding:.55rem 1.1rem; font-size:.86rem;
-      background:var(--cz-ink); color:var(--cz-muted); border:1px solid var(--cz-line); box-shadow:none; }
-    .cz-tabs button.on{ background:linear-gradient(135deg,var(--cz-amber),#e07f00); color:#191d21; border-color:transparent; }
-    .cz-tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem;
-      border-radius:20px; background:#e03e4d; color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
+    .cz-mark{ width:152px; height:29px; margin:.5rem 0 1rem 2px; display:block; max-width:60%; }
 
     /* ---- parcel card ---- */
-    .parcels{ display:grid; gap:.9rem; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
-    .parcel{ background:var(--cz-ink); border:1px solid var(--cz-line); border-left:4px solid var(--cz-amber);
-      border-radius:13px; padding:1rem 1.1rem; color:var(--cz-text); }
-    .parcel.done{ border-left-color:var(--cz-green); opacity:.78; }
+    .parcels{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); }
+    .parcel{ position:relative; overflow:hidden; color:var(--cz-text);
+      background:linear-gradient(165deg,var(--cz-ink),var(--cz-ink-2));
+      border:1px solid var(--cz-line); border-radius:16px; padding:1.05rem 1.15rem 1.1rem;
+      transition:transform .2s ease, border-color .2s, box-shadow .2s; }
+    /* The status stripe is a pseudo-element rather than a border so it can be
+       a gradient — a flat 4px slab always looks like a table cell. */
+    .parcel::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+      background:linear-gradient(180deg,var(--cz-amber),var(--cz-deep)); }
+    .parcel:hover{ transform:translateY(-3px); border-color:rgba(255,153,0,.36);
+      box-shadow:0 16px 34px rgba(3,8,20,.4); }
+    .parcel.done{ opacity:.86; }
+    .parcel.done::before{ background:linear-gradient(180deg,#2ee0b0,#0fb98a); }
     .parcel .top{ display:flex; justify-content:space-between; gap:.7rem; align-items:flex-start; }
-    .parcel .what{ font-weight:700; font-size:.98rem; line-height:1.25; }
+    .parcel .what{ font-weight:700; font-size:1rem; line-height:1.3; }
     .parcel .kind{ font-size:.63rem; font-weight:800; letter-spacing:.6px; text-transform:uppercase;
-      padding:.18rem .5rem; border-radius:20px; white-space:nowrap;
+      padding:.22rem .55rem; border-radius:20px; white-space:nowrap; flex:none;
       background:rgba(255,153,0,.15); color:var(--cz-amber-2); border:1px solid rgba(255,153,0,.32); }
     .parcel .kind.market{ background:rgba(88,196,255,.15); color:#7fd0ff; border-color:rgba(88,196,255,.34); }
     .parcel .kind.card{ background:rgba(167,139,250,.15); color:#c4b1ff; border-color:rgba(167,139,250,.34); }
-    .parcel .leg{ display:flex; align-items:center; gap:.55rem; margin:.75rem 0; font-size:.83rem; }
-    .parcel .leg .stop{ flex:1; min-width:0; }
-    .parcel .leg .stop b{ display:block; }
-    .parcel .leg .stop span{ color:var(--cz-muted); font-size:.73rem; }
-    .parcel .leg i{ color:var(--cz-amber); }
-    .parcel .who{ font-size:.78rem; color:var(--cz-muted); }
-    .parcel .note{ font-size:.78rem; color:var(--cz-muted); font-style:italic; margin-top:.4rem; }
-    .parcel .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.85rem; }
-    .parcel .acts button{ width:auto; margin:0; padding:.44rem .9rem; font-size:.79rem; }
+    :root[data-theme="light"] .parcel .kind.market{ color:#1769c9; }
+    :root[data-theme="light"] .parcel .kind.card{ color:#6c4ed9; }
+    .parcel .who{ font-size:.79rem; color:var(--cz-muted); margin-top:.25rem; }
+    .parcel .who b{ color:var(--cz-text); }
+    .parcel .note{ font-size:.79rem; color:var(--cz-muted); font-style:italic; margin-top:.6rem;
+      padding-left:.65rem; border-left:2px solid var(--cz-line); }
+    .parcel .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.9rem; align-items:center; }
+    .parcel .acts:empty{ display:none; }
+    .parcel .acts button{ width:auto; margin:0; padding:.45rem .9rem; font-size:.79rem; }
+
+    /* ---- the route ---- */
+    /* Two stops and the road between them. A parcel is a journey, so the card
+       should show one rather than list two addresses. */
+    .route{ display:flex; align-items:center; gap:.55rem; margin-top:.9rem;
+      padding:.7rem .85rem; border-radius:12px;
+      background:rgba(255,255,255,.035); border:1px solid var(--cz-line); }
+    :root[data-theme="light"] .route{ background:rgba(15,40,80,.035); }
+    .route .stop{ display:flex; align-items:center; gap:.5rem; flex:1; min-width:0; }
+    .route .stop > i{ font-size:.82rem; color:var(--cz-amber); flex:none; }
+    .route .stop div{ min-width:0; }
+    .route .stop b{ display:block; font-size:.88rem; line-height:1.3;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .route .stop span{ display:block; font-size:.71rem; color:var(--cz-muted);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .route .road{ position:relative; flex:.9; min-width:40px; height:2px;
+      background:repeating-linear-gradient(90deg,rgba(255,153,0,.6) 0 6px,transparent 6px 12px); }
+    .route .road i{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+      padding:0 .32rem; font-size:.82rem; color:var(--cz-amber); background:var(--cz-ink); }
 
     /* ---- progress rail ---- */
-    .rail{ display:flex; align-items:center; gap:.3rem; margin-top:.7rem; }
-    .rail .dot{ width:9px; height:9px; border-radius:50%; background:var(--cz-line); flex:none; }
-    .rail .dot.on{ background:var(--cz-amber); box-shadow:0 0 0 3px rgba(255,153,0,.16); }
-    .rail .dot.done{ background:var(--cz-green); }
-    .rail .bar{ flex:1; height:2px; background:var(--cz-line); }
-    .rail .bar.on{ background:var(--cz-amber); }
-    .rail-lbl{ font-size:.68rem; color:var(--cz-muted); margin-top:.3rem; letter-spacing:.3px; }
+    /* Four dots with their own captions, so you can read where a parcel is
+       without decoding a colour. */
+    .rail{ display:flex; margin-top:.95rem; }
+    .rail .step{ flex:1; position:relative; text-align:center; }
+    .rail .step + .step::before{ content:""; position:absolute; left:-50%; right:50%; top:5px;
+      height:2px; background:var(--cz-line); }
+    .rail .step.done::before{ background:var(--cz-green); }
+    .rail .step.on::before{ background:var(--cz-amber); }
+    .rail .d{ position:relative; z-index:1; display:block; width:12px; height:12px; margin:0 auto;
+      border-radius:50%; background:var(--cz-ink-2); border:2px solid var(--cz-line); }
+    .rail .step.done .d{ background:var(--cz-green); border-color:var(--cz-green); }
+    .rail .step.on .d{ background:var(--cz-amber); border-color:var(--cz-amber);
+      animation:czPulse 2s ease-in-out infinite; }
+    .rail em{ display:block; font-style:normal; font-size:.66rem; letter-spacing:.2px;
+      color:var(--cz-muted); margin-top:.42rem; }
+    .rail .step.on em{ color:var(--cz-amber-2); font-weight:700; }
+    .rail .step.done em{ color:var(--cz-muted); }
+    @keyframes czPulse{ 0%,100%{ box-shadow:0 0 0 4px rgba(255,153,0,.20); }
+                        50%{ box-shadow:0 0 0 8px rgba(255,153,0,.04); } }
 
     /* ---- couriers ---- */
-    .crew{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); }
-    .crew-c{ display:flex; align-items:center; gap:.75rem; padding:.85rem 1rem; border-radius:13px;
-      background:var(--cz-ink); border:1px solid var(--cz-line); color:var(--cz-text); }
-    .crew-c .av{ width:40px; height:40px; border-radius:50%; flex:none; display:grid; place-items:center;
-      background:linear-gradient(135deg,var(--cz-amber),#e07f00); color:#191d21; font-weight:800; }
-    .crew-c b{ display:block; font-size:.92rem; }
-    .crew-c span{ font-size:.74rem; color:var(--cz-muted); }
-    .empty{ color:var(--cz-muted); text-align:center; padding:2.2rem 1rem; grid-column:1/-1; }
+    .crew{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+    .crew-c{ display:flex; align-items:center; gap:.8rem; padding:.85rem 1rem; border-radius:14px;
+      background:linear-gradient(165deg,var(--cz-ink),var(--cz-ink-2));
+      border:1px solid var(--cz-line); color:var(--cz-text);
+      transition:transform .2s ease, border-color .2s, box-shadow .2s; }
+    .crew-c:hover{ transform:translateY(-2px); border-color:rgba(255,153,0,.35);
+      box-shadow:0 12px 26px rgba(3,8,20,.34); }
+    .crew-c .av{ width:42px; height:42px; border-radius:50%; flex:none; display:grid; place-items:center;
+      background:linear-gradient(135deg,var(--cz-amber),var(--cz-deep)); color:#191d21; font-weight:800;
+      box-shadow:0 4px 12px rgba(255,153,0,.25); }
+    .crew-c b{ display:block; font-size:.93rem; }
+    .crew-c span{ display:block; font-size:.74rem; color:var(--cz-muted); }
   </style>
 </head>
 <body>
   <div id="nav"></div>
 
-  <div class="wrap cz">
+  <div class="wrap svc cz">
     <!-- HERO -->
-    <div class="cz-hero">
+    <div class="svc-hero cz-hero">
       <div class="cz-logo">Cyv<span class="zn">azon</span></div>
       <!-- Our own mark: a parcel travelling a dotted route between two stops.
            Deliberately not a swoosh under the wordmark. -->
@@ -159,21 +181,21 @@
       </svg>
       <p>The national delivery service. Anything, to anyone, anywhere in school — a book to
         the library, a Match Attax card to another form room, something you sold on the
-        marketplace. <b style="color:var(--cz-text)">Delivery is free.</b> Couriers are citizens
+        marketplace. <b>Delivery is free.</b> Couriers are citizens
         who signed up to run parcels, and the nation pays their wage through the delivery levy.</p>
-      <div class="cz-badges" id="heroBadges"></div>
+      <div class="svc-badges" id="heroBadges"></div>
     </div>
 
-    <div class="cz-tabs" id="tabs"></div>
-    <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
+    <div class="svc-tabs" id="tabs" role="tablist"></div>
+    <p id="msg" class="svc-alert"></p>
 
     <!-- SEND -->
     <section id="tab-send" class="czpane">
-      <div class="cz-panel">
+      <div class="svc-panel">
         <h3><i class="fas fa-box-open"></i> Send something</h3>
         <p class="sub">Free, whatever it is. Tell us which class it's leaving from and which
           class it's going to — a courier picks it up from there.</p>
-        <div class="cz-grid2">
+        <div class="svc-grid2">
           <div><label class="lbl">Send to</label>
             <input id="sTo" list="citizenList" placeholder="Citizen's username">
             <datalist id="citizenList"></datalist></div>
@@ -191,41 +213,42 @@
             <input id="sNotes" placeholder="e.g. 'ask for me at the door — break time only'"></div>
         </div>
         <button style="margin-top:1.1rem;" onclick="sendParcel()"><i class="fas fa-paper-plane"></i> Book a free delivery</button>
-        <p id="sendMsg" class="small" style="text-align:center;"></p>
+        <p id="sendMsg" class="svc-alert"></p>
       </div>
 
-      <div class="cz-panel">
+      <div class="svc-panel">
         <h3><i class="fas fa-location-dot"></i> Where to find you</h3>
         <p class="sub">Set your usual class once and every delivery to you is addressed
           there automatically — including things you buy on the marketplace and cards you trade.</p>
-        <div class="cz-grid2">
+        <div class="svc-grid2">
           <div><label class="lbl">My class</label><input id="hClass" placeholder="e.g. 9C"></div>
           <div><label class="lbl">Usually found in</label><select id="hArea"></select></div>
         </div>
         <button class="ghost" style="margin-top:.9rem;width:auto;" onclick="saveHome()">Save</button>
-        <span id="homeMsg" class="small" style="margin-left:.6rem;"></span>
+        <span id="homeMsg" class="svc-alert" style="margin-left:.6rem;"></span>
       </div>
     </section>
 
     <!-- MY PARCELS -->
     <section id="tab-mine" class="czpane" style="display:none;">
-      <h3 style="margin-bottom:.3rem;"><i class="fas fa-truck-ramp-box" style="color:var(--cz-amber)"></i> Coming to me</h3>
-      <p class="small" style="margin-bottom:1rem;">Confirm each one when it actually reaches your hands — that's what closes the run and credits the courier.</p>
-      <div class="parcels" id="incoming"></div>
-      <h3 style="margin:2.2rem 0 .3rem;"><i class="fas fa-hand-holding-box" style="color:var(--cz-amber)"></i> For me to hand over</h3>
-      <p class="small" style="margin-bottom:1rem;">Things you've sold, traded or posted. Have them ready for the courier.</p>
-      <div class="parcels" id="sending"></div>
+      <h3 class="svc-head"><i class="fas fa-truck-ramp-box"></i> Coming to me</h3>
+      <p class="svc-note">Confirm each one when it actually reaches your hands — that's what closes the run and credits the courier.</p>
+      <div class="parcels svc-anim" id="incoming"></div>
+      <h3 class="svc-head" style="margin-top:2.2rem;"><i class="fas fa-hand-holding-box"></i> For me to hand over</h3>
+      <p class="svc-note">Things you've sold, traded or posted. Have them ready for the courier.</p>
+      <div class="parcels svc-anim" id="sending"></div>
     </section>
 
     <!-- COURIER JOBS -->
     <section id="tab-jobs" class="czpane" style="display:none;">
       <div id="courierGate"></div>
       <div id="courierBody" style="display:none;">
-        <h3 style="margin-bottom:.3rem;"><i class="fas fa-bolt" style="color:var(--cz-amber)"></i> Runs I'm carrying</h3>
-        <div class="parcels" id="carrying" style="margin-bottom:2.2rem;"></div>
-        <h3 style="margin-bottom:.3rem;"><i class="fas fa-list-check" style="color:var(--cz-amber)"></i> Open jobs</h3>
-        <p class="small" style="margin-bottom:1rem;">Claim one and it's yours to run.</p>
-        <div class="parcels" id="board"></div>
+        <h3 class="svc-head"><i class="fas fa-bolt"></i> Runs I'm carrying</h3>
+        <p class="svc-note">Everything you have claimed, in the order you should run it.</p>
+        <div class="parcels svc-anim" id="carrying" style="margin-bottom:2.2rem;"></div>
+        <h3 class="svc-head"><i class="fas fa-list-check"></i> Open jobs</h3>
+        <p class="svc-note">Claim one and it's yours to run.</p>
+        <div class="parcels svc-anim" id="board"></div>
       </div>
     </section>
 
@@ -236,10 +259,10 @@
 
     <!-- CREW -->
     <section id="tab-crew" class="czpane" style="display:none;">
-      <div class="cz-panel" id="joinPanel"></div>
-      <h3 style="margin-bottom:.3rem;"><i class="fas fa-people-carry-box" style="color:var(--cz-amber)"></i> The courier crew</h3>
-      <p class="small" style="margin-bottom:1rem;">Citizens keeping the Republic moving.</p>
-      <div class="crew" id="crew"></div>
+      <div class="svc-panel" id="joinPanel"></div>
+      <h3 class="svc-head"><i class="fas fa-people-carry-box"></i> The courier crew</h3>
+      <p class="svc-note">Citizens keeping the Republic moving.</p>
+      <div class="crew svc-anim" id="crew"></div>
     </section>
   </div>
 
@@ -249,27 +272,28 @@
     const esc=(s)=>(s==null?"":String(s))
       .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
       .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-    const msg=(t,ok=false,el="msg")=>{const m=document.getElementById(el);
-      m.textContent=t||""; m.style.color= ok?"var(--cz-green)":"var(--red)";};
+    const msg=(t,ok=false,el="msg")=>svcAlert(el,t,ok);
 
     const STEPS = ["open","claimed","picked_up","delivered"];
-    const STEP_LABEL = {open:"Waiting for a courier", claimed:"Courier assigned",
+    // Short enough to sit under a dot; the long version is the tooltip.
+    const STEP_LABEL = {open:"Booked", claimed:"Claimed",
                         picked_up:"On the way", delivered:"Delivered"};
+    const STEP_TITLE = {open:"Waiting for a courier to claim it",
+                        claimed:"A courier has it on their list",
+                        picked_up:"Collected and moving", delivered:"Handed over and signed for"};
 
     function rail(status){
       const i = STEPS.indexOf(status);
-      let h = "";
-      STEPS.forEach((s,n)=>{
-        if(n) h += `<div class="bar ${n<=i?"on":""}"></div>`;
-        h += `<div class="dot ${n<i?"done":(n===i?"on":"")}"></div>`;
-      });
-      return `<div class="rail">${h}</div><div class="rail-lbl">${esc(STEP_LABEL[status]||status)}</div>`;
+      return `<div class="rail">` + STEPS.map((s,n)=>
+        `<div class="step ${n<i?"done":(n===i?"on":"")}" title="${esc(STEP_TITLE[s])}">
+           <span class="d"></span><em>${esc(STEP_LABEL[s])}</em></div>`).join("") + `</div>`;
     }
 
-    function where(cls, area){
+    // One stop on the route: the class in bold, where in the school underneath.
+    function stop(cls, area, icon){
       const c = esc(cls), a = esc(area);
-      if(c && a) return `<b>${c}</b><span>${a}</span>`;
-      return `<b>${c||a||"—"}</b><span>${c&&a?"":""}</span>`;
+      return `<div class="stop"><i class="fas ${icon}"></i>
+        <div><b>${c || a || "—"}</b><span>${c && a ? a : (c || a ? "" : "not given")}</span></div></div>`;
     }
 
     function parcel(p, role){
@@ -299,13 +323,13 @@
           <span class="kind ${esc(p.kind)}">${esc(kindLbl)}</span>
         </div>
         <div class="who">${other}${p.courier?` · courier <b>${esc(p.courier)}</b>`:""}</div>
-        <div class="leg">
-          <div class="stop">${where(p.pickup_class,p.pickup_area)}</div>
-          <i class="fas fa-arrow-right-long"></i>
-          <div class="stop">${where(p.dropoff_class,p.dropoff_area)}</div>
+        <div class="route">
+          ${stop(p.pickup_class,p.pickup_area,"fa-circle-dot")}
+          <div class="road"><i class="fas fa-truck-fast"></i></div>
+          ${stop(p.dropoff_class,p.dropoff_area,"fa-location-dot")}
         </div>
         ${rail(p.status)}
-        ${p.notes?`<div class="note">"${esc(p.notes)}"</div>`:""}
+        ${p.notes?`<div class="note">${esc(p.notes)}</div>`:""}
         <div class="acts">${acts}</div>
       </div>`;
     }
@@ -345,23 +369,33 @@
     /* ---- board ---- */
     async function loadBoard(){
       let d;
+      // Shimmer blocks while the fetch is in flight — an empty panel reads as
+      // a broken page, and this list is often the first thing you look at.
+      ["incoming","sending","carrying","board"].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el && !el.innerHTML) el.innerHTML = svcSkeleton(2,"card");
+      });
       try{ d = await api("/cyvazon/board"); }catch(e){ return msg(e.message); }
-      const put=(id,list,role,empty)=>{
+      const put=(id,list,role,icon,title,hint)=>{
         document.getElementById(id).innerHTML = list.length
-          ? list.map(p=>parcel(p,role)).join("") : `<p class="empty">${empty}</p>`;
+          ? list.map(p=>parcel(p,role)).join("") : svcEmpty(icon,title,hint);
       };
-      put("incoming", d.incoming, "incoming", "Nothing on its way to you.");
-      put("sending",  d.sending,  "sending",  "Nothing waiting to be collected from you.");
+      put("incoming", d.incoming, "incoming", "fa-inbox", "Nothing on its way to you",
+          "When somebody sends you something \u2014 or you buy on the marketplace \u2014 it turns up here.");
+      put("sending",  d.sending,  "sending",  "fa-hand-holding-box", "Nothing to hand over",
+          "Things you sell or post sit here until a courier collects them.");
 
       const gate = document.getElementById("courierGate");
       if(d.courier){
         gate.innerHTML = "";
         document.getElementById("courierBody").style.display = "block";
-        put("carrying", d.carrying, "carrying", "You're not carrying anything right now.");
-        put("board",    d.board,    "board",    "No open jobs — the Republic is all caught up.");
+        put("carrying", d.carrying, "carrying", "fa-truck-fast", "You're not carrying anything",
+            "Claim a job from the board below and it appears here.");
+        put("board",    d.board,    "board",    "fa-clipboard-check", "No open jobs",
+            "The Republic is all caught up. Worth checking back after break.");
       }else{
         document.getElementById("courierBody").style.display = "none";
-        gate.innerHTML = `<div class="cz-panel">
+        gate.innerHTML = `<div class="svc-panel">
           <h3><i class="fas fa-id-badge"></i> Couriers only</h3>
           <p class="sub">${CFG.courier_status === "pending"
             ? "Your application is with the President. Once it is approved, the jobs board opens here."
@@ -399,10 +433,11 @@
       document.getElementById("crew").innerHTML = d.couriers.length
         ? d.couriers.map(c=>`<div class="crew-c">
             <div class="av" ${avatarStyle(c.avatar)}>${c.avatar?"":esc((c.username[0]||"?").toUpperCase())}</div>
-            <div><b>${esc(c.username)}${c.me?" (you)":""}</b>
-              <span>${c.deliveries} delivered${c.covers?" · "+esc(c.covers):""}</span></div>
+            <div style="min-width:0"><b>${esc(c.username)}${c.me?" (you)":""}</b>
+              <span>${esc(c.deliveries)} delivered${c.covers?" \u00b7 "+esc(c.covers):""}</span></div>
           </div>`).join("")
-        : `<p class="empty">No couriers yet — the service needs you.</p>`;
+        : svcEmpty("fa-people-carry-box","No couriers yet",
+                   "The service needs you \u2014 apply above and the President will vet you.");
       drawJoin();
     }
     function drawJoin(){
@@ -460,7 +495,7 @@
       try{ d = await api("/cyvazon/admin"); }
       catch(e){
         document.getElementById("adminBody").innerHTML =
-          `<div class="cz-panel"><p class="sub">${esc(e.message)}</p></div>`;
+          `<div class="svc-panel"><p class="sub">${esc(e.message)}</p></div>`;
         return;
       }
       ADMIN_PENDING = d.pending.length;
@@ -480,42 +515,42 @@
         ? d.pending.map(c=>line(c,
             `<button style="${btn}" onclick="decide('${esc(c.username)}','approve')">Approve</button>
              <button class="ghost" style="${btn}" onclick="decide('${esc(c.username)}','reject')">Turn away</button>`)).join("")
-        : `<p class="empty">No applications waiting.</p>`;
+        : svcEmpty("fa-user-check","No applications waiting",
+                   "Every citizen who asks to carry parcels lands here first.");
 
       const appr = d.approved.length
         ? d.approved.map(c=>line(c,
             `<button class="danger" style="${btn}" onclick="decide('${esc(c.username)}','revoke')">Revoke</button>`)).join("")
-        : `<p class="empty">No approved couriers yet.</p>`;
+        : svcEmpty("fa-id-badge","No approved couriers yet",
+                   "Approve an application above and the crew starts here.");
 
       const pc = d.parcels || {};
-      const stat = (k,v,c)=>`<div style="flex:1;min-width:118px;padding:.75rem .9rem;border-radius:12px;
-        background:var(--cz-ink-2);border:1px solid var(--cz-line);">
-        <div style="font-size:1.5rem;font-weight:800;color:${c}">${v||0}</div>
-        <div style="font-size:.7rem;color:var(--cz-muted);text-transform:uppercase;letter-spacing:.5px">${k}</div></div>`;
+      const stat = (k,v,icon,tone)=>`<div class="svc-stat ${tone||""}">
+        <i class="fas ${icon}"></i><b>${esc(v==null?0:v)}</b><span>${esc(k)}</span></div>`;
 
       document.getElementById("adminBody").innerHTML = `
-        <div class="cz-panel">
+        <div class="svc-panel">
           <h3><i class="fas fa-chart-simple"></i> Service at a glance</h3>
           <p class="sub">What Cyvazon is costing the Treasury, and what is moving right now.</p>
-          <div style="display:flex;flex-wrap:wrap;gap:.7rem;">
-            ${stat("Awaiting a courier", pc.open, "var(--cz-amber)")}
-            ${stat("In transit", (pc.claimed||0)+(pc.picked_up||0), "var(--cz-amber)")}
-            ${stat("Delivered", pc.delivered, "var(--cz-green)")}
-            ${stat("Couriers on the books", d.approved.length, "var(--cz-text)")}
-            ${stat("Wage bill per period", d.weekly_cost + " CB", "var(--cz-text)")}
+          <div class="svc-stats" style="margin:0">
+            ${stat("Awaiting a courier", pc.open, "fa-hourglass-half")}
+            ${stat("In transit", (pc.claimed||0)+(pc.picked_up||0), "fa-truck-fast")}
+            ${stat("Delivered", pc.delivered, "fa-circle-check", "good")}
+            ${stat("Couriers on the books", d.approved.length, "fa-id-badge", "plain")}
+            ${stat("Wage bill per period", d.weekly_cost + " CB", "fa-sack-dollar", "plain")}
           </div>
           <p class="sub" style="margin:.9rem 0 0;">Funded by the ${(d.levy*100).toFixed(0)}% delivery levy.
             Change the wage or the levy in the <a class="link" href="/admin">Presidential Admin Panel</a>.</p>
         </div>
 
-        <div class="cz-panel">
+        <div class="svc-panel">
           <h3><i class="fas fa-user-check"></i> Courier applications${
-            d.pending.length?` <span class="cz-badge">${d.pending.length} waiting</span>`:""}</h3>
+            d.pending.length?` <span class="svc-badge">${d.pending.length} waiting</span>`:""}</h3>
           <p class="sub">Nobody carries another citizen's property until you approve them.</p>
           <div class="crew" style="grid-template-columns:1fr;">${pend}</div>
         </div>
 
-        <div class="cz-panel">
+        <div class="svc-panel">
           <h3><i class="fas fa-id-badge"></i> Approved couriers</h3>
           <p class="sub">Revoking a licence releases anything they are holding back onto the board.</p>
           <div class="crew" style="grid-template-columns:1fr;">${appr}</div>
@@ -566,10 +601,10 @@
 
     function drawHero(){
       document.getElementById("heroBadges").innerHTML = `
-        <span class="cz-badge free"><i class="fas fa-gift"></i> Delivery always free</span>
-        <span class="cz-badge"><i class="fas fa-sack-dollar"></i> Couriers earn ${esc(CFG.wage)} CB / ${esc(CFG.salary_days)} days</span>
-        <span class="cz-badge"><i class="fas fa-receipt"></i> Funded by a ${(CFG.levy*100).toFixed(0)}% delivery levy</span>
-        ${CFG.open?"":`<span class="cz-badge" style="background:rgba(224,62,77,.15);border-color:rgba(224,62,77,.4);color:#ff8f9a"><i class="fas fa-ban"></i> Service suspended</span>`}`;
+        <span class="svc-badge free"><i class="fas fa-gift"></i> Delivery always free</span>
+        <span class="svc-badge"><i class="fas fa-sack-dollar"></i> Couriers earn ${esc(CFG.wage)} CB / ${esc(CFG.salary_days)} days</span>
+        <span class="svc-badge"><i class="fas fa-receipt"></i> Funded by a ${(CFG.levy*100).toFixed(0)}% delivery levy</span>
+        ${CFG.open?"":`<span class="svc-badge" style="background:rgba(224,62,77,.15);border-color:rgba(224,62,77,.4);color:#ff8f9a"><i class="fas fa-ban"></i> Service suspended</span>`}`;
     }
 
     async function refresh(){

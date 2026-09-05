@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvapay · Cyvathon</title>
+  <!-- social / SEO metadata -->
+  <meta name="description" content="Cyvapay — take Cybucks payments on any website. Make a link, paste the button, get paid." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/cyvapay" />
+  <meta name="theme-color" content="#1fd6a6" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="Cyvapay · Cyvathon" />
+  <meta property="og:description" content="Take Cybucks payments on any website." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/cyvapay" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Cyvapay · Cyvathon" />
+  <meta name="twitter:description" content="Take Cybucks payments on any website." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    /* ============================================================
+       CYVAPAY — its own livery. Teal on deep slate, the colour of a
+       receipt stamp. A payment gateway should feel calm and exact,
+       not like a shop.
+       ============================================================ */
+    .cp{
+      --cp-ink:#0e1a1a;
+      --cp-ink-2:#14262a;
+      --cp-teal:#1fd6a6;
+      --cp-teal-2:#5cebc4;
+      --cp-deep:#0e9d78;
+      --cp-line:rgba(255,255,255,.1);
+      --cp-text:#eefaf6;
+      --cp-muted:#9db8b2;
+      --cp-warn:#ffce56;
+      --cp-bad:#ff5d6c;
+    }
+    :root[data-theme="light"] .cp{
+      --cp-ink:#ffffff; --cp-ink-2:#eef7f4;
+      --cp-line:rgba(15,60,50,.14);
+      --cp-text:#0d2a24; --cp-muted:#4f6b64;
+      --cp-teal:#0f9d72; --cp-teal-2:#0b7d5b;
+    }
+
+    /* ---- hero ---- */
+    .cp-hero{ background:linear-gradient(135deg,var(--cp-ink),var(--cp-ink-2));
+      border:1px solid var(--cp-line); border-radius:20px; padding:2.1rem 2rem 1.9rem;
+      margin-bottom:2rem; position:relative; overflow:hidden; }
+    .cp-hero::after{ content:""; position:absolute; right:-70px; top:-70px; width:260px; height:260px;
+      border-radius:50%; background:radial-gradient(circle,rgba(31,214,166,.2),transparent 68%); }
+    .cp-brand{ display:flex; align-items:center; gap:.85rem; margin-bottom:.5rem; }
+    .cp-brand svg{ width:44px; height:44px; flex:none; }
+    .cp-logo{ font-size:2.35rem; font-weight:800; letter-spacing:-1.2px; color:var(--cp-text); line-height:1; }
+    .cp-logo .t{ color:var(--cp-teal); }
+    .cp-hero p{ color:var(--cp-muted); max-width:640px; margin:0; line-height:1.65; font-size:.96rem; }
+    .cp-badges{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.1rem; }
+    .cp-badge{ display:inline-flex; align-items:center; gap:.4rem; padding:.36rem .8rem; border-radius:20px;
+      font-size:.78rem; font-weight:600; background:rgba(31,214,166,.13);
+      border:1px solid rgba(31,214,166,.36); color:var(--cp-teal-2); }
+
+    /* ---- panels ---- */
+    .cp-panel{ background:var(--cp-ink); border:1px solid var(--cp-line); border-radius:16px;
+      padding:1.4rem 1.5rem; margin-bottom:1.4rem; color:var(--cp-text); }
+    .cp-panel h3{ display:flex; align-items:center; gap:.55rem; margin-bottom:.35rem; font-size:1.08rem; }
+    .cp-panel h3 i{ color:var(--cp-teal); }
+    .cp-panel .sub{ color:var(--cp-muted); font-size:.86rem; margin-bottom:1rem; line-height:1.6; }
+    .cp .lbl{ display:block; font-size:.72rem; color:var(--cp-muted); margin-top:.55rem;
+      text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+    .cp input,.cp select,.cp textarea{ background:var(--cp-ink-2); border:1px solid var(--cp-line);
+      color:var(--cp-text); margin-top:5px; }
+    .cp input:focus,.cp select:focus,.cp textarea:focus{ border-color:var(--cp-teal);
+      box-shadow:0 0 0 3px rgba(31,214,166,.16); }
+    .cp button{ background:linear-gradient(135deg,var(--cp-teal),var(--cp-deep)); color:#04231a;
+      box-shadow:0 6px 18px rgba(31,214,166,.26); font-weight:700; }
+    .cp button:hover{ box-shadow:0 10px 24px rgba(31,214,166,.36); }
+    .cp button.ghost{ background:transparent; border:1px solid rgba(31,214,166,.5);
+      color:var(--cp-teal); box-shadow:none; }
+    .cp button.ghost:hover{ background:rgba(31,214,166,.1); }
+    .cp button.danger{ background:linear-gradient(135deg,#ff6b78,#e03e4d); color:#fff; }
+    .cp-grid2{ display:grid; gap:.7rem; grid-template-columns:1fr 1fr; }
+    .cp-grid2 .full{ grid-column:1/-1; }
+    @media(max-width:640px){ .cp-grid2{ grid-template-columns:1fr; } }
+    .cp label.chk{ display:flex; align-items:center; gap:.5rem; font-size:.84rem;
+      color:var(--cp-muted); margin-top:.6rem; }
+    .cp label.chk input{ width:auto; margin:0; }
+
+    /* ---- tabs ---- */
+    .cp-tabs{ display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.6rem; }
+    .cp-tabs button{ width:auto; margin:0; padding:.55rem 1.1rem; font-size:.86rem;
+      background:var(--cp-ink); color:var(--cp-muted); border:1px solid var(--cp-line); box-shadow:none; }
+    .cp-tabs button.on{ background:linear-gradient(135deg,var(--cp-teal),var(--cp-deep));
+      color:#04231a; border-color:transparent; }
+    .cp-tabs .badge{ display:inline-block; min-width:18px; padding:0 5px; margin-left:.4rem;
+      border-radius:20px; background:#e03e4d; color:#fff; font-size:.7rem; line-height:18px; text-align:center; }
+
+    /* ---- stats ---- */
+    .stats{ display:flex; flex-wrap:wrap; gap:.7rem; margin-bottom:1.4rem; }
+    .stat{ flex:1; min-width:130px; padding:.8rem 1rem; border-radius:12px;
+      background:var(--cp-ink); border:1px solid var(--cp-line); color:var(--cp-text); }
+    .stat b{ display:block; font-size:1.5rem; font-weight:800; letter-spacing:-.6px; color:var(--cp-teal); }
+    .stat span{ font-size:.7rem; color:var(--cp-muted); text-transform:uppercase; letter-spacing:.5px; }
+
+    /* ---- link cards ---- */
+    .links{ display:grid; gap:1rem; }
+    .lnk{ background:var(--cp-ink); border:1px solid var(--cp-line); border-left:4px solid var(--cp-teal);
+      border-radius:14px; padding:1.1rem 1.25rem; color:var(--cp-text); }
+    .lnk.off{ border-left-color:var(--cp-muted); opacity:.75; }
+    .lnk .top{ display:flex; justify-content:space-between; gap:.8rem; flex-wrap:wrap; align-items:flex-start; }
+    .lnk .nm{ font-weight:700; font-size:1.02rem; }
+    .lnk .meta{ font-size:.78rem; color:var(--cp-muted); margin-top:.15rem; }
+    .lnk .amt{ font-size:1.3rem; font-weight:800; color:var(--cp-teal); white-space:nowrap; }
+    .lnk .amt small{ font-size:.72rem; color:var(--cp-muted); font-weight:600; display:block; text-align:right; }
+    .lnk .urlbox{ display:flex; gap:.4rem; margin-top:.8rem; }
+    .lnk .urlbox input{ margin:0; font-family:Consolas,monospace; font-size:.8rem; padding:.5rem .7rem; }
+    .lnk .urlbox button{ width:auto; margin:0; padding:.5rem .9rem; font-size:.8rem; flex:none; }
+    .lnk .acts{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.75rem; }
+    .lnk .acts button{ width:auto; margin:0; padding:.42rem .85rem; font-size:.78rem; }
+    .lnk .state{ font-size:.64rem; font-weight:800; letter-spacing:.6px; text-transform:uppercase;
+      padding:.18rem .5rem; border-radius:20px; }
+    .lnk .state.on{ background:rgba(31,214,166,.16); color:var(--cp-teal); }
+    .lnk .state.off{ background:rgba(255,255,255,.07); color:var(--cp-muted); }
+
+    /* ---- embed ---- */
+    .embed{ margin-top:.8rem; }
+    .embed .tabs2{ display:flex; gap:.35rem; margin-bottom:.4rem; }
+    .embed .tabs2 button{ width:auto; margin:0; padding:.3rem .7rem; font-size:.72rem;
+      background:var(--cp-ink-2); color:var(--cp-muted); box-shadow:none; border:1px solid var(--cp-line); }
+    .embed .tabs2 button.on{ color:var(--cp-teal); border-color:rgba(31,214,166,.5); }
+    .embed textarea{ font-family:Consolas,monospace; font-size:.76rem; line-height:1.5;
+      margin:0; min-height:88px; resize:vertical; }
+    .embed .prev{ margin-top:.6rem; padding:.9rem; border-radius:10px; text-align:center;
+      background:#f4f6f8; border:1px dashed #c9d3dc; }
+
+    /* ---- receipts ---- */
+    .rcpts{ display:grid; gap:.6rem; }
+    .rc{ display:flex; align-items:center; gap:.9rem; padding:.75rem 1rem; border-radius:12px;
+      background:var(--cp-ink); border:1px solid var(--cp-line); color:var(--cp-text); }
+    .rc .ic{ width:36px; height:36px; border-radius:10px; flex:none; display:grid; place-items:center;
+      font-size:.85rem; }
+    .rc .ic.in{ background:rgba(31,214,166,.15); color:var(--cp-teal); }
+    .rc .ic.out{ background:rgba(255,206,86,.15); color:var(--cp-warn); }
+    .rc .mid{ flex:1; min-width:0; }
+    .rc .mid b{ display:block; font-size:.92rem; }
+    .rc .mid span{ font-size:.75rem; color:var(--cp-muted); }
+    .rc .amt{ font-weight:800; white-space:nowrap; }
+    .rc .amt.in{ color:var(--cp-teal); }
+    .rc .amt.out{ color:var(--cp-warn); }
+    .rc .ref{ font-family:Consolas,monospace; font-size:.7rem; color:var(--cp-muted); }
+    .empty{ color:var(--cp-muted); text-align:center; padding:2.2rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap cp">
+    <!-- HERO -->
+    <div class="cp-hero">
+      <div class="cp-brand">
+        <!-- Our own mark: a card with a receipt line. -->
+        <svg viewBox="0 0 44 44" fill="none" aria-hidden="true">
+          <rect x="4" y="10" width="36" height="25" rx="5" stroke="#1fd6a6" stroke-width="2.6"/>
+          <path d="M4 18h36" stroke="#1fd6a6" stroke-width="2.6"/>
+          <path d="M11 27h8" stroke="#1fd6a6" stroke-width="2.6" stroke-linecap="round"/>
+          <circle cx="32" cy="27" r="2.4" fill="#1fd6a6"/>
+        </svg>
+        <div class="cp-logo">Cyva<span class="t">pay</span></div>
+      </div>
+      <p>Take Cybucks payments on <b style="color:var(--cp-text)">any website</b>. Make a
+        payment link, paste the button into your page, and the money lands in your Cyvathon
+        account. Anyone who clicks it gets a hosted checkout — and if they don't have an
+        account yet, they're offered a free one and come straight back to pay.</p>
+      <div class="cp-badges" id="heroBadges"></div>
+    </div>
+
+    <div class="cp-tabs" id="tabs"></div>
+    <p id="msg" class="small" style="text-align:center;min-height:1.2em;"></p>
+
+    <!-- LINKS -->
+    <section id="tab-links" class="cppane">
+      <div class="stats" id="stats"></div>
+      <div class="cp-panel">
+        <h3><i class="fas fa-link"></i> Make a payment link</h3>
+        <p class="sub">Give it a name and a price. You'll get a link and a button you can put
+          anywhere — a website, a blog, a message.</p>
+        <div class="cp-grid2">
+          <div><label class="lbl">What is it for?</label>
+            <input id="lTitle" placeholder="e.g. Poster print, Tutoring session, Club membership"></div>
+          <div><label class="lbl">Collect as</label><select id="lCompany"></select></div>
+          <div><label class="lbl">Currency</label>
+            <select id="lCur">
+              <option value="cybucks">Cybucks (CB)</option>
+              <option value="pufb">Pufferbucks (PUFB)</option>
+              <option value="aquilines">Aquilines (AQ)</option>
+              <option value="cybit">Cybits (CBT)</option>
+            </select></div>
+          <div id="fixedWrap"><label class="lbl">Price</label>
+            <input id="lAmount" type="number" min="1" step="any" placeholder="e.g. 50"></div>
+          <div id="flexWrap" style="display:none;grid-column:1/-1;">
+            <div class="cp-grid2">
+              <div><label class="lbl">Minimum</label><input id="lMin" type="number" min="1" value="1"></div>
+              <div><label class="lbl">Maximum</label><input id="lMax" type="number" min="1" value="1000"></div>
+            </div>
+          </div>
+          <div class="full"><label class="lbl">Description (optional, shown at checkout)</label>
+            <input id="lDesc" placeholder="e.g. 'A3, collected from 8B at break'"></div>
+          <div class="full"><label class="lbl">Send them back to (optional)</label>
+            <input id="lRedirect" placeholder="https://your-site.example/thanks">
+            <p class="small" style="margin-top:.3rem">Shown to the payer as a button after paying —
+              never followed automatically.</p></div>
+          <div class="full">
+            <label class="chk"><input type="checkbox" id="lFlex" onchange="toggleFlex()">
+              Let the payer choose the amount (tips, donations, pay-what-you-want)</label>
+            <label class="chk"><input type="checkbox" id="lReuse" checked>
+              Reusable — can be paid more than once</label>
+          </div>
+        </div>
+        <button style="margin-top:1rem;" onclick="createLink()"><i class="fas fa-plus"></i> Create link</button>
+        <p id="createMsg" class="small" style="text-align:center;"></p>
+      </div>
+
+      <h3 style="margin:2rem 0 .3rem;"><i class="fas fa-list" style="color:var(--cp-teal)"></i> Your links</h3>
+      <p class="small" style="margin-bottom:1rem;">Copy the link, or grab the button to embed.</p>
+      <div class="links" id="links"></div>
+    </section>
+
+    <!-- PAYMENTS -->
+    <section id="tab-payments" class="cppane" style="display:none;">
+      <h3 style="margin-bottom:.3rem;"><i class="fas fa-arrow-down" style="color:var(--cp-teal)"></i> Received</h3>
+      <p class="small" style="margin-bottom:1rem;">Every payment that came in through your links, with its receipt number.</p>
+      <div class="rcpts" id="received"></div>
+      <h3 style="margin:2.2rem 0 .3rem;"><i class="fas fa-arrow-up" style="color:var(--cp-warn)"></i> Sent</h3>
+      <p class="small" style="margin-bottom:1rem;">Things you've paid for through Cyvapay.</p>
+      <div class="rcpts" id="sent"></div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="tab-how" class="cppane" style="display:none;">
+      <div class="cp-panel">
+        <h3><i class="fas fa-shield-halved"></i> How it keeps everyone safe</h3>
+        <p class="sub">A payment gateway is only worth using if it can't be abused. These are the
+          rules, and none of them can be switched off.</p>
+        <ul style="list-style:none;display:grid;gap:.8rem;">
+          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+            <div><b>The amount comes from the link, never the request.</b>
+              <div class="small" style="margin:0">A fixed link charges what you set. Nobody can be talked into paying more — or less.</div></div></li>
+          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+            <div><b>Nothing moves without a signed-in payer pressing Pay.</b>
+              <div class="small" style="margin:0">Loading a URL can't charge anyone. A link on a hostile page can't either.</div></div></li>
+          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+            <div><b>Return links are shown, never followed automatically.</b>
+              <div class="small" style="margin:0">After paying, the payer sees where they'd be sent and chooses to go — so a checkout can't be used to bounce people somewhere nasty.</div></div></li>
+          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+            <div><b>Only earned Cybucks can be paid out.</b>
+              <div class="small" style="margin:0">Same rule as a bank transfer. The welcome grant stays put, so a payment link can't be used to farm free money into one account.</div></div></li>
+          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+            <div><b>Every payment has a receipt number both sides can see.</b>
+              <div class="small" style="margin:0">Deleting a link never deletes its receipts.</div></div></li>
+          <li style="display:flex;gap:.7rem;"><i class="fas fa-circle-check" style="color:var(--cp-teal);margin-top:.25rem"></i>
+            <div><b>Cyvathon never asks for real money.</b>
+              <div class="small" style="margin:0">Signing up needs a username and a password. No card details, no real currency, ever — and the checkout says so.</div></div></li>
+        </ul>
+      </div>
+      <div class="cp-panel">
+        <h3><i class="fas fa-code"></i> Putting it on your website</h3>
+        <p class="sub">Every link has a ready-made button under "Embed". It's plain HTML — no script
+          to load, nothing that runs on your page — so it works on any site, blog or page builder
+          that lets you paste HTML. If you can only paste a URL, the link on its own works just as well.</p>
+      </div>
+    </section>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, D=null, TAB="links";
+    const esc=(s)=>(s==null?"":String(s))
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const msg=(t,ok=false,el="msg")=>{const m=document.getElementById(el);
+      m.textContent=t||""; m.style.color= ok?"var(--cp-teal)":"var(--red)";};
+    const CUR = {cybucks:"CB", pufb:"PUFB", aquilines:"AQ", cybit:"CBT"};
+    const money=(n)=>(Math.round((Number(n)||0)*100)/100).toLocaleString();
+
+    function drawTabs(c){
+      c = c || {};
+      const defs = [["links","Payment links","fa-link",0],
+                    ["payments","Receipts","fa-receipt",0],
+                    ["how","How it works","fa-shield-halved",0]];
+      document.getElementById("tabs").innerHTML = defs.map(([k,t,i,n])=>
+        `<button class="${k===TAB?"on":""}" onclick="go('${k}')"><i class="fas ${i}"></i> ${t}${
+          n?`<span class="badge">${n}</span>`:""}</button>`).join("");
+    }
+    function go(tab){
+      TAB=tab;
+      document.querySelectorAll(".cppane").forEach(p=>p.style.display="none");
+      document.getElementById("tab-"+tab).style.display="block";
+      document.querySelectorAll("#tabs button").forEach((b,i)=>
+        b.classList.toggle("on",["links","payments","how"][i]===tab));
+      msg("");
+      if(tab==="links") loadLinks();
+      if(tab==="payments") loadPayments();
+      history.replaceState(null,"","/cyvapay?tab="+tab);
+    }
+
+    function toggleFlex(){
+      const f = document.getElementById("lFlex").checked;
+      document.getElementById("fixedWrap").style.display = f ? "none" : "";
+      document.getElementById("flexWrap").style.display = f ? "" : "none";
+    }
+
+    /* ---- links ---- */
+    function buttonHtml(l){
+      // Plain HTML only: no script, nothing that runs on the host page.
+      return `<a href="${esc(l.url)}" target="_blank" rel="noopener"
+   style="display:inline-flex;align-items:center;gap:.5em;padding:.7em 1.3em;
+          background:#1fd6a6;color:#04231a;border-radius:10px;font:600 15px system-ui,sans-serif;
+          text-decoration:none">
+  Pay ${l.flexible ? "" : money(l.amount) + " " + (CUR[l.currency]||l.currency) + " "}with Cybucks
+</a>`;
+    }
+    function linkCard(l){
+      const unit = CUR[l.currency] || l.currency;
+      return `<div class="lnk ${l.active?"":"off"}" id="lnk_${esc(l.code)}">
+        <div class="top">
+          <div>
+            <div class="nm">${esc(l.title)}</div>
+            <div class="meta">${l.company_id?`collected as <b>${esc(l.payee)}</b> · `:""}${
+              l.reusable?"reusable":"single use"} · used ${esc(l.uses)}×${
+              l.total_taken?` · ${money(l.total_taken)} ${esc(unit)} taken`:""}</div>
+          </div>
+          <div class="amt">${l.flexible?"Payer chooses":money(l.amount)+" "+esc(unit)}
+            <small>${l.flexible?`${esc(l.min_amount)}–${esc(l.max_amount)} ${esc(unit)}`:""}
+              <span class="state ${l.active?"on":"off"}">${l.active?"Live":"Off"}</span></small></div>
+        </div>
+        <div class="urlbox">
+          <input readonly value="${esc(l.url)}" onclick="this.select()">
+          <button onclick="copyText('${esc(l.url)}')"><i class="fas fa-copy"></i> Copy</button>
+        </div>
+        <div class="acts">
+          <button class="ghost" onclick="toggleEmbed('${esc(l.code)}')"><i class="fas fa-code"></i> Embed</button>
+          <a href="${esc(l.url)}" target="_blank" rel="noopener"><button class="ghost"><i class="fas fa-eye"></i> Preview</button></a>
+          <button class="ghost" onclick="toggleLink('${esc(l.code)}')">${l.active?"Switch off":"Switch on"}</button>
+          <button class="danger" onclick="deleteLink('${esc(l.code)}')"><i class="fas fa-trash"></i></button>
+        </div>
+        <div class="embed" id="emb_${esc(l.code)}" style="display:none">
+          <div class="tabs2">
+            <button class="on" onclick="embedMode('${esc(l.code)}','html')">HTML button</button>
+            <button onclick="embedMode('${esc(l.code)}','md')">Markdown</button>
+            <button onclick="embedMode('${esc(l.code)}','url')">Just the link</button>
+          </div>
+          <textarea id="embt_${esc(l.code)}" readonly onclick="this.select()"></textarea>
+          <div class="prev" id="embp_${esc(l.code)}"></div>
+          <button class="ghost" style="width:auto;margin-top:.5rem;padding:.4rem .9rem;font-size:.78rem"
+                  onclick="copyText(document.getElementById('embt_${esc(l.code)}').value)">
+            <i class="fas fa-copy"></i> Copy snippet</button>
+        </div>
+      </div>`;
+    }
+    function toggleEmbed(code){
+      const e = document.getElementById("emb_"+code);
+      e.style.display = e.style.display==="none" ? "block" : "none";
+      if(e.style.display==="block") embedMode(code,"html");
+    }
+    function embedMode(code, mode){
+      const l = (D.links||[]).find(x=>x.code===code); if(!l) return;
+      const t = document.getElementById("embt_"+code), p = document.getElementById("embp_"+code);
+      const unit = CUR[l.currency]||l.currency;
+      document.querySelectorAll(`#emb_${code} .tabs2 button`).forEach(b=>
+        b.classList.toggle("on", b.textContent.toLowerCase().startsWith(
+          {html:"html",md:"markdown",url:"just"}[mode])));
+      if(mode==="html"){ t.value = buttonHtml(l); p.innerHTML = buttonHtml(l); }
+      else if(mode==="md"){
+        t.value = `[Pay ${l.flexible?"":money(l.amount)+" "+unit+" "}with Cybucks](${l.url})`;
+        p.innerHTML = `<a class="link" href="${esc(l.url)}">Pay ${l.flexible?"":money(l.amount)+" "+esc(unit)+" "}with Cybucks</a>`;
+      } else { t.value = l.url; p.innerHTML = `<code>${esc(l.url)}</code>`; }
+    }
+    async function copyText(s){
+      try{ await navigator.clipboard.writeText(s); msg("Copied.",true); }
+      catch{ msg("Select the text and copy it yourself — the browser blocked the clipboard."); }
+    }
+
+    async function loadLinks(){
+      try{ D = await api("/cyvapay/links"); }catch(e){ return msg(e.message); }
+      const sel = document.getElementById("lCompany");
+      sel.innerHTML = `<option value="">Myself (${esc(D.me)})</option>` +
+        (D.companies||[]).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+      document.getElementById("links").innerHTML = D.links.length
+        ? D.links.map(linkCard).join("")
+        : `<p class="empty">No links yet — make one above.</p>`;
+      const live = D.links.filter(l=>l.active).length;
+      const taken = D.links.reduce((a,l)=>a+(l.currency==="cybucks"?Number(l.total_taken||0):0),0);
+      document.getElementById("stats").innerHTML = `
+        <div class="stat"><b>${esc(D.links.length)}</b><span>Payment links</span></div>
+        <div class="stat"><b>${esc(live)}</b><span>Live right now</span></div>
+        <div class="stat"><b>${esc(D.links.reduce((a,l)=>a+(l.uses||0),0))}</b><span>Payments taken</span></div>
+        <div class="stat"><b>${esc(money(taken))} CB</b><span>Collected in Cybucks</span></div>`;
+    }
+    async function createLink(){
+      const flex = document.getElementById("lFlex").checked;
+      const body = {
+        title: document.getElementById("lTitle").value.trim(),
+        company_id: document.getElementById("lCompany").value || null,
+        currency: document.getElementById("lCur").value,
+        flexible: flex,
+        amount: document.getElementById("lAmount").value,
+        min_amount: document.getElementById("lMin").value,
+        max_amount: document.getElementById("lMax").value,
+        description: document.getElementById("lDesc").value.trim(),
+        redirect_url: document.getElementById("lRedirect").value.trim(),
+        reusable: document.getElementById("lReuse").checked,
+      };
+      try{
+        const r = await api("/cyvapay/link",{method:"POST",body:JSON.stringify(body)});
+        msg("Link created — copy it or grab the button below.",true,"createMsg");
+        ["lTitle","lAmount","lDesc","lRedirect"].forEach(id=>document.getElementById(id).value="");
+        await loadLinks(); refresh();
+        const el = document.getElementById("lnk_"+r.link.code);
+        if(el){ el.scrollIntoView({behavior:"smooth",block:"center"}); toggleEmbed(r.link.code); }
+      }catch(e){ msg(e.message,false,"createMsg"); }
+    }
+    async function toggleLink(code){
+      try{ await api("/cyvapay/link/toggle",{method:"POST",body:JSON.stringify({code})}); loadLinks(); refresh(); }
+      catch(e){ msg(e.message); }
+    }
+    async function deleteLink(code){
+      if(!confirm("Delete this link? Receipts for payments already made are kept.")) return;
+      try{ await api("/cyvapay/link/delete",{method:"POST",body:JSON.stringify({code})}); loadLinks(); refresh(); }
+      catch(e){ msg(e.message); }
+    }
+
+    /* ---- receipts ---- */
+    function receipt(r, dir){
+      const unit = CUR[r.currency]||r.currency;
+      const who = dir==="in" ? `from ${esc(r.payer)}` : `to ${esc(r.payee)}`;
+      return `<div class="rc">
+        <div class="ic ${dir}"><i class="fas fa-arrow-${dir==="in"?"down":"up"}"></i></div>
+        <div class="mid"><b>${esc(r.title||"Payment")}</b>
+          <span>${who}${r.note?` · "${esc(r.note)}"`:""}${
+            r.created_at?` · ${esc(new Date(r.created_at).toLocaleString())}`:""}</span></div>
+        <div style="text-align:right">
+          <div class="amt ${dir}">${dir==="in"?"+":"−"}${money(r.amount)} ${esc(unit)}</div>
+          <div class="ref">${esc(r.ref)}</div></div>
+      </div>`;
+    }
+    async function loadPayments(){
+      let d;
+      try{ d = await api("/cyvapay/payments"); }catch(e){ return msg(e.message); }
+      document.getElementById("received").innerHTML = d.received.length
+        ? d.received.map(r=>receipt(r,"in")).join("") : `<p class="empty">Nothing received yet.</p>`;
+      document.getElementById("sent").innerHTML = d.sent.length
+        ? d.sent.map(r=>receipt(r,"out")).join("") : `<p class="empty">You haven't paid through Cyvapay yet.</p>`;
+    }
+
+    function drawHero(c){
+      document.getElementById("heroBadges").innerHTML = `
+        <span class="cp-badge"><i class="fas fa-gift"></i> Free to use</span>
+        <span class="cp-badge"><i class="fas fa-globe"></i> Works on any website</span>
+        <span class="cp-badge"><i class="fas fa-lock"></i> Amount fixed by you, never the payer</span>
+        ${c && c.open===false?`<span class="cp-badge" style="background:rgba(224,62,77,.15);border-color:rgba(224,62,77,.4);color:#ff8f9a"><i class="fas fa-ban"></i> Gateway closed</span>`:""}`;
+    }
+    async function refresh(){
+      try{ const c = await api("/cyvapay/summary"); drawTabs(c); drawHero(c); }
+      catch{ drawTabs({}); drawHero({}); }
+    }
+
+    (async function(){
+      ME = await requireAuth(); if(!ME) return;
+      renderNav("/cyvapay", ME);
+      await refresh();
+      const t = new URLSearchParams(location.search).get("tab");
+      go(["links","payments","how"].includes(t) ? t : "links");
+    })();
+  </script>
+</body>
+</html>

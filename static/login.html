@@ -361,7 +361,7 @@
           setMode("login");
           return;
         }
-        window.location.href = "/";
+        window.location.href = nextUrl();
       }catch(e){
         $("msg").style.color = "var(--red)";
         $("msg").textContent = e.message;
@@ -372,8 +372,15 @@
       }finally{ $("submitBtn").disabled = false; }
     }
 
+    /* Where to go once you're in. Only ever a path on this site — following
+       an absolute URL from a query string is how open redirects happen. */
+    function nextUrl(){
+      const n = new URLSearchParams(location.search).get("next") || "";
+      return /^\/[A-Za-z0-9._~!$&'()*+,;=:@%\/-]*$/.test(n) && !n.startsWith("//") ? n : "/";
+    }
+
     (async function(){
-      if(await currentUser()){ window.location.href = "/"; return; }
+      if(await currentUser()){ window.location.href = nextUrl(); return; }
       loadStats();
       await initTurnstile();
       if(REF) setMode("signup");      // applyVis() shows the "Invited by …" line

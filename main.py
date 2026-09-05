@@ -11,7 +11,7 @@ import re
 import secrets
 from time import time
 from datetime import timedelta, datetime, timezone
-from urllib.parse import unquote
+from urllib.parse import unquote, quote
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from google import genai
@@ -89,6 +89,7 @@ _CONFIG_KEYS = {
     "insurance_open": "INSURANCE_OPEN", "insurance_levy": "INSURANCE_LEVY",
     "lend_open": "LEND_OPEN", "lend_max_deposit": "LEND_MAX_DEPOSIT",
     "pen_rate": "PEN_RATE", "pen_open": "PEN_OPEN",
+    "cyvapay_open": "CYVAPAY_OPEN", "cyvapay_fee": "CYVAPAY_FEE",
 }
 
 # Justice levers. RECORD_EXPIRY_DAYS = 0 means a conviction bars a citizen
@@ -337,7 +338,7 @@ def refresh_config():
             if v is not None:
                 # day/grant fields are whole numbers
                 if name in ("FINE_BARS_OFFICE", "DELIVERY_OPEN", "INSURANCE_OPEN",
-                            "LEND_OPEN", "PEN_OPEN"):
+                            "LEND_OPEN", "PEN_OPEN", "CYVAPAY_OPEN"):
                     g[name] = bool(v)
                 elif name.endswith(("_DAYS", "GRANT")) or name in ("LOAN_MAX", "MINISTRY_MIN_APPLICANTS"):
                     g[name] = int(v)
@@ -1505,7 +1506,7 @@ def sitemap():
              "/court", "/gazette", "/states", "/foreign", "/treasury",
              "/exchange", "/company", "/jobs", "/marketplace", "/casino",
              "/flightsim", "/packet", "/cyvazon", "/shield", "/cyvalend", "/pens",
-             "/cabinet", "/timeline", "/passport", "/login"]
+             "/cabinet", "/timeline", "/cyvapay", "/passport", "/login"]
     urls = "".join(f"<url><loc>https://cyvathon.onrender.com{p}</loc></url>"
                    for p in pages)
     xml = ('<?xml version="1.0" encoding="UTF-8"?>'
@@ -5201,7 +5202,7 @@ CONFIG_FIELDS = ["vat_rate", "tax_period_days", "salary_period_days", "savings_r
                  "bond_rate", "bond_days", "company_fee", "loan_max", "loan_days",
                  "starting_grant", "gdp", "gdp_multiplier",
                  "courier_wage", "delivery_levy", "insurance_levy", "lend_max_deposit",
-                 "pen_rate"]
+                 "pen_rate", "cyvapay_fee"]
 
 
 @app.route("/admin/config", methods=["GET"])
@@ -10842,6 +10843,432 @@ def timeline_remove():
     except Exception:
         return jsonify(success=False, error="Couldn't strike that entry"), 500
     return jsonify(success=True)
+
+# ============================================================
+#  CYVAPAY — the payment gateway
+# ============================================================
+#  A citizen makes a payment link, puts the button on any website, and
+#  gets paid in Cybucks. Anyone who follows the link lands on a checkout
+#  page hosted here; if they have no account they're offered one, and
+#  come straight back to the same checkout once they're in.
+#
+#  Three rules make it safe, and none of them are negotiable:
+#
+#  1. THE AMOUNT COMES FROM THE LINK, never from the request. A fixed
+#     link charges what the merchant set, full stop. Only a link the
+#     merchant explicitly marked "flexible" lets the payer name a
+#     figure, and then only inside the merchant's own bounds.
+#  2. PAYING IS A POST BY AN AUTHENTICATED PAYER WHO CLICKED CONFIRM.
+#     No amount of GET traffic can move money, so a merchant cannot
+#     charge someone by tricking them into loading a URL, and an <img>
+#     tag on a hostile page can't either.
+#  3. THE RETURN URL IS NEVER FOLLOWED AUTOMATICALLY. It is shown to
+#     the payer as a link they choose to click, with the destination
+#     host visible — an open redirect that fires by itself is how
+#     payment pages get used for phishing.
+#
+#  Money moves under the same rule as a bank transfer: you may only pay
+#  with Cybucks you have earned. The welcome grant stays put, or a
+#  gateway link would be the easiest grant-farm in the Republic.
+
+CYVAPAY_OPEN = True
+CYVAPAY_FEE  = 0.0          # fraction taken by the Treasury; 0 = free to use
+MAX_LINKS_PER_CITIZEN = 25
+
+
+def _cyvapay_missing():
+    return jsonify(success=False,
+                   error="Cyvapay isn't enabled yet — the database needs a quick update "
+                         "(run migration_cyvapay.sql)."), 503
+
+
+def _pay_code():
+    """An unguessable public handle for a link."""
+    return secrets.token_urlsafe(9).replace("-", "").replace("_", "")[:12]
+
+
+def _pay_ref():
+    return "CYP-" + secrets.token_hex(4).upper()
+
+
+def _site_root():
+    return request.url_root.rstrip("/")
+
+
+def _payee_label(link):
+    """Who the payer is actually paying."""
+    if link.get("company_id"):
+        try:
+            c = supabase.table("companies").select("name").eq("id", link["company_id"]).execute().data
+            if c:
+                return c[0]["name"]
+        except Exception:
+            pass
+    return link.get("owner") or ""
+
+
+def _link_public(row, full=False):
+    out = {
+        "code": row.get("code"), "owner": row.get("owner"),
+        "company_id": row.get("company_id"),
+        "payee": _payee_label(row),
+        "title": row.get("title") or "", "description": row.get("description") or "",
+        "currency": row.get("currency") or "cybucks",
+        "amount": row.get("amount") or 0,
+        "flexible": bool(row.get("flexible")),
+        "min_amount": row.get("min_amount") or 1,
+        "max_amount": row.get("max_amount") or 100000,
+        "active": bool(row.get("active")),
+        "reusable": bool(row.get("reusable")),
+        "uses": row.get("uses") or 0,
+        "redirect_url": row.get("redirect_url") or "",
+        "expires_at": row.get("expires_at"),
+        "url": _site_root() + "/cyvapay/checkout/" + (row.get("code") or ""),
+    }
+    if full:
+        out["total_taken"] = row.get("total_taken") or 0
+        out["created_at"] = row.get("created_at")
+    return out
+
+
+def _link_state(row):
+    """Why a link can't be paid, or None if it can."""
+    if not row.get("active"):
+        return "This payment link has been switched off by the merchant."
+    if not row.get("reusable") and (row.get("uses") or 0) >= 1:
+        return "This payment link has already been used."
+    exp = _parse(row.get("expires_at"))
+    if exp and _now() > exp:
+        return "This payment link has expired."
+    if not CYVAPAY_OPEN:
+        return "Cyvapay is closed right now."
+    return None
+
+
+# ---- routes -----------------------------------------------------------
+@app.route("/cyvapay")
+def cyvapay_page():
+    return app.send_static_file("cyvapay.html")
+
+
+@app.route("/cyvapay/checkout/<code>")
+def cyvapay_checkout_page(code):
+    # The checkout is deliberately public — the whole point is that someone
+    # who has never heard of Cyvathon can land here from another website.
+    return app.send_static_file("checkout.html")
+
+
+@app.route("/cyvapay/link/<code>")
+@limiter.limit("120/minute")
+def cyvapay_link(code):
+    """What the checkout page needs. Public: no account required to LOOK."""
+    try:
+        r = supabase.table("cyvapay_links").select("*").eq("code", code).execute().data
+    except Exception:
+        return _cyvapay_missing()
+    if not r:
+        return jsonify(success=False, error="No such payment link"), 404
+    link = r[0]
+
+    user = get_current_user(run_economics=False)
+    me = user["username"] if user else None
+    bal = None
+    if user:
+        bal = round(_available_cb(me, user.get("balance")), 2) \
+            if (link.get("currency") or "cybucks") == "cybucks" \
+            else (user.get(CURRENCY_COLUMN.get(link.get("currency") or "cybucks", "balance")) or 0)
+
+    return jsonify(success=True, link=_link_public(link),
+                   blocked=_link_state(link),
+                   signed_in=bool(user), me=me, balance=bal,
+                   is_owner=bool(me and me == link.get("owner")),
+                   # Where the checkout sends someone who has no account yet.
+                   signup_url="/login?next=" + quote("/cyvapay/checkout/" + code, safe=""))
+
+
+@app.route("/cyvapay/charge", methods=["POST"])
+@limiter.limit("20/minute")
+def cyvapay_charge():
+    """Take the payment. POST only, authenticated, and the payer has
+    confirmed on a page that showed them exactly what they're paying."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Sign in to pay"), 401
+    me = user["username"]
+    d = request.get_json() or {}
+    code = (d.get("code") or "").strip()[:32]
+
+    try:
+        r = supabase.table("cyvapay_links").select("*").eq("code", code).execute().data
+    except Exception:
+        return _cyvapay_missing()
+    if not r:
+        return jsonify(success=False, error="No such payment link"), 404
+    link = r[0]
+
+    blocked = _link_state(link)
+    if blocked:
+        return jsonify(success=False, error=blocked), 409
+    if link["owner"] == me and not link.get("company_id"):
+        return jsonify(success=False, error="That's your own payment link."), 400
+
+    currency = link.get("currency") or "cybucks"
+    if currency not in CURRENCY_COLUMN:
+        return jsonify(success=False, error="Unknown currency"), 400
+
+    # --- the amount. A fixed link ignores whatever the request says. ---
+    if link.get("flexible"):
+        try:
+            amount = round(float(d.get("amount") or 0), 2)
+        except (TypeError, ValueError):
+            return jsonify(success=False, error="How much are you paying?"), 400
+        lo, hi = float(link.get("min_amount") or 1), float(link.get("max_amount") or 100000)
+        if not math.isfinite(amount) or amount < lo or amount > hi:
+            return jsonify(success=False,
+                           error=f"This link accepts between {lo:g} and {hi:g} {currency}."), 400
+    else:
+        amount = round(float(link.get("amount") or 0), 2)
+    if amount <= 0:
+        return jsonify(success=False, error="That link has no amount set."), 400
+
+    col = CURRENCY_COLUMN[currency]
+    payer = supabase.table("cybucks").select("*").eq("username", me).execute().data[0]
+    if (payer.get(col) or 0) < amount:
+        return jsonify(success=False, error=f"You don't have {amount:g} {currency}."), 400
+    if currency == "cybucks" and amount > _available_cb(me, payer.get("balance")):
+        return jsonify(success=False,
+                       error="Borrowed Cybucks can't be spent here. Repay your loan first."), 400
+    # Same rule as a bank transfer: only money you've earned leaves your
+    # account for another citizen. Otherwise a payment link is a grant farm.
+    if amount * CYBUCK_VALUE[currency] > _transferable_value(payer) + 1e-9:
+        return jsonify(success=False,
+                       error="You can only pay with money you've earned — your welcome grant "
+                             "can't be sent to other citizens. Earn some through jobs, sales "
+                             "or trading first."), 400
+
+    # --- take it, atomically ---
+    if not cas_adjust(me, col, -amount):
+        return jsonify(success=False,
+                       error="Insufficient funds or a conflicting payment — try again."), 400
+
+    fee = round(amount * CYVAPAY_FEE, 2) if CYVAPAY_FEE else 0
+    net = round(amount - fee, 2)
+    if link.get("company_id"):
+        _add_company_currency(link["company_id"], currency, net)
+    else:
+        _add_cash_currency(link["owner"], currency, net)
+    if fee:
+        treasury_add(**{("cybucks" if currency == "cybucks" else currency): fee},
+                     counterparty=me, kind="cyvapay_fee")
+
+    ref = _pay_ref()
+    payee_label = _payee_label(link)
+    try:
+        supabase.table("cyvapay_payments").insert({
+            "ref": ref, "code": code, "payee": link["owner"],
+            "company_id": link.get("company_id"), "payer": me,
+            "amount": amount, "currency": currency, "title": link.get("title") or "",
+            "note": (d.get("note") or "").strip()[:140],
+        }).execute()
+    except Exception as ex:
+        logging.warning("cyvapay receipt not written: %s", ex)
+
+    cas_num("cyvapay_links", [("code", code)], "uses", 1, places=0)
+    cas_num("cyvapay_links", [("code", code)], "total_taken", amount)
+
+    add_record(me, f"Paid {amount:g} {currency} to {payee_label} via Cyvapay ({ref}).")
+    log_txn("cyvapay", me, payee_label, amount, currency, link.get("title") or "Cyvapay payment")
+    notify(link["owner"],
+           f"\U0001F4B3 {me} paid you {amount:g} {currency} through Cyvapay — "
+           f"{link.get('title') or 'payment'} ({ref}).", "/cyvapay?tab=payments")
+
+    return jsonify(success=True, ref=ref, amount=amount, currency=currency,
+                   payee=payee_label, title=link.get("title") or "",
+                   redirect_url=link.get("redirect_url") or "")
+
+
+@app.route("/cyvapay/links")
+@limiter.limit("60/minute")
+def cyvapay_links():
+    """The merchant's own links."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        rows = supabase.table("cyvapay_links").select("*").eq("owner", me) \
+            .order("created_at", desc=True).limit(100).execute().data or []
+    except Exception:
+        return _cyvapay_missing()
+    companies = []
+    try:
+        companies = supabase.table("companies").select("id,name").eq("founder", me).execute().data or []
+    except Exception:
+        pass
+    return jsonify(success=True, me=me, links=[_link_public(r, full=True) for r in rows],
+                   companies=companies, root=_site_root(),
+                   open=bool(CYVAPAY_OPEN), fee=CYVAPAY_FEE)
+
+
+@app.route("/cyvapay/link", methods=["POST"])
+@limiter.limit("20/minute")
+def cyvapay_create():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not CYVAPAY_OPEN:
+        return jsonify(success=False, error="Cyvapay is closed right now."), 403
+    me = user["username"]
+    d = request.get_json() or {}
+
+    title = (d.get("title") or "").strip()[:80]
+    if not title:
+        return jsonify(success=False, error="What is the payment for?"), 400
+    currency = (d.get("currency") or "cybucks").strip()
+    if currency not in CURRENCY_COLUMN:
+        return jsonify(success=False, error="Unknown currency"), 400
+
+    flexible = bool(d.get("flexible"))
+    amount = min_amount = 0
+    max_amount = 100000
+    if flexible:
+        try:
+            min_amount = round(float(d.get("min_amount") or 1), 2)
+            max_amount = round(float(d.get("max_amount") or 100000), 2)
+        except (TypeError, ValueError):
+            return jsonify(success=False, error="Set a valid range"), 400
+        if min_amount < 1 or max_amount < min_amount or max_amount > 1000000:
+            return jsonify(success=False, error="The range must run from 1 upwards."), 400
+    else:
+        try:
+            amount = round(float(d.get("amount") or 0), 2)
+        except (TypeError, ValueError):
+            return jsonify(success=False, error="Set a price"), 400
+        if not math.isfinite(amount) or amount <= 0 or amount > 1000000:
+            return jsonify(success=False, error="Set a price above zero."), 400
+
+    company_id = d.get("company_id") or None
+    if company_id:
+        try:
+            company_id = int(company_id)
+        except (TypeError, ValueError):
+            return jsonify(success=False, error="Bad company"), 400
+        c = supabase.table("companies").select("*").eq("id", company_id).execute().data
+        if not c or me not in company_founders(c[0]):
+            return jsonify(success=False, error="You can only collect for your own company"), 403
+
+    redirect_url = (d.get("redirect_url") or "").strip()[:400]
+    if redirect_url and not _card_url_ok(redirect_url):
+        return jsonify(success=False,
+                       error="The return link must be a plain https:// address."), 400
+
+    try:
+        mine = supabase.table("cyvapay_links").select("id").eq("owner", me).execute().data or []
+    except Exception:
+        return _cyvapay_missing()
+    if len(mine) >= MAX_LINKS_PER_CITIZEN:
+        return jsonify(success=False,
+                       error=f"You already have {MAX_LINKS_PER_CITIZEN} payment links."), 400
+
+    row = {"code": _pay_code(), "owner": me, "company_id": company_id,
+           "title": title, "description": (d.get("description") or "").strip()[:300],
+           "currency": currency, "amount": amount, "flexible": flexible,
+           "min_amount": min_amount or 1, "max_amount": max_amount,
+           "reusable": bool(d.get("reusable", True)), "redirect_url": redirect_url}
+    try:
+        made = supabase.table("cyvapay_links").insert(row).execute().data[0]
+    except Exception:
+        return _cyvapay_missing()
+    return jsonify(success=True, link=_link_public(made, full=True))
+
+
+@app.route("/cyvapay/link/toggle", methods=["POST"])
+@limiter.limit("30/minute")
+def cyvapay_toggle():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    code = ((request.get_json() or {}).get("code") or "").strip()[:32]
+    try:
+        r = supabase.table("cyvapay_links").select("*").eq("code", code) \
+            .eq("owner", user["username"]).execute().data
+    except Exception:
+        return _cyvapay_missing()
+    if not r:
+        return jsonify(success=False, error="That isn't your link"), 404
+    want = not bool(r[0].get("active"))
+    supabase.table("cyvapay_links").update({"active": want}).eq("code", code).execute()
+    return jsonify(success=True, active=want)
+
+
+@app.route("/cyvapay/link/delete", methods=["POST"])
+@limiter.limit("20/minute")
+def cyvapay_delete():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    code = ((request.get_json() or {}).get("code") or "").strip()[:32]
+    try:
+        r = supabase.table("cyvapay_links").select("code").eq("code", code) \
+            .eq("owner", user["username"]).execute().data
+    except Exception:
+        return _cyvapay_missing()
+    if not r:
+        return jsonify(success=False, error="That isn't your link"), 404
+    # Receipts are kept: deleting a link must never erase the record of
+    # money that actually moved.
+    supabase.table("cyvapay_links").delete().eq("code", code).execute()
+    return jsonify(success=True)
+
+
+@app.route("/cyvapay/payments")
+@limiter.limit("60/minute")
+def cyvapay_payments():
+    """Money in, and money out."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        rows = supabase.table("cyvapay_payments").select("*") \
+            .order("created_at", desc=True).limit(200).execute().data or []
+    except Exception:
+        return _cyvapay_missing()
+    got = [r for r in rows if r.get("payee") == me]
+    paid = [r for r in rows if r.get("payer") == me]
+
+    def shape(r):
+        return {"ref": r.get("ref"), "code": r.get("code"), "payer": r.get("payer"),
+                "payee": r.get("payee"), "amount": r.get("amount") or 0,
+                "currency": r.get("currency") or "cybucks",
+                "title": r.get("title") or "", "note": r.get("note") or "",
+                "created_at": r.get("created_at")}
+
+    return jsonify(success=True, me=me,
+                   received=[shape(r) for r in got], sent=[shape(r) for r in paid],
+                   total_received=round(sum(float(r.get("amount") or 0)
+                                            for r in got if (r.get("currency") or "cybucks") == "cybucks"), 2))
+
+
+@app.route("/cyvapay/summary")
+@limiter.limit("60/minute")
+def cyvapay_summary():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        links = supabase.table("cyvapay_links").select("active").eq("owner", me).execute().data or []
+        pays = supabase.table("cyvapay_payments").select("payee,amount,currency") \
+            .eq("payee", me).execute().data or []
+    except Exception:
+        return jsonify(success=True, enabled=False, links=0, live=0,
+                       received=0, open=bool(CYVAPAY_OPEN))
+    return jsonify(success=True, enabled=True, open=bool(CYVAPAY_OPEN),
+                   links=len(links), live=sum(1 for l in links if l.get("active")),
+                   payments=len(pays),
+                   received=round(sum(float(p.get("amount") or 0) for p in pays
+                                      if (p.get("currency") or "cybucks") == "cybucks"), 2))
 
 # ============================================================
 #  JUSTICE — jail, criminal records, eligibility for office

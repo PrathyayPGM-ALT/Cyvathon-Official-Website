@@ -1,0 +1,230 @@
+/* ============================================================
+   CYVATHON — SERVICE PAGES (shared chassis)
+   Cyvazon, Cyvalend and the Armoury are sub-brands. Each keeps
+   its own livery — amber, violet, brass — but they should read
+   as three departments of one country, not three websites.
+   This file is the part they share: heroes, tab bars, panels,
+   stat tiles, empty states, skeletons, alerts.
+
+   A page opts in with class="wrap svc <page-class>" and sets
+   the --sv-* tokens below to its own colours. Nothing here
+   hard-codes a hue, so re-skinning a service is a six-line job.
+============================================================ */
+
+.svc{
+  /* Sensible fallbacks — the nation's own blue — so a page that
+     forgets to set its livery still looks deliberate. */
+  --sv-ink:#111a2e;
+  --sv-ink-2:#16223a;
+  --sv-line:rgba(255,255,255,.1);
+  --sv-text:#f2f6fa;
+  --sv-muted:#9fb0c2;
+  --sv-accent:#58c4ff;
+  --sv-accent-2:#8dd1ff;
+  --sv-accent-deep:#2b6cb0;
+  --sv-accent-rgb:88,196,255;   /* the accent again, as a triplet, for rgba() */
+  --sv-on-accent:#06182b;       /* text that sits on top of a filled accent */
+  --sv-good:#1fd6a6;
+  --sv-warn:#ffce56;
+  --sv-bad:#ff5d6c;
+}
+
+/* ---------------- HERO ---------------- */
+.svc-hero{
+  position:relative; overflow:hidden;
+  border:1px solid var(--sv-line); border-radius:22px;
+  padding:clamp(1.5rem,4vw,2.3rem) clamp(1.25rem,4vw,2.2rem) clamp(1.4rem,4vw,2rem);
+  margin-bottom:1.6rem;
+  /* Two washes of the brand colour over the base slate. One panel, three
+     layers — that is the difference between a dark box and a designed one. */
+  background:
+    radial-gradient(700px 340px at 88% -35%, rgba(var(--sv-accent-rgb),.26), transparent 70%),
+    radial-gradient(460px 320px at -5% 125%, rgba(var(--sv-accent-rgb),.10), transparent 70%),
+    linear-gradient(140deg,var(--sv-ink),var(--sv-ink-2));
+  box-shadow:0 22px 54px rgba(3,8,20,.35);
+}
+/* A lit hairline along the top edge. Costs one line, reads as craft. */
+.svc-hero::before{ content:""; position:absolute; left:0; right:0; top:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(var(--sv-accent-rgb),.8) 22%,rgba(var(--sv-accent-rgb),.8) 78%,transparent); }
+.svc-hero > *{ position:relative; z-index:1; }
+.svc-hero p{ color:var(--sv-muted); max-width:66ch; margin:0; line-height:1.7; font-size:.96rem; }
+.svc-hero p b{ color:var(--sv-text); }
+
+.svc-badges{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1.2rem; }
+.svc-badge{ display:inline-flex; align-items:center; gap:.45rem; padding:.38rem .85rem;
+  border-radius:30px; font-size:.78rem; font-weight:600; line-height:1.4;
+  background:rgba(var(--sv-accent-rgb),.13); border:1px solid rgba(var(--sv-accent-rgb),.34);
+  color:var(--sv-accent-2); }
+.svc-badge.good{ background:rgba(31,214,166,.13); border-color:rgba(31,214,166,.36); color:var(--sv-good); }
+.svc-badge.bad{ background:rgba(255,93,108,.14); border-color:rgba(255,93,108,.4); color:#ff8f9a; }
+
+/* ---------------- TABS ---------------- */
+/* One track holding four pills, rather than four loose buttons. On a phone it
+   scrolls sideways instead of wrapping into a ragged second row. */
+.svc-tabs{ display:flex; gap:.3rem; margin-bottom:1.5rem; padding:.34rem;
+  background:var(--sv-ink); border:1px solid var(--sv-line); border-radius:16px;
+  overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+.svc-tabs::-webkit-scrollbar{ display:none; }
+.svc-tabs button{ flex:none; width:auto; margin:0; padding:.6rem 1.05rem; font-size:.87rem;
+  font-weight:600; border-radius:12px; white-space:nowrap; border:none; box-shadow:none;
+  display:inline-flex; align-items:center; gap:.45rem;
+  background:transparent; color:var(--sv-muted); }
+.svc-tabs button:hover{ background:rgba(var(--sv-accent-rgb),.10); color:var(--sv-text);
+  transform:none; box-shadow:none; filter:none; }
+.svc-tabs button.on{ background:linear-gradient(135deg,var(--sv-accent),var(--sv-accent-deep));
+  color:var(--sv-on-accent); box-shadow:0 6px 16px rgba(var(--sv-accent-rgb),.3); }
+.svc-tabs button.on:hover{ filter:brightness(1.06); }
+.svc-tabs .badge{ display:inline-block; min-width:19px; padding:0 5px; border-radius:20px;
+  background:var(--sv-bad); color:#fff; font-size:.7rem; font-weight:800; line-height:19px;
+  text-align:center; box-shadow:0 2px 8px rgba(255,93,108,.4); }
+.svc-tabs button.on .badge{ background:rgba(0,0,0,.28); color:#fff; box-shadow:none; }
+
+/* ---------------- PANELS ---------------- */
+.svc-panel{ background:linear-gradient(165deg,var(--sv-ink),var(--sv-ink-2));
+  border:1px solid var(--sv-line); border-radius:18px; color:var(--sv-text);
+  padding:clamp(1.2rem,3vw,1.5rem) clamp(1.1rem,3vw,1.6rem); margin-bottom:1.3rem;
+  box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 10px 30px rgba(3,8,20,.22); }
+.svc-panel h3{ display:flex; align-items:center; gap:.6rem; margin-bottom:.35rem;
+  font-size:1.08rem; font-weight:700; letter-spacing:-.2px; }
+/* The icon gets its own tinted chip. A loose icon next to a heading always
+   looks like it landed there by accident. */
+.svc-panel h3 > i:first-child{ display:grid; place-items:center; width:30px; height:30px; flex:none;
+  border-radius:9px; font-size:.85rem; color:var(--sv-accent);
+  background:rgba(var(--sv-accent-rgb),.12); border:1px solid rgba(var(--sv-accent-rgb),.26); }
+.svc-panel .sub{ color:var(--sv-muted); font-size:.87rem; margin-bottom:1.1rem; line-height:1.65; }
+.svc-panel .sub b{ color:var(--sv-text); }
+
+/* section headings that sit outside a panel */
+.svc-head{ display:flex; align-items:center; gap:.6rem; font-size:1.06rem; font-weight:700;
+  color:var(--sv-text); margin-bottom:.3rem; }
+.svc-head i{ color:var(--sv-accent); }
+.svc-head .count{ font-size:.72rem; font-weight:700; color:var(--sv-muted);
+  padding:.15rem .55rem; border-radius:20px; background:rgba(var(--sv-accent-rgb),.10);
+  border:1px solid var(--sv-line); }
+.svc-note{ color:var(--sv-muted); font-size:.85rem; margin-bottom:1.1rem; line-height:1.6; }
+
+/* ---------------- FORM ---------------- */
+.svc .lbl{ display:block; font-size:.71rem; color:var(--sv-muted); margin-top:.6rem;
+  text-transform:uppercase; letter-spacing:.6px; font-weight:700; }
+.svc input,.svc select,.svc textarea{ background:var(--sv-ink-2); border:1px solid var(--sv-line);
+  color:var(--sv-text); margin-top:5px; }
+.svc input:hover,.svc select:hover,.svc textarea:hover{ border-color:rgba(var(--sv-accent-rgb),.35); }
+.svc input:focus,.svc select:focus,.svc textarea:focus{ border-color:var(--sv-accent);
+  box-shadow:0 0 0 3px rgba(var(--sv-accent-rgb),.18); }
+.svc button{ background:linear-gradient(135deg,var(--sv-accent),var(--sv-accent-deep));
+  color:var(--sv-on-accent); font-weight:700; box-shadow:0 6px 18px rgba(var(--sv-accent-rgb),.26); }
+.svc button:hover{ box-shadow:0 11px 26px rgba(var(--sv-accent-rgb),.38); }
+.svc button.ghost{ background:transparent; border:1px solid rgba(var(--sv-accent-rgb),.5);
+  color:var(--sv-accent); box-shadow:none; }
+.svc button.ghost:hover{ background:rgba(var(--sv-accent-rgb),.12); box-shadow:none; }
+.svc button.danger{ background:linear-gradient(135deg,#ff6b78,#e03e4d); color:#fff;
+  box-shadow:0 6px 18px rgba(224,62,77,.28); }
+.svc button.good{ background:linear-gradient(135deg,#2ee0b0,#0fb98a); color:#04231a;
+  box-shadow:0 6px 18px rgba(31,214,166,.26); }
+.svc-grid2{ display:grid; gap:.75rem; grid-template-columns:1fr 1fr; }
+.svc-grid2 .full{ grid-column:1/-1; }
+@media(max-width:640px){ .svc-grid2{ grid-template-columns:1fr; } }
+
+/* ---------------- STAT TILES ---------------- */
+.svc-stats{ display:grid; gap:.8rem; margin-bottom:1.7rem;
+  grid-template-columns:repeat(auto-fit,minmax(158px,1fr)); }
+.svc-stat{ position:relative; overflow:hidden; padding:1rem 1.1rem; border-radius:15px;
+  background:linear-gradient(165deg,var(--sv-ink),var(--sv-ink-2));
+  border:1px solid var(--sv-line); color:var(--sv-text);
+  transition:transform .2s ease, border-color .2s, box-shadow .2s; }
+.svc-stat:hover{ transform:translateY(-3px); border-color:rgba(var(--sv-accent-rgb),.4);
+  box-shadow:0 14px 30px rgba(3,8,20,.4); }
+.svc-stat b{ display:block; font-size:1.7rem; font-weight:800; letter-spacing:-.9px; line-height:1.2;
+  background:linear-gradient(135deg,var(--sv-accent-2),var(--sv-accent));
+  -webkit-background-clip:text; background-clip:text; color:transparent; }
+.svc-stat span{ display:block; font-size:.69rem; color:var(--sv-muted); font-weight:700;
+  text-transform:uppercase; letter-spacing:.7px; margin-top:.15rem; }
+.svc-stat > i{ position:absolute; right:.9rem; top:.9rem; font-size:1rem;
+  color:rgba(var(--sv-accent-rgb),.4); }
+/* A tile can override the number's colour when the figure itself means
+   something — money owed should not be the same colour as money earned. */
+.svc-stat.good b{ background:linear-gradient(135deg,#5cf0cd,var(--sv-good));
+  -webkit-background-clip:text; background-clip:text; }
+.svc-stat.bad b{ background:linear-gradient(135deg,#ff8f9a,var(--sv-bad));
+  -webkit-background-clip:text; background-clip:text; }
+.svc-stat.plain b{ background:none; color:var(--sv-text); }
+
+/* ---------------- STEP STRIP ---------------- */
+/* How this works, in three moves. Used where a service needs explaining
+   before anyone will trust it with their calculator. */
+.svc-steps{ display:grid; gap:.8rem; margin-bottom:1.6rem;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+.svc-step{ position:relative; padding:1rem 1.1rem 1.05rem; border-radius:15px;
+  background:var(--sv-ink); border:1px solid var(--sv-line); color:var(--sv-text); }
+.svc-step .n{ display:grid; place-items:center; width:26px; height:26px; border-radius:8px;
+  font-size:.78rem; font-weight:800; margin-bottom:.55rem;
+  background:rgba(var(--sv-accent-rgb),.14); border:1px solid rgba(var(--sv-accent-rgb),.3);
+  color:var(--sv-accent); }
+.svc-step b{ display:block; font-size:.94rem; margin-bottom:.2rem; }
+.svc-step span{ font-size:.83rem; color:var(--sv-muted); line-height:1.6; }
+
+/* ---------------- EMPTY STATES ---------------- */
+/* One grey sentence tells you nothing. An icon, a headline and a nudge tell
+   you the feature works and you simply have not used it yet. */
+.svc-empty{ grid-column:1/-1; text-align:center; padding:2.6rem 1.3rem; color:var(--sv-muted);
+  border:1px dashed var(--sv-line); border-radius:18px;
+  background:rgba(var(--sv-accent-rgb),.03); }
+.svc-empty > i{ display:grid; place-items:center; width:54px; height:54px; margin:0 auto .85rem;
+  border-radius:50%; font-size:1.3rem; color:var(--sv-accent);
+  background:rgba(var(--sv-accent-rgb),.11); border:1px solid rgba(var(--sv-accent-rgb),.26); }
+.svc-empty b{ display:block; color:var(--sv-text); font-size:1rem; font-weight:700; margin-bottom:.3rem; }
+.svc-empty span{ display:block; font-size:.86rem; max-width:42ch; margin:0 auto; line-height:1.6; }
+
+/* ---------------- SKELETONS ---------------- */
+/* Something honest to look at while the fetch is in flight, instead of a
+   blank panel that reads as broken. */
+.svc-skel{ border-radius:15px; border:1px solid var(--sv-line);
+  background-image:linear-gradient(100deg,
+    rgba(var(--sv-accent-rgb),.05) 28%,
+    rgba(var(--sv-accent-rgb),.13) 48%,
+    rgba(var(--sv-accent-rgb),.05) 68%);
+  background-color:var(--sv-ink); background-size:260% 100%;
+  animation:svcShimmer 1.3s linear infinite; }
+.svc-skel.card{ height:250px; }
+.svc-skel.row{ height:104px; }
+.svc-skel.line{ height:62px; }
+@keyframes svcShimmer{ from{ background-position:200% 0; } to{ background-position:-60% 0; } }
+
+/* ---------------- INLINE ALERT ---------------- */
+.svc-alert{ display:none; }
+.svc-alert.show{ display:flex; align-items:flex-start; gap:.55rem; width:fit-content;
+  max-width:100%; margin:.2rem auto 1.1rem; padding:.6rem 1rem; border-radius:12px;
+  font-size:.88rem; font-weight:600; text-align:left; line-height:1.5;
+  animation:svcPop .26s cubic-bezier(.2,.9,.3,1.25) both; }
+.svc-alert.show i{ margin-top:.14rem; }
+.svc-alert.ok{ background:rgba(31,214,166,.13); border:1px solid rgba(31,214,166,.36); color:var(--sv-good); }
+.svc-alert.err{ background:rgba(255,93,108,.13); border:1px solid rgba(255,93,108,.38); color:#ff8f9a; }
+@keyframes svcPop{ from{ opacity:0; transform:translateY(-5px) scale(.97); } to{ opacity:1; transform:none; } }
+
+/* ---------------- ENTRANCE ---------------- */
+/* Cards arrive in sequence rather than all at once. Cheap, and it makes a
+   list feel loaded rather than pasted. */
+.svc-anim > *{ animation:svcIn .38s ease both; }
+.svc-anim > *:nth-child(1){ animation-delay:.02s; }
+.svc-anim > *:nth-child(2){ animation-delay:.06s; }
+.svc-anim > *:nth-child(3){ animation-delay:.10s; }
+.svc-anim > *:nth-child(4){ animation-delay:.14s; }
+.svc-anim > *:nth-child(5){ animation-delay:.18s; }
+.svc-anim > *:nth-child(6){ animation-delay:.22s; }
+.svc-anim > *:nth-child(n+7){ animation-delay:.26s; }
+@keyframes svcIn{ from{ opacity:0; transform:translateY(9px); } to{ opacity:1; transform:none; } }
+
+/* ---------------- LIGHT THEME ---------------- */
+/* Pages remap their own --sv-ink / --sv-text under [data-theme="light"];
+   these are the corrections that are the same for all of them. */
+:root[data-theme="light"] .svc-hero{ box-shadow:0 16px 40px rgba(20,45,90,.12); }
+:root[data-theme="light"] .svc-panel,
+:root[data-theme="light"] .svc-stat,
+:root[data-theme="light"] .svc-step{ box-shadow:0 1px 2px rgba(20,45,90,.05), 0 8px 24px rgba(20,45,90,.07); }
+:root[data-theme="light"] .svc-tabs{ box-shadow:inset 0 1px 2px rgba(20,45,90,.05); }
+:root[data-theme="light"] .svc-skel{ background-color:#f3f6fb; }
+
+@media(max-width:600px){
+  .svc-stat b{ font-size:1.45rem; }
+  .svc-tabs{ border-radius:14px; }
+}

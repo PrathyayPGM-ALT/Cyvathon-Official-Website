@@ -69,7 +69,7 @@ async function requireAuth() {
 function renderNav(active, user) {
   const GROUPS = [
     { label: "Home", href: "/" },
-    { label: "Money",      items: [["/bank","Bank"], ["/card","Debit Card"], ["/pay","Pay by Card"], ["/exchange","Stock Exchange"], ["/loans","Loans"]] },
+    { label: "Money",      items: [["/bank","Bank"], ["/card","Debit Card"], ["/pay","Pay by Card"], ["/cyvapay","Cyvapay"], ["/exchange","Stock Exchange"], ["/loans","Loans"]] },
     { label: "Business",   items: [["/company","Companies"], ["/jobs","Jobs Board"], ["/states","States"], ["/marketplace","Import & Export"], ["/cyvazon","Cyvazon Delivery"], ["/shield","Cyvashield"]] },
     { label: "Government",  items: [["/government","Cabinet"], ["/ministries","Ministries"], ["/cabinet","Cabinet Powers"], ["/legislature","Legislature"], ["/gazette","Gazette"], ["/timeline","National Timeline"], ["/pens","The Armoury"], ["/court","Courts"], ["/fir","Report a Crime"], ["/voting","Elections"], ["/foreign","Foreign Affairs"], ["/treasury","Treasury"], ["/admin","Admin Panel"]] },
     { label: "Community",   items: [["/search","Search"], ["/citizens","Citizens"], ["/chat","Chat"], ["/videos","Videos"], ["/blogs","Blogs"], ["/flightsim","Flight Sim"], ["/casino","Casino"], ["/packet","Card Packets"], ["/cyvalend","Cyvalend"], ["/ai","Cyvathon AI"], ["/invite","Invite Friends"], ["/news","News"], ["/rules","Rules"]] },
@@ -217,4 +217,39 @@ function userLink(name) {
   if (!name) return "—";
   const safe = (name + "").replace(/</g, "&lt;");
   return `<a class="link" href="/profile?user=${encodeURIComponent(name)}">${safe}</a>`;
+}
+
+/* ============================================================
+   SERVICE-PAGE HELPERS  (Cyvazon / Cyvalend / The Armoury)
+   These three share a chassis in service.css. The bits of it that
+   have to be built from JS live here so all three stay identical.
+============================================================ */
+
+const _svEsc = (s) => (s == null ? "" : String(s))
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+/* An empty list should say what the thing is and how to fill it, not just
+   go grey. Icon, headline, nudge. */
+function svcEmpty(icon, title, hint) {
+  return `<div class="svc-empty"><i class="fas ${_svEsc(icon)}"></i>
+    <b>${_svEsc(title)}</b>${hint ? `<span>${_svEsc(hint)}</span>` : ""}</div>`;
+}
+
+/* Placeholder blocks to show while a fetch is in flight — a blank panel
+   reads as a broken page. kind: "card" | "row" | "line". */
+function svcSkeleton(n, kind) {
+  return Array.from({ length: n || 3 },
+    () => `<div class="svc-skel ${kind || "row"}"></div>`).join("");
+}
+
+/* The one status line a service page talks through. Green with a tick or
+   red with a warning, and it disappears entirely when there's nothing to say. */
+function svcAlert(elId, text, ok) {
+  const m = document.getElementById(elId);
+  if (!m) return;
+  if (!text) { m.className = "svc-alert"; m.innerHTML = ""; return; }
+  m.className = "svc-alert show " + (ok ? "ok" : "err");
+  m.innerHTML = `<i class="fas fa-${ok ? "circle-check" : "circle-exclamation"}"></i>
+    <span>${_svEsc(text)}</span>`;
 }

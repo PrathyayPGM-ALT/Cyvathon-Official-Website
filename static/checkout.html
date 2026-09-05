@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvapay Checkout · Cyvathon</title>
+  <meta name="description" content="Pay in Cybucks through Cyvapay, the Cyvathon payment gateway." />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#1fd6a6" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    /* A checkout should look like a checkout: one column, one decision,
+       nothing else on screen competing for the click. */
+    body{ display:grid; place-items:center; min-height:100vh; padding:1.4rem; }
+    .co{ width:100%; max-width:430px; }
+    .brand{ display:flex; align-items:center; justify-content:center; gap:.55rem;
+      margin-bottom:1.1rem; }
+    .brand svg{ width:26px; height:26px; }
+    .brand b{ font-size:1.15rem; font-weight:800; letter-spacing:-.4px; }
+    .brand b span{ color:var(--green); }
+
+    .sheet{ background:linear-gradient(165deg,rgba(120,170,255,.09),rgba(120,170,255,.025));
+      border:1px solid var(--panel-border); border-radius:20px; overflow:hidden;
+      box-shadow:var(--shadow); }
+    .top{ padding:1.5rem 1.6rem 1.3rem; text-align:center;
+      border-bottom:1px dashed var(--panel-border); }
+    .to{ font-size:.76rem; color:var(--muted); text-transform:uppercase;
+      letter-spacing:1px; font-weight:700; }
+    .who{ font-size:1.12rem; font-weight:700; margin:.25rem 0 .9rem; }
+    .amt{ font-size:2.5rem; font-weight:800; letter-spacing:-1.6px; line-height:1;
+      color:var(--green); }
+    .amt small{ font-size:.95rem; font-weight:700; letter-spacing:0; margin-left:.2rem; }
+    .what{ font-size:.95rem; font-weight:600; margin-top:.9rem; }
+    .desc{ font-size:.86rem; color:var(--muted); margin-top:.3rem; line-height:1.6; }
+
+    .body2{ padding:1.4rem 1.6rem 1.6rem; }
+    .body2 label{ margin-bottom:.2rem; }
+    .row2{ display:flex; justify-content:space-between; font-size:.86rem; padding:.4rem 0; }
+    .row2 span{ color:var(--muted); }
+    .row2 b{ font-weight:600; }
+
+    .paybtn{ background:var(--grad-green); color:#04231a; font-size:1rem; font-weight:800;
+      padding:14px; box-shadow:0 8px 24px rgba(31,214,166,.3); }
+    .paybtn:hover{ box-shadow:0 12px 30px rgba(31,214,166,.42); }
+
+    .guest{ text-align:center; }
+    .guest .lead{ font-size:.92rem; color:var(--text-dim); line-height:1.65; margin-bottom:1rem; }
+    .guest .safe{ display:flex; align-items:flex-start; gap:.6rem; text-align:left;
+      background:rgba(31,214,166,.08); border:1px solid rgba(31,214,166,.3);
+      border-radius:12px; padding:.8rem .9rem; margin:1rem 0; font-size:.82rem;
+      color:var(--text-dim); line-height:1.6; }
+    .guest .safe i{ color:var(--green); margin-top:.15rem; }
+
+    .done{ text-align:center; padding:1.8rem 1.6rem 1.7rem; }
+    .done .tick{ width:62px; height:62px; border-radius:50%; margin:0 auto 1rem;
+      display:grid; place-items:center; font-size:1.8rem; color:#04231a;
+      background:var(--grad-green); box-shadow:0 8px 24px rgba(31,214,166,.35); }
+    .done h3{ font-size:1.25rem; margin-bottom:.3rem; }
+    .done .ref{ font-family:Consolas,monospace; font-size:.86rem; color:var(--muted);
+      background:var(--panel-2); border:1px solid var(--panel-border);
+      border-radius:8px; padding:.4rem .7rem; display:inline-block; margin-top:.7rem; }
+    .done .back{ margin-top:1.2rem; }
+
+    .warn{ text-align:center; padding:1.8rem 1.6rem; }
+    .warn i{ font-size:2.2rem; color:var(--gold); margin-bottom:.8rem; display:block; }
+
+    .foot{ text-align:center; font-size:.75rem; color:var(--muted); margin-top:1.1rem;
+      line-height:1.7; }
+    .foot a{ color:var(--muted); }
+    .msg{ text-align:center; font-size:.86rem; margin-top:.8rem; min-height:1.2em; }
+  </style>
+</head>
+<body>
+  <div class="co">
+    <div class="brand">
+      <svg viewBox="0 0 28 28" fill="none" aria-hidden="true">
+        <rect x="2" y="6" width="24" height="17" rx="3.5" stroke="#1fd6a6" stroke-width="2.2"/>
+        <path d="M2 11.5h24" stroke="#1fd6a6" stroke-width="2.2"/>
+        <path d="M6.5 17.5h5" stroke="#1fd6a6" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+      <b>Cyva<span>pay</span></b>
+    </div>
+
+    <div class="sheet" id="sheet">
+      <div class="warn"><i class="fas fa-circle-notch fa-spin"></i>Loading…</div>
+    </div>
+
+    <p class="foot">
+      Payments are made in <b>Cybucks</b>, the currency of the
+      <a href="/" class="link">Republic of Cyvathon</a>.<br>
+      Cyvathon never asks for real money, card details or passwords from another site.
+    </p>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const CODE = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop() || "");
+    let D = null;
+    const esc=(s)=>(s==null?"":String(s))
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const CUR = {cybucks:"CB", pufb:"PUFB", aquilines:"AQ", cybit:"CBT"};
+    const money=(n)=>(Math.round((Number(n)||0)*100)/100).toLocaleString();
+    /* Only ever show a return link we can vouch for the shape of, and only
+       ever as something the payer clicks — never an automatic redirect. */
+    function safeReturn(u){
+      if(!/^https:\/\/[A-Za-z0-9._~:/?#@!$&*+,;=%-]+$/.test(u||"")) return null;
+      try{ return { href: encodeURI(u), host: new URL(u).host }; }catch{ return null; }
+    }
+
+    function render(){
+      const L = D.link, sheet = document.getElementById("sheet");
+      const unit = CUR[L.currency] || L.currency;
+
+      if(D.blocked){
+        sheet.innerHTML = `<div class="warn"><i class="fas fa-triangle-exclamation"></i>
+          <h3>${esc(D.blocked)}</h3>
+          <p class="small">Ask ${esc(L.payee)} for a new link.</p></div>`;
+        return;
+      }
+
+      const head = `
+        <div class="top">
+          <div class="to">Paying</div>
+          <div class="who">${esc(L.payee)}</div>
+          <div class="amt">${L.flexible ? "You choose" : money(L.amount)}<small>${
+            L.flexible ? "" : " " + esc(unit)}</small></div>
+          <div class="what">${esc(L.title)}</div>
+          ${L.description?`<div class="desc">${esc(L.description)}</div>`:""}
+        </div>`;
+
+      if(!D.signed_in){
+        sheet.innerHTML = head + `
+          <div class="body2 guest">
+            <p class="lead">You need a Cyvathon account to pay in Cybucks.
+              It's free, and you'll come straight back here.</p>
+            <div class="safe"><i class="fas fa-shield-halved"></i>
+              <div><b>This is safe.</b> Cyvathon is a student-run micronation with a
+                play currency. Signing up asks for a username and password and nothing
+                else — no real money, no card details, no payment information ever.</div>
+            </div>
+            <a href="${esc(D.signup_url)}"><button class="paybtn">
+              <i class="fas fa-user-plus"></i> Create a free account &amp; pay</button></a>
+            <a href="${esc(D.signup_url)}"><button class="ghost" style="margin-top:.6rem">
+              I already have one — sign in</button></a>
+          </div>`;
+        return;
+      }
+
+      if(D.is_owner){
+        sheet.innerHTML = head + `
+          <div class="body2">
+            <p class="small" style="text-align:center">This is your own payment link — you
+              can't pay yourself. Share it, or manage it in
+              <a class="link" href="/cyvapay">Cyvapay</a>.</p>
+          </div>`;
+        return;
+      }
+
+      sheet.innerHTML = head + `
+        <div class="body2">
+          ${L.flexible?`
+            <label>How much are you paying?</label>
+            <input id="amt" type="number" min="${esc(L.min_amount)}" max="${esc(L.max_amount)}"
+                   step="any" placeholder="${esc(L.min_amount)}–${esc(L.max_amount)} ${esc(unit)}">`:""}
+          <label>Your reference (optional)</label>
+          <input id="note" placeholder="e.g. order 12, or your name" maxlength="140">
+          <div class="row2" style="margin-top:1rem;border-top:1px solid var(--panel-border);padding-top:.8rem;">
+            <span>Paying as</span><b>${esc(D.me)}</b></div>
+          <div class="row2"><span>Your balance</span>
+            <b>${money(D.balance)} ${esc(unit)}</b></div>
+          <button class="paybtn" style="margin-top:1rem" onclick="pay()">
+            <i class="fas fa-lock"></i> Pay ${L.flexible?"":money(L.amount)+" "+esc(unit)}</button>
+          <p class="msg" id="msg"></p>
+        </div>`;
+    }
+
+    async function pay(){
+      const btn = document.querySelector(".paybtn");
+      const m = document.getElementById("msg");
+      const body = { code: CODE, note: (document.getElementById("note")||{}).value || "" };
+      const a = document.getElementById("amt");
+      if(a) body.amount = a.value;
+      btn.disabled = true; m.style.color = "var(--muted)"; m.textContent = "Paying…";
+      try{
+        const r = await api("/cyvapay/charge",{method:"POST",body:JSON.stringify(body)});
+        const ret = safeReturn(r.redirect_url);
+        document.getElementById("sheet").innerHTML = `
+          <div class="done">
+            <div class="tick"><i class="fas fa-check"></i></div>
+            <h3>Paid</h3>
+            <p class="small" style="margin:0">${esc(money(r.amount))} ${esc(CUR[r.currency]||r.currency)}
+              to ${esc(r.payee)}${r.title?` for ${esc(r.title)}`:""}.</p>
+            <div class="ref">Receipt ${esc(r.ref)}</div>
+            <div class="back">
+              ${ret?`<a href="${esc(ret.href)}"><button class="ghost">
+                Return to ${esc(ret.host)}</button></a>`:""}
+              <a href="/cyvapay?tab=payments"><button class="ghost" style="margin-top:.5rem">
+                View my receipts</button></a>
+            </div>
+          </div>`;
+      }catch(e){
+        m.style.color = "var(--red)"; m.textContent = e.message;
+        btn.disabled = false;
+      }
+    }
+
+    (async function(){
+      try{ D = await api("/cyvapay/link/" + encodeURIComponent(CODE)); }
+      catch(e){
+        document.getElementById("sheet").innerHTML =
+          `<div class="warn"><i class="fas fa-circle-xmark"></i>
+             <h3>${esc(e.message)}</h3></div>`;
+        return;
+      }
+      render();
+    })();
+  </script>
+</body>
+</html>
