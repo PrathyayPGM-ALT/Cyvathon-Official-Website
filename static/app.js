@@ -69,8 +69,8 @@ async function requireAuth() {
 function renderNav(active, user) {
   const GROUPS = [
     { label: "Home", href: "/" },
-    { label: "Money",      items: [["/bank","Bank"], ["/card","Debit Card"], ["/pay","Pay by Card"], ["/cyvapay","Cyvapay"], ["/exchange","Stock Exchange"], ["/loans","Loans"]] },
-    { label: "Business",   items: [["/company","Companies"], ["/jobs","Jobs Board"], ["/states","States"], ["/marketplace","Import & Export"], ["/cyvazon","Cyvazon Delivery"], ["/shield","Cyvashield"]] },
+    { label: "Money",      items: [["/bank","Bank"], ["/card","Debit Card"], ["/pay","Pay by Card"], ["/cyvapay","Cyvapay"], ["/loans","Loans"]] },
+    { label: "Business",   items: [["/company","Companies"], ["/exchange","Stock Exchange"], ["/jobs","Jobs Board"], ["/states","States"], ["/marketplace","Import & Export"], ["/cyvazon","Cyvazon Delivery"], ["/shield","Cyvashield"]] },
     { label: "Government",  items: [["/government","Cabinet"], ["/ministries","Ministries"], ["/cabinet","Cabinet Powers"], ["/legislature","Legislature"], ["/gazette","Gazette"], ["/timeline","National Timeline"], ["/pens","The Armoury"], ["/court","Courts"], ["/fir","Report a Crime"], ["/voting","Elections"], ["/foreign","Foreign Affairs"], ["/treasury","Treasury"], ["/admin","Admin Panel"]] },
     { label: "Community",   items: [["/search","Search"], ["/citizens","Citizens"], ["/chat","Chat"], ["/videos","Videos"], ["/blogs","Blogs"], ["/flightsim","Flight Sim"], ["/casino","Casino"], ["/packet","Card Packets"], ["/cyvalend","Cyvalend"], ["/ai","Cyvathon AI"], ["/invite","Invite Friends"], ["/news","News"], ["/rules","Rules"]] },
     { label: "ID Card", items: [["/profile","ID Card"], ["/passport","Passport & Citizenship"], ["/portfolio","Portfolio"], ["/leaderboard","Leaderboards"]] },
