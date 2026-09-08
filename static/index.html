@@ -233,15 +233,15 @@
     .hub-sc-wrap:empty{ display:none; }
     .hub-sc-edit{ margin-left:auto; font-size:.76rem; font-weight:600; color:var(--sv-muted); text-decoration:none; }
     .hub-sc-row{ display:flex; flex-wrap:wrap; gap:.55rem; margin-top:.6rem; }
-    .hub-sc{ display:flex; align-items:center; gap:.65rem; flex:1 1 200px; max-width:280px; min-height:52px; padding:.5rem .85rem .5rem .5rem; border-radius:12px;
+    .hub-sc{ display:flex; align-items:center; gap:.8rem; flex:1 1 222px; max-width:305px; min-height:66px; padding:.65rem 1rem .65rem .65rem; border-radius:14px;
       background:var(--hub-row); border:1px solid var(--sv-line); text-decoration:none; color:inherit; transition:border-color .18s, transform .18s; }
     /* rgba fallback first, colour-mixed tint second — the server picks these hues */
-    .hub-sc .ic{ width:30px; height:30px; flex:none; border-radius:9px; display:grid; place-items:center; font-size:.85rem; color:var(--sc);
+    .hub-sc .ic{ width:40px; height:40px; flex:none; border-radius:11px; display:grid; place-items:center; font-size:1.05rem; color:var(--sc);
       background:rgba(var(--sv-accent-rgb),.12); background:color-mix(in srgb,var(--sc) 14%,transparent);
       border:1px solid rgba(var(--sv-accent-rgb),.26); border-color:color-mix(in srgb,var(--sc) 32%,transparent); }
     .hub-sc .tx{ min-width:0; }
-    .hub-sc b{ display:block; font-size:.88rem; font-weight:700; color:var(--sv-text); line-height:1.25; }
-    .hub-sc small{ display:block; font-size:.76rem; color:var(--sv-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .hub-sc b{ display:block; font-size:.96rem; font-weight:700; color:var(--sv-text); line-height:1.3; }
+    .hub-sc small{ display:block; font-size:.8rem; color:var(--sv-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:.1rem; }
     html[data-theme="light"] .hub-sc .ic{ color:var(--sv-accent); color:color-mix(in srgb,var(--sc) 70%,#10243f); }
     .hub-sc:focus-visible{ outline:2px solid var(--sv-accent); outline-offset:2px; border-radius:12px; }
 
@@ -269,14 +269,19 @@
     .hub-section > h4{ display:flex; align-items:center; gap:.6rem; margin:0 0 .6rem .1rem; font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--sv-muted); }
     .hub-section > h4::before{ content:""; width:8px; height:8px; border-radius:50%; background:var(--ac); flex:none; }
     .hub-section > h4::after{ content:""; flex:1; height:1px; background:var(--sv-line); }
-    .hub-grid{ display:grid; gap:.6rem; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); }
-    .hc{ display:grid; grid-template-columns:34px minmax(0,1fr) auto; align-items:center; column-gap:.7rem; min-height:60px; padding:.6rem .7rem .6rem .6rem; border-radius:12px;
+    /* auto-rows:1fr so a two-line description doesn't leave one row of tiles
+       taller than its neighbours */
+    .hub-grid{ display:grid; gap:.7rem; grid-template-columns:repeat(auto-fill,minmax(242px,1fr)); grid-auto-rows:1fr; }
+    .hc{ display:grid; grid-template-columns:44px minmax(0,1fr) auto; align-items:center; column-gap:.85rem; min-height:78px; padding:.85rem .9rem .85rem .8rem; border-radius:14px;
       background:var(--hub-row); border:1px solid var(--sv-line); text-decoration:none; color:inherit; text-align:left; transition:border-color .18s, background .18s, transform .18s; }
-    .hc .ic{ width:34px; height:34px; border-radius:9px; display:grid; place-items:center; font-size:.9rem; color:var(--ac); background:rgba(var(--ac-rgb),.13); border:1px solid rgba(var(--ac-rgb),.28); }
+    .hc .ic{ width:44px; height:44px; border-radius:12px; display:grid; place-items:center; font-size:1.1rem; color:var(--ac); background:rgba(var(--ac-rgb),.13); border:1px solid rgba(var(--ac-rgb),.28); }
     .hc .tx{ min-width:0; }
-    .hc b{ display:block; font-size:.9rem; font-weight:700; color:var(--sv-text); line-height:1.25; }
-    .hc small{ display:block; font-size:.76rem; color:var(--sv-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:.1rem; }
-    .hc-go{ font-size:.6rem; color:var(--sv-muted); opacity:.55; transition:transform .18s, opacity .18s; }
+    .hc b{ display:block; font-size:.98rem; font-weight:700; color:var(--sv-text); line-height:1.3; }
+    /* the taller tile has room for two lines, so the description wraps
+       instead of ending in an ellipsis */
+    .hc small{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+      font-size:.8rem; line-height:1.35; color:var(--sv-muted); margin-top:.15rem; overflow-wrap:anywhere; }
+    .hc-go{ font-size:.68rem; color:var(--sv-muted); opacity:.55; transition:transform .18s, opacity .18s; }
     .hc:focus-visible{ outline:2px solid var(--ac); outline-offset:2px; border-radius:12px; }
 
     /* ---- 7. rail: live feed (scoped under .hub; the guest feed keeps the base look) ---- */
@@ -340,17 +345,18 @@
       .hub-alert .cta{ grid-column:2; justify-self:start; margin-top:.35rem; }
       .hub-sc-row{ flex-wrap:nowrap; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:.35rem; scrollbar-width:none; }
       .hub-sc-row::-webkit-scrollbar{ display:none; }
-      .hub-sc{ flex:0 0 auto; min-width:168px; max-width:none; scroll-snap-align:start; }
+      .hub-sc{ flex:0 0 auto; min-width:190px; max-width:none; scroll-snap-align:start; }
       .hub-sc small{ display:none; }
       .hub-tools{ flex-wrap:wrap; }
       /* full width on its own row, but still after the pills — so reading order,
          tab order and visual order all agree */
       .hub-filter{ flex:1 1 100%; margin-left:0; }
-      .hub-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; }
-      .hc{ grid-template-columns:30px minmax(0,1fr); min-height:50px; padding:.55rem .6rem; }
-      .hc .ic{ width:30px; height:30px; font-size:.82rem; }
+      .hub-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; }
+      .hc{ grid-template-columns:36px minmax(0,1fr); min-height:62px; padding:.7rem .65rem; column-gap:.6rem; }
+      .hc .ic{ width:36px; height:36px; font-size:.95rem; }
       .hc small, .hc-go{ display:none; }
-      .hc b{ font-size:.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      /* two lines beats "Support the A…" on a 160px tile */
+      .hc b{ font-size:.88rem; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
       .hub .fi:nth-child(n+8){ display:none; }
     }
 
