@@ -25,14 +25,8 @@
   <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/service.css">
   <style>
-    .hero{ text-align:center; padding:5.5rem 1.5rem 3rem; max-width:900px; margin:auto; position:relative; }
-    .hero::before{ content:""; position:absolute; top:-40px; left:50%; transform:translateX(-50%);
-      width:600px; height:600px; background:radial-gradient(circle,rgba(88,196,255,.18),transparent 70%); z-index:-1; }
-    .hero h2{ font-size:3rem; font-weight:700; margin-bottom:1rem;
-      background:linear-gradient(90deg,var(--accent),var(--accent2));
-      -webkit-background-clip:text; background-clip:text; color:transparent; }
-    .hero p{ font-size:1.2rem; color:var(--muted); }
     .typing-text{ background:linear-gradient(90deg,var(--accent),var(--accent2));
       -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:700; }
     .typing-text::after{ content:""; display:inline-block; width:6px; height:1.1em; background:var(--accent2);
@@ -44,64 +38,6 @@
     .stat-strip{ display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin-top:1.5rem; }
     .stat{ padding:.6rem 1.2rem; border-radius:30px; background:var(--panel); border:1px solid var(--panel-border); }
     .stat b{ color:var(--accent); }
-    .hub-card{ text-align:center; text-decoration:none; color:inherit; display:block; }
-
-    /* ---- refined dashboard hub ---- */
-    .hub-hero{ padding:2.6rem 1.5rem 1rem; }
-    .hub-welcome{ display:flex; align-items:center; justify-content:center; gap:.7rem; }
-    .hub-av{ width:42px; height:42px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
-      font-weight:800; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); font-size:1.05rem; }
-    .bstrip{ display:grid; grid-template-columns:repeat(4,1fr); gap:.8rem; max-width:760px; margin:1.6rem auto 0; }
-    @media(max-width:600px){ .bstrip{ grid-template-columns:repeat(2,1fr); } }
-    .bcard{ background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; padding:1rem .8rem; text-align:center; }
-    .bcard .bi{ font-size:.9rem; margin-bottom:.35rem; }
-    .bcard .bv{ font-size:1.45rem; font-weight:800; letter-spacing:-.5px; }
-    .bcard .bl{ font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:.15rem; }
-    .hub-section{ margin-bottom:1.8rem; }
-    .hub-section > h3{ font-size:.74rem; text-transform:uppercase; letter-spacing:1.6px; color:var(--muted);
-      margin:0 0 .85rem .2rem; display:flex; align-items:center; gap:.7rem; font-weight:600; }
-    .hub-section > h3::after{ content:""; flex:1; height:1px; background:var(--panel-border); }
-    .hub-grid{ display:grid; gap:1.1rem; grid-template-columns:repeat(auto-fill,minmax(245px,1fr)); }
-    .hc{ position:relative; display:flex; flex-direction:column; align-items:center; text-align:center; gap:.9rem;
-      padding:1.7rem 1.4rem; text-decoration:none; color:inherit; min-height:186px; overflow:hidden; justify-content:flex-start;
-      background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.015));
-      border:1px solid var(--panel-border); border-radius:20px;
-      transition:transform .2s, box-shadow .2s, border-color .2s; }
-    .hc::after{ content:""; position:absolute; top:-58px; left:50%; transform:translateX(-50%); width:165px; height:165px;
-      border-radius:50%; background:var(--ac,var(--accent)); opacity:.09; transition:.25s; }
-    .hc:hover{ transform:translateY(-6px); border-color:var(--ac,var(--accent)); box-shadow:0 18px 42px rgba(0,0,0,.42); }
-    .hc:hover::after{ opacity:.17; transform:translateX(-50%) scale(1.2); }
-    .hc .ic{ width:58px; height:58px; border-radius:17px; display:flex; align-items:center; justify-content:center;
-      font-size:1.55rem; color:#06223a; background:var(--ac,var(--accent)); box-shadow:0 8px 22px rgba(0,0,0,.3);
-      transition:transform .2s; position:relative; z-index:1; }
-    .hc:hover .ic{ transform:scale(1.08) rotate(-4deg); }
-    .hc .tx{ position:relative; z-index:1; }
-    .hc .tx h4{ margin:0; font-size:1.18rem; font-weight:700; color:var(--text); }
-    .hc .tx p{ margin:.35rem 0 0; font-size:.85rem; color:var(--muted); line-height:1.45; }
-
-    /* ---- recommended-for-you (bigger, colorful) ---- */
-    .rec-wrap{ margin-bottom:2.3rem; }
-    .rec-grid{ display:grid; gap:1.2rem; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); }
-    .rc{ position:relative; display:flex; align-items:center; gap:1.15rem; padding:1.7rem 1.6rem; border-radius:22px;
-      text-decoration:none; color:#fff; min-height:126px; overflow:hidden; background:var(--rc,#58c4ff);
-      background-image:linear-gradient(135deg, rgba(255,255,255,.20), rgba(0,0,0,.28));
-      border:1px solid rgba(255,255,255,.16); box-shadow:0 14px 34px rgba(0,0,0,.42);
-      transition:transform .2s, box-shadow .2s; }
-    .rc:hover{ transform:translateY(-6px) scale(1.012); box-shadow:0 24px 52px rgba(0,0,0,.55); }
-    .rc .ric{ width:66px; height:66px; border-radius:19px; display:flex; align-items:center; justify-content:center;
-      font-size:1.75rem; background:rgba(255,255,255,.22); flex-shrink:0; box-shadow:0 6px 16px rgba(0,0,0,.2); }
-    .rc .rtx h4{ margin:0; font-size:1.32rem; font-weight:800; letter-spacing:-.3px; }
-    .rc .rtx p{ margin:.32rem 0 0; font-size:.92rem; opacity:.92; line-height:1.4; }
-
-    /* ---- interests prompt banner ---- */
-    .int-banner{ display:flex; align-items:center; justify-content:space-between; gap:1rem; text-decoration:none;
-      padding:1.25rem 1.6rem; border-radius:18px; margin-bottom:2rem;
-      background:linear-gradient(135deg, rgba(167,139,250,.20), rgba(88,196,255,.12));
-      border:1px solid rgba(167,139,250,.45); transition:transform .18s, box-shadow .18s; }
-    .int-banner:hover{ transform:translateY(-3px); box-shadow:0 14px 34px rgba(0,0,0,.35); }
-    .int-banner b{ color:var(--text); font-size:1.1rem; display:block; }
-    .int-banner .int-sub{ color:var(--muted); font-size:.9rem; margin-top:.25rem; }
-    .int-cta{ color:var(--accent); font-weight:800; white-space:nowrap; font-size:1rem; }
 
     /* ---- landing (guest) ---- */
     .lhero{ text-align:center; margin:auto; padding:5.5rem 1.5rem 3.5rem; position:relative; overflow:hidden; }
@@ -173,7 +109,7 @@
       background:linear-gradient(135deg,rgba(88,196,255,.13),rgba(167,139,250,.09)); border:1px solid rgba(88,196,255,.28); }
     .lfinal h2{ font-size:1.9rem; margin-bottom:.5rem; }
 
-    /* ---- live activity feed ---- */
+    /* ---- live activity feed (base rules; the guest page uses these as-is) ---- */
     .feed{ display:flex; flex-direction:column; gap:.55rem; max-width:720px; margin:0 auto; }
     .fi{ display:flex; align-items:center; gap:.85rem; background:var(--panel); border:1px solid var(--panel-border);
       border-radius:12px; padding:.7rem .95rem; animation:fiIn .35s ease both; }
@@ -185,61 +121,243 @@
     .fi .ft a:hover{ color:var(--accent); }
     .fi .fw{ font-size:.72rem; color:var(--muted); white-space:nowrap; flex-shrink:0; }
 
-    /* --- cabinet vacancy call --- */
-    .vacban{ border:1px solid rgba(255,206,86,.4); background:rgba(255,206,86,.07);
-      border-radius:16px; padding:1.1rem 1.3rem; margin-bottom:1.8rem; }
-    .vacban h3{ margin:0 0 .3rem; font-size:1.05rem; display:flex;
-      align-items:center; gap:.55rem; }
-    .vacban h3 i{ color:var(--gold,#ffce56); }
-    .vacban p{ margin:0; color:var(--muted); font-size:.9rem; }
-    .vacban .seats{ display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.75rem; }
-    .vacban .seat{ font-size:.78rem; padding:.3rem .75rem; border-radius:20px;
-      background:var(--panel-2); border:1px solid var(--panel-border);
-      text-decoration:none; color:inherit; }
-    .vacban .seat:hover{ border-color:var(--gold,#ffce56); }
-    .vacban .seat b{ color:var(--gold,#ffce56); }
+    /* ============================================================
+       CITIZEN DASHBOARD — built on the service chassis (service.css)
+       so the capital reads as the same country as Cyvazon, Cyvalend
+       and Cyvashield. Three questions, in order: what needs me, how
+       am I doing, where do I go. Colour is on a budget: brand blue
+       for structure, the four currency tokens only on their figures,
+       red / gold only as urgency, group hues only in small chips.
+    ============================================================ */
 
-    /* Card-trading alert: offers waiting on you, and cards people want. */
-    .cardban{ display:flex; flex-wrap:wrap; align-items:center; gap:1rem; justify-content:space-between;
-      border:1px solid rgba(31,214,166,.42); background:rgba(31,214,166,.08);
-      border-radius:16px; padding:1.1rem 1.3rem; margin-bottom:1.8rem; text-decoration:none; color:inherit; }
-    .cardban:hover{ border-color:var(--green,#1fd6a6); }
-    .cardban h3{ margin:0 0 .3rem; font-size:1.05rem; display:flex; align-items:center; gap:.55rem; }
-    .cardban h3 i{ color:var(--green,#1fd6a6); }
-    .cardban p{ margin:0; color:var(--muted); font-size:.9rem; }
-    .cardban .cta{ font-size:.85rem; font-weight:600; color:var(--green,#1fd6a6); white-space:nowrap; }
+    /* ---- 1. tokens + shell (.hub sits on the same element as .svc) ---- */
+    .hub{ --sv-ink:var(--surface); --sv-ink-2:var(--surface-2); --sv-line:var(--panel-border); --sv-text:var(--text); --sv-muted:var(--muted);
+      --sv-accent:var(--accent); --sv-accent-2:var(--accent2); --sv-accent-deep:var(--accent-deep);
+      --hub-row:rgba(120,170,255,.06);
+      --rgb-accent:88,196,255; --rgb-cyan:34,211,238; --rgb-green:31,214,166; --rgb-gold:255,206,86; --rgb-violet:167,139,250; --rgb-red:255,93,108;
+      --rgb-cybucks:88,196,255; --rgb-pufb:255,206,86; --rgb-aquilines:31,214,166; --rgb-cybits:167,139,250; }
+    html[data-theme="light"] .hub.svc{ --sv-accent-rgb:23,105,201; --sv-on-accent:#ffffff; --sv-good:#0f9d72; --sv-warn:#c98a06; --sv-bad:#e23b49;
+      --hub-row:#f7f9fd; --cyan:#0e8fb5; --violet:#6c4ed9;
+      --rgb-accent:23,105,201; --rgb-cyan:14,143,181; --rgb-green:15,157,114; --rgb-gold:201,138,6; --rgb-violet:108,78,217; --rgb-red:226,59,73;
+      --rgb-cybucks:23,105,201; --rgb-pufb:201,138,6; --rgb-aquilines:15,157,114; --rgb-cybits:108,78,217;
+      /* Small bold text on a tint of its own hue fails AA on white. These inks
+         are only for the sub-14px labels (count pill, tier badge, seat figure,
+         role chips) — the tints and rails keep the brand colours. */
+      --ink-gold:#7a5300; --ink-red:#b3202d; --ink-green:#0a6b4e; }
+    .hub{ --ink-gold:var(--gold); --ink-red:var(--red); --ink-green:var(--sv-good); }
+    .hub.wrap{ padding:1.6rem 1.7rem 3rem; }
+    .hub-body{ display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:1.3rem; align-items:start; }
+    .hub-main,.hub-rail{ min-width:0; }
+    .hub-skel{ margin-bottom:.6rem; }
+    /* reveal + filter work through the hidden attribute; this keeps it winning over display rules */
+    .hub [hidden]{ display:none !important; }
 
-    /* Cyvazon alert — parcels waiting on you, in the service's own amber. */
-    .czban{ display:flex; flex-wrap:wrap; align-items:center; gap:1rem; justify-content:space-between;
-      border:1px solid rgba(255,153,0,.42); background:rgba(255,153,0,.08);
-      border-radius:16px; padding:1.1rem 1.3rem; margin-bottom:1.8rem; text-decoration:none; color:inherit; }
-    .czban:hover{ border-color:#ff9900; }
-    .czban h3{ margin:0 0 .3rem; font-size:1.05rem; display:flex; align-items:center; gap:.55rem; }
-    .czban h3 i{ color:#ff9900; }
-    .czban p{ margin:0; color:var(--muted); font-size:.9rem; }
-    .czban .cta{ font-size:.85rem; font-weight:600; color:#ff9900; white-space:nowrap; }
+    /* ---- 2. header band: who you are + the four balances ---- */
+    .hub-hero{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:1.4rem 2rem; align-items:center; padding:1.3rem 1.5rem 1.35rem; }
+    .hub-id{ display:flex; align-items:center; gap:.9rem; min-width:0; }
+    .hub-av{ width:48px; height:48px; border-radius:50%; flex:none; display:grid; place-items:center; font-weight:800; font-size:1.1rem;
+      color:var(--sv-on-accent); background:linear-gradient(135deg,var(--sv-accent),var(--sv-accent-deep)); background-size:cover; background-position:center;
+      box-shadow:0 0 0 3px rgba(var(--sv-accent-rgb),.18); }
+    .hub-id-tx{ min-width:0; overflow-wrap:anywhere; }
+    .hub-eyebrow{ display:block; font-size:.74rem; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--sv-muted); }
+    .hub-name{ margin:.1rem 0 0; font-size:1.35rem; font-weight:800; letter-spacing:-.4px; line-height:1.25; color:var(--sv-text); }
+    /* display:inline-block, not the chassis's inline-flex — text-overflow only
+       draws an ellipsis on a block container. */
+    .hub-desig{ display:inline-block; vertical-align:middle; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-left:.35rem; font-size:.72rem; padding:.22rem .7rem; }
+    .hub-desig:empty{ display:none; }
+    .hub-quick{ margin-top:.65rem; gap:.45rem; }
+    .hub a.svc-badge{ text-decoration:none; }
+    .hub a.svc-badge:focus-visible{ outline:2px solid var(--sv-accent); outline-offset:2px; border-radius:30px; }
+    html[data-theme="light"] .hub .svc-badge{ color:var(--accent-deep); }
+    html[data-theme="light"] .hub .svc-badge.good{ color:var(--ink-green); }
+    /* balances: currency by class, never by inline hex — so the light theme remaps them too */
+    .hub-bal{ margin:0; gap:.7rem; grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .cur-cybucks{ --sv-accent:var(--c-cybucks); --sv-accent-2:var(--c-cybucks); --sv-accent-rgb:var(--rgb-cybucks); }
+    .cur-pufb{ --sv-accent:var(--c-pufb); --sv-accent-2:var(--c-pufb); --sv-accent-rgb:var(--rgb-pufb); }
+    .cur-aquilines{ --sv-accent:var(--c-aquilines); --sv-accent-2:var(--c-aquilines); --sv-accent-rgb:var(--rgb-aquilines); }
+    .cur-cybits{ --sv-accent:var(--c-cybits); --sv-accent-2:var(--c-cybits); --sv-accent-rgb:var(--rgb-cybits); }
+    .hub-stat{ display:block; text-decoration:none; min-width:0; padding:.85rem 1rem; }
+    .hub-stat b{ font-size:clamp(1.15rem,2vw,1.55rem); letter-spacing:-.6px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+    .hub-stat span{ font-size:.76rem; letter-spacing:.6px; }
+    .hub-stat:focus-visible{ outline:2px solid var(--sv-accent); outline-offset:2px; border-radius:15px; }
 
-    /* Cyvashield alert — a claim waiting on the President, or cover to pick up. */
-    .shban{ display:flex; flex-wrap:wrap; align-items:center; gap:1rem; justify-content:space-between;
-      border:1px solid rgba(31,214,166,.42); background:rgba(31,214,166,.08);
-      border-radius:16px; padding:1.1rem 1.3rem; margin-bottom:1.8rem; text-decoration:none; color:inherit; }
-    .shban:hover{ border-color:var(--green,#1fd6a6); }
-    .shban h3{ margin:0 0 .3rem; font-size:1.05rem; display:flex; align-items:center; gap:.55rem; }
-    .shban h3 i{ color:var(--green,#1fd6a6); }
-    .shban p{ margin:0; color:var(--muted); font-size:.9rem; }
-    .shban .cta{ font-size:.85rem; font-weight:600; color:var(--green,#1fd6a6); white-space:nowrap; }
+    /* ---- 3. section heads outside panels get the same icon chip as panel heads ---- */
+    .hub .svc-head > i:first-child{ display:grid; place-items:center; width:30px; height:30px; flex:none; border-radius:9px; font-size:.85rem;
+      color:var(--sv-accent); background:rgba(var(--sv-accent-rgb),.12); border:1px solid rgba(var(--sv-accent-rgb),.26); }
 
-    /* Cyvalend alert — something due back, or someone waiting on your answer. */
-    .clban{ display:flex; flex-wrap:wrap; align-items:center; gap:1rem; justify-content:space-between;
-      border:1px solid rgba(167,139,250,.42); background:rgba(167,139,250,.08);
-      border-radius:16px; padding:1.1rem 1.3rem; margin-bottom:1.8rem; text-decoration:none; color:inherit; }
-    .clban:hover{ border-color:#a78bfa; }
-    .clban.late{ border-color:rgba(255,93,108,.5); background:rgba(255,93,108,.08); }
-    .clban h3{ margin:0 0 .3rem; font-size:1.05rem; display:flex; align-items:center; gap:.55rem; }
-    .clban h3 i{ color:#a78bfa; }
-    .clban.late h3 i{ color:var(--red,#ff5d6c); }
-    .clban p{ margin:0; color:var(--muted); font-size:.9rem; }
-    .clban .cta{ font-size:.85rem; font-weight:600; color:#a78bfa; white-space:nowrap; }
+    /* ---- 4. "Needs you" — one inbox, ranked by urgency ---- */
+    .hub-needs .svc-head{ margin-bottom:.2rem; }
+    .hub-needs .svc-note{ margin-bottom:.7rem; }
+    .hub-needs .count.hot{ background:rgba(var(--rgb-gold),.18); color:var(--ink-gold); border-color:rgba(var(--rgb-gold),.4); }
+    .hub-needs .count.hot.red{ background:rgba(var(--rgb-red),.16); color:var(--ink-red); border-color:rgba(var(--rgb-red),.4); }
+    .hub-needs-list{ display:flex; flex-direction:column; gap:.6rem; }
+    .hub-needs-list.is-loading{ min-height:128px; }
+    .hub-needs-list.is-loading > [role=listitem], .hub-needs-list.is-loading > .hub-allclear{ display:none; }
+    .hub-needs-list:not(.is-loading) .hub-skel{ display:none; }
+    .hub-allclear{ display:flex; align-items:center; gap:.7rem; padding:.75rem .9rem; border-radius:12px; border:1px dashed var(--sv-line);
+      background:rgba(var(--sv-accent-rgb),.03); color:var(--sv-muted); font-size:.85rem; }
+    .hub-allclear > i{ display:grid; place-items:center; width:28px; height:28px; flex:none; border-radius:50%; color:var(--sv-good);
+      background:rgba(var(--rgb-green),.13); border:1px solid rgba(var(--rgb-green),.36); }
+    .hub-allclear b{ display:block; font-size:.9rem; font-weight:700; color:var(--sv-text); }
+    .hub-failed > i{ color:var(--sv-warn); background:rgba(var(--rgb-gold),.13); border-color:rgba(var(--rgb-gold),.36); }
+    /* the alert row — one chassis, tier by attribute */
+    .hub-alert{ position:relative; display:grid; grid-template-columns:36px minmax(0,1fr) auto; column-gap:.85rem; align-items:center;
+      padding:.8rem .95rem .8rem 1rem; border-radius:14px; background:var(--hub-row); border:1px solid var(--sv-line);
+      text-decoration:none; color:inherit; transition:border-color .18s, background .18s; }
+    .hub-alert::before{ content:""; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:3px; background:var(--al); }
+    .hub-alert[data-tier=urgent]{ --al:var(--red); --al-rgb:var(--rgb-red); }
+    .hub-alert[data-tier=action]{ --al:var(--gold); --al-rgb:var(--rgb-gold); }
+    .hub-alert[data-tier=quiet]{ --al:var(--sv-accent); --al-rgb:var(--sv-accent-rgb); }
+    .hub-alert[data-tier=quiet]::before{ opacity:.55; }
+    .hub-alert > i{ display:grid; place-items:center; width:36px; height:36px; border-radius:10px; font-size:.9rem; color:var(--al);
+      background:rgba(var(--al-rgb),.13); border:1px solid rgba(var(--al-rgb),.3); }
+    .hub-alert[data-tier=quiet] > i{ background:rgba(var(--al-rgb),.09); border-color:rgba(var(--al-rgb),.22); }
+    .hub-alert .ht{ min-width:0; }
+    .hub-alert .ht b{ display:block; font-size:.95rem; font-weight:700; color:var(--sv-text); line-height:1.35; }
+    .hub-alert .ht span{ display:block; font-size:.83rem; color:var(--sv-muted); line-height:1.5; margin-top:.15rem; overflow-wrap:anywhere; }
+    .hub-alert-h{ color:inherit; text-decoration:none; }
+    .hub-tier{ display:inline-block; margin-left:.45rem; font-style:normal; font-size:.66rem; font-weight:800; letter-spacing:.4px; text-transform:uppercase;
+      padding:.12rem .5rem; border-radius:20px; vertical-align:middle; background:rgba(var(--rgb-red),.15); color:var(--ink-red); border:1px solid rgba(var(--rgb-red),.4); }
+    .hub-alert .cta{ font-size:.8rem; font-weight:700; color:var(--sv-accent); white-space:nowrap; display:inline-flex; gap:.35rem; align-items:center; text-decoration:none; }
+    .hub-alert .cta i{ font-size:.7rem; transition:transform .18s; }
+    .hub-alert .seats{ grid-column:2/-1; display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.55rem; }
+    .hub-alert .seat{ font-size:.8rem; padding:.28rem .7rem; border-radius:20px; background:rgba(var(--sv-accent-rgb),.08); border:1px solid var(--sv-line); color:var(--sv-text); text-decoration:none; }
+    .hub-alert .seat b{ color:var(--al-ink,var(--al)); }
+    .hub-alert[data-tier=urgent]{ --al-ink:var(--ink-red); }
+    .hub-alert[data-tier=action]{ --al-ink:var(--ink-gold); }
+    .hub-alert:focus-visible{ outline:2px solid var(--sv-accent); outline-offset:2px; border-radius:14px; }
+    .hub-alert .seat:focus-visible{ border-radius:20px; }
+
+    /* ---- 5. shortcuts (from your interests) ---- */
+    .hub-sc-wrap{ margin-bottom:1.3rem; }
+    .hub-sc-wrap:empty{ display:none; }
+    .hub-sc-edit{ margin-left:auto; font-size:.76rem; font-weight:600; color:var(--sv-muted); text-decoration:none; }
+    .hub-sc-row{ display:flex; flex-wrap:wrap; gap:.55rem; margin-top:.6rem; }
+    .hub-sc{ display:flex; align-items:center; gap:.65rem; flex:1 1 200px; max-width:280px; min-height:52px; padding:.5rem .85rem .5rem .5rem; border-radius:12px;
+      background:var(--hub-row); border:1px solid var(--sv-line); text-decoration:none; color:inherit; transition:border-color .18s, transform .18s; }
+    /* rgba fallback first, colour-mixed tint second — the server picks these hues */
+    .hub-sc .ic{ width:30px; height:30px; flex:none; border-radius:9px; display:grid; place-items:center; font-size:.85rem; color:var(--sc);
+      background:rgba(var(--sv-accent-rgb),.12); background:color-mix(in srgb,var(--sc) 14%,transparent);
+      border:1px solid rgba(var(--sv-accent-rgb),.26); border-color:color-mix(in srgb,var(--sc) 32%,transparent); }
+    .hub-sc .tx{ min-width:0; }
+    .hub-sc b{ display:block; font-size:.88rem; font-weight:700; color:var(--sv-text); line-height:1.25; }
+    .hub-sc small{ display:block; font-size:.76rem; color:var(--sv-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    html[data-theme="light"] .hub-sc .ic{ color:var(--sv-accent); color:color-mix(in srgb,var(--sc) 70%,#10243f); }
+    .hub-sc:focus-visible{ outline:2px solid var(--sv-accent); outline-offset:2px; border-radius:12px; }
+
+    /* ---- 6. launcher: jump strip + filter + compact directory ---- */
+    .hub-launch .svc-head{ margin-bottom:.2rem; }
+    .hub-tools{ display:flex; gap:.5rem; align-items:center; padding:.34rem; margin:.6rem 0 1rem; background:var(--sv-ink); border:1px solid var(--sv-line); border-radius:14px; }
+    /* This is a bare <nav>, so theme.css's element rule (max-width, auto margin,
+       24px padding, space-between, and flex-direction:column at ≤600px) lands on
+       it. Reset all of it, or the pills stack into a column on a phone. */
+    .hub-cats{ display:flex; flex-direction:row; justify-content:flex-start; align-items:center;
+      max-width:none; margin:0; padding:0; gap:.2rem; overflow-x:auto; scrollbar-width:none; min-width:0;
+      -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);
+      mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent); }
+    .hub-cats::-webkit-scrollbar{ display:none; }
+    .hub-cats a{ flex:none; padding:.5rem .6rem; border-radius:10px; font-size:.83rem; font-weight:600; color:var(--sv-muted); text-decoration:none; white-space:nowrap; }
+    .hub-cats a:focus-visible{ outline:2px solid var(--sv-accent); outline-offset:2px; border-radius:10px; background:rgba(var(--sv-accent-rgb),.10); color:var(--sv-text); }
+    /* The filter yields width before the pills do, so the last jump link stays reachable. */
+    .hub-filter{ position:relative; margin:0 0 0 auto; flex:0 4 240px; min-width:132px; display:block; }
+    .hub-filter i{ position:absolute; left:.7rem; top:50%; transform:translateY(-50%); font-size:.8rem; color:var(--sv-muted); pointer-events:none; }
+    .hub-filter input{ margin:0; width:100%; padding:.5rem .8rem .5rem 2rem; font-size:.86rem; border-radius:10px; }
+    .hub-section, #hubNeeds, #hubFeedWrap, #hubNewsWrap{ scroll-margin-top:calc(var(--hub-navh,62px) + 72px); }
+    .hub-nomatch{ padding:1.4rem 1rem; margin-bottom:1.3rem; }
+    .hub-nomatch b{ overflow-wrap:anywhere; }
+    .hub-section{ margin-bottom:1.3rem; }
+    .hub-section > h4{ display:flex; align-items:center; gap:.6rem; margin:0 0 .6rem .1rem; font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--sv-muted); }
+    .hub-section > h4::before{ content:""; width:8px; height:8px; border-radius:50%; background:var(--ac); flex:none; }
+    .hub-section > h4::after{ content:""; flex:1; height:1px; background:var(--sv-line); }
+    .hub-grid{ display:grid; gap:.6rem; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); }
+    .hc{ display:grid; grid-template-columns:34px minmax(0,1fr) auto; align-items:center; column-gap:.7rem; min-height:60px; padding:.6rem .7rem .6rem .6rem; border-radius:12px;
+      background:var(--hub-row); border:1px solid var(--sv-line); text-decoration:none; color:inherit; text-align:left; transition:border-color .18s, background .18s, transform .18s; }
+    .hc .ic{ width:34px; height:34px; border-radius:9px; display:grid; place-items:center; font-size:.9rem; color:var(--ac); background:rgba(var(--ac-rgb),.13); border:1px solid rgba(var(--ac-rgb),.28); }
+    .hc .tx{ min-width:0; }
+    .hc b{ display:block; font-size:.9rem; font-weight:700; color:var(--sv-text); line-height:1.25; }
+    .hc small{ display:block; font-size:.76rem; color:var(--sv-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:.1rem; }
+    .hc-go{ font-size:.6rem; color:var(--sv-muted); opacity:.55; transition:transform .18s, opacity .18s; }
+    .hc:focus-visible{ outline:2px solid var(--ac); outline-offset:2px; border-radius:12px; }
+
+    /* ---- 7. rail: live feed (scoped under .hub; the guest feed keeps the base look) ---- */
+    .hub-feedp h3, .hub-newsp h3{ margin-bottom:.5rem; }
+    .hub .feed{ max-width:none; margin:0; gap:0; }
+    .hub .fi{ background:transparent; border:0; border-bottom:1px solid var(--sv-line); border-radius:0; padding:.55rem .15rem; gap:.7rem; animation:none; }
+    .hub .fi:last-child{ border-bottom:0; }
+    .hub .fi .fic{ width:30px; height:30px; border-radius:9px; font-size:.8rem; box-shadow:none; color:var(--fc);
+      background:rgba(var(--sv-accent-rgb),.12); background:color-mix(in srgb,var(--fc) 16%,transparent); }
+    html[data-theme="light"] .hub .fi .fic{ color:color-mix(in srgb,var(--fc) 65%,#10243f); }
+    .hub .fi .ft{ color:var(--sv-muted); font-size:.86rem; }
+    .hub .fi .ft a{ color:var(--sv-text); }
+    .hub .fi .fw{ font-size:.74rem; }
+    /* ---- 8. rail: news ---- */
+    .hn-all{ margin-left:auto; font-size:.8rem; font-weight:600; color:var(--sv-accent); text-decoration:none; display:inline-flex; gap:.35rem; align-items:center; }
+    .hn-all i{ font-size:.7rem; }
+    .hn{ padding:.7rem 0; border-bottom:1px solid var(--sv-line); }
+    .hn:first-child{ padding-top:.2rem; }
+    .hn:last-child{ border-bottom:0; padding-bottom:0; }
+    .hn-t{ display:block; font-size:.92rem; font-weight:700; color:var(--sv-text); text-decoration:none; line-height:1.35; }
+    .hn-m{ font-size:.76rem; color:var(--sv-muted); margin-top:.15rem; }
+    .hn-b{ margin:.3rem 0 0; font-size:.82rem; line-height:1.5; color:var(--sv-muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; white-space:normal; }
+    .hub-rail .svc-empty{ padding:1.6rem 1rem; margin-bottom:1.3rem; }
+
+    /* ---- 9. hover — only where hover exists, so nothing sticks after a tap ---- */
+    @media(hover:hover){
+      .hub a.svc-badge:hover{ background:rgba(var(--sv-accent-rgb),.2); }
+      .hub-alert:hover{ border-color:rgba(var(--al-rgb),.5); background:rgba(var(--al-rgb),.06); }
+      .hub-alert:hover .cta i{ transform:translateX(3px); }
+      .hub-alert-h:hover, .hn-t:hover, .hub-sc-edit:hover{ color:var(--sv-accent); }
+      .hub-alert .seat:hover{ border-color:rgba(var(--sv-accent-rgb),.5); }
+      .hub-sc:hover{ border-color:rgba(var(--sv-accent-rgb),.45); border-color:color-mix(in srgb,var(--sc) 45%,transparent); transform:translateY(-1px); }
+      .hub-cats a:hover{ background:rgba(var(--sv-accent-rgb),.10); color:var(--sv-text); }
+      .hc:hover{ border-color:rgba(var(--ac-rgb),.45); background:rgba(var(--ac-rgb),.06); transform:translateY(-1px); }
+      .hc:hover .hc-go{ transform:translateX(2px); opacity:1; color:var(--ac); }
+      .hn-all:hover{ color:var(--sv-accent-2); }
+    }
+    @media(hover:none){ .hub-stat:hover{ transform:none; } }
+
+    /* ---- 10. sticky toolbar, only where the nav is one row ---- */
+    @media(min-width:1024px){
+      .hub-tools{ position:sticky; top:calc(var(--hub-navh,62px) + 8px); z-index:5; box-shadow:0 8px 24px rgba(3,8,20,.25); }
+      html[data-theme="light"] .hub-tools{ box-shadow:0 6px 18px rgba(20,45,90,.10); }
+    }
+
+    /* ---- 11. breakpoints ---- */
+    @media(max-width:1180px){ .hub-body{ grid-template-columns:minmax(0,1fr) 320px; } }
+    @media(max-width:1100px){ .hub-hero{ grid-template-columns:1fr; } }
+    @media(max-width:1023px){ .hub-body{ grid-template-columns:1fr; } }
+    /* Two-up well before the phone breakpoint: four tiles across a 640px window
+       leaves ~90px for the figure, and a nine-digit balance wraps mid-number. */
+    @media(max-width:760px){ .hub-bal{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:600px){
+      .hub.wrap{ padding:1.2rem 1rem 2.4rem; }
+      .hub-hero{ padding:1.1rem 1rem 1.15rem; }
+      .hub-av{ width:44px; height:44px; font-size:1rem; }
+      .hub-name{ font-size:1.2rem; }
+      .hub-allclear span{ display:none; }
+      .hub-alert{ grid-template-columns:32px minmax(0,1fr); }
+      .hub-alert > i{ width:32px; height:32px; }
+      .hub-alert .cta{ grid-column:2; justify-self:start; margin-top:.35rem; }
+      .hub-sc-row{ flex-wrap:nowrap; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:.35rem; scrollbar-width:none; }
+      .hub-sc-row::-webkit-scrollbar{ display:none; }
+      .hub-sc{ flex:0 0 auto; min-width:168px; max-width:none; scroll-snap-align:start; }
+      .hub-sc small{ display:none; }
+      .hub-tools{ flex-wrap:wrap; }
+      /* full width on its own row, but still after the pills — so reading order,
+         tab order and visual order all agree */
+      .hub-filter{ flex:1 1 100%; margin-left:0; }
+      .hub-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; }
+      .hc{ grid-template-columns:30px minmax(0,1fr); min-height:50px; padding:.55rem .6rem; }
+      .hc .ic{ width:30px; height:30px; font-size:.82rem; }
+      .hc small, .hc-go{ display:none; }
+      .hc b{ font-size:.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .hub .fi:nth-child(n+8){ display:none; }
+    }
+
+    /* ---- 12. browsers without color-mix fall back to the brand tint ---- */
+    @supports not (color:color-mix(in srgb,red,blue)){
+      .hub-sc .ic, .hub .fi .fic{ color:var(--sv-accent); background:rgba(var(--sv-accent-rgb),.12); border-color:rgba(var(--sv-accent-rgb),.26); }
+    }
   </style>
 </head>
 <body>
@@ -321,34 +439,78 @@
   </div>
 
   <!-- ============ LOGGED-IN DASHBOARD HUB ============ -->
-  <div id="hubView" style="display:none;">
-    <section class="hero hub-hero">
-      <h2 style="font-size:2.05rem;margin-bottom:.7rem;">Citizen Dashboard</h2>
-      <div class="hub-welcome">
-        <div class="hub-av" id="hubAv"></div>
-        <p style="margin:0;">Welcome back, <b id="hubName" style="color:var(--accent)"></b> <span class="tag" id="hubDesig"></span></p>
+  <main id="hubView" class="wrap svc hub" style="display:none">
+    <!-- who you are + how you're doing, in one band -->
+    <section class="svc-hero hub-hero" aria-label="Your account">
+      <div class="hub-id">
+        <div class="hub-av" id="hubAv" aria-hidden="true"></div>
+        <div class="hub-id-tx">
+          <span class="hub-eyebrow">Welcome back · <span id="hubDate"></span></span>
+          <h2 class="hub-name"><b id="hubName"></b> <span class="svc-badge hub-desig" id="hubDesig"></span></h2>
+          <div class="svc-badges hub-quick" id="hubQuick"></div>
+        </div>
       </div>
-      <div class="bstrip" id="hubBalances"></div>
+      <div class="svc-stats hub-bal" id="hubBalances" role="group" aria-label="Your balances"></div>
     </section>
-    <section class="wrap" style="padding-top:.5rem;">
-      <div id="interestBanner"></div>
-      <div id="hubRec"></div>
-      <div id="vacancyBanner"></div>
-      <div id="packetBanner"></div>
-      <div id="cyvazonBanner"></div>
-      <div id="shieldBanner"></div>
-      <div id="lendBanner"></div>
-      <div id="hubGrid"></div>
-    </section>
-    <section class="wrap" id="hubFeedWrap" style="padding-top:0; display:none;">
-      <h2 class="section-title" style="font-size:1.4rem;"><i class="fas fa-bolt" style="color:var(--gold)"></i> Live from the Republic</h2>
-      <div class="feed" id="hubFeed"></div>
-    </section>
-    <section class="wrap" id="hubNewsWrap" style="padding-top:0; display:none;">
-      <h2 class="section-title" style="font-size:1.4rem;"><i class="fas fa-newspaper"></i> National News</h2>
-      <div id="hubNews"></div>
-    </section>
-  </div>
+
+    <div class="hub-body">
+      <div class="hub-main">
+        <!-- what needs you: the five service summaries and the interests prompt, one list, most urgent first -->
+        <section class="svc-panel hub-needs" id="hubNeeds" aria-labelledby="hubNeedsTitle">
+          <h3 class="svc-head" id="hubNeedsTitle"><i class="fas fa-bell" aria-hidden="true"></i> Needs you <span class="count" id="hubNeedsCount" hidden>0</span></h3>
+          <p class="svc-note">Waiting on you, most urgent first.</p>
+          <div class="hub-needs-list is-loading" role="list" aria-busy="true">
+            <div class="svc-skel line hub-skel" aria-hidden="true"></div>
+            <div id="vacancyBanner" role="listitem"></div>
+            <div id="packetBanner" role="listitem"></div>
+            <div id="cyvazonBanner" role="listitem"></div>
+            <div id="shieldBanner" role="listitem"></div>
+            <div id="lendBanner" role="listitem"></div>
+            <div id="interestBanner" role="listitem"></div>
+            <div class="hub-allclear" role="listitem" hidden><i class="fas fa-check" aria-hidden="true"></i><div><b>Nothing needs you right now</b><span>Parcels, claims, trades and seats will appear here the moment they do.</span></div></div>
+            <div class="hub-allclear hub-failed" role="listitem" hidden><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><div><b>Couldn't check everything</b><span>Some summaries didn't load — try again shortly.</span></div></div>
+          </div>
+        </section>
+
+        <!-- shortcuts picked from your interests -->
+        <div id="hubRec" class="hub-sc-wrap"><div class="svc-skel line hub-skel" aria-hidden="true"></div></div>
+
+        <!-- where do I go: every page in the Republic, filterable -->
+        <section class="hub-launch" aria-labelledby="hubLaunchTitle">
+          <h3 class="svc-head" id="hubLaunchTitle"><i class="fas fa-compass" aria-hidden="true"></i> Everything in Cyvathon</h3>
+          <div class="hub-tools">
+            <nav class="hub-cats" aria-label="Jump to a section">
+              <a href="#g-money">Money</a>
+              <a href="#g-you">You</a>
+              <a href="#g-business">Business</a>
+              <a href="#g-government">Government</a>
+              <a href="#g-community">Community</a>
+              <a href="#g-classified" id="hubCatClassified" hidden>Classified</a>
+              <a href="#hubFeedWrap" id="hubCatLive" hidden>Live</a>
+              <a href="#hubNewsWrap" id="hubCatNews" hidden>News</a>
+            </nav>
+            <label class="hub-filter"><i class="fas fa-magnifying-glass" aria-hidden="true"></i><input type="search" id="hubFilter" placeholder="Jump to… e.g. Gazette" autocomplete="off" aria-label="Filter the list"></label>
+          </div>
+          <div id="hubGrid"></div>
+          <div class="hub-nomatch svc-empty" role="status" hidden><i class="fas fa-robot" aria-hidden="true"></i><b>Nothing called “<span id="hubNoMatchQ"></span>”</b><span><a class="link" href="/ai">Ask the AI guide →</a></span></div>
+        </section>
+      </div>
+
+      <!-- what changed: the live feed and the headlines -->
+      <aside class="hub-rail">
+        <div class="svc-skel row hub-skel" id="hubRailSkel" aria-hidden="true"></div>
+        <section class="svc-panel hub-feedp" id="hubFeedWrap" style="display:none" aria-labelledby="hubFeedTitle">
+          <h3 id="hubFeedTitle"><i class="fas fa-bolt" aria-hidden="true"></i> Live from the Republic</h3>
+          <div class="feed hub-feed" id="hubFeed"></div>
+        </section>
+        <section class="svc-panel hub-newsp" id="hubNewsWrap" style="display:none" aria-labelledby="hubNewsTitle">
+          <h3><i class="fas fa-newspaper" aria-hidden="true"></i> <span id="hubNewsTitle">National News</span> <a class="hn-all" href="/news">All news <i class="fas fa-arrow-right" aria-hidden="true"></i></a></h3>
+          <div id="hubNews" class="hub-news"></div>
+        </section>
+        <div class="hub-rail-empty svc-empty" id="hubRailEmpty" hidden><i class="fas fa-moon" aria-hidden="true"></i><b>Quiet in the Republic</b><span>Citizen activity and headlines will show up here.</span></div>
+      </aside>
+    </div>
+  </main>
 
   <footer>
     <p>© 2025 Cyvathon | Code. Conquer. Cause Creativity.</p>
@@ -357,14 +519,45 @@
 
   <script src="/static/app.js"></script>
   <script>
+    // ---- shared helpers: one escaper for every template on the page ----
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+    const safeIcon = i => /^fa-[a-z0-9-]+$/.test(i || "") ? i : "fa-circle-info";
+
+    /* One row chassis for everything in "Needs you". The loaders decide the
+       words and the tier (urgent / action / quiet); this decides what a row
+       looks like. `sub` arrives already escaped because some callers embed
+       escaped names in it. */
+    function needRow({href, icon, head, sub, cta, tier = "action", badge = "", detail = "", headHref = ""}){
+      const tag = href ? "a" : "div";
+      const b = badge ? ` <em class="hub-tier">${esc(badge)}</em>` : "";
+      const h = headHref ? `<a class="hub-alert-h" href="${esc(headHref)}">${esc(head)}</a>` : esc(head);
+      const arrow = `<i class="fas fa-arrow-right" aria-hidden="true"></i>`;
+      const c = href ? `<span class="cta">${esc(cta)} ${arrow}</span>`
+                     : `<a class="cta" href="${esc(headHref)}">${esc(cta)} ${arrow}</a>`;
+      return `<${tag} class="hub-alert" data-tier="${tier}"${href ? ` href="${esc(href)}"` : ""}>
+        <i class="fas ${safeIcon(icon)}" aria-hidden="true"></i>
+        <div class="ht"><b>${h}${b}</b><span>${sub}</span></div>${c}${detail}</${tag}>`;
+    }
+    function fillSlot(id, tier, html){
+      const slot = document.getElementById(id); if(!slot) return true;
+      slot.dataset.tier = tier; slot.innerHTML = html; return true;
+    }
+
+    // [title, anchor slug, colour token, rgb-triplet token, cards]
     const GROUPS = [
-      ["Money & Markets", "#58c4ff", [
+      ["Money & Markets", "money", "var(--accent)", "var(--rgb-accent)", [
         ["/bank","fa-building-columns","Bank","Send & convert money"],
         ["/card","fa-credit-card","Debit Card","Print it, get scanned, get paid"],
         ["/cyvapay","fa-money-bill-transfer","Cyvapay","Take payments on any website"],
         ["/loans","fa-hand-holding-dollar","Loans","Borrow up to 5000 CB"],
       ]],
-      ["Business & Trade", "#1fd6a6", [
+      ["You", "you", "var(--cyan)", "var(--rgb-cyan)", [
+        ["/profile","fa-id-card","ID Card","Your record & balances"],
+        ["/passport","fa-passport","Passport","Citizenship & visas"],
+        ["/portfolio","fa-chart-pie","Portfolio","Your cash & investments"],
+        ["/leaderboard","fa-ranking-star","Leaderboards","See who's on top"],
+      ]],
+      ["Business & Trade", "business", "var(--green)", "var(--rgb-green)", [
         ["/company","fa-briefcase","Companies","Found & work at companies"],
         ["/exchange","fa-chart-line","Stock Exchange","Trade company shares"],
         ["/jobs","fa-clipboard-list","Jobs Board","Find work & earn a wage"],
@@ -373,7 +566,7 @@
         ["/cyvazon","fa-truck-fast","Cyvazon","Free delivery, anywhere in school"],
         ["/shield","fa-shield-halved","Cyvashield","Free cover if things go wrong"],
       ]],
-      ["Government", "#ffce56", [
+      ["Government", "government", "var(--gold)", "var(--rgb-gold)", [
         ["/government","fa-landmark","Government","See the cabinet"],
         ["/ministries","fa-landmark-dome","Ministries","Departments & budgets"],
         ["/cabinet","fa-user-tie","Cabinet Powers","What each minister may do"],
@@ -384,9 +577,9 @@
         ["/fir","fa-file-shield","Report a Crime","File an FIR"],
         ["/gazette","fa-stamp","Gazette","Laws & decrees"],
         ["/timeline","fa-timeline","Timeline","How the Republic got here"],
-        ["/pens","fa-shield-halved","Support the Army","Hand in a G2, get 400 CB"],
+        ["/pens","fa-pen","Support the Army","Hand in a G2, get 400 CB"],
       ]],
-      ["Community", "#a78bfa", [
+      ["Community", "community", "var(--violet)", "var(--rgb-violet)", [
         ["/citizens","fa-users","Citizens","Directory & DMs"],
         ["/chat","fa-comments","Chat","Talk with citizens"],
         ["/videos","fa-video","Videos","Share & watch videos"],
@@ -400,18 +593,13 @@
         ["/news","fa-newspaper","News","National headlines"],
         ["/rules","fa-scroll","Rules","The laws of Cyvathon"],
       ]],
-      ["Identity", "#ff8fb0", [
-        ["/profile","fa-id-card","ID Card","Your record & balances"],
-        ["/passport","fa-passport","Passport","Citizenship & visas"],
-        ["/portfolio","fa-chart-pie","Portfolio","Your cash & investments"],
-        ["/leaderboard","fa-ranking-star","Leaderboards","See who's on top"],
-      ]],
     ];
+    // [balance key, label, icon, currency class] — colour comes from the class, so the light theme remaps it
     const CUR = [
-      ["balance","Cybucks","fa-coins","var(--accent)"],
-      ["pufb","Pufferbucks","fa-fish-fins","var(--gold)"],
-      ["aquilines","Aquilines","fa-feather-pointed","var(--green)"],
-      ["cybits","Cybits","fa-bolt","#a78bfa"],
+      ["balance","Cybucks","fa-coins","cur-cybucks"],
+      ["pufb","Pufferbucks","fa-fish-fins","cur-pufb"],
+      ["aquilines","Aquilines","fa-feather-pointed","cur-aquilines"],
+      ["cybits","Cybits","fa-bolt","cur-cybits"],
     ];
 
     function showGuest(){
@@ -460,13 +648,18 @@
       if(s<86400) return Math.floor(s/3600)+"h ago";
       return Math.floor(s/86400)+"d ago";
     }
-    function renderFeed(list, elId){
+    // `compact` is the hub's hairline-list variant; the guest page keeps the card look.
+    function renderFeed(list, elId, compact){
       const box = document.getElementById(elId); if(!box) return;
-      const esc = (s)=>(s||"").replace(/</g,"&lt;");
       box.innerHTML = list.map(a=>{
         const [ic,c] = feedIcon(a.entry);
         const name = esc(a.username||"Someone");
         const link = a.username ? `/profile?user=${encodeURIComponent(a.username)}` : "#";
+        if(compact) return `<div class="fi" style="--fc:${c}">
+          <div class="fic"><i class="fas ${ic}" aria-hidden="true"></i></div>
+          <div class="ft"><a href="${link}">${name}</a> ${esc(a.entry)}</div>
+          <div class="fw"><time datetime="${esc(a.created_at)}">${timeAgo(a.created_at)}</time></div>
+        </div>`;
         return `<div class="fi">
           <div class="fic" style="background:${c}"><i class="fas ${ic}"></i></div>
           <div class="ft"><a href="${link}">${name}</a> ${esc(a.entry)}</div>
@@ -478,112 +671,203 @@
       try{
         const d = await api("/activity");
         const list = (d.activity||[]).slice(0, limit||8);
-        if(!list.length) return;
-        renderFeed(list, elId);
+        if(!list.length) return true;
+        renderFeed(list, elId, elId === "hubFeed");
         const w = document.getElementById(wrapId);
         if(w) w.style.display = "block";
-      }catch{}
+        return true;
+      }catch(e){ return false; }
     }
+
     function showHub(user, admin, cia, registry){
       document.getElementById("guestView").style.display = "none";
       document.getElementById("hubView").style.display = "block";
       document.getElementById("hubName").textContent = user.username;
-      document.getElementById("hubDesig").textContent = user.designation;
+      document.getElementById("hubDesig").textContent = user.designation || "";
+      const dateEl = document.getElementById("hubDate");
+      if(dateEl) dateEl.textContent = new Date().toLocaleDateString(undefined, {weekday:"long", day:"numeric", month:"long"});
+
+      // Avatar: same escape as app.js avatarStyle(), so a quote or bracket in
+      // the URL can't break out of url().
       const av = document.getElementById("hubAv");
-      if(user.avatar){ av.setAttribute("style", `background-image:url('${(user.avatar+'').replace(/'/g,"%27")}');background-size:cover;background-position:center;`); av.textContent=""; }
-      else av.textContent = (user.username[0]||"?").toUpperCase();
+      av.textContent = ((user.username||"")[0] || "?").toUpperCase();
+      av.style.backgroundImage = "";
+      if(user.avatar){
+        const safe = encodeURI(user.avatar + "").replace(/['()]/g, encodeURIComponent);
+        av.style.backgroundImage = "url('" + safe + "')";
+        if(av.style.backgroundImage) av.textContent = "";
+      }
 
-      document.getElementById("hubBalances").innerHTML = CUR.map(([k,label,icon,color])=>`
-        <div class="bcard"><div class="bi" style="color:${color}"><i class="fas ${icon}"></i></div>
-          <div class="bv" style="color:${color}">${fmt(user[k])}</div><div class="bl">${label}</div></div>`).join("");
+      const chip  = (ic, t) => `<span class="svc-badge good"><i class="fas ${ic}" aria-hidden="true"></i> ${t}</span>`;
+      const qlink = (h, ic, t) => `<a class="svc-badge" href="${h}"><i class="fas ${ic}" aria-hidden="true"></i> ${t}</a>`;
+      document.getElementById("hubQuick").innerHTML =
+        (admin ? chip("fa-sliders","Admin") : "") + (cia ? chip("fa-eye","Athena") : "") + (registry ? chip("fa-folder-open","Registry") : "") +
+        qlink("/bank","fa-paper-plane","Send money") + qlink("/profile","fa-id-card","ID card") + qlink("/portfolio","fa-chart-pie","Portfolio");
 
-      const groups = GROUPS.map(g=>[g[0], g[1], g[2].slice()]);
+      document.getElementById("hubBalances").innerHTML = CUR.map(([k,label,icon,cls])=>
+        `<a class="svc-stat hub-stat ${cls}" href="/bank"><i class="fas ${icon}" aria-hidden="true"></i><b>${fmt(user[k])}</b><span>${label}</span></a>`).join("");
+
+      const groups = GROUPS.map(g=>[g[0], g[1], g[2], g[3], g[4].slice()]);
       const extra = [];
       if (cia) extra.push(["/athena","fa-eye","Athena","Intelligence Agency"]);
       if (registry) extra.push(["/registry","fa-folder-open","The Registry","Classified files & dossiers"]);
       if (admin) extra.push(["/admin","fa-sliders","Admin Panel","National economic policy"]);
-      if (extra.length) groups.push(["Classified & Admin", "#ff5d6c", extra]);
+      if (extra.length) groups.push(["Classified & Admin", "classified", "var(--red)", "var(--rgb-red)", extra]);
+      const catC = document.getElementById("hubCatClassified"); if(catC) catC.hidden = !extra.length;
 
-      document.getElementById("hubGrid").innerHTML = groups.map(([title, color, cards])=>`
-        <div class="hub-section">
-          <h3>${title}</h3>
+      document.getElementById("hubGrid").innerHTML = groups.map(([title, slug, color, rgb, cards])=>`
+        <div class="hub-section" id="g-${slug}" style="--ac:${color};--ac-rgb:${rgb}">
+          <h4>${title}</h4>
           <div class="hub-grid">${cards.map(([h,i,t,d])=>`
-            <a class="hc" href="${h}" style="--ac:${color}">
-              <div class="ic"><i class="fas ${i}"></i></div>
-              <div class="tx"><h4>${t}</h4><p>${d}</p></div>
+            <a class="hc" href="${h}" data-q="${esc((t+" "+d).toLowerCase())}">
+              <span class="ic"><i class="fas ${i}" aria-hidden="true"></i></span>
+              <span class="tx"><b>${t}</b><small>${d}</small></span>
+              <i class="fas fa-chevron-right hc-go" aria-hidden="true"></i>
             </a>`).join("")}</div>
         </div>`).join("");
-      loadRecommended();
-      loadVacancies();
-      loadPacketBanner();
-      loadCyvazonBanner();
-      loadShieldBanner();
-      loadLendBanner();
-      loadFeed("hubFeed", "hubFeedWrap", 12);
-      loadHubNews();
+
+      wireFilter();
+      measureNav();
+
+      // Everything above the directory reveals once, sorted — not in eight
+      // separate jerks as each summary lands. The race shows what has arrived
+      // after 2.5s; the settle call finishes the job for late arrivals.
+      const pause = ms => new Promise(r => setTimeout(r, ms));
+      const six = [loadRecommended(), loadVacancies(), loadPacketBanner(), loadCyvazonBanner(), loadShieldBanner(), loadLendBanner()];
+      Promise.race([Promise.allSettled(six), pause(2500)]).then(revealNeeds);
+      Promise.allSettled(six).then(revealNeeds);
+      const rail = [loadFeed("hubFeed", "hubFeedWrap", 12), loadHubNews()];
+      Promise.race([Promise.allSettled(rail), pause(2500)]).then(()=>revealRail(false));
+      Promise.allSettled(rail).then(()=>revealRail(true));
     }
 
-    // Personalized recommendations + interests prompt.
+    /* Hide empty slots, put the visible ones in urgency order (a real DOM
+       reorder, so tab order matches what you see), write the count, and show
+       the all-clear or the "couldn't check" note. Idempotent. */
+    function revealNeeds(results){
+      const list = document.querySelector(".hub-needs-list"); if(!list) return;
+      const final = Array.isArray(results);
+      const slots = [...list.querySelectorAll("[role=listitem]")];
+      slots.forEach(s => { s.hidden = !s.firstElementChild; });
+      const vis = slots.filter(s => !s.hidden);
+      if(!final && !vis.length) return;   // timed out with nothing in yet — keep the skeleton
+      const rank = {urgent:0, action:1, quiet:2};
+      const allclear = list.querySelector(".hub-allclear:not(.hub-failed)");
+      vis.slice().sort((a,b) => (rank[a.dataset.tier] ?? 3) - (rank[b.dataset.tier] ?? 3))
+         .forEach(s => list.insertBefore(s, allclear));
+      const hot = vis.filter(s => s.dataset.tier === "urgent" || s.dataset.tier === "action");
+      const pill = document.getElementById("hubNeedsCount");
+      if(pill){
+        pill.textContent = hot.length; pill.hidden = !hot.length;
+        pill.classList.toggle("hot", hot.length > 0);
+        pill.classList.toggle("red", vis.some(s => s.dataset.tier === "urgent"));
+      }
+      // results[1..5] are the five service summaries; false means the call threw
+      const allFailed = final && results.slice(1,6).every(r => r.status === "rejected" || r.value === false);
+      allclear.hidden = vis.length > 0 || allFailed;
+      list.querySelector(".hub-failed").hidden = vis.length > 0 || !allFailed;
+      list.classList.remove("is-loading");
+      list.classList.add("svc-anim");
+      list.removeAttribute("aria-busy");
+      const rec = document.getElementById("hubRec");
+      if(rec && !rec.querySelector(".hub-sc-row")) rec.innerHTML = "";
+    }
+    function revealRail(final){
+      const fw = document.getElementById("hubFeedWrap"), nw = document.getElementById("hubNewsWrap");
+      const feedOn = !!fw && fw.style.display !== "none";
+      const newsOn = !!nw && nw.style.display !== "none";
+      if(!final && !feedOn && !newsOn) return;
+      const sk = document.getElementById("hubRailSkel"); if(sk) sk.remove();
+      const empty = document.getElementById("hubRailEmpty"); if(empty) empty.hidden = feedOn || newsOn;
+      const cl = document.getElementById("hubCatLive"); if(cl) cl.hidden = !feedOn;
+      const cn = document.getElementById("hubCatNews"); if(cn) cn.hidden = !newsOn;
+    }
+    // The sticky toolbar and anchor jumps need to know how tall the nav is.
+    // The header keeps growing after first paint (icon font, notification
+    // badge, a second row of links), so watch it rather than measure once.
+    function measureNav(){
+      const h = document.querySelector("header"), hub = document.getElementById("hubView");
+      if(hub) hub.style.setProperty("--hub-navh", (h ? h.offsetHeight : 62) + "px");
+      if(h && !h.dataset.measured && window.ResizeObserver){
+        h.dataset.measured = "1";
+        new ResizeObserver(measureNav).observe(h);
+      }
+    }
+    window.addEventListener("resize", measureNav);
+    function wireFilter(){
+      const f = document.getElementById("hubFilter"); if(!f || f.dataset.wired) return; f.dataset.wired = "1";
+      const nm = document.querySelector(".hub-nomatch"), nq = document.getElementById("hubNoMatchQ");
+      f.addEventListener("input", () => {
+        const q = f.value.trim().toLowerCase(); let any = false;
+        document.querySelectorAll("#hubGrid .hc").forEach(t => { const hit = !q || (t.dataset.q || "").includes(q); t.hidden = !hit; any = any || hit; });
+        document.querySelectorAll("#hubGrid .hub-section").forEach(s => { s.hidden = !s.querySelector(".hc:not([hidden])"); });
+        if(nm) nm.hidden = any || !q;
+        if(nq) nq.textContent = f.value.trim().slice(0, 60);
+      });
+      f.addEventListener("keydown", e => {
+        if(e.key === "Escape"){ f.value = ""; f.dispatchEvent(new Event("input")); }
+        if(e.key === "Enter"){ const first = document.querySelector("#hubGrid .hc:not([hidden])"); if(first && f.value.trim()) location.href = first.href; }
+      });
+    }
+
+    // Shortcuts from your interests — or, with none set, a quiet row in the inbox asking for them.
     async function loadRecommended(){
-      try{
-        const d = await api("/recommended");
-        const rec = d.recommended || [];
-        if(!(d.interests || []).length){
-          document.getElementById("interestBanner").innerHTML = `
-            <a href="/profile" class="int-banner">
-              <div><b>✨ Tell us what you love</b>
-                <div class="int-sub">Pick your interests so we can tailor Cyvathon to you — and drop you into group chats with people who share them.</div></div>
-              <span class="int-cta">Set interests →</span></a>`;
-          return;
-        }
-        if(rec.length){
-          document.getElementById("hubRec").innerHTML = `
-            <div class="hub-section rec-wrap">
-              <h3 style="color:var(--gold);"><i class="fas fa-star"></i> Recommended for you</h3>
-              <div class="rec-grid">${rec.map(c=>`
-                <a class="rc" href="${c.href}" style="--rc:${c.color}">
-                  <div class="ric"><i class="fas ${c.icon}"></i></div>
-                  <div class="rtx"><h4>${c.title}</h4><p>${c.desc}</p></div>
-                </a>`).join("")}</div>
-            </div>`;
-        }
-      }catch{}
+      let d;
+      try{ d = await api("/recommended"); }catch(e){ return false; }
+      const rec = d.recommended || [];
+      const box = document.getElementById("hubRec");
+      if(!(d.interests || []).length){
+        if(box) box.innerHTML = "";
+        return fillSlot("interestBanner", "quiet", needRow({href:"/profile", icon:"fa-sliders", tier:"quiet",
+          head:"Tell us what you love",
+          sub:esc("Pick your interests so we can tailor Cyvathon to you — and drop you into group chats with people who share them."),
+          cta:"Set interests"}));
+      }
+      if(!box) return true;
+      if(!rec.length){ box.innerHTML = ""; return true; }
+      box.innerHTML = `
+        <h3 class="svc-head"><i class="fas fa-star" aria-hidden="true"></i> Your shortcuts
+          <a class="hub-sc-edit" href="/profile">based on your interests · edit</a></h3>
+        <div class="hub-sc-row">${rec.map(c=>{
+          // one leading slash only — "//host" and "/\host" are off-site
+          const href = /^\/(?![\/\\])[^\s]*$/.test(c.href || "") ? c.href : "#";
+          const col  = /^#[0-9a-f]{3,8}$/i.test(c.color || "") ? c.color : "var(--accent)";
+          return `<a class="hub-sc" href="${esc(href)}" style="--sc:${col}">
+            <span class="ic"><i class="fas ${safeIcon(c.icon)}" aria-hidden="true"></i></span>
+            <span class="tx"><b>${esc(c.title)}</b><small>${esc(c.desc)}</small></span></a>`; }).join("")}</div>`;
+      return true;
     }
 
     /* A vacant cabinet seat is the sort of thing citizens should see the
        moment they land, not have to go hunting for. */
     async function loadVacancies(){
       let d;
-      try{ d = await api("/ministries/vacancies"); }catch(e){ return; }
+      try{ d = await api("/ministries/vacancies"); }catch(e){ return false; }
       const vac = (d.vacancies || []);
-      if (!vac.length) return;
-      const esc = (x)=>(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      if (!vac.length) return true;
       const seats = vac.map(v => {
         const short = Math.max(0, v.needed - v.applicants);
         return `<a class="seat" href="/ministries">${esc(v.name)} —
           <b>${short ? short + " more needed" : "election opening"}</b></a>`;
       }).join("");
-      document.getElementById("vacancyBanner").innerHTML = `
-        <div class="vacban">
-          <h3><i class="fas fa-landmark-dome"></i>
-            ${vac.length} cabinet seat${vac.length===1?" is":"s are"} vacant</h3>
-          <p>${d.eligible
-              ? "You are eligible to stand. Apply, and once enough citizens do, an election opens automatically."
-              : esc(d.reason || "Applications are open to eligible citizens.")}</p>
-          <div class="seats">${seats}</div>
-        </div>`;
+      const tier = d.eligible ? "action" : "quiet";
+      return fillSlot("vacancyBanner", tier, needRow({
+        icon:"fa-landmark-dome", headHref:"/ministries", tier,
+        head:`${vac.length} cabinet seat${vac.length===1?" is":"s are"} vacant`,
+        sub: d.eligible
+          ? "You are eligible to stand. Apply, and once enough citizens do, an election opens automatically."
+          : esc(d.reason || "Applications are open to eligible citizens."),
+        cta:"Open Ministries",
+        detail:`<div class="seats">${seats}</div>`}));
     }
 
     /* Card trading: an offer waiting on you (or a card someone wants) should
        be visible the second you land, the same way a vacant seat is. */
     async function loadPacketBanner(){
       let d;
-      try{ d = await api("/packet/summary"); }catch(e){ return; }
-      if(!d.enabled) return;
-      const esc = (x)=>(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-      let head, sub, href = "/packet";
+      try{ d = await api("/packet/summary"); }catch(e){ return false; }
+      if(!d.enabled) return true;
+      let head, sub, href = "/packet", tier = "action";
       if(d.offers){
         const who = (d.offer_from||[]).map(esc).join(", ");
         head = `${d.offers} card trade offer${d.offers===1?"":"s"} waiting on you`;
@@ -597,36 +881,29 @@
       } else if(!d.cards){
         head = "Start your card packet";
         sub  = "Search any footballer in the card database, add the editions you've pulled, and trade with other citizens.";
-        href = "/packet?tab=add";
+        href = "/packet?tab=add"; tier = "quiet";
       } else if(d.up_for_trade){
         head = `${d.up_for_trade} card${d.up_for_trade===1?"":"s"} up for trade across the Republic`;
         sub  = "Browse other citizens' packets and wishlist what you're missing.";
-        href = "/packet?tab=browse";
-      } else return;
-
-      document.getElementById("packetBanner").innerHTML = `
-        <a class="cardban" href="${href}">
-          <div>
-            <h3><i class="fas fa-futbol"></i> ${head}</h3>
-            <p>${sub}</p>
-          </div>
-          <span class="cta">Open Card Packets &rarr;</span>
-        </a>`;
+        href = "/packet?tab=browse"; tier = "quiet";
+      } else return true;
+      return fillSlot("packetBanner", tier, needRow({href, icon:"fa-futbol", head, sub, cta:"Open Card Packets", tier}));
     }
 
     /* Cyvazon: a parcel you need to hand over — or one waiting to be carried —
        is time-sensitive in a way a menu item isn't. */
     async function loadCyvazonBanner(){
       let d;
-      try{ d = await api("/cyvazon/summary"); }catch(e){ return; }
-      if(!d.enabled || !d.open) return;
-      let head, sub, href = "/cyvazon?tab=mine";
+      try{ d = await api("/cyvazon/summary"); }catch(e){ return false; }
+      if(!d.enabled || !d.open) return true;
+      let head, sub, href = "/cyvazon?tab=mine", tier = "action", badge = "";
       if(d.incoming){
         head = `${d.incoming} parcel${d.incoming===1?"":"s"} on the way to you`;
         sub  = "Confirm each one when it reaches your hands — that credits the courier who ran it.";
       } else if(d.to_hand_over){
         head = `${d.to_hand_over} parcel${d.to_hand_over===1?" is":"s are"} waiting to leave you`;
         sub  = "Something you sold or traded still needs handing to a courier.";
+        tier = "urgent"; badge = "Blocked on you";
       } else if(d.carrying){
         head = `You're carrying ${d.carrying} Cyvazon parcel${d.carrying===1?"":"s"}`;
         sub  = "Finish the run and the recipient signs for it.";
@@ -637,24 +914,19 @@
         href = "/cyvazon?tab=jobs";
       } else if(!d.courier){
         head = "Cyvazon is hiring couriers";
-        sub  = `Deliver parcels around school and earn ${d.wage} CB a week — more than most jobs in Cyvathon.`;
-        href = "/cyvazon?tab=crew";
-      } else return;
-
-      document.getElementById("cyvazonBanner").innerHTML = `
-        <a class="czban" href="${href}">
-          <div><h3><i class="fas fa-truck-fast"></i> ${head}</h3><p>${sub}</p></div>
-          <span class="cta">Open Cyvazon &rarr;</span>
-        </a>`;
+        sub  = `Deliver parcels around school and earn ${esc(d.wage)} CB a week — more than most jobs in Cyvathon.`;
+        href = "/cyvazon?tab=crew"; tier = "quiet";
+      } else return true;
+      return fillSlot("cyvazonBanner", tier, needRow({href, icon:"fa-truck-fast", head, sub, cta:"Open Cyvazon", tier, badge}));
     }
 
     /* Cyvashield: an unruled claim is the President's job queue, and an
        uncovered citizen is one bad day from losing money for nothing. */
     async function loadShieldBanner(){
       let d;
-      try{ d = await api("/shield/summary"); }catch(e){ return; }
-      if(!d.enabled || !d.open) return;
-      let head, sub, href = "/shield";
+      try{ d = await api("/shield/summary"); }catch(e){ return false; }
+      if(!d.enabled || !d.open) return true;
+      let head, sub, href = "/shield", tier = "action";
       if(d.is_admin && d.waiting){
         head = `${d.waiting} insurance claim${d.waiting===1?"":"s"} waiting on your ruling`;
         sub  = "Each one is checked against the records, so you can see what actually happened.";
@@ -662,31 +934,26 @@
       } else if(d.open_mine){
         head = `${d.open_mine} of your claims ${d.open_mine===1?"is":"are"} being reviewed`;
         sub  = "The President will rule on it and you'll be notified either way.";
-        href = "/shield?tab=mine";
+        href = "/shield?tab=mine"; tier = "quiet";
       } else if(!d.enrolled){
         head = "You aren't covered by Cyvashield";
         sub  = "Free insurance against lost parcels, stolen Cybucks, bad trades and scams. Pick a plan — they all cost nothing.";
-        href = "/shield?tab=plans";
-      } else return;
-
-      document.getElementById("shieldBanner").innerHTML = `
-        <a class="shban" href="${href}">
-          <div><h3><i class="fas fa-shield-halved"></i> ${head}</h3><p>${sub}</p></div>
-          <span class="cta">Open Cyvashield &rarr;</span>
-        </a>`;
+        href = "/shield?tab=plans"; tier = "quiet";
+      } else return true;
+      return fillSlot("shieldBanner", tier, needRow({href, icon:"fa-shield-halved", head, sub, cta:"Open Cyvashield", tier}));
     }
 
     /* Cyvalend: something you owe back is time-sensitive in a way a menu
        item isn't, and an overdue item is somebody else's property. */
     async function loadLendBanner(){
       let d;
-      try{ d = await api("/cyvalend/summary"); }catch(e){ return; }
-      if(!d.enabled || !d.open) return;
-      let head, sub, href = "/cyvalend?tab=borrowed", late = false;
+      try{ d = await api("/cyvalend/summary"); }catch(e){ return false; }
+      if(!d.enabled || !d.open) return true;
+      let head, sub, href = "/cyvalend?tab=borrowed", tier = "action", badge = "";
       if(d.overdue){
         head = `${d.overdue} borrowed item${d.overdue===1?" is":"s are"} overdue`;
         sub  = "Give it back — someone is waiting on their own property.";
-        late = true;
+        tier = "urgent"; badge = "Overdue";
       } else if(d.requests){
         head = `${d.requests} citizen${d.requests===1?" wants":"s want"} to borrow from you`;
         sub  = "Approving holds any deposit and starts the clock.";
@@ -697,33 +964,28 @@
       } else if(d.awaiting_return){
         head = `${d.awaiting_return} of your things ${d.awaiting_return===1?"is":"are"} out on loan`;
         sub  = "Confirm the return when you get it back.";
-        href = "/cyvalend?tab=lending";
+        href = "/cyvalend?tab=lending"; tier = "quiet";
       } else if(d.shelf){
         head = `${d.shelf} thing${d.shelf===1?"":"s"} on the Cyvalend shelf`;
         sub  = "Forgot your calculator, pen or charger? Borrow one — it's free.";
-        href = "/cyvalend";
-      } else return;
-
-      document.getElementById("lendBanner").innerHTML = `
-        <a class="clban ${late?"late":""}" href="${href}">
-          <div><h3><i class="fas fa-hand-holding-heart"></i> ${head}</h3><p>${sub}</p></div>
-          <span class="cta">Open Cyvalend &rarr;</span>
-        </a>`;
+        href = "/cyvalend"; tier = "quiet";
+      } else return true;
+      return fillSlot("lendBanner", tier, needRow({href, icon:"fa-hand-holding-heart", head, sub, cta:"Open Cyvalend", tier, badge}));
     }
 
     async function loadHubNews(){
       try{
         const d = await api("/news/list");
-        if(!d.news || !d.news.length) return;
-        const esc = (s)=>(s||"").replace(/</g,"&lt;");
+        if(!d.news || !d.news.length) return true;
         document.getElementById("hubNews").innerHTML = d.news.slice(0,3).map(n=>`
-          <div class="panel" style="margin-bottom:1rem;text-align:left;border-left:4px solid var(--accent);">
-            <h3 style="margin-bottom:.2rem;">${esc(n.title)}</h3>
-            <p class="small" style="color:var(--muted)">By ${esc(n.author)} · ${new Date(n.created_at).toLocaleDateString()}</p>
-            <p style="white-space:pre-wrap;color:#cdd6e0;margin-top:.4rem;">${esc(n.body)}</p>
-          </div>`).join("") + `<p style="text-align:center;"><a class="link" href="/news">All news →</a></p>`;
+          <article class="hn">
+            <a class="hn-t" href="/news">${esc(n.title)}</a>
+            <div class="hn-m">By ${esc(n.author)} · <time datetime="${esc(n.created_at)}">${new Date(n.created_at).toLocaleDateString()}</time></div>
+            <p class="hn-b">${esc(String(n.body || "").replace(/\s+/g, " "))}</p>
+          </article>`).join("");
         document.getElementById("hubNewsWrap").style.display = "block";
-      }catch{}
+        return true;
+      }catch(e){ return false; }
     }
 
     async function loadStats(){
