@@ -35,11 +35,11 @@ PREAMBLE = (
     "We, the citizens of the Republic of Cyvathon — a micronation founded on the twenty-sixth "
     "day of May in the year two thousand and twenty-five, built by its own citizens around "
     "code, creativity and community — do adopt this Constitution as the founding law of our "
-    "Republic. We hold that a nation is its people and not its ruler; that every office exists "
-    "to serve the citizens who fill the treasury and cast the ballots; that law is made in the "
-    "open, argued in the open and recorded in the open; and that nothing in Cyvathon is held by "
-    "force, because everything in Cyvathon was joined by choice. Code. Conquer. Cause "
-    "Creativity."
+    "Republic. We hold that a nation is its people and not its ruler. We hold that every office "
+    "exists to serve the citizens who fill the treasury and cast the ballots. We hold that law is "
+    "made in the open, argued in the open and recorded in the open. And we hold that nothing in "
+    "Cyvathon is held by force, because everything in Cyvathon was joined by choice. Our motto is "
+    "<i>Code. Conquer. Cause Creativity.</i> — and what we conquer is problems, never people."
 )
 
 ARTICLES = [
@@ -105,24 +105,27 @@ ARTICLES = [
              "Every citizen may earn, hold, save, invest, lend and spend money; found a company, "
              "take it public and trade its shares; and buy and sell in any market of the "
              "Republic. What a citizen has earned is theirs, and may be taken only by a "
-             "judgment of the Court or by a tax laid down in law."),
+             "judgment of the Court, by a tax laid down in law, or in settlement of a loan the "
+             "citizen has not repaid (Article VIII &sect;5)."),
             ("The ballot",
              "Every citizen has one vote in every election and one vote on every bill, cast once "
-             "and final. Every citizen may stand for any elected office, unless they are serving "
-             "a sentence, carry a conviction on their record, or hold an unpaid loan."),
+             "and final. Every citizen may stand for any vacant ministry, unless they are serving "
+             "a sentence, carry a conviction on their record, or still owe a loan. For the Prime "
+             "Minister and the Judge the President convenes the vote and names the candidates on "
+             "the ballot; the citizens choose between them."),
             ("The law",
              "Every citizen may table a bill before the Legislature, may bring a case before the "
-             "Court, may report a crime, and is entitled to be heard before any judgment is "
-             "given against them. No citizen may be judged by a person who is a party to their "
-             "case."),
+             "Court, may report a crime, and is entitled to be heard before the Court gives any "
+             "judgment against them. No citizen may be judged by a person who is a party to "
+             "their case."),
             ("Belief",
              "Chairism is the valued culture of the Republic and is honoured by it. It is never "
              "compelled. No citizen is taxed, fined, ranked, or disadvantaged in any way for "
              "declining to practise it."),
             ("Openness",
              "The Treasury's holdings, the Gazette, the record of every Act and decree, the "
-             "National Timeline and the proceedings of the Legislature and the Court are open "
-             "to every citizen to read."),
+             "National Timeline, the proceedings of the Legislature and the Court, and every "
+             "citizen's public record are open to every citizen to read."),
         ],
     },
     {
@@ -130,20 +133,27 @@ ARTICLES = [
         "sections": [
             ("Office",
              "The President is Head of State. The office is held by the founder of the "
-             "Republic, Prathyay. Once every six years a national vote is held in which the "
-             "citizens elect or confirm the President."),
+             "Republic, Prathyay. Once every six years a national vote, which the President is "
+             "bound to convene, is held in which the citizens elect or confirm the President."),
             ("Powers",
              "The President: administers the National Treasury and sets the national levers of "
              "the economy; gives or withholds assent to bills passed by the Legislature; issues "
              "decrees within the law; convenes national votes for the Prime Minister and the "
-             "Judge; reviews new citizens and approves couriers; confirms alliances with other "
-             "nations; sits as Judge when no Judge is elected; may release or pardon a citizen; "
-             "and keeps the National Timeline."),
+             "Judge and names the candidates; may appoint a citizen to a ministry, or dismiss a "
+             "minister; reviews new citizens and approves couriers; confirms alliances with "
+             "other nations; may sit in the Court, and sits alone when no Judge is elected; may "
+             "detain a citizen by order, for a stated reason and a stated term; may release or "
+             "pardon a citizen; and keeps the National Timeline. This list is complete: a power "
+             "not written here is not held."),
             ("Limits",
              "The President is bound by this Constitution. A decree may not repeal an Act of the "
              "Legislature, override a judgment of the Court, or amend this Constitution. The "
-             "President may not rule on a case to which they are a party. Every decree, assent, "
-             "refusal and pardon is entered in the public record."),
+             "President may not rule on a case to which they are a party. A detention by "
+             "presidential order may not exceed three hundred and sixty-five (365) days, is "
+             "entered on the citizen's public record with its reason on the day it is made, and "
+             "counts as a conviction; it is the one judgment given without a hearing in the "
+             "Republic, and this Article names it so that no citizen is surprised by it. Every "
+             "decree, assent, appointment, detention and pardon is entered in the public record."),
             ("No salary",
              "The President draws no salary. The Treasury is held for the nation and spent on "
              "it, and the person who holds it takes nothing from it."),
@@ -161,9 +171,10 @@ ARTICLES = [
              "Security Minister, the Head of Coding, the Head of Hacking — as the Republic "
              "keeps."),
             ("How ministers are chosen",
-             "A vacant ministry is filled by election, not appointment. Any eligible citizen may "
-             "stand; when four have done so, an election opens of its own accord and every "
-             "citizen votes."),
+             "A vacant ministry is filled by election: any eligible citizen may stand, and when "
+             "four have done so an election opens of its own accord and every citizen votes. The "
+             "President may also appoint a citizen to a ministry, and may dismiss a minister; an "
+             "appointment is entered on the citizen's record."),
             ("Duties held outright",
              "A minister's duties are theirs to carry out without asking: the Defence Minister "
              "works the Armoury desk; the Transport Minister vets and approves the couriers of "
@@ -183,8 +194,8 @@ ARTICLES = [
             ("Passage",
              "A bill that receives more Ayes than Nays passes and goes to the President for "
              "assent. On assent it is enacted, numbered as an Act of the year, and published in "
-             "the Gazette. A bill refused assent does not become law, and the refusal is "
-             "recorded."),
+             "the Gazette. A bill refused assent does not become law, and is marked refused on "
+             "the Legislature's roll."),
             ("The Gazette",
              "The Gazette is the Republic's record of law: every Act and every decree, numbered "
              "in order and open to all. What is not in the Gazette is not the law."),
@@ -194,17 +205,19 @@ ARTICLES = [
         "num": "VII", "title": "The Courts and Justice",
         "sections": [
             ("The National Court",
-             "The National Court hears every case a citizen brings. The elected Judge presides; "
-             "the President presides only when no Judge holds office. No one may rule on a case "
-             "to which they are a party."),
+             "The National Court hears every case a citizen brings. The elected Judge presides. "
+             "The President may also sit, and sits alone when no Judge holds office. No one may "
+             "rule on a case to which they are a party."),
             ("A fair hearing",
              "Both sides of a case may argue it before judgment. A citizen may report a crime "
              "with evidence, and the report is heard in the same way."),
             ("Sentences",
-             "A sentence is a fine, a term in jail, or both. No term of jail may exceed three "
-             "hundred and sixty-five (365) days. A jailed citizen is confined to the jail until "
-             "the term is served, and is released when it is. Convictions are entered on the "
-             "criminal record and bar the citizen from standing for office."),
+             "A sentence of the Court is a fine, a term in jail, or both. No term of jail — "
+             "whether given by the Court or by presidential order under Article IV — may exceed "
+             "three hundred and sixty-five (365) days. A jailed citizen is confined to the jail "
+             "until the term is served, and is released when it is. Convictions, including a "
+             "detention by order, are entered on the criminal record and bar the citizen from "
+             "standing for office."),
             ("Mercy",
              "The President may pardon any conviction. A pardon is recorded like any other act "
              "of the office."),
@@ -216,7 +229,7 @@ ARTICLES = [
             ("One Treasury, in the open",
              "There is a single National Treasury into which all taxes, levies, fees and "
              "forfeitures flow and from which every salary and public service is paid. Its "
-             "holdings are published, and any citizen may read them at any time."),
+             "holdings are published, and every citizen may read them at any time."),
             ("Currency",
              "The lawful currencies are the Cybuck (CB), the Pufferbuck (PUFB), the Aquiline "
              "(AQ) and the Cybit (CBT), pegged at one Cybuck to one Pufferbuck, ten Aquilines "
@@ -224,8 +237,9 @@ ARTICLES = [
             ("Taxation",
              "A Value-Added Tax is levied monthly on every citizen's holdings, at a rate set by "
              "law and published — ten percent (10%) at the adoption of this Constitution — "
-             "together with the delivery levy that keeps Cyvazon free and any insurance levy "
-             "the Republic sets. No tax may be laid on a citizen for what they believe."),
+             "together with the delivery levy that keeps Cyvazon free. Cyvashield cover is free; "
+             "the Republic may set an insurance levy only if payouts outrun revenue, and must "
+             "publish it. No tax may be laid on a citizen for what they believe."),
             ("Salaries",
              "Salaries are paid weekly from the Treasury by office: the Prime Minister 1,000 "
              "CB; a Minister, the Security Minister and the Judge 900; the Head of Coding, the "
@@ -233,9 +247,13 @@ ARTICLES = [
              "Couriers of Cyvazon draw 500 CB besides. The President draws nothing."),
             ("Credit",
              "A citizen may borrow up to five thousand (5,000) Cybucks from the Treasury, to be "
-             "repaid within thirty (30) days. Borrowed money may not be sent away. A loan "
-             "unpaid past its term is entered on the record; a citizen with a loan outstanding "
-             "may not stand for office until it is settled."),
+             "repaid within thirty (30) days. Borrowed money may not be sent away. A loan not "
+             "repaid by the end of its term is called in: the Treasury takes the citizen's "
+             "Cybucks, Pufferbucks and Aquilines in settlement — the whole of them, not only the "
+             "sum owed — and the default is entered on the record. This is the hardest rule in "
+             "the Republic and it is written here so that no one borrows without knowing it. "
+             "While a loan is still owed a citizen may not stand for office; once it is repaid "
+             "or called in, they may."),
         ],
     },
     {
@@ -250,13 +268,15 @@ ARTICLES = [
              "Every citizen may take free cover against theft, lost parcels, bad trades and "
              "scams. Claims are checked against the record and ruled on openly."),
             ("Cyvalend",
-             "Citizens lend one another the things they forgot — free — and give them back on "
-             "time."),
+             "Citizens lend one another the things they forgot, free of charge — though an "
+             "owner may ask a returnable deposit, given back when the item comes home — and "
+             "give them back on time."),
             ("The Armoury",
              "The Republic keeps a defensive Armoury. A citizen who hands in a G2 pen is paid "
              "the war-effort rate by the Defence desk, and every round is logged."),
             ("Cyvapay and the markets",
-             "Cybucks may be taken as payment on any website through Cyvapay, and goods traded "
+             "Any of the Republic's currencies may be taken as payment on any website through "
+             "Cyvapay, and goods traded "
              "in the national and state marketplaces and the card packets. Every sale raises a "
              "delivery so that nobody may take the money and keep the goods."),
         ],
@@ -265,19 +285,20 @@ ARTICLES = [
         "num": "X", "title": "Defence and Foreign Relations",
         "sections": [
             ("Doctrine",
-             "The doctrine of the Republic is <i>defence, not invasion</i>. Cyvathon does not "
-             "probe, breach, attack or retaliate against any other nation or its servers, and "
-             "no office of the Republic may order it to."),
+             "The doctrine of the Republic is <i>defence, not invasion</i>. Cyvathon's forces "
+             "exist to defend it. No office of the Republic may order an attack on another "
+             "nation, its citizens or its servers, and none has."),
             ("Athena and the Registry",
              "The intelligence service and the classified Registry serve the Republic's "
              "defence and its knowledge of the world, within the doctrine above and within the "
-             "law."),
+             "law. Both answer to the President, and nothing held in the Registry may be used "
+             "against a citizen except in the open, before the Court."),
             ("Treaties",
              "The Republic keeps its word. It signed a Treaty of Peace, Friendship and Free "
              "Trade with the Republic of Crystonia on 14 June 2026, and the Treaty of "
              "Anti-Anarchism on 2 September 2026. Alliances are requested by nations and "
-             "confirmed by the President, and every treaty is entered in the National "
-             "Timeline."),
+             "confirmed by the President; the Republic may also name a rival, and a rival is "
+             "watched, never attacked. Every treaty is entered in the National Timeline."),
         ],
     },
     {

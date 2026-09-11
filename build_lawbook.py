@@ -66,8 +66,9 @@ CHAPTERS = [
          "else's property."),
         ("Peace",
          "No citizen may attack another. The Republic's own doctrine is <i>defence, not "
-         "invasion</i>, and it applies to citizens as much as to nations. Play fights are "
-         "permitted only where the zoning laws allow them."),
+         "invasion</i>, and it applies to citizens as much as to nations. Play fights are a "
+         "matter for the school's rules, which this Lawbook does not touch, and are never done "
+         "in Cyvathon's name."),
     ]),
     ("CHAPTER 2 — MONEY", [
         ("Legal tender",
@@ -80,14 +81,20 @@ CHAPTERS = [
         ("Tax",
          "A Value-Added Tax of ten percent (10%) is collected from every citizen's holdings "
          "each month, together with a five percent (5%) delivery levy while Cyvazon runs. "
-         "Both go to the National Treasury, whose holdings anyone may inspect. The rates are "
-         "set by law and published; no one is taxed for their beliefs."),
+         "Both go to the National Treasury, whose holdings every citizen may inspect. The rates "
+         "are set by law and published; no one is taxed for their beliefs."),
         ("Savings and bonds",
          "The Bank pays five percent (5%) monthly interest on savings. A Government Bond "
          "returns ten percent (10%) after thirty (30) days."),
         ("Payments",
          "Money may be sent by username, by scanning a citizen's debit card, or through "
          "Cyvapay on any website. A company may be paid the same way."),
+        ("Invitations",
+         "A citizen who invites a friend is paid five hundred (500) Cybucks by the Treasury "
+         "when that friend is admitted."),
+        ("The Casino",
+         "The Casino takes bets in Cybucks against the Treasury, at the coin flip, the dice and "
+         "the slots. The House can win, and often does; bet what you can afford to lose."),
     ]),
     ("CHAPTER 3 — TRADE AND WORK", [
         ("Companies",
@@ -113,8 +120,11 @@ CHAPTERS = [
          "repay it within thirty (30) days. Borrowed money cannot be sent away — only money "
          "you have earned can."),
         ("Falling behind",
-         "A loan unpaid past its term is entered on your record. A citizen with a loan "
-         "outstanding may not stand for office until it is settled."),
+         "A loan not repaid by the end of its term is called in: the Treasury takes your "
+         "Cybucks, Pufferbucks and Aquilines in settlement — all of them, not only what you "
+         "owe — and the default goes on your record. It is the hardest rule in the Republic, "
+         "so do not borrow what you cannot repay in thirty days. While a loan is still owed you "
+         "may not stand for office; once it is repaid or called in, you may."),
     ]),
     ("CHAPTER 5 — THE PUBLIC SERVICES", [
         ("Cyvazon",
@@ -127,8 +137,10 @@ CHAPTERS = [
          "loss honestly; the claim is checked against the record and ruled on. A claim found "
          "fraudulent is itself an offence."),
         ("Cyvalend",
-         "Borrow what you forgot — a calculator, a pen, a charger — free, and return it by the "
-         "time agreed. The owner confirms the return."),
+         "Borrow what you forgot — a calculator, a pen, a charger — free of charge, and return "
+         "it by the time agreed. An owner may ask a returnable deposit of up to two hundred "
+         "(200) Cybucks, which comes back to you when the item does. The owner confirms the "
+         "return."),
         ("The Armoury",
          "Hand in a G2 pen for the Republic's defence and the Armoury desk pays the "
          "war-effort rate, four hundred (400) Cybucks a round, delivered by Cyvazon to the "
@@ -137,39 +149,59 @@ CHAPTERS = [
          "Trade Match Attax cards with other citizens. An accepted trade swaps the cards and "
          "raises a parcel each way, so the real cards move too."),
     ]),
-    ("CHAPTER 6 — ELECTIONS AND OFFICE", [
+    ("CHAPTER 6 — TRAVEL", [
+        ("Passports",
+         "Issue a Passport on the Passport page before crossing any state border. Border "
+         "Control stamps it as you go; the stamps are yours to collect."),
+        ("The states",
+         "Neonhaven, Cryptvale, Silica Plains, Portus Mare and Aetheris each keep a "
+         "marketplace and a channel of their own. Settle in a state to become its resident and "
+         "join its channel; you may settle again elsewhere later."),
+        ("The capital",
+         "Aetheris, the seat of the President, admits sworn citizens: swear the Oath of "
+         "Allegiance to enter. The Oath is voluntary, and binding once sworn."),
+    ]),
+    ("CHAPTER 7 — ELECTIONS AND OFFICE", [
         ("Voting",
          "Every citizen has one vote in every election and on every bill. A vote cast is "
-         "final. Elections for the Prime Minister and the Judge are convened by the President; "
-         "a vacant ministry opens its own election the moment four eligible citizens stand."),
+         "final. Elections for the Prime Minister and the Judge are convened by the President, "
+         "who names the candidates on the ballot; a vacant ministry opens its own election the "
+         "moment four eligible citizens stand. The President may also appoint a citizen to a "
+         "ministry, or dismiss a minister."),
         ("Standing",
-         "Any citizen may stand for office who is not serving a sentence, does not carry a "
-         "conviction, and has no loan outstanding."),
+         "Any citizen may stand for a vacant ministry who is not serving a sentence, does not "
+         "carry a conviction, and does not still owe a loan."),
         ("Making law",
          "Any citizen may table a bill. It is debated and voted on by all; with more Ayes than "
          "Nays it passes to the President for assent, and on assent it becomes an Act, "
          "numbered and published in the Gazette."),
     ]),
-    ("CHAPTER 7 — JUSTICE", [
+    ("CHAPTER 8 — JUSTICE", [
         ("Reporting a crime",
          "Any citizen may file a report (an FIR) with evidence. Any citizen may bring a case "
          "before the National Court."),
         ("Hearing",
-         "Both sides argue before the elected Judge, or before the President only when no "
-         "Judge holds office. No one rules on a case they are party to."),
+         "Both sides argue before the elected Judge. The President may also sit, and sits alone "
+         "when no Judge holds office. No one rules on a case they are party to."),
         ("Sentences",
-         "A sentence is a fine, a term in jail, or both; no term exceeds three hundred and "
-         "sixty-five (365) days. A jailed citizen is confined to the jail page until the term "
-         "is served, then released. Convictions go on the criminal record and bar a citizen "
-         "from standing for office. The President may pardon."),
+         "A sentence of the Court is a fine, a term in jail, or both; no term exceeds three "
+         "hundred and sixty-five (365) days. A jailed citizen is confined to the jail page until "
+         "the term is served, then released. Convictions go on the criminal record and bar a "
+         "citizen from standing for office. The President may pardon."),
+        ("Detention by order",
+         "The President may also jail a citizen by order, without a case, for a stated reason "
+         "and for no more than 365 days. The order and its reason go on the citizen's public "
+         "record the day it is made, and count as a conviction. It is the one judgment in the "
+         "Republic given without a hearing, and the Constitution names it (Article IV) so that "
+         "nobody is surprised by it."),
     ]),
-    ("CHAPTER 8 — CULTURE", [
+    ("CHAPTER 9 — CULTURE", [
         ("Chairism",
          "Chairism is the Republic's valued culture and is encouraged as a cultural practice. "
          "It is never required, and no citizen is taxed, fined or disadvantaged for declining "
          "it. All hail the Chair — if you like."),
     ]),
-    ("CHAPTER 9 — HOW THESE LAWS CHANGE", [
+    ("CHAPTER 10 — HOW THESE LAWS CHANGE", [
         ("By the citizens",
          "These laws are changed by Act of the Legislature, as the Constitution provides, and "
          "every change is published in the Gazette. The national levers — tax rates, the "
@@ -181,7 +213,7 @@ CHAPTERS = [
 ]
 
 CLOSING = ("Issued under the Constitution of the Republic of Cyvathon on " + ISSUED +
-           ", replacing the Constitution and Lawbook of 2025.")
+           ", in place of the Lawbook of 2025.")
 
 DISCLAIMER = (
     "Cyvathon is a student-run micronation: a game of government played among classmates. "
@@ -248,13 +280,22 @@ def build():
     e.append(Paragraph(CLOSING, ParagraphStyle("ratify", parent=body_style,
              fontName="Times-Italic", alignment=TA_CENTER)))
     e.append(Spacer(1, 1 * cm))
-    sig = Table([["_______________________"], ["Prathyay, President of Cyvathon"],
-                 ["for the Legislature and the citizens"]], colWidths=[8 * cm])
+    sig = Table([
+        ["______________________________", "", "______________________________"],
+        ["The Legislature of Cyvathon", "", "Prathyay"],
+        ["by whom these laws are made", "", "President of the Republic"],
+        ["", "", ""],
+        ["Date: " + ISSUED, "", "Date: " + ISSUED],
+    ], colWidths=[7 * cm, 1.5 * cm, 7 * cm])
     sig.setStyle(TableStyle([
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("FONTNAME", (0, 1), (0, 2), "Times-Italic"),
-        ("FONTSIZE", (0, 1), (0, 2), 10),
-        ("TEXTCOLOR", (0, 1), (0, 2), GREY),
+        ("FONTNAME", (0, 1), (-1, 1), "Times-Bold"),
+        ("FONTSIZE", (0, 1), (-1, 1), 12),
+        ("FONTNAME", (0, 2), (-1, 2), "Times-Italic"),
+        ("FONTSIZE", (0, 2), (-1, 2), 9.5),
+        ("TEXTCOLOR", (0, 2), (-1, 2), GREY),
+        ("FONTSIZE", (0, 4), (-1, 4), 10),
+        ("TOPPADDING", (0, 0), (-1, 0), 2),
     ]))
     e.append(sig)
     e.append(Spacer(1, 0.9 * cm))
