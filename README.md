@@ -237,6 +237,27 @@ from TheSportsDB or the owner's own photo of the card in their hand. Update
 
 ---
 
+### 12. Cyvathon Wrapped — every September
+A Spotify-Wrapped-style story of each citizen's year, at `/wrapped`. Tap through
+full-screen slides: money earned and spent (and where it came from), a ranking
+among earners, the citizens you paid and messaged most, parcels and card trades,
+votes and bills, the rest of what you did, a slot-machine reveal of your
+**Cyvathon personality**, the Republic's year as a whole, and a summary card you
+can save as a PNG or share straight from your phone.
+
+| | |
+|---|---|
+| **Season** | All of September, India time. The dashboard shows a banner while it's open; the rest of the year `/wrapped` shows a countdown. The President can preview the year in progress at any time, marked as a preview. |
+| **The year covered** | 1 September to 31 August, so everyone's numbers hold still while they're being shared. The first edition, **2026**, reaches back to the founding (26 May 2025). |
+| **Where the numbers come from** | Only what the ledgers already record: `treasury_flows` for salary, courier wages, tax and the Treasury's payouts; `transactions` for money between citizens; the service tables for everything else. Casino, Cyvashield and Armoury payouts are written to both ledgers and are counted from `treasury_flows` only. Every currency is valued in Cybucks at the pegs. |
+| **The ranking** | Shown only when it flatters: something earned, and in the top half. Foreign nations and banned accounts aren't ranked. |
+| **Personalities** | The Tycoon, The Courier, The Collector, The Lawmaker, The Patriot, The Socialite, The Creator, The Good Neighbour — or The Quiet Citizen. Whichever activity dominates the year. |
+
+No migration is needed: it reads existing tables and writes nothing. Reads are
+paged by id, so Supabase's 1000-row limit can't quietly cut a year short, and
+each citizen's deck is cached for ten minutes (the Republic-wide pass for thirty).
+Tests: `python tests/test_wrapped.py`.
+
 ### 11. The Constitution & the Lawbook
 Two documents, two pages, two PDFs — and a clear split between them:
 

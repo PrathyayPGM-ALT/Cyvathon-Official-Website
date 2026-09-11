@@ -256,6 +256,25 @@
 
     /* Darker inks for the small bold labels, which fail contrast on a light
        background when they use the brand hue at its own tint. */
+    /* ---- Cyvathon Wrapped: September only, loud on purpose ---- */
+    .wrapban{ position:relative; overflow:hidden; display:flex; align-items:center; justify-content:space-between;
+      gap:1.2rem; flex-wrap:wrap; padding:1.5rem 1.7rem; border-radius:22px; margin-bottom:2.3rem;
+      text-decoration:none; color:#041b33;
+      background:linear-gradient(110deg,#c6f432,#58c4ff 40%,#22d3ee 62%,#ffce56);
+      background-size:260% 100%; animation:wbShift 9s ease-in-out infinite alternate;
+      box-shadow:0 16px 40px rgba(88,196,255,.3); transition:transform .2s, box-shadow .2s; }
+    .wrapban:hover{ transform:translateY(-4px); box-shadow:0 22px 50px rgba(88,196,255,.45); }
+    .wrapban:focus-visible{ border-radius:22px; outline-offset:3px; }
+    @keyframes wbShift{ to{ background-position:100% 0; } }
+    .wrapban > div{ position:relative; z-index:1; }
+    .wrapban .wb-k{ font-size:.72rem; font-weight:800; letter-spacing:.2em; text-transform:uppercase; opacity:.8; }
+    .wrapban h3{ margin:.2rem 0 .25rem; font-size:1.45rem; font-weight:900; letter-spacing:-.5px; color:#041b33; }
+    .wrapban p{ margin:0; font-size:.95rem; font-weight:600; opacity:.85; max-width:540px; color:#041b33; }
+    .wrapban .wb-cta{ position:relative; z-index:1; display:inline-flex; align-items:center; gap:.5rem;
+      padding:.8rem 1.4rem; border-radius:40px; background:#041b33; color:#c6f432; font-weight:800; white-space:nowrap; }
+    .wrapban .wb-num{ position:absolute; right:-6px; bottom:-38px; font-size:8rem; font-weight:900;
+      letter-spacing:-6px; opacity:.13; pointer-events:none; }
+
     :root{ --ink-gold:var(--gold); --ink-red:var(--red); }
     html[data-theme="light"]{ --ink-gold:#7a5300; --ink-red:#b3202d; }
   </style>
@@ -350,6 +369,8 @@
     </section>
     <section class="wrap" style="padding-top:.5rem;">
       <!-- your shortcuts, big and colourful -->
+      <!-- every September: this citizen's year in review -->
+      <div id="wrapBanner"></div>
       <div id="hubRec"></div>
 
       <!-- everything waiting on you, most urgent first -->
@@ -596,6 +617,7 @@
 
       wireFilter();
       measureNav();
+      loadWrappedBanner();
 
       /* The six summaries land whenever they land. Rather than letting each one
          shove the page around as it arrives, reveal the list once — after the
@@ -644,6 +666,20 @@
       failed.hidden = !anyFailed;
       list.classList.remove("is-loading");
       list.removeAttribute("aria-busy");
+    }
+    // Cyvathon Wrapped is only shown while it's open: all of September.
+    async function loadWrappedBanner(){
+      let s;
+      try{ s = await api("/wrapped/status"); }catch(e){ return; }
+      const box = document.getElementById("wrapBanner");
+      if(!s.open || !box) return;
+      box.innerHTML = `<a class="wrapban" href="/wrapped?play=1">
+        <span class="wb-num" aria-hidden="true">${esc(s.edition)}</span>
+        <div><div class="wb-k"><i class="fas fa-gift" aria-hidden="true"></i> Cyvathon Wrapped</div>
+          <h3>Your ${esc(s.edition)} Wrapped is here</h3>
+          <p>Your year in the Republic: the money, the votes, the trades, and your Cyvathon personality.
+             Open until ${esc(s.closes_label)}.</p></div>
+        <span class="wb-cta"><i class="fas fa-play" aria-hidden="true"></i> Play it</span></a>`;
     }
     // the jump links need to clear the sticky site header
     function measureNav(){

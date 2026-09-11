@@ -7178,6 +7178,8 @@ INTERESTS: when you sign up (and on your ID Card) you pick what you love to do. 
 
 GOVERNMENT: a President leads the nation; the Prime Minister and Judge are elected by vote (/voting), and a national presidential vote is held once every six years. The Legislature (/legislature) is where citizens table and vote on bills — any citizen can table one, and with more Ayes than Nays it goes to the President for assent and becomes a numbered Act; the Gazette (/gazette) records laws and decrees; the National Court (/court) rules on cases; report a crime with an FIR (/fir); Ministries (/ministries) run departments with budgets; the Treasury (/treasury) holds national funds and anyone can inspect it. Foreign Affairs (/foreign) tracks Cyvathon's allied and rival micronations — fellow nations can register at signup and request an alliance, which the President confirms.
 
+CYVATHON WRAPPED (/wrapped): every September — the whole month, India time — each citizen can play a Spotify-Wrapped-style story of their Cyvathon year: money earned and spent, their rank among earners (shown only if they're in the top half), the citizens they paid and messaged most, votes, bills, card trades, parcels, Cyvalend, the Armoury, their "Cyvathon personality", and the Republic's year as a whole. At the end they can save a share card as an image. The year covered ends as September begins (the first edition, 2026, goes back to the founding), so the numbers don't change while people share them. Outside September it's sealed with a countdown; the dashboard shows a banner while it's open.
+
 THE CONSTITUTION (/constitution) is the founding law: it sets out citizenship, the rights every citizen holds (voice, property, the ballot, a fair hearing, freedom of belief, an open Treasury), what the President may and may not do (a decree cannot repeal an Act or amend the Constitution; the President draws no salary), how ministers are elected, how bills become Acts, how the Courts work, and how the Constitution itself is amended — only by an Act of the Legislature, never by decree. It is also a PDF. The Lawbook (/rules) is the shorter, day-to-day companion: conduct, money, trade, debt, the services, elections and justice. Chairism is the Republic's valued culture and is never required — nobody is taxed or disadvantaged for declining it.
 
 COMMUNITY: Chat (/chat) is a full messenger — public square, group channels, per-state channels and DMs, with @mentions, replies, emoji reactions, typing indicators, online status, GIFs, image sharing and voice messages. Mail (/mail) — reached from the Chat/Mail toggle — is a Gmail-style inbox where you compose to recipients you pick from a list (or broadcast to everyone), with threaded replies. Share Videos (/videos) by YouTube link or uploading from your device, and write Blogs (/blogs) that others can like and comment on. Climb the Leaderboards (/leaderboard) — richest citizens, top founders, top recruiters. Track your cash and investments in the Portfolio (/portfolio). Browse the Citizens directory (/citizens) and National News (/news). You'll get notification pop-ups for DMs, mentions, mail, approvals, news and opened elections.
@@ -11278,6 +11280,417 @@ def cyvapay_summary():
                    payments=len(pays),
                    received=round(sum(float(p.get("amount") or 0) for p in pays
                                       if (p.get("currency") or "cybucks") == "cybucks"), 2))
+
+# ============================================================
+#  CYVATHON WRAPPED — the year in review, every September
+# ============================================================
+#  A story-style look back at each citizen's year, built only from what the
+#  ledgers already record: treasury_flows carries salary, tax and the
+#  Treasury's own payouts; transactions carries money between citizens; the
+#  service tables carry votes, parcels, trades and the rest.
+#
+#  The season is the whole of September, India time. The year it covers ends
+#  the moment September begins, so a citizen's numbers stay put for the whole
+#  month they are being shared. The first edition (2026) reaches back to the
+#  founding so nobody's early months go missing. Outside the season it is
+#  sealed; the President may preview the edition in progress.
+from collections import Counter, defaultdict
+import threading
+
+WRAPPED_TZ = timezone(timedelta(hours=5, minutes=30))   # India; no daylight saving
+WRAPPED_MONTH = 9
+WRAPPED_FIRST_EDITION = 2026
+WRAPPED_FOUNDED = datetime(2025, 5, 26, tzinfo=WRAPPED_TZ)
+WRAPPED_TTL = 600             # seconds a citizen's deck is cached in season
+WRAPPED_NATION_TTL = 1800     # the Republic-wide pass
+WRAPPED_PAGE = 1000           # Supabase hands back at most 1000 rows a request
+WRAPPED_ROW_CAP = 20000       # and we stop paging after this many
+_wrapped_cache = {}
+_wrapped_lock = threading.Lock()
+
+# Which ledger rows count as money in or out for the citizen they name.
+# A Treasury flow OUT of the Treasury is money to the citizen.
+_WR_FLOW_EARN = {"salary": "salary", "courier_wage": "salary",
+                 "insurance_payout": "rewards", "pen_reserve": "rewards",
+                 "interest": "rewards"}
+_WR_FLOW_SPEND = {"vat": "tax", "delivery_levy": "tax", "company_fee": "fees"}
+# Casino, insurance and Armoury payouts are written to both ledgers, so they
+# are counted from treasury_flows only and their transaction kinds are absent.
+_WR_TX_EARN = {"transfer": "citizens", "market": "sales", "cyvapay": "sales",
+               "ministry": "rewards", "court": "rewards", "bluff": "winnings"}
+_WR_TX_SPEND = {"transfer": "citizens", "market": "shopping", "cyvapay": "shopping",
+                "court": "fines"}
+
+# key -> (name, line, icon, palette). The palette names are the slide
+# colours in static/wrapped.html.
+WRAPPED_PERSONAS = {
+    "tycoon":    ("The Tycoon", "Money moved when you did. The Treasury knows your name.",
+                  "fa-sack-dollar", "gold"),
+    "courier":   ("The Courier", "Half the school got its things because of you.",
+                  "fa-truck-fast", "coral"),
+    "collector": ("The Collector", "Your binder is the envy of 8E.",
+                  "fa-futbol", "lime"),
+    "lawmaker":  ("The Lawmaker", "You didn't just live under the law. You wrote it.",
+                  "fa-scale-balanced", "sky"),
+    "patriot":   ("The Patriot", "Every vote, every round for the Armoury. The Republic noticed.",
+                  "fa-flag", "gold"),
+    "socialite": ("The Socialite", "If something happened in Cyvathon, you were in the chat.",
+                  "fa-comments", "cyan"),
+    "creator":   ("The Creator", "Blogs, videos, ideas. You gave the Republic something to read.",
+                  "fa-feather-pointed", "mint"),
+    "neighbour": ("The Good Neighbour", "Somebody always had a pen, because you lent it.",
+                  "fa-hand-holding-heart", "mint"),
+    "newcomer":  ("The Quiet Citizen", "A calm year. Next year is yours to make loud.",
+                  "fa-seedling", "sky"),
+}
+
+
+def _wrapped_window(now=None):
+    """The current edition, the year it covers, and whether the season is open."""
+    now = (now or _now()).astimezone(WRAPPED_TZ)
+    edition = now.year if now.month <= WRAPPED_MONTH else now.year + 1
+    start = (WRAPPED_FOUNDED if edition <= WRAPPED_FIRST_EDITION
+             else datetime(edition - 1, WRAPPED_MONTH, 1, tzinfo=WRAPPED_TZ))
+    end = datetime(edition, WRAPPED_MONTH, 1, tzinfo=WRAPPED_TZ)
+    closes = datetime(edition, WRAPPED_MONTH + 1, 1, tzinfo=WRAPPED_TZ)
+    return {"edition": edition, "start": start, "end": end, "closes": closes,
+            "now": now, "open": end <= now < closes}
+
+
+def _wr_iso(d):
+    return d.astimezone(timezone.utc).isoformat()
+
+
+def _wr_day(d):
+    return f"{d.day} {d.strftime('%B %Y')}"
+
+
+def _wr_dt(ts):
+    d = _parse(ts)
+    if d is not None and d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    return d
+
+
+def _wr_in(ts, win):
+    d = _wr_dt(ts)
+    return d is not None and win["start"] <= d < win["end"]
+
+
+def _wr_query(table, cols, filters, win, time_col, count=False):
+    q = (supabase.table(table).select(cols, count="exact") if count
+         else supabase.table(table).select(cols))
+    for op, col, val in filters:
+        q = getattr(q, op)(col, val)
+    if win is not None:
+        q = q.gte(time_col, _wr_iso(win["start"])).lt(time_col, _wr_iso(win["end"]))
+    return q
+
+
+def _wr_rows(table, cols, filters=(), win=None, time_col="created_at"):
+    """Every matching row, paged by id so the 1000-row cap can't quietly cut a
+    year short. A missing table reads as empty: Wrapped never breaks a page."""
+    out, last = [], None
+    try:
+        while len(out) < WRAPPED_ROW_CAP:
+            q = _wr_query(table, cols, filters, win, time_col)
+            if last is not None:
+                q = q.gt("id", last)
+            page = q.order("id").limit(WRAPPED_PAGE).execute().data or []
+            out.extend(page)
+            if len(page) < WRAPPED_PAGE or page[-1].get("id") is None:
+                break
+            last = page[-1]["id"]
+    except Exception as ex:
+        logging.warning("wrapped: reading %s failed: %s", table, ex)
+    return out
+
+
+def _wr_count(table, filters=(), win=None, time_col="created_at"):
+    try:
+        n = getattr(_wr_query(table, "id", filters, win, time_col, count=True)
+                    .limit(1).execute(), "count", None)
+        if n is not None:
+            return int(n)
+    except Exception as ex:
+        logging.warning("wrapped: counting %s failed: %s", table, ex)
+        return 0
+    return len(_wr_rows(table, "id", filters, win, time_col))
+
+
+def _wr_cb(amount, currency):
+    """Any of the four currencies, in Cybuck value."""
+    cur = (currency or "cybucks").lower()
+    if cur == "cybits":
+        cur = "cybit"
+    try:
+        return float(amount or 0) * CYBUCK_VALUE.get(cur, 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _wr_top(counter, key="amount"):
+    if not counter:
+        return None
+    name, n = counter.most_common(1)[0]
+    if not name or not n:
+        return None
+    return {"name": name, key: round(n, 2) if key == "amount" else int(n)}
+
+
+def _wr_money(me, tx_in, tx_out, flows):
+    """Money in and out for one citizen, in Cybuck value, by where it came from."""
+    earn = dict.fromkeys(("salary", "sales", "citizens", "rewards", "winnings"), 0.0)
+    spend = dict.fromkeys(("citizens", "shopping", "tax", "fees", "fines", "casino"), 0.0)
+    paid_by, paid_to = Counter(), Counter()
+    courier = casino = 0.0
+    for t in tx_in:
+        bucket = _WR_TX_EARN.get(t.get("kind"))
+        if not bucket or t.get("from_party") == me:
+            continue
+        v = _wr_cb(t.get("amount"), t.get("currency"))
+        earn[bucket] += v
+        if t.get("kind") == "transfer" and t.get("from_party"):
+            paid_by[t["from_party"]] += v
+    for t in tx_out:
+        bucket = _WR_TX_SPEND.get(t.get("kind"))
+        if not bucket or t.get("to_party") == me:
+            continue
+        v = _wr_cb(t.get("amount"), t.get("currency"))
+        spend[bucket] += v
+        if t.get("kind") == "transfer" and t.get("to_party"):
+            paid_to[t["to_party"]] += v
+    for f in flows:
+        v = _wr_cb(f.get("amount"), f.get("currency"))
+        kind, out = f.get("kind"), f.get("direction") == "OUT"
+        if kind == "casino":
+            casino += v if out else -v
+        elif out and kind in _WR_FLOW_EARN:
+            earn[_WR_FLOW_EARN[kind]] += v
+            if kind == "courier_wage":
+                courier += v
+        elif not out and kind in _WR_FLOW_SPEND:
+            spend[_WR_FLOW_SPEND[kind]] += v
+    if casino >= 0:
+        earn["winnings"] += casino
+    else:
+        spend["casino"] += -casino
+
+    def r2(d):
+        return {k: round(v, 2) for k, v in d.items()}
+    return {"earned": round(sum(earn.values()), 2), "spent": round(sum(spend.values()), 2),
+            "earn": r2(earn), "spend": r2(spend),
+            "top_payer": _wr_top(paid_by), "top_paid": _wr_top(paid_to),
+            "courier_pay": round(courier, 2), "casino_net": round(casino, 2)}
+
+
+def _wrapped_nation(win):
+    """The Republic's year, and every citizen's earnings for the ranking."""
+    citizens = [c for c in _wr_rows("cybucks", "id,username,created_at,account_type,banned,approved")
+                if c.get("username") and not c.get("banned")
+                and c.get("approved", True) is not False
+                and (c.get("account_type") or "citizen") == "citizen"
+                and (_wr_dt(c.get("created_at")) or win["start"]) < win["end"]]
+    tx = _wr_rows("transactions", "id,kind,from_party,to_party,amount,currency,created_at", (), win)
+    flows = _wr_rows("treasury_flows", "id,direction,counterparty,amount,currency,kind", (), win)
+    t_in, t_out, f_by = defaultdict(list), defaultdict(list), defaultdict(list)
+    for t in tx:
+        t_in[t.get("to_party")].append(t)
+        t_out[t.get("from_party")].append(t)
+    for f in flows:
+        f_by[f.get("counterparty")].append(f)
+    earned = {c["username"]: _wr_money(c["username"], t_in[c["username"]],
+                                       t_out[c["username"]], f_by[c["username"]])["earned"]
+              for c in citizens}
+    months = Counter(d.astimezone(WRAPPED_TZ).strftime("%B")
+                     for d in (_wr_dt(t.get("created_at")) for t in tx) if d)
+    return {"earned": earned, "stats": {
+        "citizens": len(citizens),
+        "new_citizens": sum(1 for c in citizens if _wr_in(c.get("created_at"), win)),
+        "moved": round(sum(_wr_cb(t.get("amount"), t.get("currency"))
+                           for t in tx if t.get("kind") == "transfer"), 2),
+        "deliveries": _wr_count("deliveries", [("eq", "status", "delivered")], win),
+        "card_trades": _wr_count("card_trades", [("eq", "status", "accepted")], win),
+        "ballots": _wr_count("ballots", (), win),
+        "messages": _wr_count("messages", (), win),
+        "acts": _wr_count("bills", [("eq", "status", "enacted")], win, "enacted_at"),
+        "companies": _wr_count("companies", (), win),
+        "busiest_month": months.most_common(1)[0][0] if months else None,
+    }}
+
+
+def _wrapped_deck(user, win, nation):
+    """One citizen's year, ready for the slides."""
+    me = user["username"]
+    txc = "id,kind,from_party,to_party,amount,currency"
+    money = _wr_money(
+        me,
+        _wr_rows("transactions", txc, [("eq", "to_party", me)], win),
+        _wr_rows("transactions", txc, [("eq", "from_party", me)], win),
+        _wr_rows("treasury_flows", "id,direction,amount,currency,kind",
+                 [("eq", "counterparty", me)], win))
+
+    # bill_votes carries no timestamp, so a vote belongs to the year its bill
+    # was tabled in.
+    voted_on = sorted({r.get("bill_id") for r in
+                       _wr_rows("bill_votes", "id,bill_id", [("eq", "voter", me)])
+                       if r.get("bill_id") is not None})
+    bill_votes = sum(1 for i in range(0, len(voted_on), 200)
+                     for b in _wr_rows("bills", "id,created_at", [("in_", "id", voted_on[i:i + 200])])
+                     if _wr_in(b.get("created_at"), win))
+    tabled = _wr_rows("bills", "id,status", [("eq", "sponsor", me)], win)
+
+    # Trades and parcels belong to the year they were settled in.
+    trades = {t["id"]: t for side in ("from_user", "to_user")
+              for t in _wr_rows("card_trades", "id,from_user,to_user,created_at,resolved_at",
+                                [("eq", "status", "accepted"), ("eq", side, me)])
+              if _wr_in(t.get("resolved_at") or t.get("created_at"), win)}
+    partners = Counter(p for p in (t.get("to_user") if t.get("from_user") == me
+                                   else t.get("from_user") for t in trades.values()) if p)
+
+    def parcels(side):
+        return sum(1 for d in _wr_rows("deliveries", "id,created_at,delivered_at",
+                                       [("eq", "status", "delivered"), ("eq", side, me)])
+                   if _wr_in(d.get("delivered_at") or d.get("created_at"), win))
+
+    def lends(side):
+        return len(_wr_rows("lend_loans", "id", [("eq", side, me), ("in_", "status", ["out", "returned"])],
+                            win, "requested_at"))
+
+    msgs = _wr_rows("messages", "id,recipient", [("eq", "sender", me)], win)
+    dms = Counter(m.get("recipient") for m in msgs if m.get("recipient") and m.get("recipient") != me)
+    blogs = _wr_rows("blogs", "id,created_at", [("eq", "username", me)])
+    blog_ids = [b["id"] for b in blogs if b.get("id") is not None]
+    stock = {t["id"]: t for side in ("buyer", "seller")
+             for t in _wr_rows("trades", "id,price,quantity", [("eq", side, me)], win)}
+
+    a = {
+        "votes": _wr_count("ballots", [("eq", "voter", me)], win),
+        "bill_votes": bill_votes,
+        "bills": len(tabled),
+        "bills_enacted": sum(1 for b in tabled if b.get("status") == "enacted"),
+        "card_trades": len(trades), "trade_partner": _wr_top(partners, "count"),
+        "parcels_received": parcels("recipient"), "parcels_sent": parcels("sender"),
+        "runs": parcels("courier"),
+        "lent": lends("owner"), "borrowed": lends("borrower"),
+        "pens": sum(int(p.get("counted") or 0) for p in
+                    _wr_rows("pen_donations", "id,counted",
+                             [("eq", "username", me), ("eq", "status", "received")], win)),
+        "messages": len(msgs), "dm_partner": _wr_top(dms, "count"),
+        "mail": _wr_count("mail", [("eq", "sender", me)], win),
+        "blogs": sum(1 for b in blogs if _wr_in(b.get("created_at"), win)),
+        "videos": _wr_count("videos", [("eq", "username", me)], win),
+        "likes": sum(_wr_count("blog_likes", [("in_", "blog_id", blog_ids[i:i + 200])], win)
+                     for i in range(0, len(blog_ids), 200)),
+        "stock_trades": len(stock),
+        "stock_volume": round(sum(float(t.get("price") or 0) * float(t.get("quantity") or 0)
+                                  for t in stock.values()), 2),
+        "companies": _wr_count("companies", [("eq", "founder", me)], win),
+    }
+
+    # The ranking is shown only when it flatters: top half, with something earned.
+    rank, earned = None, nation["earned"]
+    if me in earned and money["earned"] > 0 and len(earned) >= 3:
+        place = 1 + sum(1 for v in earned.values() if v > money["earned"])
+        top = max(1, math.ceil(100 * place / len(earned)))
+        if top <= 50:
+            rank = {"top_pct": top, "place": place, "citizens": len(earned)}
+
+    score = {
+        "tycoon":    money["earned"] / 3000 + a["stock_trades"] / 5 + a["companies"] * 1.5,
+        "courier":   a["runs"] / 3,
+        "collector": a["card_trades"] / 2,
+        "lawmaker":  a["bills"] * 2 + a["bill_votes"] / 4,
+        "patriot":   a["votes"] / 2 + a["pens"] / 3,
+        "socialite": a["messages"] / 150 + a["mail"] / 20,
+        "creator":   (a["blogs"] + a["videos"]) / 2 + a["likes"] / 10,
+        "neighbour": (a["lent"] + a["borrowed"]) / 2,
+    }
+    key = max(score, key=score.get)
+    if score[key] < 1:
+        key = "newcomer"
+    name, line, icon, colour = WRAPPED_PERSONAS[key]
+
+    joined = _wr_dt(user.get("created_at"))
+    fresh = bool(joined and joined >= win["end"])
+    days = None if (joined is None or fresh) else max(0, (min(win["now"], win["end"]) - joined).days)
+    return {
+        "me": {"username": me, "designation": user.get("designation") or "Citizen",
+               "days": days, "fresh": fresh,
+               "joined": _wr_day(joined.astimezone(WRAPPED_TZ)) if joined else None},
+        "money": money, "rank": rank, "activity": a,
+        "persona": {"key": key, "name": name, "line": line, "icon": icon, "color": colour},
+        "personas": [p[0] for p in WRAPPED_PERSONAS.values()],
+        "nation": nation["stats"],
+    }
+
+
+def _wr_store(key, ttl, val):
+    if len(_wrapped_cache) > 5000:
+        _wrapped_cache.clear()
+    _wrapped_cache[key] = (time() + ttl, val)
+    return val
+
+
+def _wr_cached(key, ttl, build, lock=False):
+    hit = _wrapped_cache.get(key)
+    if hit and hit[0] > time():
+        return hit[1]
+    if not lock:
+        return _wr_store(key, ttl, build())
+    with _wrapped_lock:          # one Republic-wide pass at a time, not one per citizen
+        hit = _wrapped_cache.get(key)
+        if hit and hit[0] > time():
+            return hit[1]
+        return _wr_store(key, ttl, build())
+
+
+def _wrapped_status(user):
+    win = _wrapped_window()
+    return win, {
+        "edition": win["edition"], "open": win["open"],
+        "opens": _wr_iso(win["end"]), "opens_label": _wr_day(win["end"]),
+        "closes": _wr_iso(win["closes"]),
+        "closes_label": _wr_day(win["closes"] - timedelta(days=1)),
+        "period": {"start": _wr_day(win["start"]),
+                   "end": _wr_day(win["end"] - timedelta(days=1))},
+        "can_preview": bool(user) and is_treasury_admin(user),
+    }
+
+
+@app.route("/wrapped")
+def wrapped_page():
+    return app.send_static_file("wrapped.html")
+
+
+@app.route("/wrapped/status")
+@limiter.limit("60/minute")
+def wrapped_status():
+    user = get_current_user(run_economics=False)
+    _, st = _wrapped_status(user)
+    return jsonify(success=True, logged_in=bool(user), **st)
+
+
+@app.route("/wrapped/data")
+@limiter.limit("20/minute")
+def wrapped_data():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Log in to see your Wrapped."), 401
+    win, st = _wrapped_status(user)
+    preview = not win["open"]
+    if preview and not st["can_preview"]:
+        return jsonify(success=False, sealed=True,
+                       error=f"Wrapped {win['edition']} opens on {st['opens_label']}.", **st), 403
+    # A preview is a year still in progress, so it goes stale quickly.
+    nation = _wr_cached(("nation", win["edition"], preview),
+                        60 if preview else WRAPPED_NATION_TTL,
+                        lambda: _wrapped_nation(win), lock=True)
+    deck = _wr_cached(("deck", win["edition"], preview, user["username"]),
+                      60 if preview else WRAPPED_TTL,
+                      lambda: _wrapped_deck(user, win, nation))
+    return jsonify(success=True, preview=preview, **st, **deck)
+
 
 # ============================================================
 #  JUSTICE — jail, criminal records, eligibility for office
