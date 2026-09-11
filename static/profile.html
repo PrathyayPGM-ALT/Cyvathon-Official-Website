@@ -60,6 +60,20 @@
     .pinned .pl{ font-size:.72rem; text-transform:uppercase; letter-spacing:1px; color:var(--gold); font-weight:700; margin-bottom:.4rem; }
     .pinned h4{ margin:0 0 .35rem; font-size:1.1rem; } .pinned h4 a{ color:var(--text); text-decoration:none; } .pinned h4 a:hover{ color:var(--accent); }
     .pinned p{ color:var(--muted); font-size:.9rem; white-space:pre-wrap; line-height:1.5; }
+    /* ---- Citizen Sites shelf ---- */
+    .shelf{ border:1px solid var(--panel-border); background:var(--panel); border-radius:14px; padding:1rem 1.15rem; margin:0 0 1.4rem; text-align:left; }
+    .shelf-h{ display:flex; justify-content:space-between; align-items:center; gap:.6rem; flex-wrap:wrap; }
+    .shelf-h a{ font-size:.85rem; }
+    .shelf-list{ display:grid; gap:.5rem; margin-top:.75rem; }
+    .shelf-i{ display:flex; align-items:center; gap:.7rem; padding:.55rem .65rem; border-radius:12px; background:var(--panel-2);
+      text-decoration:none; color:inherit; border:1px solid transparent; transition:border-color .18s; }
+    .shelf-i:hover{ border-color:rgba(88,196,255,.45); }
+    .shelf-l{ width:34px; height:34px; flex:none; border-radius:10px; display:grid; place-items:center; font-weight:900;
+      color:#06223a; background:linear-gradient(135deg,var(--accent),var(--cyan)); }
+    .shelf-t{ flex:1; min-width:0; }
+    .shelf-t b{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .shelf-t small{ color:var(--muted); font-size:.78rem; }
+    .shelf-s{ color:var(--gold); font-size:.82rem; font-weight:700; white-space:nowrap; }
 
     /* --- criminal record --- */
     .crim{ border:1px solid rgba(224,108,108,.4); background:rgba(224,108,108,.07);
@@ -245,6 +259,7 @@
           <a class="link" href="/passport"><i class="fas fa-passport"></i> View Passport &amp; Citizenship →</a></p>
         ${badgesHtml(d.badges)}
         ${pinnedHtml(d.pinned, true, d.my_blogs)}
+        <div id="siteShelf"></div>
         <div class="panel" style="text-align:left;margin:0 0 1.4rem;">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
             <b><i class="fas fa-circle-info"></i> What I Do</b>
@@ -258,6 +273,7 @@
         <div>${recordsHtml(d.records)}</div>`;
       loadCriminal(d.username || (window.__me||""), "crimMine");
       renderInterests(p.interests||[]);
+      loadShelf(p.username, true);
     }
 
     /* ---- Interests (favorite things) ---- */
@@ -294,6 +310,25 @@
       finally{ document.getElementById("intSaveBtn").disabled=false; }
     }
 
+    /* ---- Citizen Sites: what this citizen has built on the web ---- */
+    async function loadShelf(username, own){
+      const box = document.getElementById("siteShelf"); if(!box || !username) return;
+      let d;
+      try{ d = await api("/sites/list?owner=" + encodeURIComponent(username) + "&sort=top"); }catch(e){ return; }
+      const s = d.sites || [];
+      if(!s.length){
+        if(own) box.innerHTML = `<div class="shelf"><div class="shelf-h"><b><i class="fas fa-globe"></i> My Sites</b></div>
+          <p class="muted" style="margin:.4rem 0 0;">Built something on the web? <a class="link" href="/sites?add=1">List it in Citizen Sites →</a></p></div>`;
+        return;
+      }
+      box.innerHTML = `<div class="shelf"><div class="shelf-h"><b><i class="fas fa-globe"></i> ${own ? "My Sites" : esc(username) + "'s Sites"}</b>
+          <a class="link" href="/sites${own ? "?add=1" : "?q=" + encodeURIComponent(username)}">${own ? "Manage" : "See them in the directory"} →</a></div>
+        <div class="shelf-list">${s.map(x => `<a class="shelf-i" href="/sites/go/${x.id}" target="_blank" rel="noopener noreferrer nofollow ugc">
+            <span class="shelf-l" aria-hidden="true">${esc(String(x.host || "?").replace(/^www\./, "")[0].toUpperCase())}</span>
+            <span class="shelf-t"><b>${esc(x.title)}</b><small>${esc(x.host)}${x.hidden ? " · under review" : ""}</small></span>
+            <span class="shelf-s"><i class="fas fa-star"></i> ${x.stars}</span></a>`).join("")}</div></div>`;
+    }
+
     /* ---- Another citizen's public profile ---- */
     async function showPublic(username){
       let d;
@@ -326,11 +361,13 @@
         </div>
         ${badgesHtml(p.badges)}
         ${pinnedHtml(p.pinned, false)}
+        <div id="siteShelf"></div>
         ${p.bio?`<div class="panel" style="text-align:left;margin:0 0 1.4rem;"><b><i class="fas fa-circle-info"></i> What ${esc(p.username)} Does</b><p style="margin-top:.5rem;white-space:pre-wrap;">${esc(p.bio)}</p></div>`:''}
         <h3 style="margin-bottom:.8rem;"><i class="fas fa-file-lines"></i> Public Record</h3>
         <div id="crimTheirs"></div>
         <div>${recordsHtml(p.records)}</div>`;
       loadCriminal(p.username, "crimTheirs");
+      loadShelf(p.username, false);
     }
 
     (async function(){

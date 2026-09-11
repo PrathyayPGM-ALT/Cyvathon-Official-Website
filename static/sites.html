@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Citizen Sites · Cyvathon</title>
+  <!-- social / SEO metadata -->
+  <meta name="description" content="Citizen Sites — the websites Cyvathon's citizens have built: portfolios, blogs, games, tools and businesses." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/sites" />
+  <meta name="theme-color" content="#58c4ff" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="Citizen Sites · Cyvathon" />
+  <meta property="og:description" content="The web, as built by Cyvathonians." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/sites" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Citizen Sites · Cyvathon" />
+  <meta name="twitter:description" content="The web, as built by Cyvathonians." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <style>
+    /* National livery: the Republic's own blue and cyan. */
+
+    /* ---- hero ---- */
+    .s-hero{ text-align:center; margin:0 auto 2rem; max-width:760px; }
+    .s-kick{ display:inline-flex; align-items:center; gap:.5rem; padding:.4rem 1rem; border-radius:30px;
+      font-size:.82rem; font-weight:700; color:var(--accent); background:rgba(88,196,255,.12);
+      border:1px solid rgba(88,196,255,.32); }
+    .s-hero h2{ font-size:clamp(2.2rem, 6vw, 3.4rem); font-weight:900; letter-spacing:-1.5px; margin:.7rem 0 .6rem;
+      background:linear-gradient(95deg,var(--accent),var(--cyan) 55%,var(--green)); -webkit-background-clip:text;
+      background-clip:text; color:transparent; }
+    .s-hero p{ color:var(--muted); font-size:1.02rem; line-height:1.65; margin:0 auto; max-width:620px; }
+    .stats{ display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap; margin-top:1.3rem; }
+    .stats span{ padding:.5rem 1rem; border-radius:30px; background:var(--panel); border:1px solid var(--panel-border);
+      font-size:.88rem; color:var(--muted); }
+    .stats b{ color:var(--text); font-weight:800; }
+
+    /* ---- layout ---- */
+    .s-layout{ display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:1.6rem; align-items:start; }
+    .s-main{ min-width:0; }
+    @media (max-width:980px){ .s-layout{ grid-template-columns:1fr; } .s-aside{ order:-1; } }
+
+    /* ---- the add / edit panel ---- */
+    .s-aside{ position:sticky; top:90px; }
+    @media (max-width:980px){ .s-aside{ position:static; } }
+    .addp{ background:var(--panel); border:1px solid var(--panel-border); border-radius:20px; padding:1.3rem 1.3rem 1.4rem; }
+    .addp h3{ display:flex; align-items:center; gap:.6rem; font-size:1.12rem; margin:0 0 .5rem; }
+    .addp h3 i{ display:grid; place-items:center; width:32px; height:32px; border-radius:10px; font-size:.9rem;
+      color:var(--accent); background:rgba(88,196,255,.13); border:1px solid rgba(88,196,255,.3); }
+    .meter{ font-size:.82rem; color:var(--muted); margin:0 0 .9rem; }
+    .meter .track{ display:block; height:6px; border-radius:6px; margin-top:.4rem; background:var(--panel-2); overflow:hidden; }
+    .meter .track i{ display:block; height:100%; border-radius:6px; background:var(--grad-accent, linear-gradient(90deg,var(--accent),var(--cyan)));
+      transition:width .4s ease; }
+    .addp label{ font-size:.76rem; font-weight:700; color:var(--muted); margin-top:.85rem; }
+    .addp label .opt{ font-weight:500; opacity:.8; }
+    .addp input, .addp textarea{ margin-top:.35rem; padding:.7rem .85rem; font-size:.92rem; }
+    .addp textarea{ resize:vertical; min-height:74px; }
+    .cnt{ display:block; text-align:right; font-size:.72rem; color:var(--muted); margin-top:.2rem; }
+    .catpick{ display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.4rem; }
+    .catpick button{ width:auto; margin:0; padding:.42rem .7rem; font-size:.78rem; font-weight:600; border-radius:20px;
+      background:var(--panel-2); color:var(--muted); border:1px solid var(--panel-border); box-shadow:none; }
+    .catpick button:hover{ color:var(--text); transform:none; box-shadow:none; }
+    .catpick button[aria-pressed="true"]{ background:rgba(88,196,255,.16); color:var(--accent); border-color:rgba(88,196,255,.5); }
+    .addp label.chk{ display:flex; align-items:center; gap:.55rem; font-size:.86rem; font-weight:500; color:var(--text-dim); margin-top:1rem; }
+    .addp label.chk input{ width:auto; margin:0; accent-color:var(--accent); }
+    .pv-l{ font-size:.72rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:1.1rem 0 .5rem; }
+    .pv .site{ animation:none; pointer-events:none; }
+    .f-actions{ display:flex; gap:.5rem; margin-top:1rem; }
+    .f-actions button{ margin:0; }
+    .f-actions .ghost{ width:auto; }
+    .msg{ font-size:.86rem; margin:.7rem 0 0; min-height:1.2em; }
+    .msg.ok{ color:var(--green); } .msg.err{ color:var(--red); }
+    .login-cta{ text-align:center; padding:.4rem 0 .2rem; }
+    .login-cta p{ color:var(--muted); font-size:.9rem; margin:0 0 .9rem; }
+
+    /* ---- toolbar ---- */
+    .toolbar{ display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
+    .search{ position:relative; flex:1 1 260px; margin:0; }
+    .search i{ position:absolute; left:.9rem; top:50%; transform:translateY(-50%); color:var(--muted); font-size:.85rem; pointer-events:none; }
+    .search input{ margin:0; padding:.72rem 1rem .72rem 2.4rem; border-radius:14px; }
+    .seg{ display:flex; gap:.25rem; padding:.3rem; border-radius:14px; background:var(--panel); border:1px solid var(--panel-border); }
+    .seg button{ width:auto; margin:0; padding:.48rem .9rem; font-size:.84rem; font-weight:700; border-radius:10px;
+      background:transparent; color:var(--muted); box-shadow:none; }
+    .seg button:hover{ color:var(--text); transform:none; box-shadow:none; background:rgba(88,196,255,.08); }
+    .seg button[aria-pressed="true"]{ background:linear-gradient(135deg,var(--accent),var(--accent-deep)); color:#fff; }
+    .chips{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:1.3rem; }
+    .chips button{ width:auto; margin:0; padding:.45rem .85rem; font-size:.82rem; font-weight:600; border-radius:20px;
+      background:var(--panel); color:var(--muted); border:1px solid var(--panel-border); box-shadow:none; }
+    .chips button:hover{ color:var(--text); transform:none; box-shadow:none; border-color:var(--panel-border-2); }
+    .chips button[aria-pressed="true"]{ background:rgba(88,196,255,.15); color:var(--accent); border-color:rgba(88,196,255,.5); }
+    .chips button em{ font-style:normal; opacity:.7; margin-left:.25rem; }
+
+    /* ---- site of the week ---- */
+    .spot{ position:relative; overflow:hidden; border-radius:22px; padding:1.4rem 1.5rem; margin-bottom:1.5rem;
+      background:linear-gradient(135deg,rgba(88,196,255,.16),rgba(34,211,238,.06) 60%,rgba(31,214,166,.1));
+      border:1px solid rgba(88,196,255,.35); }
+    .spot::before{ content:""; position:absolute; right:-60px; top:-60px; width:220px; height:220px; border-radius:50%;
+      background:radial-gradient(circle,rgba(255,206,86,.25),transparent 70%); pointer-events:none; }
+    .spot-k{ display:inline-flex; align-items:center; gap:.5rem; font-size:.74rem; font-weight:800; letter-spacing:.14em;
+      text-transform:uppercase; color:var(--gold); margin-bottom:.9rem; }
+    .spot-b{ display:flex; gap:1.1rem; align-items:center; flex-wrap:wrap; position:relative; }
+    .spot-b .fav{ width:64px; height:64px; border-radius:18px; font-size:1.6rem; }
+    .spot-t{ flex:1; min-width:200px; }
+    .spot-t a.st{ font-size:1.35rem; font-weight:800; color:var(--text); text-decoration:none; overflow-wrap:anywhere; }
+    .spot-t a.st:hover{ color:var(--accent); }
+    .spot-t p{ margin:.3rem 0 0; color:var(--muted); font-size:.92rem; line-height:1.55; }
+    .spot-t .by{ font-size:.82rem; margin-top:.4rem; }
+
+    /* ---- the cards ---- */
+    .grid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill, minmax(270px,1fr)); }
+    .site{ position:relative; display:flex; flex-direction:column; gap:.75rem; padding:1.05rem 1.1rem 1rem;
+      border-radius:18px; background:var(--panel); border:1px solid var(--panel-border);
+      transition:transform .2s, border-color .2s, box-shadow .2s;
+      animation:cardIn .45s cubic-bezier(.2,.9,.25,1) both; animation-delay:calc(min(var(--i,0),12) * 45ms); }
+    @keyframes cardIn{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+    @media (hover:hover){ .site:hover{ transform:translateY(-4px); border-color:rgba(88,196,255,.45);
+      box-shadow:0 16px 38px rgba(0,0,0,.28); } }
+    .site.is-hidden{ opacity:.62; border-style:dashed; }
+    .ribbon{ position:absolute; top:10px; right:-30px; transform:rotate(35deg); padding:.22rem 2.2rem; font-size:.66rem;
+      font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#231500; background:var(--gold); }
+    .site-top{ display:flex; gap:.8rem; align-items:flex-start; }
+    .fav{ position:relative; width:46px; height:46px; flex:none; border-radius:14px; display:grid; place-items:center;
+      font-size:1.2rem; font-weight:900; color:#06223a; background:var(--fc,var(--accent)); overflow:hidden; }
+    .fav img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; padding:8px; background:#fff; }
+    .site-id{ flex:1; min-width:0; }
+    .site-title{ display:block; font-weight:800; font-size:1.02rem; color:var(--text); text-decoration:none;
+      line-height:1.3; overflow-wrap:anywhere; }
+    .site-title:hover{ color:var(--accent); }
+    .site-host{ display:block; font-size:.78rem; color:var(--muted); margin-top:.15rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .star{ width:auto; margin:0; padding:.38rem .62rem; display:inline-flex; align-items:center; gap:.35rem; flex:none;
+      border-radius:12px; font-size:.86rem; font-weight:800; background:var(--panel-2); color:var(--muted);
+      border:1px solid var(--panel-border); box-shadow:none; }
+    .star:hover:not(:disabled){ color:var(--gold); border-color:rgba(255,206,86,.5); transform:none; box-shadow:none; }
+    .star.on{ color:var(--gold); background:rgba(255,206,86,.13); border-color:rgba(255,206,86,.45); }
+    .star.on i{ animation:starPop .35s cubic-bezier(.3,1.8,.5,1); }
+    @keyframes starPop{ from{ transform:scale(.4) rotate(-30deg); } to{ transform:none; } }
+    .star:disabled{ opacity:.65; cursor:default; }
+    .site-desc{ margin:0; color:var(--text-dim); font-size:.88rem; line-height:1.55; overflow-wrap:anywhere;
+      display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+    .site-tags{ display:flex; flex-wrap:wrap; gap:.35rem; }
+    .tag2{ display:inline-flex; align-items:center; gap:.35rem; padding:.22rem .6rem; border-radius:20px; font-size:.72rem;
+      font-weight:700; color:var(--muted); background:var(--panel-2); border:1px solid var(--panel-border); }
+    .tag2.pay{ color:var(--green); background:rgba(31,214,166,.12); border-color:rgba(31,214,166,.36); }
+    .tag2.new{ color:var(--accent); background:rgba(88,196,255,.12); border-color:rgba(88,196,255,.36); }
+    .site-foot{ display:flex; align-items:center; gap:.6rem; margin-top:auto; padding-top:.7rem;
+      border-top:1px solid var(--panel-border); font-size:.8rem; }
+    .owner{ display:inline-flex; align-items:center; gap:.45rem; color:var(--text); text-decoration:none; font-weight:700;
+      min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .owner:hover{ color:var(--accent); }
+    .oav{ width:24px; height:24px; flex:none; border-radius:50%; display:grid; place-items:center; font-size:.7rem; font-weight:800;
+      color:#06223a; background:linear-gradient(135deg,var(--accent),var(--cyan)); background-size:cover; background-position:center; }
+    .visits{ color:var(--muted); white-space:nowrap; }
+    .visit{ margin-left:auto; display:inline-flex; align-items:center; gap:.4rem; padding:.42rem .8rem; border-radius:10px;
+      font-weight:800; color:#fff; text-decoration:none; white-space:nowrap;
+      background:linear-gradient(135deg,var(--accent),var(--accent-deep)); }
+    .visit:hover{ filter:brightness(1.08); }
+    .visit i{ font-size:.7rem; }
+    .more{ position:relative; }
+    .more summary{ list-style:none; cursor:pointer; width:30px; height:30px; display:grid; place-items:center; border-radius:9px;
+      color:var(--muted); }
+    .more summary::-webkit-details-marker{ display:none; }
+    .more summary:hover, .more[open] summary{ background:var(--panel-2); color:var(--text); }
+    .menu{ position:absolute; right:0; bottom:calc(100% + 6px); z-index:20; min-width:190px; padding:.35rem; border-radius:14px;
+      background:var(--surface); border:1px solid var(--panel-border-2); box-shadow:0 18px 40px rgba(0,0,0,.35); }
+    .menu button{ width:100%; margin:0; padding:.55rem .7rem; display:flex; align-items:center; gap:.55rem; text-align:left;
+      font-size:.84rem; font-weight:600; border-radius:9px; background:transparent; color:var(--text); box-shadow:none; }
+    .menu button:hover{ background:var(--panel-2); transform:none; box-shadow:none; }
+    .menu button.danger{ color:var(--red); }
+    .menu .mh{ font-size:.68rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); padding:.4rem .7rem .2rem; }
+    .empty{ grid-column:1/-1; text-align:center; padding:3rem 1.2rem; color:var(--muted); border:1px dashed var(--panel-border);
+      border-radius:20px; }
+    .empty i{ font-size:1.8rem; color:var(--accent); display:block; margin-bottom:.7rem; }
+    .empty b{ display:block; color:var(--text); font-size:1.05rem; margin-bottom:.3rem; }
+
+    /* ---- the President's review queue ---- */
+    .review{ margin-top:2.2rem; padding:1.3rem; border-radius:20px; background:rgba(255,206,86,.06);
+      border:1px solid rgba(255,206,86,.35); }
+    .review h3{ display:flex; align-items:center; gap:.55rem; margin:0 0 .3rem; }
+    .review h3 i{ color:var(--gold); }
+    .rv{ display:flex; align-items:center; gap:.9rem; flex-wrap:wrap; padding:.9rem 0; border-top:1px solid var(--panel-border); }
+    .rv:first-of-type{ border-top:none; }
+    .rv .rv-t{ flex:1; min-width:200px; }
+    .rv .rv-t b{ display:block; overflow-wrap:anywhere; }
+    .rv .rv-t span{ font-size:.82rem; color:var(--muted); }
+    .rv .why{ display:flex; gap:.3rem; flex-wrap:wrap; }
+    .rv button{ width:auto; margin:0; padding:.5rem .9rem; font-size:.84rem; }
+    .toast2{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:60; padding:.75rem 1.2rem; border-radius:14px;
+      background:var(--surface); border:1px solid var(--panel-border-2); box-shadow:0 18px 40px rgba(0,0,0,.35); font-size:.9rem; }
+    .toast2[hidden]{ display:none; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap">
+    <div class="s-hero">
+      <span class="s-kick"><i class="fas fa-globe"></i> Made by citizens</span>
+      <h2>Citizen Sites</h2>
+      <p>The wider web, as built by Cyvathonians — portfolios, blogs, games, tools and businesses.
+        List yours, star the best, and see what everyone else is making.</p>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="s-layout">
+      <div class="s-main">
+        <div class="toolbar">
+          <label class="search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+            <input id="q" type="search" placeholder="Search sites, people, ideas…" aria-label="Search sites" autocomplete="off"></label>
+          <div class="seg" role="group" aria-label="Sort">
+            <button type="button" data-sort="top" aria-pressed="true"><i class="fas fa-star"></i> Top</button>
+            <button type="button" data-sort="new" aria-pressed="false">New</button>
+            <button type="button" data-sort="visited" aria-pressed="false">Most visited</button>
+          </div>
+        </div>
+        <div class="chips" id="chips" role="group" aria-label="Category"></div>
+        <section class="spot" id="spot" hidden aria-label="Site of the Week"></section>
+        <div class="grid" id="grid" aria-live="polite"></div>
+        <section class="review" id="review" hidden aria-labelledby="rvH">
+          <h3 id="rvH"><i class="fas fa-flag"></i> Review queue</h3>
+          <p class="small" style="margin:0 0 .6rem;">Sites citizens have reported. Three reports take a site down until you decide.</p>
+          <div id="reviewList"></div>
+        </section>
+      </div>
+
+      <aside class="s-aside">
+        <div class="addp" id="addp"></div>
+      </aside>
+    </div>
+  </div>
+  <div class="toast2" id="toast" role="status" hidden></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+    const qs = new URLSearchParams(location.search);
+    const TILE = ["#58c4ff", "#22d3ee", "#1fd6a6", "#ffce56", "#8dd1ff", "#5cf0cd", "#ffb454", "#7cc4ff"];
+    let D = null, ME = null, F = {q: qs.get("q") || "", cat: qs.get("cat") || "", sort: "top"}, EDIT = null, FORM = {cat: "other"};
+
+    const hostOf = u => { try{ return new URL(/:\/\//.test(u) ? u : "https://" + u).hostname.toLowerCase(); }catch(e){ return ""; } };
+    const hash = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+    const catOf = key => (D && D.categories.find(c => c.key === key)) || {key:"other", label:"Other", icon:"fa-globe"};
+    let toastT = null;
+    function toast(t){ const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2600); }
+
+    // A letter tile in a colour of its own, with the site's real favicon laid
+    // over it when there is one.
+    function tile(host){
+      const h = String(host || "?").replace(/[^a-z0-9.-]/gi, ""), bare = h.replace(/^www\./, "");
+      return `<div class="fav" style="--fc:${TILE[hash(bare) % TILE.length]}" aria-hidden="true"><span>${esc((bare[0] || "?").toUpperCase())}</span>${
+        h ? `<img src="https://${h}/favicon.ico" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}</div>`;
+    }
+
+    function menu(s){
+      const items = [];
+      if(s.mine || (D && D.is_admin)) items.push(`<button type="button" data-edit="${s.id}"><i class="fas fa-pen"></i> Edit</button>`);
+      if(s.mine) items.push(`<button type="button" class="danger" data-del="${s.id}"><i class="fas fa-trash"></i> Remove</button>`);
+      else if(D && D.is_admin) items.push(`<button type="button" class="danger" data-mod="${s.id}" data-act="remove"><i class="fas fa-trash"></i> Remove (President)</button>`);
+      if(!s.mine && D && D.logged_in){
+        items.push(`<div class="mh">Report</div>` + Object.entries(D.reasons).map(([k, l]) =>
+          `<button type="button" data-report="${s.id}" data-reason="${esc(k)}"><i class="fas fa-flag"></i> ${esc(l)}</button>`).join(""));
+      }
+      if(!items.length) return "";
+      return `<details class="more"><summary aria-label="More options for ${esc(s.title)}"><i class="fas fa-ellipsis"></i></summary><div class="menu">${items.join("")}</div></details>`;
+    }
+
+    function card(s, i = 0, preview = false){
+      const cat = catOf(s.category), go = preview ? "#" : `/sites/go/${s.id}`;
+      const tgt = preview ? "" : ` target="_blank" rel="noopener noreferrer nofollow ugc"`;
+      const starTitle = s.mine ? "You can't star your own site" : (D && D.logged_in ? (s.starred ? "Take your star back" : "Star this site") : "Log in to star");
+      return `<article class="site ${s.hidden ? "is-hidden" : ""}" style="--i:${i}">
+        ${s.hidden ? `<div class="ribbon">Under review</div>` : ""}
+        <div class="site-top">${tile(s.host)}
+          <div class="site-id"><a class="site-title" href="${go}"${tgt}>${esc(s.title)}</a><span class="site-host">${esc(s.host)}</span></div>
+          <button type="button" class="star ${s.starred ? "on" : ""}" data-star="${s.id}" ${s.mine || preview || !(D && D.logged_in) ? "disabled" : ""}
+            aria-pressed="${!!s.starred}" title="${esc(starTitle)}" aria-label="${esc(starTitle)}"><i class="${s.starred ? "fas" : "far"} fa-star"></i><b>${fmt(s.stars)}</b></button>
+        </div>
+        ${s.description ? `<p class="site-desc">${esc(s.description)}</p>` : ""}
+        <div class="site-tags"><span class="tag2"><i class="fas ${esc(cat.icon)}"></i> ${esc(cat.label)}</span>${
+          s.cyvapay ? `<span class="tag2 pay" title="Its owner has a live Cyvapay link"><i class="fas fa-money-bill-transfer"></i> Takes Cyvapay</span>` : ""}${
+          s.new ? `<span class="tag2 new">New</span>` : ""}</div>
+        <div class="site-foot">
+          <a class="owner" href="/profile?user=${encodeURIComponent(s.owner)}"><span class="oav" ${avatarStyle(s.avatar)}>${s.avatar ? "" : esc(String(s.owner || "?")[0].toUpperCase())}</span>${esc(s.owner)}</a>
+          <span class="visits">${fmt(s.clicks)} ${s.clicks === 1 ? "visit" : "visits"}</span>
+          <a class="visit" href="${go}"${tgt}>Visit <i class="fas fa-arrow-up-right-from-square"></i></a>
+          ${preview ? "" : menu(s)}
+        </div>
+      </article>`;
+    }
+
+    // ---------------- directory ----------------
+    async function load(){
+      const p = new URLSearchParams({sort: F.sort});
+      if(F.q) p.set("q", F.q);
+      if(F.cat) p.set("cat", F.cat);
+      try{ D = await api("/sites/list?" + p); }
+      catch(e){
+        $("grid").innerHTML = `<div class="empty"><i class="fas fa-plug-circle-xmark"></i><b>The directory isn't open yet</b>${esc(e.message)}</div>`;
+        $("addp").innerHTML = ""; return;
+      }
+      render();
+    }
+
+    function render(){
+      $("stats").innerHTML = `<span><b>${fmt(D.total)}</b> ${D.total === 1 ? "site" : "sites"}</span>
+        <span><b>${fmt(D.owners)}</b> ${D.owners === 1 ? "builder" : "builders"}</span>
+        <span><b>${fmt(D.visits)}</b> ${D.visits === 1 ? "visit" : "visits"} sent</span>`;
+      $("chips").innerHTML = [`<button type="button" data-cat="" aria-pressed="${!F.cat}">All<em>${fmt(D.total)}</em></button>`]
+        .concat(D.categories.filter(c => c.count || c.key === F.cat).map(c =>
+          `<button type="button" data-cat="${esc(c.key)}" aria-pressed="${F.cat === c.key}"><i class="fas ${esc(c.icon)}"></i> ${esc(c.label)}<em>${fmt(c.count)}</em></button>`)).join("");
+      document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.sort === F.sort)));
+
+      const f = D.featured, filtering = !!(F.q || F.cat);
+      $("spot").hidden = !f || filtering;
+      if(f && !filtering) $("spot").innerHTML = `
+        <div class="spot-k"><i class="fas fa-trophy"></i> Site of the Week · ${fmt(f.week_stars)} ${f.week_stars === 1 ? "star" : "stars"} this week</div>
+        <div class="spot-b">${tile(f.host)}
+          <div class="spot-t"><a class="st" href="/sites/go/${f.id}" target="_blank" rel="noopener noreferrer nofollow ugc">${esc(f.title)}</a>
+            ${f.description ? `<p>${esc(f.description)}</p>` : ""}
+            <p class="by">by <a class="link" href="/profile?user=${encodeURIComponent(f.owner)}">${esc(f.owner)}</a> · ${esc(f.host)}</p></div>
+          <a class="visit" href="/sites/go/${f.id}" target="_blank" rel="noopener noreferrer nofollow ugc" style="margin-left:0">Visit <i class="fas fa-arrow-up-right-from-square"></i></a>
+        </div>`;
+
+      $("grid").innerHTML = D.sites.length ? D.sites.map((s, i) => card(s, i)).join("")
+        : filtering ? `<div class="empty"><i class="fas fa-magnifying-glass"></i><b>Nothing matches that</b>Try another word, or clear the category.</div>`
+        : `<div class="empty"><i class="fas fa-seedling"></i><b>No sites yet</b>Be the first citizen in the directory — add yours on the right.</div>`;
+
+      const rv = D.review || [];
+      $("review").hidden = !D.is_admin || !rv.length;
+      if(D.is_admin && rv.length) $("reviewList").innerHTML = rv.map(s => `
+        <div class="rv">${tile(s.host)}
+          <div class="rv-t"><b>${esc(s.title)}</b><span>${esc(s.host)} · by ${esc(s.owner)} · ${s.hidden ? "taken down" : "still listed"}</span>
+            <div class="why">${Object.entries(s.reasons || {}).map(([k, n]) => `<span class="tag2">${esc(D.reasons[k] || k)} ×${n}</span>`).join("")}</div></div>
+          <button type="button" class="success" data-mod="${s.id}" data-act="restore"><i class="fas fa-rotate-left"></i> Restore</button>
+          <button type="button" class="danger" data-mod="${s.id}" data-act="remove"><i class="fas fa-trash"></i> Remove</button>
+        </div>`).join("");
+      renderForm();
+    }
+
+    // ---------------- the add / edit panel ----------------
+    function renderForm(){
+      if(!D.logged_in){
+        $("addp").innerHTML = `<h3><i class="fas fa-plus"></i> Add your site</h3>
+          <div class="login-cta"><p>Built something on the web? Log in and put it in front of the whole Republic.</p>
+          <a href="/login?next=/sites"><button type="button"><i class="fas fa-right-to-bracket"></i> Log in to add yours</button></a></div>`;
+        return;
+      }
+      if(document.activeElement && $("addp").contains(document.activeElement)) return;   // don't wipe a form mid-typing
+      const full = !EDIT && D.mine >= D.limit;
+      const s = EDIT || {};
+      $("addp").innerHTML = `
+        <h3><i class="fas fa-${EDIT ? "pen" : "plus"}"></i> ${EDIT ? "Edit your site" : "Add your site"}</h3>
+        <div class="meter">You have listed ${fmt(D.mine)} of ${fmt(D.limit)} sites.
+          <span class="track"><i style="width:${Math.min(100, 100 * D.mine / D.limit)}%"></i></span></div>
+        ${full ? `<p class="small">That's all ${D.limit}. Remove one from its <i class="fas fa-ellipsis"></i> menu to list another.</p>` : `
+        <form id="siteForm" novalidate>
+          <label for="fUrl">Web address</label>
+          <input id="fUrl" placeholder="your-site.com" autocomplete="off" inputmode="url" maxlength="300" value="${esc(s.url || "")}">
+          <label for="fTitle">Name <span class="opt">(optional)</span></label>
+          <input id="fTitle" maxlength="80" placeholder="What it's called" value="${esc(s.title && s.title !== s.host ? s.title : "")}">
+          <label for="fDesc">What is it? <span class="opt">(optional)</span></label>
+          <textarea id="fDesc" maxlength="200" rows="3" placeholder="One or two lines about it">${esc(s.description || "")}</textarea>
+          <span class="cnt" id="fCnt">${(s.description || "").length}/200</span>
+          <label>Category</label>
+          <div class="catpick" id="fCats">${D.categories.map(c =>
+            `<button type="button" data-pick="${esc(c.key)}" aria-pressed="${FORM.cat === c.key}"><i class="fas ${esc(c.icon)}"></i> ${esc(c.label)}</button>`).join("")}</div>
+          <label class="chk"><input type="checkbox" id="fPay" ${s.cyvapay_claim || s.cyvapay ? "checked" : ""}> It takes payment through Cyvapay</label>
+          <div class="pv-l">Preview</div>
+          <div class="pv" id="pv"></div>
+          <div class="f-actions">
+            <button type="submit" id="fGo"><i class="fas fa-${EDIT ? "check" : "plus"}"></i> ${EDIT ? "Save changes" : "Add to the directory"}</button>
+            ${EDIT ? `<button type="button" class="ghost" id="fCancel">Cancel</button>` : ""}
+          </div>
+          <p class="msg" id="fMsg" role="status"></p>
+        </form>`}`;
+      if(full) return;
+      ["fUrl", "fTitle", "fDesc"].forEach(id => $(id).addEventListener("input", preview));
+      $("fPay").addEventListener("change", preview);
+      $("fCats").addEventListener("click", e => {
+        const b = e.target.closest("[data-pick]"); if(!b) return;
+        FORM.cat = b.dataset.pick;
+        $("fCats").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+        preview();
+      });
+      $("siteForm").addEventListener("submit", submit);
+      if(EDIT) $("fCancel").onclick = () => { EDIT = null; FORM.cat = "other"; renderForm(); };
+      preview();
+    }
+
+    function preview(){
+      const url = $("fUrl").value.trim(), host = hostOf(url);
+      $("fCnt").textContent = `${$("fDesc").value.length}/200`;
+      $("pv").innerHTML = card({id: 0, owner: ME ? ME.username : "you", avatar: ME ? ME.avatar : null,
+        title: $("fTitle").value.trim() || host || "Your site", host: host || "your-site.com",
+        description: $("fDesc").value.trim(), category: FORM.cat, cyvapay: $("fPay").checked && D.can_cyvapay,
+        stars: EDIT ? EDIT.stars : 0, clicks: EDIT ? EDIT.clicks : 0, mine: true, new: !EDIT}, 0, true);
+    }
+
+    async function submit(e){
+      e.preventDefault();
+      const msg = $("fMsg"), btn = $("fGo");
+      const body = {url: $("fUrl").value.trim(), title: $("fTitle").value.trim(),
+                    description: $("fDesc").value.trim(), category: FORM.cat, cyvapay: $("fPay").checked};
+      if(!body.url){ msg.className = "msg err"; msg.textContent = "Put in the site's web address."; $("fUrl").focus(); return; }
+      btn.disabled = true; msg.className = "msg"; msg.textContent = "";
+      try{
+        if(EDIT) await api("/sites/edit", {method: "POST", body: JSON.stringify({id: EDIT.id, ...body})});
+        else await api("/sites/add", {method: "POST", body: JSON.stringify(body)});
+        const was = EDIT; EDIT = null; FORM.cat = "other";
+        document.activeElement && document.activeElement.blur();
+        await load();
+        toast(was ? "Saved." : "Listed. It's in the directory now.");
+      }catch(err){ msg.className = "msg err"; msg.textContent = err.message; btn.disabled = false; }
+    }
+
+    // ---------------- actions ----------------
+    document.addEventListener("click", async e => {
+      const t = e.target.closest("[data-star],[data-edit],[data-del],[data-report],[data-mod],[data-cat],[data-sort]");
+      if(!t) return;
+      const d = t.dataset, find = id => D.sites.find(s => s.id === +id) || (D.review || []).find(s => s.id === +id);
+      try{
+        if(d.sort !== undefined){ F.sort = d.sort; return load(); }
+        if(d.cat !== undefined){ F.cat = d.cat; return load(); }
+        if(d.star){
+          const r = await api("/sites/star", {method: "POST", body: JSON.stringify({id: +d.star})});
+          const s = find(d.star); if(s){ s.starred = r.starred; s.stars = r.stars; }
+          t.classList.toggle("on", r.starred); t.setAttribute("aria-pressed", String(r.starred));
+          t.innerHTML = `<i class="${r.starred ? "fas" : "far"} fa-star"></i><b>${fmt(r.stars)}</b>`;
+          return;
+        }
+        if(d.edit){
+          const s = find(d.edit); if(!s) return;
+          EDIT = s; FORM.cat = s.category;
+          t.closest("details") && t.closest("details").removeAttribute("open");
+          renderForm(); $("fUrl").focus(); $("addp").scrollIntoView({behavior: "smooth", block: "start"});
+          return;
+        }
+        if(d.del){
+          const s = find(d.del);
+          if(!confirm(`Remove ${s ? s.title : "this site"} from the directory?`)) return;
+          await api("/sites/delete", {method: "POST", body: JSON.stringify({id: +d.del})});
+          await load(); toast("Removed."); return;
+        }
+        if(d.report){
+          const r = await api("/sites/report", {method: "POST", body: JSON.stringify({id: +d.report, reason: d.reason})});
+          t.closest("details") && t.closest("details").removeAttribute("open");
+          toast(r.hidden ? "Reported. That was enough reports — it's down until the President reviews it." : "Reported. Thanks for keeping the directory honest.");
+          if(r.hidden) await load();
+          return;
+        }
+        if(d.mod){
+          if(d.act === "remove" && !confirm("Remove this site from the directory for good?")) return;
+          await api("/sites/moderate", {method: "POST", body: JSON.stringify({id: +d.mod, action: d.act})});
+          await load(); toast(d.act === "restore" ? "Restored." : "Removed."); return;
+        }
+      }catch(err){ toast(err.message); }
+    });
+    // close any open menu when clicking elsewhere
+    document.addEventListener("click", e => {
+      document.querySelectorAll("details.more[open]").forEach(m => { if(!m.contains(e.target)) m.removeAttribute("open"); });
+    });
+    let qT = null;
+    $("q").value = F.q;
+    $("q").addEventListener("input", () => { clearTimeout(qT); qT = setTimeout(() => { F.q = $("q").value.trim(); load(); }, 250); });
+
+    (async function(){
+      ME = await currentUser();
+      renderNav("/sites", ME);
+      await load();
+      if(qs.get("add") === "1" && $("fUrl")) $("fUrl").focus();
+      if(qs.get("tab") === "review" && !$("review").hidden) $("review").scrollIntoView({behavior: "smooth"});
+    })();
+  </script>
+</body>
+</html>

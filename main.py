@@ -1501,7 +1501,7 @@ def favicon():
 def sitemap():
     """List the public pages for search engines. Private and classified
     pages are deliberately absent — see robots() above."""
-    pages = ["", "/rules", "/constitution", "/news", "/blogs", "/videos", "/citizens",
+    pages = ["", "/rules", "/constitution", "/sites", "/news", "/blogs", "/videos", "/citizens",
              "/leaderboard", "/government", "/ministries", "/legislature",
              "/court", "/gazette", "/states", "/foreign", "/treasury",
              "/exchange", "/company", "/jobs", "/marketplace", "/casino",
@@ -7178,6 +7178,8 @@ INTERESTS: when you sign up (and on your ID Card) you pick what you love to do. 
 
 GOVERNMENT: a President leads the nation; the Prime Minister and Judge are elected by vote (/voting), and a national presidential vote is held once every six years. The Legislature (/legislature) is where citizens table and vote on bills — any citizen can table one, and with more Ayes than Nays it goes to the President for assent and becomes a numbered Act; the Gazette (/gazette) records laws and decrees; the National Court (/court) rules on cases; report a crime with an FIR (/fir); Ministries (/ministries) run departments with budgets; the Treasury (/treasury) holds national funds and anyone can inspect it. Foreign Affairs (/foreign) tracks Cyvathon's allied and rival micronations — fellow nations can register at signup and request an alliance, which the President confirms.
 
+CITIZEN SITES (/sites): a directory of the websites citizens have built — portfolios, blogs, projects, games, businesses, tools, art. Each citizen can list up to 5 (https links only; a site can only be listed once). Others can search it, filter by category, sort by Top / New / Most visited, star the ones they like (not their own), and visit them — visits are counted. The most-starred site of the last seven days is Site of the Week. A site whose owner has a live Cyvapay link can show a "Takes Cyvapay" badge. Anyone can report a broken or unsuitable site; three reports take it down until the President restores or removes it. Your listed sites also appear on your ID card.
+
 CYVATHON WRAPPED (/wrapped): every September — the whole month, India time — each citizen can play a Spotify-Wrapped-style story of their Cyvathon year: money earned and spent, their rank among earners (shown only if they're in the top half), the citizens they paid and messaged most, votes, bills, card trades, parcels, Cyvalend, the Armoury, their "Cyvathon personality", and the Republic's year as a whole. At the end they can save a share card as an image. The year covered ends as September begins (the first edition, 2026, goes back to the founding), so the numbers don't change while people share them. Outside September it's sealed with a countdown; the dashboard shows a banner while it's open.
 
 THE CONSTITUTION (/constitution) is the founding law: it sets out citizenship, the rights every citizen holds (voice, property, the ballot, a fair hearing, freedom of belief, an open Treasury), what the President may and may not do (a decree cannot repeal an Act or amend the Constitution; the President draws no salary), how ministers are elected, how bills become Acts, how the Courts work, and how the Constitution itself is amended — only by an Act of the Legislature, never by decree. It is also a PDF. The Lawbook (/rules) is the shorter, day-to-day companion: conduct, money, trade, debt, the services, elections and justice. Chairism is the Republic's valued culture and is never required — nobody is taxed or disadvantaged for declining it.
@@ -11690,6 +11692,466 @@ def wrapped_data():
                       60 if preview else WRAPPED_TTL,
                       lambda: _wrapped_deck(user, win, nation))
     return jsonify(success=True, preview=preview, **st, **deck)
+
+
+# ============================================================
+#  CITIZEN SITES — the web, as built by Cyvathonians
+# ============================================================
+#  A directory of the websites citizens have made. Each citizen lists up to
+#  five; others star them, and visit them through /sites/go, which counts the
+#  visit (the owner's own clicks excepted). Three reports from different
+#  citizens pull a site until the President restores or removes it.
+#
+#  Only https links are accepted, and a site is listed once however it's
+#  typed: host and path are normalised into url_key, which is unique. Nothing
+#  is ever fetched from a listed site on the server, so there is nothing to
+#  point at the inside of the network.
+from urllib.parse import urlparse
+from flask import redirect
+
+SITES_PER_CITIZEN = 5
+SITE_REPORTS_TO_HIDE = 3
+SITE_NEW_DAYS = 7
+SITE_STAR_MILESTONES = {1, 5, 10, 25, 50, 100}
+SITE_CATEGORIES = [
+    ("portfolio", "Portfolio", "fa-user-astronaut"),
+    ("blog", "Blog", "fa-feather-pointed"),
+    ("project", "Project", "fa-code"),
+    ("game", "Game", "fa-gamepad"),
+    ("business", "Business", "fa-store"),
+    ("tool", "Tool", "fa-screwdriver-wrench"),
+    ("art", "Art & Music", "fa-palette"),
+    ("other", "Other", "fa-globe"),
+]
+SITE_CATEGORY_KEYS = {c[0] for c in SITE_CATEGORIES}
+SITE_REPORT_REASONS = {"broken": "Broken link", "inappropriate": "Not suitable",
+                       "scam": "Scam or phishing", "other": "Something else"}
+_SITE_URL_RE = re.compile(r"^https://[A-Za-z0-9._~:/?#@!$&*+,;=%-]+$")
+
+
+def _sites_missing():
+    return jsonify(success=False,
+                   error="Citizen Sites isn't set up yet — the database needs a quick update "
+                         "(run migration_citizen_sites.sql)."), 503
+
+
+def _site_url(raw):
+    """(url, url_key) for a link that can be listed, or (None, the reason not)."""
+    url = (raw or "").strip()
+    if not url:
+        return None, "Put in the site's web address."
+    if "://" not in url:
+        url = "https://" + url
+    if len(url) > 300:
+        return None, "That address is too long."
+    if not url.lower().startswith("https://"):
+        return None, "Only secure https:// links can be listed."
+    if not _SITE_URL_RE.match(url):
+        return None, "That doesn't look like a web address."
+    try:
+        p = urlparse(url)
+        host = (p.hostname or "").lower().rstrip(".")
+        has_login = bool(p.username or p.password)
+    except ValueError:
+        return None, "That doesn't look like a web address."
+    if has_login:
+        return None, "Leave usernames and passwords out of the link."
+    if (not host or "." not in host or ":" in host or host == "localhost"
+            or host.endswith(".localhost") or re.fullmatch(r"[0-9.]+", host)):
+        return None, "Use the site's real web address, not a local or numeric one."
+    bare = host[4:] if host.startswith("www.") else host
+    return url, bare + p.path.rstrip("/") + (f"?{p.query}" if p.query else "")
+
+
+def _site_host(r):
+    try:
+        return (urlparse(r.get("url") or "").hostname or "").lower()
+    except ValueError:
+        return ""
+
+
+def _site_title(r):
+    return r.get("title") or _site_host(r) or "a site"
+
+
+def _sites_paying(owners):
+    """Owners with a live Cyvapay link — the only ones whose sites get the badge."""
+    owners = list({o for o in owners if o})
+    if not owners:
+        return set()
+    try:
+        rows = supabase.table("cyvapay_links").select("owner,active") \
+            .in_("owner", owners).execute().data or []
+        return {r["owner"] for r in rows if r.get("active")}
+    except Exception:
+        return set()
+
+
+def _site_public(r, me=None, starred=frozenset(), avatars=None, paying=frozenset(), flags=False):
+    created = _parse(r.get("created_at"))
+    if created is not None and created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    out = {
+        "id": r["id"], "owner": r.get("owner"), "url": r.get("url"), "host": _site_host(r),
+        "title": _site_title(r), "description": r.get("description") or "",
+        "category": r.get("category") if r.get("category") in SITE_CATEGORY_KEYS else "other",
+        "cyvapay": bool(r.get("cyvapay")) and r.get("owner") in paying,
+        "cyvapay_claim": bool(r.get("cyvapay")),
+        "stars": int(r.get("stars") or 0), "clicks": int(r.get("clicks") or 0),
+        "created_at": r.get("created_at"),
+        "new": bool(created and (_now() - created).days < SITE_NEW_DAYS),
+        "mine": bool(me) and r.get("owner") == me,
+        "starred": r["id"] in starred,
+        "avatar": (avatars or {}).get(r.get("owner")),
+        "hidden": bool(r.get("hidden")),
+    }
+    if flags or out["mine"]:
+        out["reports"] = int(r.get("reports") or 0)
+    return out
+
+
+def _site_get(sid):
+    rows = supabase.table("citizen_sites").select("*").eq("id", sid).execute().data or []
+    return rows[0] if rows else None
+
+
+def _site_id(d):
+    try:
+        return int(d.get("id"))
+    except (TypeError, ValueError):
+        return None
+
+
+def _site_remove(sid):
+    for t in ("site_stars", "site_reports"):
+        try:
+            supabase.table(t).delete().eq("site_id", sid).execute()
+        except Exception:
+            pass
+    supabase.table("citizen_sites").delete().eq("id", sid).execute()
+
+
+@app.route("/sites")
+def sites_page():
+    return app.send_static_file("sites.html")
+
+
+@app.route("/sites/list")
+@limiter.limit("60/minute")
+def sites_list():
+    """The directory. Public, so visitors can see what citizens build."""
+    user = get_current_user(run_economics=False)
+    me = user["username"] if user else None
+    admin = is_treasury_admin(user)
+    try:
+        rows = supabase.table("citizen_sites").select("*").order("id", desc=True) \
+            .limit(1000).execute().data or []
+    except Exception:
+        return _sites_missing()
+
+    owner = (request.args.get("owner") or "").strip()
+    q = (request.args.get("q") or "").strip().lower()[:80]
+    cat = (request.args.get("cat") or "").strip()
+    sort = request.args.get("sort") or "top"
+
+    public = [r for r in rows if not r.get("hidden")]
+    # A pulled site is seen only by its owner and the President.
+    visible = [r for r in rows if not r.get("hidden") or admin or (me and r.get("owner") == me)]
+    if owner:
+        visible = [r for r in visible if r.get("owner") == owner]
+    labels = {c[0]: c[1] for c in SITE_CATEGORIES}
+
+    def found(r):
+        if not q:
+            return True
+        hay = " ".join((r.get("title") or "", r.get("description") or "", _site_host(r),
+                        r.get("owner") or "", labels.get(r.get("category"), "Other"))).lower()
+        return q in hay
+
+    searched = [r for r in visible if found(r)]
+    shown = [r for r in searched if not cat or (r.get("category") or "other") == cat]
+    order = {
+        "new": lambda r: (r["id"],),
+        "visited": lambda r: (int(r.get("clicks") or 0), int(r.get("stars") or 0), r["id"]),
+    }.get(sort, lambda r: (int(r.get("stars") or 0), int(r.get("clicks") or 0), r["id"]))
+    shown.sort(key=order, reverse=True)
+    counts = Counter(r.get("category") if r.get("category") in SITE_CATEGORY_KEYS else "other"
+                     for r in searched)
+
+    starred = set()
+    if me:
+        try:
+            starred = {s["site_id"] for s in supabase.table("site_stars").select("site_id")
+                       .eq("username", me).execute().data or []}
+        except Exception:
+            pass
+    owners = [r.get("owner") for r in rows]
+    avatars, paying = _avatars_for(owners), _sites_paying(owners)
+
+    # Site of the Week: the most stars gained in the last seven days.
+    featured = None
+    try:
+        since = (_now() - timedelta(days=7)).isoformat()
+        recent = supabase.table("site_stars").select("site_id,created_at") \
+            .gte("created_at", since).limit(5000).execute().data or []
+    except Exception:
+        recent = []
+    live = {r["id"]: r for r in public}
+    week = Counter(s["site_id"] for s in recent if s.get("site_id") in live)
+    if week:
+        sid, n = max(week.items(), key=lambda kv: (kv[1], int(live[kv[0]].get("stars") or 0), kv[0]))
+        featured = {**_site_public(live[sid], me, starred, avatars, paying), "week_stars": n}
+
+    body = dict(
+        success=True,
+        sites=[_site_public(r, me, starred, avatars, paying, admin) for r in shown],
+        featured=featured,
+        mine=sum(1 for r in rows if me and r.get("owner") == me),
+        limit=SITES_PER_CITIZEN,
+        categories=[{"key": k, "label": l, "icon": i, "count": counts.get(k, 0)}
+                    for k, l, i in SITE_CATEGORIES],
+        reasons=SITE_REPORT_REASONS, is_admin=admin, logged_in=bool(user), me=me,
+        can_cyvapay=bool(me) and me in paying or (bool(me) and me in _sites_paying([me])),
+        total=len(public), owners=len({r.get("owner") for r in public}),
+        visits=sum(int(r.get("clicks") or 0) for r in public),
+    )
+    if admin:
+        flagged = [r for r in rows if r.get("hidden") or int(r.get("reports") or 0) > 0]
+        reasons = defaultdict(Counter)
+        if flagged:
+            try:
+                for x in supabase.table("site_reports").select("site_id,reason") \
+                        .in_("site_id", [r["id"] for r in flagged]).execute().data or []:
+                    reasons[x["site_id"]][x.get("reason") or "other"] += 1
+            except Exception:
+                pass
+        body["review"] = [{**_site_public(r, me, starred, avatars, paying, True),
+                           "reasons": dict(reasons[r["id"]])} for r in flagged]
+    return jsonify(**body)
+
+
+def _site_fields(d):
+    return {"title": (d.get("title") or "").strip()[:80],
+            "description": (d.get("description") or "").strip()[:200],
+            "category": d.get("category") if d.get("category") in SITE_CATEGORY_KEYS else "other",
+            "cyvapay": bool(d.get("cyvapay"))}
+
+
+@app.route("/sites/add", methods=["POST"])
+@limiter.limit("10/minute")
+def sites_add():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Log in to list a site."), 401
+    me = user["username"]
+    d = request.get_json(silent=True) or {}
+    url, key = _site_url(d.get("url"))
+    if not url:
+        return jsonify(success=False, error=key), 400
+    try:
+        mine = supabase.table("citizen_sites").select("id").eq("owner", me).execute().data or []
+        taken = supabase.table("citizen_sites").select("owner").eq("url_key", key).execute().data or []
+    except Exception:
+        return _sites_missing()
+    if taken:
+        return jsonify(success=False, error=f"That site is already in the directory — "
+                                            f"listed by {taken[0].get('owner')}."), 400
+    if len(mine) >= SITES_PER_CITIZEN:
+        return jsonify(success=False, error=f"You've listed all {SITES_PER_CITIZEN} of your "
+                                            f"sites — remove one to add another."), 400
+    now = _now().isoformat()
+    try:
+        row = supabase.table("citizen_sites").insert({
+            "owner": me, "url": url, "url_key": key, **_site_fields(d),
+            "created_at": now, "updated_at": now}).execute().data[0]
+    except Exception:
+        # the unique url_key lost a race with someone listing the same site
+        return jsonify(success=False, error="That site is already in the directory."), 400
+    add_record(me, f"Listed a site in Citizen Sites: {_site_title(row)}")
+    return jsonify(success=True, site=_site_public(row, me, avatars=_avatars_for([me]),
+                                                   paying=_sites_paying([me])))
+
+
+@app.route("/sites/edit", methods=["POST"])
+@limiter.limit("20/minute")
+def sites_edit():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Log in first."), 401
+    d = request.get_json(silent=True) or {}
+    sid = _site_id(d)
+    if sid is None:
+        return jsonify(success=False, error="Which site?"), 400
+    try:
+        r = _site_get(sid)
+    except Exception:
+        return _sites_missing()
+    if not r:
+        return jsonify(success=False, error="That site isn't in the directory."), 404
+    if r.get("owner") != user["username"] and not is_treasury_admin(user):
+        return jsonify(success=False, error="That isn't your site."), 403
+    patch = {"updated_at": _now().isoformat()}
+    if "url" in d:
+        url, key = _site_url(d.get("url"))
+        if not url:
+            return jsonify(success=False, error=key), 400
+        taken = [x for x in supabase.table("citizen_sites").select("id,owner")
+                 .eq("url_key", key).execute().data or [] if x.get("id") != sid]
+        if taken:
+            return jsonify(success=False, error=f"That site is already in the directory — "
+                                                f"listed by {taken[0].get('owner')}."), 400
+        patch.update(url=url, url_key=key)
+    fields = _site_fields(d)
+    patch.update({k: v for k, v in fields.items() if k in d})
+    row = supabase.table("citizen_sites").update(patch).eq("id", sid).execute().data[0]
+    return jsonify(success=True, site=_site_public(row, user["username"],
+                                                   avatars=_avatars_for([row.get("owner")]),
+                                                   paying=_sites_paying([row.get("owner")])))
+
+
+@app.route("/sites/delete", methods=["POST"])
+@limiter.limit("20/minute")
+def sites_delete():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Log in first."), 401
+    sid = _site_id(request.get_json(silent=True) or {})
+    if sid is None:
+        return jsonify(success=False, error="Which site?"), 400
+    try:
+        r = _site_get(sid)
+    except Exception:
+        return _sites_missing()
+    if not r:
+        return jsonify(success=False, error="That site isn't in the directory."), 404
+    if r.get("owner") != user["username"] and not is_treasury_admin(user):
+        return jsonify(success=False, error="That isn't your site."), 403
+    _site_remove(sid)
+    return jsonify(success=True)
+
+
+@app.route("/sites/star", methods=["POST"])
+@limiter.limit("60/minute")
+def sites_star():
+    """Star a site, or take the star back."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Log in to star sites."), 401
+    me = user["username"]
+    sid = _site_id(request.get_json(silent=True) or {})
+    try:
+        r = _site_get(sid) if sid is not None else None
+    except Exception:
+        return _sites_missing()
+    if not r or r.get("hidden"):
+        return jsonify(success=False, error="That site isn't in the directory."), 404
+    if r.get("owner") == me:
+        return jsonify(success=False, error="You can't star your own site."), 400
+    have = supabase.table("site_stars").select("id").eq("site_id", sid) \
+        .eq("username", me).execute().data or []
+    if have:
+        supabase.table("site_stars").delete().eq("id", have[0]["id"]).execute()
+        cas_num("citizen_sites", [("id", sid)], "stars", -1, allow_negative=False)
+        starred = False
+    else:
+        try:
+            supabase.table("site_stars").insert({"site_id": sid, "username": me,
+                                                 "created_at": _now().isoformat()}).execute()
+        except Exception:
+            return jsonify(success=False, error="You've already starred it."), 400
+        cas_num("citizen_sites", [("id", sid)], "stars", 1, allow_negative=False)
+        starred = True
+    n = int((_site_get(sid) or r).get("stars") or 0)
+    if starred and n in SITE_STAR_MILESTONES:
+        title = _site_title(r)
+        notify(r["owner"], f"⭐ Your site '{title}' got its first star." if n == 1
+               else f"⭐ Your site '{title}' reached {n} stars.", "/sites")
+    return jsonify(success=True, starred=starred, stars=n)
+
+
+@app.route("/sites/report", methods=["POST"])
+@limiter.limit("20/minute")
+def sites_report():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Log in to report a site."), 401
+    me = user["username"]
+    d = request.get_json(silent=True) or {}
+    sid, reason = _site_id(d), d.get("reason")
+    if reason not in SITE_REPORT_REASONS:
+        return jsonify(success=False, error="Pick a reason for the report."), 400
+    try:
+        r = _site_get(sid) if sid is not None else None
+    except Exception:
+        return _sites_missing()
+    if not r:
+        return jsonify(success=False, error="That site isn't in the directory."), 404
+    if r.get("owner") == me:
+        return jsonify(success=False, error="You can't report your own site — edit or remove it instead."), 400
+    try:
+        supabase.table("site_reports").insert({"site_id": sid, "username": me, "reason": reason}).execute()
+    except Exception:
+        return jsonify(success=False, error="You've already reported this site."), 400
+    cas_num("citizen_sites", [("id", sid)], "reports", 1, allow_negative=False)
+    fresh = _site_get(sid) or r
+    n, hidden = int(fresh.get("reports") or 0), bool(fresh.get("hidden"))
+    if not hidden and n >= SITE_REPORTS_TO_HIDE:
+        supabase.table("citizen_sites").update({"hidden": True}).eq("id", sid).execute()
+        hidden = True
+        title = _site_title(r)
+        notify(r["owner"], f"Your site '{title}' was taken down for review after citizens "
+                           f"reported it. The President will look at it.", "/sites")
+        for admin in sorted(TREASURY_ADMINS):
+            notify(admin, f"🚩 '{title}' by {r['owner']} was pulled from Citizen Sites after "
+                          f"{n} reports.", "/sites?tab=review")
+    return jsonify(success=True, hidden=hidden)
+
+
+@app.route("/sites/go/<int:sid>")
+@limiter.limit("120/minute")
+def sites_go(sid):
+    """Send a visitor on to a listed site, counting the visit."""
+    user = get_current_user(run_economics=False)
+    try:
+        r = _site_get(sid)
+    except Exception:
+        r = None
+    insider = bool(user) and r is not None and (is_treasury_admin(user) or user["username"] == r.get("owner"))
+    url = (r or {}).get("url") or ""
+    if not r or (r.get("hidden") and not insider) or not _SITE_URL_RE.match(url):
+        return redirect("/sites", 302)
+    if not (user and user["username"] == r.get("owner")):
+        cas_num("citizen_sites", [("id", sid)], "clicks", 1, allow_negative=False)
+    return redirect(url, 302)
+
+
+@app.route("/sites/moderate", methods=["POST"])
+@limiter.limit("30/minute")
+def sites_moderate():
+    user = get_current_user(run_economics=False)
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="Only the President reviews reported sites."), 403
+    d = request.get_json(silent=True) or {}
+    sid, action = _site_id(d), d.get("action")
+    if sid is None or action not in ("restore", "hide", "remove"):
+        return jsonify(success=False, error="Restore, hide or remove which site?"), 400
+    try:
+        r = _site_get(sid)
+    except Exception:
+        return _sites_missing()
+    if not r:
+        return jsonify(success=False, error="That site isn't in the directory."), 404
+    title = _site_title(r)
+    if action == "restore":
+        supabase.table("citizen_sites").update({"hidden": False, "reports": 0}).eq("id", sid).execute()
+        supabase.table("site_reports").delete().eq("site_id", sid).execute()
+        notify(r["owner"], f"Your site '{title}' is back in the directory.", "/sites")
+    elif action == "hide":
+        supabase.table("citizen_sites").update({"hidden": True}).eq("id", sid).execute()
+    else:
+        _site_remove(sid)
+        notify(r["owner"], f"Your site '{title}' was removed from the directory by the President.", "/sites")
+    return jsonify(success=True)
 
 
 # ============================================================

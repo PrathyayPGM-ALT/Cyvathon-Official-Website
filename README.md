@@ -237,6 +237,36 @@ from TheSportsDB or the owner's own photo of the card in their hand. Update
 
 ---
 
+### 13. Citizen Sites — the web, as built by citizens
+A directory at `/sites` of the websites Cyvathon's citizens have made:
+portfolios, blogs, projects, games, businesses, tools, art and music.
+
+- **List up to five sites each.** Type the address with or without `https://`.
+  Only secure https links are accepted, never plain http, localhost, IP addresses
+  or links with a password in them. A site can only be listed once, however it's
+  typed (`www.` and a trailing slash don't make it new). A live preview shows the
+  card as you fill it in.
+- **Find them.** Search names, descriptions, addresses and owners. Filter by
+  category, and sort by **Top**, **New** or **Most visited**.
+- **Star them.** One star per citizen per site, and never your own. Owners hear
+  about their first star and every milestone after. The most-starred site of the
+  last seven days is **Site of the Week**.
+- **Visit them.** Links go through `/sites/go/<id>`, which counts the visit (not
+  the owner's own) and only ever redirects to the stored https address.
+- **Cyvapay badge.** An owner can say their site takes Cyvapay. The badge only
+  shows if they also have a live Cyvapay link.
+- **Keep it honest.** Any citizen can report a site as broken, unsuitable, a
+  scam or something else. Three reports from different citizens take it down,
+  and the owner and the President are told. The President's review queue on the
+  same page shows the reasons, with **Restore** and **Remove**.
+- **On your ID card.** Your sites appear on your profile, and on other
+  citizens' when they have some.
+
+Nothing is fetched from a listed site on the server, so the directory can't be
+used to poke at anything on the inside of the network. Needs
+`migration_citizen_sites.sql`; until it's run, the page says so rather than
+erroring. Tests: `python tests/test_sites.py`.
+
 ### 12. Cyvathon Wrapped — every September
 A Spotify-Wrapped-style story of each citizen's year, at `/wrapped`. Tap through
 full-screen slides: money earned and spent (and where it came from), a ranking
