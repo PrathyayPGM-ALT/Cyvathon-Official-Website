@@ -237,6 +237,32 @@ from TheSportsDB or the owner's own photo of the card in their hand. Update
 
 ---
 
+### 11. The Constitution & the Lawbook
+Two documents, two pages, two PDFs — and a clear split between them:
+
+| | Page | PDF | Says |
+|---|---|---|---|
+| **The Constitution** | `/constitution` | `/static/cyvathon-constitution.pdf` | How the Republic is governed: citizenship, the rights every citizen holds, what the President may and may not do, how ministers are elected, how a bill becomes an Act, the Courts, the Treasury, the public services, and how the Constitution is amended — by an Act of the Legislature, never by decree. |
+| **The Lawbook** | `/rules` | `/static/cyvathon-lawbook.pdf` | What a citizen keeps to day to day: conduct, money, trade, debt, the services, elections and justice. The Rules page carries a twelve-line quick reference of it. |
+
+Every clause describes something the site actually does, with the numbers taken
+from `main.py` (the pegs, the grant, the fees, the salary table, the 365-day jail
+ceiling, the four-applicant ministry election). Where the code gives a power to
+the President the Constitution says so and then says what bounds it; Chairism is
+the Republic's valued culture and is never required.
+
+The Constitution's text lives in **one place** — `build_constitution.py` writes both
+the PDF and `static/constitution.json`, and `/constitution` renders the JSON — so
+the page and the PDF cannot drift apart. Rebuild after editing either document:
+
+```bash
+python build_constitution.py
+python build_lawbook.py
+```
+
+Both need `reportlab`, which is deliberately not in `requirements.txt`: the running
+site only serves the files.
+
 ## 🛠 Tech Stack
 
 **Frontend:**  

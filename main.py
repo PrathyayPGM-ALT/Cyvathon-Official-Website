@@ -1582,6 +1582,13 @@ def government_page():
 def rules_page():
     return app.send_static_file("rules.html")
 
+
+@app.route("/constitution")
+def constitution_page():
+    # The text itself lives in static/constitution.json, written by
+    # build_constitution.py alongside the PDF, so page and PDF never drift.
+    return app.send_static_file("constitution.html")
+
 @app.route("/treasury")
 def treasury_page():
     return app.send_static_file("treasury.html")
@@ -7169,7 +7176,9 @@ IDENTITY: your ID Card (/profile) shows your record and balances; set a profile 
 
 INTERESTS: when you sign up (and on your ID Card) you pick what you love to do. Cyvathon then shows personalized "Recommended for you" features on your dashboard and drops you into interest-based group chats with like-minded citizens.
 
-GOVERNMENT: a President leads the nation; the Prime Minister and Judge are elected by vote (/voting), and a national presidential vote is held once every six years. The Legislature (/legislature) is where citizens table and vote on bills; the Gazette (/gazette) records laws and decrees; the National Court (/court) rules on cases; report a crime with an FIR (/fir); Ministries (/ministries) run departments with budgets; the Treasury (/treasury) holds national funds. Foreign Affairs (/foreign) tracks Cyvathon's allied and rival micronations — fellow nations can register at signup and request an alliance, which the President confirms.
+GOVERNMENT: a President leads the nation; the Prime Minister and Judge are elected by vote (/voting), and a national presidential vote is held once every six years. The Legislature (/legislature) is where citizens table and vote on bills — any citizen can table one, and with more Ayes than Nays it goes to the President for assent and becomes a numbered Act; the Gazette (/gazette) records laws and decrees; the National Court (/court) rules on cases; report a crime with an FIR (/fir); Ministries (/ministries) run departments with budgets; the Treasury (/treasury) holds national funds and anyone can inspect it. Foreign Affairs (/foreign) tracks Cyvathon's allied and rival micronations — fellow nations can register at signup and request an alliance, which the President confirms.
+
+THE CONSTITUTION (/constitution) is the founding law: it sets out citizenship, the rights every citizen holds (voice, property, the ballot, a fair hearing, freedom of belief, an open Treasury), what the President may and may not do (a decree cannot repeal an Act or amend the Constitution; the President draws no salary), how ministers are elected, how bills become Acts, how the Courts work, and how the Constitution itself is amended — only by an Act of the Legislature, never by decree. It is also a PDF. The Lawbook (/rules) is the shorter, day-to-day companion: conduct, money, trade, debt, the services, elections and justice. Chairism is the Republic's valued culture and is never required — nobody is taxed or disadvantaged for declining it.
 
 COMMUNITY: Chat (/chat) is a full messenger — public square, group channels, per-state channels and DMs, with @mentions, replies, emoji reactions, typing indicators, online status, GIFs, image sharing and voice messages. Mail (/mail) — reached from the Chat/Mail toggle — is a Gmail-style inbox where you compose to recipients you pick from a list (or broadcast to everyone), with threaded replies. Share Videos (/videos) by YouTube link or uploading from your device, and write Blogs (/blogs) that others can like and comment on. Climb the Leaderboards (/leaderboard) — richest citizens, top founders, top recruiters. Track your cash and investments in the Portfolio (/portfolio). Browse the Citizens directory (/citizens) and National News (/news). You'll get notification pop-ups for DMs, mentions, mail, approvals, news and opened elections.
 

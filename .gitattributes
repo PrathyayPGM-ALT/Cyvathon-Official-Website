@@ -1,0 +1,13 @@
+# Binary assets must never go through line-ending conversion: with
+# core.autocrlf=true a checkout would rewrite the LFs inside a PDF and
+# corrupt it. `binary` = -text -diff -merge.
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary

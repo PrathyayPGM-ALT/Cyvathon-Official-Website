@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cyvathon Rules</title>
   <!-- social / SEO metadata -->
-  <meta name="description" content="The rules of Cyvathon — how citizenship, the economy, elections and the courts work." />
+  <meta name="description" content="The rules of Cyvathon — how citizens treat one another, their money, their trades, their debts and the courts." />
   <link rel="canonical" href="https://cyvathon.onrender.com/rules" />
   <meta name="theme-color" content="#58c4ff" />
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
@@ -14,65 +14,90 @@
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Cyvathon Rules" />
-  <meta property="og:description" content="The rules of Cyvathon — how citizenship, the economy, elections and the courts work." />
+  <meta property="og:description" content="The rules of Cyvathon — how citizens treat one another, their money, their trades, their debts and the courts." />
   <meta property="og:url" content="https://cyvathon.onrender.com/rules" />
   <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Cyvathon Rules" />
-  <meta name="twitter:description" content="The rules of Cyvathon — how citizenship, the economy, elections and the courts work." />
+  <meta name="twitter:description" content="The rules of Cyvathon — how citizens treat one another, their money, their trades, their debts and the courts." />
   <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
   <style>
+    .docs{ display:grid; gap:1rem; grid-template-columns:1fr 1fr; max-width:760px; margin:0 auto 2.4rem; }
+    @media(max-width:600px){ .docs{ grid-template-columns:1fr; } }
+    .doc{ text-align:center; padding:1.5rem 1.2rem; }
+    .doc .ic{ width:46px; height:46px; margin:0 auto .7rem; border-radius:13px; display:grid; place-items:center;
+      font-size:1.2rem; color:#06223a; background:var(--dc,var(--accent)); }
+    .doc h3{ margin-bottom:.25rem; }
+    .doc p{ margin-bottom:.9rem; }
+    .doc button{ width:auto; padding:.65rem 1.3rem; }
+    .doc a{ text-decoration:none; }
     .rule{ padding:1rem 1.2rem; margin-bottom:1rem; border-left:3px solid var(--accent);
       background:var(--panel); border-radius:0 10px 10px 0; transition:.2s; }
     .rule:hover{ transform:translateX(5px); }
     .rule h3{ color:var(--accent); margin-bottom:.2rem; font-size:1rem; }
+    .rule p{ margin:0; }
+    .rule .more{ display:inline-block; margin-top:.35rem; font-size:.82rem; }
   </style>
 </head>
 <body>
   <div id="nav"></div>
 
   <div class="wrap" style="max-width:760px;">
-    <h2 class="section-title"><i class="fas fa-scroll"></i> Laws of Cyvathon</h2>
-    <p class="section-sub">Every citizen agrees to uphold these laws.</p>
+    <h2 class="section-title"><i class="fas fa-scroll"></i> The Rules of Cyvathon</h2>
+    <p class="section-sub">How citizens treat one another, their money, their trades, their debts and
+      the courts. Made by the citizens, in the Legislature, in the open.</p>
 
-    <div class="panel" style="text-align:center;max-width:560px;margin:0 auto 2rem;">
-      <h3><i class="fas fa-book-bookmark"></i> The Official Lawbook</h3>
-      <p class="small">The full Constitution &amp; Lawbook of the Republic — ten formal articles.</p>
-      <a class="link" href="/static/cyvathon-lawbook.pdf" target="_blank" rel="noopener"
-         style="display:inline-block;margin-top:.6rem;">
-        <button style="width:auto;padding:.7rem 1.6rem;">
-          <i class="fas fa-file-pdf"></i> &nbsp;Read the Lawbook (PDF)</button>
-      </a>
+    <div class="docs">
+      <div class="panel doc" style="--dc:var(--accent)">
+        <div class="ic"><i class="fas fa-book-bookmark"></i></div>
+        <h3>The Lawbook</h3>
+        <p class="small">Every law a citizen keeps to, in nine short chapters.</p>
+        <a href="/static/cyvathon-lawbook.pdf" target="_blank" rel="noopener">
+          <button><i class="fas fa-file-pdf"></i> &nbsp;Read the Lawbook</button></a>
+      </div>
+      <div class="panel doc" style="--dc:var(--gold)">
+        <div class="ic"><i class="fas fa-diamond"></i></div>
+        <h3>The Constitution</h3>
+        <p class="small">How the Republic is governed, and the rights every citizen holds.</p>
+        <a href="/constitution"><button><i class="fas fa-landmark"></i> &nbsp;Read the Constitution</button></a>
+      </div>
     </div>
 
     <h3 style="text-align:center;color:var(--muted);margin-bottom:1.2rem;">Quick Reference</h3>
     <div id="rules"></div>
+
+    <p class="small" style="text-align:center;margin-top:1.6rem;">
+      Think a rule should change? Any citizen can <a class="link" href="/legislature">table a bill</a> —
+      with more Ayes than Nays it goes for assent and becomes an Act in the <a class="link" href="/gazette">Gazette</a>.
+    </p>
   </div>
 
   <script src="/static/app.js"></script>
   <script>
+    // The quick reference. The full text of each is in the Lawbook PDF.
     const RULES = [
-      "Respect all nations and communities.",
-      "Support the Cyvathon community and its members.",
-      "Only Cybucks, Pufferbucks, Aquilines and Cybits are legal tender (1 Cybuck = 50 Cybits).",
-      "A 10% VAT is collected monthly and flows to the National Treasury.",
-      "New citizens receive 100 of each currency upon joining.",
-      "Founding a company costs 1000 CB; founders earn a weekly salary.",
-      "Loans up to 5000 CB must be repaid within 30 days or all assets are seized.",
-      "Follow all Cyvathon laws and regulations.",
-      "No inappropriate language or behavior.",
-      "No attacks permitted according to zoning laws.",
-      "We encourage Chairism as a cultural practice.",
-      "No theft, murder, or illegal activities.",
+      ["Respect every citizen, every community and every other nation.", "/citizens"],
+      ["Keep your word in trade: no theft, no fraud, no scams, no impersonation.", "/marketplace"],
+      ["Legal tender is the Cybuck, Pufferbuck, Aquiline and Cybit — 1 CB = 1 PUFB = 10 AQ = 50 Cybits.", "/bank"],
+      ["A 10% VAT and a 5% delivery levy are collected monthly into the National Treasury, which anyone can inspect.", "/treasury"],
+      ["Every new citizen receives 100 of each currency. The welcome grant and borrowed money can't be sent away.", "/bank"],
+      ["Founding a company costs 1000 CB. Salaries are paid weekly, by office.", "/company"],
+      ["Loans go up to 5000 CB and are repaid within 30 days. An unpaid loan bars you from standing for office until it's settled.", "/loans"],
+      ["Any citizen may table a bill. More Ayes than Nays, then assent, and it becomes an Act in the Gazette.", "/legislature"],
+      ["Any citizen may file a case or report a crime, and is heard before any judgment. Convictions go on the record.", "/court"],
+      ["What you carry for Cyvazon you hand over; what you borrow from Cyvalend you give back on time.", "/cyvazon"],
+      ["No attacks on other citizens or other nations — defence, not invasion. Play fights only where the zoning laws allow.", "/foreign"],
+      ["Chairism is the Republic's valued culture: encouraged, and never required.", "/#chairism"],
     ];
     (async function(){
       renderNav("/rules", await currentUser());
-      document.getElementById("rules").innerHTML = RULES.map((r,i)=>
-        `<div class="rule"><h3>Rule ${i+1}</h3><p>${r}</p></div>`).join("");
+      document.getElementById("rules").innerHTML = RULES.map(([r,href],i)=>
+        `<div class="rule"><h3>Rule ${i+1}</h3><p>${r}</p>
+           <a class="link more" href="${href}">See it on the site →</a></div>`).join("");
     })();
   </script>
 </body>
