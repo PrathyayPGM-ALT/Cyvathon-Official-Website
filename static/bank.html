@@ -148,17 +148,47 @@
       }catch{}
     }
 
+    /* A payment PIN is asked for above the national threshold. The field
+       appears only when the server asks for it, so small payments stay one
+       click. */
+    function pinField(show){
+      let box = document.getElementById("pinBox");
+      if(!box){
+        document.getElementById("sendAmount").insertAdjacentHTML("afterend",
+          `<div id="pinBox" style="display:none;margin-top:.6rem;">
+             <input id="sendPin" type="password" inputmode="numeric" autocomplete="off"
+                    maxlength="6" placeholder="Payment PIN" aria-label="Payment PIN">
+             <p class="small" style="margin:.3rem 0 0;">Large payments need your PIN.
+               <a class="link" href="/profile">Set or change it on your ID card →</a></p>
+           </div>`);
+        box = document.getElementById("pinBox");
+      }
+      box.style.display = show ? "block" : "none";
+      if(show) document.getElementById("sendPin").focus();
+      return box;
+    }
+
     async function send(){
       const to = document.getElementById("recipient").value;
       const currency = document.getElementById("sendCurrency").value;
       const amount = parseFloat(document.getElementById("sendAmount").value);
+      const pinEl = document.getElementById("sendPin");
       if(!to) return msg("Select a recipient");
       if(!amount||amount<=0) return msg("Enter a positive amount");
+      const body = {to_username:to, currency, amount};
+      if(pinEl && pinEl.value.trim()) body.pin = pinEl.value.trim();
       try{
-        const d = await api("/transfer",{method:"POST",body:JSON.stringify({to_username:to,currency,amount})});
-        paint(d.user); document.getElementById("sendAmount").value="";
+        const d = await api("/transfer",{method:"POST",body:JSON.stringify(body)});
+        paint(d.user);
+        document.getElementById("sendAmount").value="";
+        if(pinEl){ pinEl.value=""; pinField(false); }
         msg(`Sent ${amount} ${NAME[currency]} to ${to}`,false);
-      }catch(e){ msg(e.message); }
+      }catch(e){
+        const f = (e.data||{});
+        if(f.pin_required){ pinField(true); }          // ask, or ask again
+        else if(f.need_pin){ pinField(false); }        // no PIN set yet — the message says where
+        msg(e.message);
+      }
     }
 
     function preview(){

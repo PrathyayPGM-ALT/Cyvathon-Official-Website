@@ -36,7 +36,14 @@ async function api(path, options = {}) {
   catch (e) {
     throw new Error("Server error (HTTP " + res.status + "). The database may not be set up yet — run schema.sql in Supabase.");
   }
-  if (!res.ok || data.success === false) throw new Error(data.error || ("HTTP " + res.status));
+  if (!res.ok || data.success === false) {
+    // Carry the whole reply on the error, so a page can react to flags like
+    // pin_required or must_change instead of reading the message text.
+    const err = new Error(data.error || ("HTTP " + res.status));
+    err.data = data;
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 

@@ -74,6 +74,21 @@
     .shelf-t b{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .shelf-t small{ color:var(--muted); font-size:.78rem; }
     .shelf-s{ color:var(--gold); font-size:.82rem; font-weight:700; white-space:nowrap; }
+    /* ---- security panel ---- */
+    .sec-h{ margin:1.3rem 0 .5rem; font-size:.95rem; display:flex; align-items:center; gap:.5rem; }
+    .sec-h .tag{ font-size:.66rem; }
+    .sec-grid{ display:grid; gap:.5rem; grid-template-columns:1fr 1fr; }
+    @media(max-width:560px){ .sec-grid{ grid-template-columns:1fr; } }
+    .sec-grid input{ margin:0; }
+    .sec-warn{ padding:.7rem .9rem; border-radius:12px; margin:0 0 1rem; font-size:.88rem; font-weight:600;
+      color:var(--gold); background:rgba(255,206,86,.12); border:1px solid rgba(255,206,86,.4); }
+    .sec-row{ display:flex; justify-content:space-between; align-items:center; gap:.8rem; padding:.5rem 0;
+      border-bottom:1px solid var(--panel-border); font-size:.86rem; }
+    .sec-row:last-of-type{ border-bottom:none; }
+    .sec-row b{ display:block; font-weight:700; }
+    .sec-row small{ color:var(--muted); font-size:.76rem; }
+    .sec-row.bad b{ color:var(--red); }
+    .sec-row .when{ color:var(--muted); white-space:nowrap; font-size:.8rem; }
 
     /* --- criminal record --- */
     .crim{ border:1px solid rgba(224,108,108,.4); background:rgba(224,108,108,.07);
@@ -268,12 +283,14 @@
           <p id="bioText" style="margin-top:.5rem;white-space:pre-wrap;color:${p.bio?'var(--text)':'var(--muted)'};">${p.bio?esc(p.bio):"Add a description of what you do in Cyvathon."}</p>
         </div>
         <div class="panel ${(p.interests&&p.interests.length)?'':'int-req'}" id="interestPanel" style="text-align:left;margin:0 0 1.4rem;"></div>
+        <div id="securityPanel"></div>
         <h3 style="margin-bottom:.8rem;"><i class="fas fa-file-lines"></i> Official Record</h3>
         <div id="crimMine"></div>
         <div>${recordsHtml(d.records)}</div>`;
       loadCriminal(d.username || (window.__me||""), "crimMine");
       renderInterests(p.interests||[]);
       loadShelf(p.username, true);
+      loadSecurity();
     }
 
     /* ---- Interests (favorite things) ---- */
@@ -308,6 +325,85 @@
         document.getElementById("interestPanel").classList.remove("int-req");
       }catch(e){ msg.style.color="var(--red)"; msg.textContent=e.message; }
       finally{ document.getElementById("intSaveBtn").disabled=false; }
+    }
+
+    /* ---- Security: password, payment PIN, and where you've signed in ---- */
+    const AGO = iso => { const t=new Date(iso).getTime(); if(isNaN(t)) return "";
+      const s=Math.max(0,(Date.now()-t)/1000);
+      return s<60?"just now":s<3600?Math.floor(s/60)+"m ago":s<86400?Math.floor(s/3600)+"h ago":Math.floor(s/86400)+"d ago"; };
+    const KIND = {login:"Signed in", fail:"Wrong password", lockout:"Locked after wrong passwords",
+      locked:"Blocked while locked", "locked-account":"Blocked — account locked",
+      "password-change":"Password changed", "admin-reset":"President reset the password",
+      "admin-logout":"President signed it out", "admin-lock":"President locked it",
+      "admin-unlock":"President unlocked it", "pin-lock":"Payments paused — wrong PINs"};
+
+    async function loadSecurity(){
+      const box = document.getElementById("securityPanel"); if(!box) return;
+      let d;
+      try{ d = await api("/account/security"); }catch(e){ return; }
+      const rows = (d.logins||[]).map(l=>`<div class="sec-row ${l.ok?"":"bad"}">
+          <span><b>${esc(KIND[l.kind]||l.kind)}</b><small>${esc(l.ip||"unknown")}</small></span>
+          <span class="when">${esc(AGO(l.at))}</span></div>`).join("");
+      box.innerHTML = `<div class="panel" style="text-align:left;margin:0 0 1.4rem;">
+        <h3 style="margin:0 0 .2rem;"><i class="fas fa-shield-halved"></i> Security</h3>
+        <p class="small" style="margin:0 0 1rem;">Your password, your payment PIN, and every sign-in to your account.</p>
+        ${d.must_change?`<p class="sec-warn"><i class="fas fa-triangle-exclamation"></i> The President reset your password — set your own now.</p>`:""}
+
+        <h4 class="sec-h">Change password</h4>
+        <div class="sec-grid">
+          <input id="pwNow" type="password" placeholder="Current password" autocomplete="current-password">
+          <input id="pwNew" type="password" placeholder="New password (${d.password_min}+ characters)" autocomplete="new-password">
+        </div>
+        <button style="width:auto;margin-top:.6rem;" onclick="changePw()"><i class="fas fa-key"></i> Change password</button>
+        <p class="small" style="margin:.4rem 0 0;">Changing it signs out every other device.</p>
+        <p id="pwMsg" class="small" style="min-height:1.2em;"></p>
+
+        <h4 class="sec-h">Payment PIN ${d.has_pin?`<span class="tag good">set</span>`:`<span class="tag warn">not set</span>`}</h4>
+        <p class="small" style="margin:0 0 .5rem;">Asked for on payments over <b>${fmt(d.pin_threshold)} CB</b>, so a stolen session can't empty your account.</p>
+        <div class="sec-grid">
+          <input id="pinPw" type="password" placeholder="Your password" autocomplete="current-password">
+          <input id="pinNew" type="password" inputmode="numeric" maxlength="${d.pin_digits[1]}" placeholder="${d.pin_digits[0]}–${d.pin_digits[1]} digit PIN" autocomplete="off">
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;">
+          <button style="width:auto;" onclick="savePin()"><i class="fas fa-lock"></i> ${d.has_pin?"Change":"Set"} PIN</button>
+          ${d.has_pin?`<button class="ghost" style="width:auto;" onclick="savePin(true)">Remove PIN</button>`:""}
+        </div>
+        <p id="pinMsg" class="small" style="min-height:1.2em;"></p>
+
+        <h4 class="sec-h">Recent sign-ins</h4>
+        ${rows||`<p class="small muted">Nothing recorded yet.</p>`}
+        <p class="small" style="margin-top:.6rem;">See something you don't recognise? Change your password, and tell the President.</p>
+      </div>`;
+      // arriving from a forced reset: put them straight in front of the form
+      if(new URLSearchParams(location.search).get("pw") === "1"){
+        box.scrollIntoView({behavior:"smooth", block:"start"});
+        const el = document.getElementById("pwNow"); if(el) el.focus();
+      }
+    }
+
+    async function changePw(){
+      const m=document.getElementById("pwMsg");
+      m.style.color="var(--muted)"; m.textContent="Changing…";
+      try{
+        await api("/account/password",{method:"POST",body:JSON.stringify({
+          current:document.getElementById("pwNow").value, new:document.getElementById("pwNew").value})});
+        m.style.color="var(--green)"; m.textContent="Changed. Every other device was signed out.";
+        document.getElementById("pwNow").value=""; document.getElementById("pwNew").value="";
+        setTimeout(loadSecurity, 900);
+      }catch(e){ m.style.color="var(--red)"; m.textContent=e.message; }
+    }
+
+    async function savePin(remove){
+      const m=document.getElementById("pinMsg");
+      m.style.color="var(--muted)"; m.textContent="Saving…";
+      try{
+        await api("/account/pin",{method:"POST",body:JSON.stringify({
+          password:document.getElementById("pinPw").value,
+          pin:document.getElementById("pinNew").value, remove:!!remove})});
+        m.style.color="var(--green)"; m.textContent = remove?"PIN removed.":"PIN saved.";
+        document.getElementById("pinPw").value=""; document.getElementById("pinNew").value="";
+        setTimeout(loadSecurity, 900);
+      }catch(e){ m.style.color="var(--red)"; m.textContent=e.message; }
     }
 
     /* ---- Citizen Sites: what this citizen has built on the web ---- */

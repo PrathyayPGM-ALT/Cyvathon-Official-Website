@@ -137,6 +137,16 @@
         <div id="signups" style="max-height:300px;overflow-y:auto;"></div>
         <p id="secMsg" class="small" style="text-align:center;"></p>
       </div>
+
+      <div class="panel" style="margin-top:1.6rem;">
+        <h3><i class="fas fa-user-shield"></i> Security Desk — One Citizen</h3>
+        <p class="small">Look up a citizen to see where they've signed in, sign every device out,
+          issue a one-time password, or lock the account while you look into it.</p>
+        <div class="row"><input id="deskUser" placeholder="Username" onkeydown="if(event.key==='Enter')deskLook()">
+          <button style="width:auto;" onclick="deskLook()"><i class="fas fa-magnifying-glass"></i> Look up</button></div>
+        <div id="deskOut"></div>
+        <p id="deskMsg" class="small" style="text-align:center;"></p>
+      </div>
     </div>
 
     <div id="deny" class="deny" style="display:none;">
@@ -247,6 +257,71 @@
     const secMsg=(t,err=true)=>{const m=document.getElementById("secMsg");m.textContent=t;m.style.color=err?"var(--red)":"var(--green)";};
 
     const rowHtml=(left,btn)=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding:.4rem .2rem;border-bottom:1px solid rgba(255,255,255,.06);font-size:.88rem;">${left}${btn}</div>`;
+
+    /* ---- Security desk: everything about one citizen's account ---- */
+    const DESK_KIND = {login:"Signed in", fail:"Wrong password", lockout:"Locked after wrong passwords",
+      locked:"Tried while locked out", "locked-account":"Tried while account locked",
+      "password-change":"Password changed", "admin-reset":"You reset the password",
+      "admin-logout":"You signed it out", "admin-lock":"You locked it", "admin-unlock":"You unlocked it",
+      "pin-lock":"Payments paused — wrong PINs"};
+    let DESK = null;
+
+    async function deskLook(){
+      const who = document.getElementById("deskUser").value.trim();
+      const out = document.getElementById("deskOut"), m = document.getElementById("deskMsg");
+      m.textContent = ""; if(!who) return;
+      out.innerHTML = `<p class="small">Looking…</p>`;
+      let d;
+      try{ d = await api("/admin/security/user?username=" + encodeURIComponent(who)); }
+      catch(e){ out.innerHTML = ""; m.style.color="var(--red)"; m.textContent = e.message; return; }
+      DESK = d.citizen;
+      const c = d.citizen;
+      const rows = (d.logins||[]).map(l=>`<tr><td>${l.ok?"✅":"❌"} ${esc(DESK_KIND[l.kind]||l.kind)}</td>
+          <td>${esc(l.ip||"—")}</td><td class="small">${esc((l.at||"").replace("T"," ").slice(0,16))}</td></tr>`).join("");
+      out.innerHTML = `
+        <div class="row" style="margin-top:.8rem;flex-wrap:wrap;gap:.4rem;">
+          <span class="tag">${esc(c.designation||"Citizen")}</span>
+          ${c.locked?`<span class="tag bad">Locked${c.lock_reason?": "+esc(c.lock_reason):""}</span>`:`<span class="tag good">Not locked</span>`}
+          ${c.banned?`<span class="tag bad">Banned</span>`:""}
+          ${c.must_change?`<span class="tag warn">Must set a new password</span>`:""}
+          ${c.has_pin?`<span class="tag good">Payment PIN set</span>`:`<span class="tag warn">No payment PIN</span>`}
+          ${c.locked_for?`<span class="tag warn">Locked out for ${Math.ceil(c.locked_for/60)} min</span>`:""}
+          ${c.login_fails?`<span class="tag warn">${c.login_fails} wrong tries</span>`:""}
+        </div>
+        <p class="small" style="margin:.6rem 0 0;">Signed up from ${esc(c.reg_ip||"unknown")} ·
+          password last changed ${c.pw_changed_at?esc(c.pw_changed_at.slice(0,10)):"never"}</p>
+        <div class="row" style="margin-top:.8rem;flex-wrap:wrap;gap:.4rem;">
+          <button style="width:auto;" onclick="deskAct('logout')"><i class="fas fa-right-from-bracket"></i> Sign out everywhere</button>
+          <button style="width:auto;" onclick="deskAct('reset')"><i class="fas fa-key"></i> Reset password</button>
+          <button class="${c.locked?"success":"danger"}" style="width:auto;" onclick="deskAct('lock')">
+            <i class="fas fa-${c.locked?"lock-open":"lock"}"></i> ${c.locked?"Unlock account":"Lock account"}</button>
+        </div>
+        ${rows?`<h4 style="margin-top:1.2rem;color:var(--muted);">Sign-in history</h4>
+          <table style="width:100%"><tbody>${rows}</tbody></table>`:`<p class="small muted" style="margin-top:1rem;">No sign-ins recorded.</p>`}`;
+    }
+
+    async function deskAct(what){
+      if(!DESK) return;
+      const m = document.getElementById("deskMsg");
+      const who = DESK.username;
+      if(what === "reset" && !confirm(`Reset ${who}'s password? They'll get a one-time password and must set their own.`)) return;
+      if(what === "lock" && !DESK.locked && !confirm(`Lock ${who} out of Cyvathon until you unlock them?`)) return;
+      m.style.color = "var(--muted)"; m.textContent = "Working…";
+      try{
+        let d;
+        if(what === "logout") d = await api("/admin/security/logout",{method:"POST",body:JSON.stringify({username:who})});
+        else if(what === "reset") d = await api("/admin/security/reset",{method:"POST",body:JSON.stringify({username:who})});
+        else d = await api("/admin/security/lock",{method:"POST",body:JSON.stringify({username:who,
+          locked:!DESK.locked, reason: DESK.locked?"":(prompt("Reason (optional)")||"")})});
+        const said = what === "reset"
+          ? `One-time password for <b>${esc(who)}</b>: <code style="font-size:1.05rem">${esc(d.temporary_password)}</code> — give it to them in person. They must set their own at next login.`
+          : what === "logout" ? `${esc(who)} was signed out everywhere.`
+          : (d.locked ? `${esc(who)} is locked out.` : `${esc(who)} is unlocked.`);
+        await deskLook();           // refresh the card first — looking up clears this line
+        m.style.color = "var(--green)";
+        m.innerHTML = said;         // the one-time password has to survive the refresh
+      }catch(e){ m.style.color="var(--red)"; m.textContent = e.message; }
+    }
 
     async function loadSecurity(){
       try{

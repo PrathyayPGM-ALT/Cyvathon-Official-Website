@@ -361,7 +361,9 @@
           setMode("login");
           return;
         }
-        window.location.href = nextUrl();
+        // A one-time password from the President: straight to Security, where
+        // they must set their own before they can do anything else.
+        window.location.href = r.must_change ? "/profile?pw=1" : nextUrl();
       }catch(e){
         $("msg").style.color = "var(--red)";
         $("msg").textContent = e.message;

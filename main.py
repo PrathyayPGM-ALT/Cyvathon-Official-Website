@@ -90,6 +90,7 @@ _CONFIG_KEYS = {
     "lend_open": "LEND_OPEN", "lend_max_deposit": "LEND_MAX_DEPOSIT",
     "pen_rate": "PEN_RATE", "pen_open": "PEN_OPEN",
     "cyvapay_open": "CYVAPAY_OPEN", "cyvapay_fee": "CYVAPAY_FEE",
+    "pin_threshold": "PIN_THRESHOLD",
 }
 
 # Justice levers. RECORD_EXPIRY_DAYS = 0 means a conviction bars a citizen
@@ -105,6 +106,11 @@ FINE_BARS_OFFICE        = True
 COURIER_WAGE   = 500        # CB per salary period — deliberately above a Citizen's
 DELIVERY_LEVY  = 0.05       # extra tax that pays for free delivery
 DELIVERY_OPEN  = True
+
+# Account security. A payment PIN is asked for once a single transfer is
+# worth more than this in Cybucks, so small payments stay one click.
+# President-tunable from the admin panel.
+PIN_THRESHOLD  = 500
 
 COMPANY_CATEGORIES = ["Finance", "Selling", "Service", "Technology", "Other"]
 
@@ -732,7 +738,14 @@ def get_current_user(run_economics=True):
     user = result.data[0]
     if user.get("banned"):        # banned accounts are logged out everywhere
         return None
+    if user.get("locked"):        # locked by the President, pending a look
+        return None
     if user.get("approved", True) is False:   # not yet approved by the President
+        return None
+    # Every device carries the session stamp it logged in with. Raising the
+    # citizen's stamp (a password change, or the President's force-logout)
+    # makes every other device's cookie worthless.
+    if int(user.get("session_version") or 0) != int(session.get("sv") or 0):
         return None
     _presence[username] = time()               # any authenticated request = "online"
     user = _sweep_cybits(user)                  # Cybucks whole; fraction -> Cybits
@@ -1802,6 +1815,9 @@ def register():
         return jsonify(success=False, error="Username (max 32) or password too long"), 400
     if not re.fullmatch(r"[A-Za-z0-9 _.\-]{3,32}", username):
         return jsonify(success=False, error="Username must be 3–32 letters, numbers, spaces, . _ -"), 400
+    weak = _password_problem(password, username)
+    if weak:
+        return jsonify(success=False, error=weak), 400
     email = (data.get("email") or "").strip()[:120]
     if email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
         return jsonify(success=False, error="That doesn't look like a valid email"), 400
@@ -1900,23 +1916,61 @@ def login():
 
     res = supabase.table("cybucks").select("*").eq("username", username).execute()
     user = res.data[0] if res.data else None
+
+    # The lock is on the ACCOUNT, not the network, so moving to another
+    # connection doesn't buy an attacker more guesses.
+    if user:
+        left = _lock_left(user)
+        if left:
+            _log_login(username, False, "locked")
+            return jsonify(success=False, locked=True,
+                           error=f"Too many wrong passwords. Try again in {_mins(left)}."), 429
+
     # One generic answer for both unknown-user and wrong-password: no username
     # enumeration. Both strike the IP and surface in the Athena threat feed.
     if not user or not check_password_hash(user["password"], password):
         _strike(client_ip())
         _log_threat(client_ip(), "login-fail:" + username[:40],
                     request.headers.get("User-Agent", ""))
+        if user:
+            fails = int(user.get("login_fails") or 0) + 1
+            if fails >= LOGIN_FAIL_LIMIT:
+                _set_user(username, {"login_fails": 0, "login_locked_until":
+                          (_now() + timedelta(minutes=LOGIN_LOCK_MINUTES)).isoformat()})
+                _log_login(username, False, "lockout")
+                notify(username, f"🔐 {LOGIN_FAIL_LIMIT} wrong passwords in a row — your account is "
+                                 f"locked for {LOGIN_LOCK_MINUTES} minutes. If that wasn't you, "
+                                 f"change your password as soon as you're back in.", "/profile")
+            else:
+                _set_user(username, {"login_fails": fails})
+                _log_login(username, False, "fail")
         return jsonify(success=False, error="Incorrect username or password"), 401
     if user.get("banned"):
         return jsonify(success=False, error="This account has been banned from Cyvathon."), 403
+    if user.get("locked"):
+        _log_login(username, False, "locked-account")
+        return jsonify(success=False, locked=True,
+                       error="This account is locked. Ask the President to unlock it."), 403
     if user.get("approved", True) is False:
         return jsonify(success=False,
                        error="Your citizenship application is awaiting Presidential approval. Please check back later."), 403
 
+    ip = seen = client_ip()
+    history = _login_history(username, 40)
+    strange = bool(history) and not any(e.get("ok") and e.get("ip") == ip for e in history)
+    session.clear()                 # never carry anything from a previous session over
     session.permanent = True
     session["username"] = username
+    session["sv"] = int(user.get("session_version") or 0)
+    _set_user(username, {"login_fails": 0, "login_locked_until": None})
+    _log_login(username, True, "login")
+    if strange:
+        notify(username, f"🔐 Your account was signed in to from a new place ({seen}) at "
+                         f"{_now().strftime('%H:%M')} UTC. If that wasn't you, change your "
+                         f"password now.", "/profile")
     user = apply_economics(user)
-    return jsonify(success=True, user=public_user(user), admin=is_treasury_admin(user), cia=is_cia(user))
+    return jsonify(success=True, user=public_user(user), admin=is_treasury_admin(user),
+                   cia=is_cia(user), must_change=bool(user.get("must_change_pw")))
 
 
 @app.route("/logout", methods=["POST"])
@@ -2173,6 +2227,10 @@ def transfer():
     sender = supabase.table("cybucks").select("*").eq("username", user["username"]).execute().data[0]
     if (sender.get(col) or 0) < amount:
         return jsonify(success=False, error="Insufficient funds"), 400
+    # Anything big needs the payment PIN, so a stolen session can't empty an account.
+    gate = _pin_gate(sender, amount * CYBUCK_VALUE[currency], data.get("pin"))
+    if gate:
+        return jsonify(**gate[0]), gate[1]
     # You may only transfer money you've EARNED — the welcome grant (and any
     # unpaid loan) is locked from gifting to other citizens.
     if amount * CYBUCK_VALUE[currency] > _transferable_value(sender) + 1e-9:
@@ -5209,7 +5267,7 @@ CONFIG_FIELDS = ["vat_rate", "tax_period_days", "salary_period_days", "savings_r
                  "bond_rate", "bond_days", "company_fee", "loan_max", "loan_days",
                  "starting_grant", "gdp", "gdp_multiplier",
                  "courier_wage", "delivery_levy", "insurance_levy", "lend_max_deposit",
-                 "pen_rate", "cyvapay_fee"]
+                 "pen_rate", "cyvapay_fee", "pin_threshold"]
 
 
 @app.route("/admin/config", methods=["GET"])
@@ -7177,6 +7235,8 @@ IDENTITY: your ID Card (/profile) shows your record and balances; set a profile 
 INTERESTS: when you sign up (and on your ID Card) you pick what you love to do. Cyvathon then shows personalized "Recommended for you" features on your dashboard and drops you into interest-based group chats with like-minded citizens.
 
 GOVERNMENT: a President leads the nation; the Prime Minister and Judge are elected by vote (/voting), and a national presidential vote is held once every six years. The Legislature (/legislature) is where citizens table and vote on bills — any citizen can table one, and with more Ayes than Nays it goes to the President for assent and becomes a numbered Act; the Gazette (/gazette) records laws and decrees; the National Court (/court) rules on cases; report a crime with an FIR (/fir); Ministries (/ministries) run departments with budgets; the Treasury (/treasury) holds national funds and anyone can inspect it. Foreign Affairs (/foreign) tracks Cyvathon's allied and rival micronations — fellow nations can register at signup and request an alliance, which the President confirms.
+
+ACCOUNT SECURITY: passwords must be at least 8 characters, can't be your username, and can't be one of the commonly guessed ones. Change yours on your ID card (/profile) under Security — changing it signs out every other device. Five wrong passwords in a row lock an account for 15 minutes (the lock is on the account, so trying from another network doesn't help), and the citizen is told. You're also told when your account is signed in to from a place it hasn't been used from before, and your last ten sign-ins are listed on your ID card. A PAYMENT PIN (4–6 digits, set under Security) is asked for on bank transfers over 500 CB — that threshold is a President-tunable lever — and five wrong PINs pause large payments for 15 minutes; setting or changing the PIN always needs your password. The President has a Security Desk in the admin panel: look up any citizen to see their sign-in history, sign every device out, issue a one-time password (the citizen must then set their own before they can do anything), or lock and unlock the account. If a citizen thinks their account was broken into: change the password immediately, then tell the President.
 
 CITIZEN SITES (/sites): a directory of the websites citizens have built — portfolios, blogs, projects, games, businesses, tools, art. Each citizen can list up to 5 (https links only; a site can only be listed once). Others can search it, filter by category, sort by Top / New / Most visited, star the ones they like (not their own), and visit them — visits are counted. The most-starred site of the last seven days is Site of the Week. A site whose owner has a live Cyvapay link can show a "Takes Cyvapay" badge. Anyone can report a broken or unsuitable site; three reports take it down until the President restores or removes it. Your listed sites also appear on your ID card.
 
@@ -11692,6 +11752,350 @@ def wrapped_data():
                       60 if preview else WRAPPED_TTL,
                       lambda: _wrapped_deck(user, win, nation))
     return jsonify(success=True, preview=preview, **st, **deck)
+
+
+# ============================================================
+#  ACCOUNT SECURITY — passwords, lockout, login alerts, PIN
+# ============================================================
+#  Three things guard an account. A password that has to be a real one and
+#  that the citizen can change; a lock that stops guessing — on the ACCOUNT,
+#  so moving to another network buys nothing; and a payment PIN on anything
+#  large, so even a stolen session can't empty someone's savings.
+#
+#  Every login, good or bad, is written to login_events. A sign-in from an
+#  address the citizen hasn't used before tells them so. The President's desk
+#  can end every session a citizen has, issue a one-time password, lock an
+#  account and read its history.
+#
+#  All of it degrades quietly: before migration_account_security.sql is run
+#  the columns are missing, the writes fail, and the site carries on as it did.
+
+PW_MIN = 8
+PW_MAX = 200
+LOGIN_FAIL_LIMIT = 5
+LOGIN_LOCK_MINUTES = 15
+LOGIN_HISTORY_SHOWN = 10
+PIN_DIGITS = (4, 6)
+PIN_FAIL_LIMIT = 5
+PIN_LOCK_MINUTES = 15
+TEMP_PW_LENGTH = 10
+
+# The passwords attackers try first. Deliberately short: it catches the
+# careless without pretending to be a real breach corpus.
+PW_COMMON = {
+    "password", "password1", "password123", "passw0rd", "12345678", "123456789",
+    "1234567890", "qwerty123", "qwertyuiop", "abc12345", "iloveyou", "letmein",
+    "welcome1", "welcome123", "admin123", "administrator", "football", "monkey123",
+    "dragon123", "sunshine", "princess", "starwars", "whatever", "trustno1",
+    "superman", "batman123", "changeme", "secret123", "baseball", "shadow123",
+    "cyvathon", "cyvathon1", "cyvathon123", "chairism", "allhailthechair",
+}
+
+
+def _password_problem(password, username=""):
+    """Why this password won't do, or None if it will."""
+    p = password or ""
+    if len(p) < PW_MIN:
+        return f"Your password needs at least {PW_MIN} characters."
+    if len(p) > PW_MAX:
+        return "That password is too long."
+    low, who = p.lower(), (username or "").lower()
+    if low in PW_COMMON:
+        return "That's one of the most-guessed passwords there is — pick another."
+    if who and (low == who or (len(who) >= 4 and who in low)):
+        return "Your password can't be your username."
+    if len(set(p)) < 4:
+        return "That password uses too few different characters."
+    return None
+
+
+def _pin_problem(pin):
+    p = (pin or "").strip()
+    lo, hi = PIN_DIGITS
+    if not p.isdigit() or not (lo <= len(p) <= hi):
+        return f"Your PIN must be {lo}–{hi} digits."
+    if len(set(p)) == 1:
+        return "A PIN of one repeated digit is no PIN at all."
+    if p in ("1234", "12345", "123456", "4321", "54321", "654321", "1212", "123123"):
+        return "That PIN is too easy to guess."
+    return None
+
+
+def _mins(seconds):
+    m = max(1, round(seconds / 60))
+    return f"{m} minute" + ("" if m == 1 else "s")
+
+
+def _set_user(username, patch):
+    """Update a citizen row. Missing columns (pre-migration) fail quietly."""
+    try:
+        supabase.table("cybucks").update(patch).eq("username", username).execute()
+        return True
+    except Exception as ex:
+        logging.warning("security: updating %s failed: %s", username, ex)
+        return False
+
+
+def _log_login(username, ok, kind="login", note=""):
+    try:
+        supabase.table("login_events").insert({
+            "username": username, "ok": bool(ok), "kind": kind, "ip": client_ip(),
+            "ua": (request.headers.get("User-Agent") or "")[:180],
+            "note": (note or "")[:120], "created_at": _now().isoformat()}).execute()
+    except Exception:
+        pass
+
+
+def _login_history(username, limit=LOGIN_HISTORY_SHOWN):
+    try:
+        return supabase.table("login_events").select("*").eq("username", username) \
+            .order("id", desc=True).limit(limit).execute().data or []
+    except Exception:
+        return []
+
+
+def _lock_left(user, col="login_locked_until"):
+    """Seconds left on a lock, or 0."""
+    until = _parse(user.get(col))
+    if until is None:
+        return 0
+    if until.tzinfo is None:
+        until = until.replace(tzinfo=timezone.utc)
+    return max(0, int((until - _now()).total_seconds()))
+
+
+def _end_sessions(username, user=None, by=None):
+    """Raise the session stamp: every device signed in as this citizen is out."""
+    if user is None:
+        rows = supabase.table("cybucks").select("session_version") \
+            .eq("username", username).execute().data or [{}]
+        user = rows[0]
+    nxt = int(user.get("session_version") or 0) + 1
+    _set_user(username, {"session_version": nxt})
+    if by:
+        _log_login(username, True, "admin-logout", f"by {by}")
+    return nxt
+
+
+def _pin_gate(user, value_cb, pin):
+    """None if a payment of this size may go ahead, else (payload, status)."""
+    if value_cb <= PIN_THRESHOLD + 1e-9:
+        return None
+    me = user["username"]
+    if not user.get("pin_hash"):
+        return ({"success": False, "need_pin": True,
+                 "error": f"Payments over {PIN_THRESHOLD:g} CB need a payment PIN. Set one on "
+                          f"your ID card, then try again."}, 400)
+    left = _lock_left(user, "pin_locked_until")
+    if left:
+        return ({"success": False, "pin_locked": True,
+                 "error": f"Too many wrong PINs. Large payments are paused for {_mins(left)}."}, 429)
+    pin = (pin or "").strip()
+    if not pin:
+        return ({"success": False, "pin_required": True,
+                 "error": f"Enter your payment PIN to send more than {PIN_THRESHOLD:g} CB."}, 400)
+    if not check_password_hash(user["pin_hash"], pin):
+        fails = int(user.get("pin_fails") or 0) + 1
+        if fails >= PIN_FAIL_LIMIT:
+            _set_user(me, {"pin_fails": 0, "pin_locked_until":
+                      (_now() + timedelta(minutes=PIN_LOCK_MINUTES)).isoformat()})
+            _log_login(me, False, "pin-lock")
+            notify(me, f"🔐 {PIN_FAIL_LIMIT} wrong payment PINs — large payments are paused for "
+                       f"{PIN_LOCK_MINUTES} minutes. If that wasn't you, change your password now.",
+                   "/profile")
+            return ({"success": False, "pin_required": True,
+                     "error": f"That PIN isn't right. Large payments are paused for "
+                              f"{PIN_LOCK_MINUTES} minutes."}, 400)
+        _set_user(me, {"pin_fails": fails})
+        return ({"success": False, "pin_required": True,
+                 "error": f"That PIN isn't right. {PIN_FAIL_LIMIT - fails} tries left."}, 400)
+    if int(user.get("pin_fails") or 0):
+        _set_user(me, {"pin_fails": 0})
+    return None
+
+
+# A citizen told to set a new password may read the site, but not act on it,
+# until they have. One cheap lookup, and only on writes.
+_PW_GATE_OPEN = {"/account/password", "/account/security", "/logout", "/me", "/login", "/register"}
+
+
+@app.before_request
+def _password_gate():
+    if request.method != "POST" or not session.get("username") or request.path in _PW_GATE_OPEN:
+        return None
+    try:
+        rows = supabase.table("cybucks").select("must_change_pw") \
+            .eq("username", session["username"]).execute().data or []
+    except Exception:
+        return None
+    if rows and rows[0].get("must_change_pw"):
+        return jsonify(success=False, must_change=True,
+                       error="Set a new password before doing anything else."), 403
+
+
+@app.route("/account/security")
+@limiter.limit("60/minute")
+def account_security():
+    """What this citizen's own security looks like, and where they've signed in."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    return jsonify(success=True, has_pin=bool(user.get("pin_hash")),
+                   pin_threshold=PIN_THRESHOLD, must_change=bool(user.get("must_change_pw")),
+                   password_changed=user.get("pw_changed_at"),
+                   pin_digits=list(PIN_DIGITS), password_min=PW_MIN,
+                   logins=[{"ok": bool(e.get("ok")), "kind": e.get("kind"), "ip": e.get("ip"),
+                            "ua": e.get("ua"), "at": e.get("created_at")}
+                           for e in _login_history(user["username"])])
+
+
+@app.route("/account/password", methods=["POST"])
+@limiter.limit("10/minute")
+def account_password():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json(silent=True) or {}
+    me = user["username"]
+    if not check_password_hash(user["password"], d.get("current") or ""):
+        _log_login(me, False, "password-change", "wrong current password")
+        return jsonify(success=False, error="That isn't your current password."), 400
+    new = (d.get("new") or "").strip()
+    if check_password_hash(user["password"], new):
+        return jsonify(success=False, error="That's the password you already have."), 400
+    weak = _password_problem(new, me)
+    if weak:
+        return jsonify(success=False, error=weak), 400
+    nxt = int(user.get("session_version") or 0) + 1
+    _set_user(me, {"password": generate_password_hash(new), "must_change_pw": False,
+                   "pw_changed_at": _now().isoformat(), "session_version": nxt,
+                   "login_fails": 0, "login_locked_until": None})
+    session["sv"] = nxt              # this device stays; every other one is out
+    _log_login(me, True, "password-change")
+    notify(me, "🔐 Your password was changed, and every other device was signed out.", "/profile")
+    return jsonify(success=True, signed_out_others=True)
+
+
+@app.route("/account/pin", methods=["POST"])
+@limiter.limit("10/minute")
+def account_pin():
+    """Set, change or remove the payment PIN. The password is asked for every
+    time, so a stolen session can't quietly put a PIN of its own on an account."""
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    d = request.get_json(silent=True) or {}
+    me = user["username"]
+    if not check_password_hash(user["password"], d.get("password") or ""):
+        return jsonify(success=False, error="Enter your password to change your PIN."), 400
+    if d.get("remove"):
+        _set_user(me, {"pin_hash": None, "pin_set_at": None, "pin_fails": 0,
+                       "pin_locked_until": None})
+        notify(me, "🔐 Your payment PIN was removed.", "/profile")
+        return jsonify(success=True, has_pin=False)
+    bad = _pin_problem(d.get("pin"))
+    if bad:
+        return jsonify(success=False, error=bad), 400
+    _set_user(me, {"pin_hash": generate_password_hash((d.get("pin") or "").strip()),
+                   "pin_set_at": _now().isoformat(), "pin_fails": 0, "pin_locked_until": None})
+    notify(me, f"🔐 Your payment PIN is set. It's asked for on payments over "
+               f"{PIN_THRESHOLD:g} CB.", "/bank")
+    return jsonify(success=True, has_pin=True)
+
+
+# ---------------- the President's security desk ----------------
+
+def _sec_target(d_or_args):
+    who = (d_or_args.get("username") or "").strip()
+    if not who:
+        return None, (jsonify(success=False, error="Which citizen?"), 400)
+    rows = supabase.table("cybucks").select("*").eq("username", who).execute().data or []
+    if not rows:
+        return None, (jsonify(success=False, error="No citizen by that name."), 404)
+    return rows[0], None
+
+
+@app.route("/admin/security/user")
+@limiter.limit("60/minute")
+def admin_sec_user():
+    user = get_current_user(run_economics=False)
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    t, err = _sec_target(request.args)
+    if err:
+        return err
+    return jsonify(success=True, citizen={
+        "username": t["username"], "designation": t.get("designation"),
+        "banned": bool(t.get("banned")), "locked": bool(t.get("locked")),
+        "lock_reason": t.get("lock_reason"), "locked_by": t.get("locked_by"),
+        "must_change": bool(t.get("must_change_pw")), "has_pin": bool(t.get("pin_hash")),
+        "pw_changed_at": t.get("pw_changed_at"), "login_fails": int(t.get("login_fails") or 0),
+        "locked_for": _lock_left(t), "reg_ip": t.get("reg_ip"),
+        "member_since": t.get("created_at")},
+        logins=[{"ok": bool(e.get("ok")), "kind": e.get("kind"), "ip": e.get("ip"),
+                 "ua": e.get("ua"), "note": e.get("note"), "at": e.get("created_at")}
+                for e in _login_history(t["username"], 25)])
+
+
+@app.route("/admin/security/logout", methods=["POST"])
+@limiter.limit("30/minute")
+def admin_sec_logout():
+    user = get_current_user(run_economics=False)
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    t, err = _sec_target(request.get_json(silent=True) or {})
+    if err:
+        return err
+    _end_sessions(t["username"], t, by=user["username"])
+    notify(t["username"], "🔐 The President signed your account out everywhere. "
+                          "Log in again, and change your password if this is news to you.", "/login")
+    return jsonify(success=True)
+
+
+@app.route("/admin/security/reset", methods=["POST"])
+@limiter.limit("20/minute")
+def admin_sec_reset():
+    """Issue a one-time password. The citizen must set their own at next login."""
+    user = get_current_user(run_economics=False)
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    t, err = _sec_target(request.get_json(silent=True) or {})
+    if err:
+        return err
+    temp = secrets.token_urlsafe(12)[:TEMP_PW_LENGTH]
+    _set_user(t["username"], {
+        "password": generate_password_hash(temp), "must_change_pw": True,
+        "login_fails": 0, "login_locked_until": None,
+        "session_version": int(t.get("session_version") or 0) + 1})
+    _log_login(t["username"], True, "admin-reset", f"by {user['username']}")
+    notify(t["username"], "🔐 The President reset your password. Log in with the one-time "
+                          "password you were given, then set your own.", "/login")
+    return jsonify(success=True, temporary_password=temp)
+
+
+@app.route("/admin/security/lock", methods=["POST"])
+@limiter.limit("30/minute")
+def admin_sec_lock():
+    user = get_current_user(run_economics=False)
+    if not is_treasury_admin(user):
+        return jsonify(success=False, error="President only"), 403
+    d = request.get_json(silent=True) or {}
+    t, err = _sec_target(d)
+    if err:
+        return err
+    lock = bool(d.get("locked", True))
+    patch = {"locked": lock, "lock_reason": ((d.get("reason") or "").strip()[:200] or None),
+             "locked_at": _now().isoformat() if lock else None,
+             "locked_by": user["username"] if lock else None}
+    if lock:
+        patch["session_version"] = int(t.get("session_version") or 0) + 1
+    else:
+        patch.update({"login_fails": 0, "login_locked_until": None})
+    _set_user(t["username"], patch)
+    _log_login(t["username"], True, "admin-lock" if lock else "admin-unlock", f"by {user['username']}")
+    notify(t["username"], "🔐 Your account was locked by the President." if lock
+           else "🔐 Your account was unlocked. Welcome back.", "/login")
+    return jsonify(success=True, locked=lock)
 
 
 # ============================================================

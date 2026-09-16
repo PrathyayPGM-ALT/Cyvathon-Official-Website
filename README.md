@@ -237,6 +237,28 @@ from TheSportsDB or the owner's own photo of the card in their hand. Update
 
 ---
 
+### 14. Account security
+What guards an account, beyond the hashed passwords, hardened session cookie,
+CSP/HSTS headers and IP firewall the site already had.
+
+| | |
+|---|---|
+| **Password rules** | At least 8 characters, not your username, not one of the commonly guessed ones. Enforced at signup and on every change. |
+| **Change your password** | On your ID card under **Security**. Asks for the current one, and signs out every other device by raising the account's session stamp. |
+| **Lockout** | Five wrong passwords lock the account for 15 minutes — on the **account**, not the network, so moving connection buys nothing. The citizen is notified. A correct password during a lock still waits. |
+| **Login alerts** | A sign-in from an address the citizen hasn't used before sends a notification with the time and address. The last ten sign-ins, good and bad, are listed on their ID card. |
+| **Payment PIN** | 4–6 digits, hashed like a password, asked for on bank transfers worth more than `pin_threshold` (500 CB, tunable in the admin panel). Five wrong PINs pause large payments for 15 minutes. Setting, changing or removing it always needs the password. |
+| **Security desk** | `/admin` → Security Desk. Look up any citizen: sign-in history, sign out everywhere, issue a one-time password (they must then set their own before they can act), lock/unlock the account. |
+
+The session stamp is what makes "sign out everywhere" instant: every signed-in
+device carries the number it logged in with, and raising it makes every other
+cookie worthless. A citizen owing a password change can read the site but every
+write is refused until they set one.
+
+Needs `migration_account_security.sql`. Until it's run, the new columns are
+missing, those writes fail quietly and the site behaves exactly as before.
+Tests: `python tests/test_security.py`.
+
 ### 13. Citizen Sites — the web, as built by citizens
 A directory at `/sites` of the websites Cyvathon's citizens have made:
 portfolios, blogs, projects, games, businesses, tools, art and music.
