@@ -130,6 +130,23 @@ check("  and whether they have a PIN", hist["has_pin"], False)
 check("  and the threshold it applies above", hist["pin_threshold"], main.PIN_THRESHOLD)
 
 
+print("\n=== 3b. being told about the PIN, once ===")
+nudges = lambda who: [m for m in notes(who) if "Set a payment PIN" in m]
+check("a citizen with no PIN is told at sign-in", len(nudges("Priya")), 1)
+login("Priya", PW["Priya"], ip="198.51.100.4")
+login("Priya", PW["Priya"], ip="198.51.100.4")
+check("  and never again", len(nudges("Priya")), 1)
+check("  the log remembers having said it", len(events("Priya", "pin-nudge")), 1)
+main._set_user("Rohan", {"pin_hash": main.generate_password_hash("4821")})
+login("Rohan", PW["Rohan"])
+check("a citizen who already has a PIN isn't nudged", len(nudges("Rohan")), 0)
+main._set_user("Rohan", {"pin_hash": None})
+
+check("the President can announce it to everyone",
+      [p["key"] for p in main.ANNOUNCEMENT_PRESETS if p["key"] in ("security", "password_reset")],
+      ["security", "password_reset"])
+
+
 print("\n=== 4. changing a password ===")
 c = client_as("Rohan")
 check("the wrong current password is refused",

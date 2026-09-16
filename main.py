@@ -1964,6 +1964,7 @@ def login():
     session["sv"] = int(user.get("session_version") or 0)
     _set_user(username, {"login_fails": 0, "login_locked_until": None})
     _log_login(username, True, "login")
+    _pin_nudge(user)
     if strange:
         notify(username, f"🔐 Your account was signed in to from a new place ({seen}) at "
                          f"{_now().strftime('%H:%M')} UTC. If that wasn't you, change your "
@@ -7236,7 +7237,7 @@ INTERESTS: when you sign up (and on your ID Card) you pick what you love to do. 
 
 GOVERNMENT: a President leads the nation; the Prime Minister and Judge are elected by vote (/voting), and a national presidential vote is held once every six years. The Legislature (/legislature) is where citizens table and vote on bills — any citizen can table one, and with more Ayes than Nays it goes to the President for assent and becomes a numbered Act; the Gazette (/gazette) records laws and decrees; the National Court (/court) rules on cases; report a crime with an FIR (/fir); Ministries (/ministries) run departments with budgets; the Treasury (/treasury) holds national funds and anyone can inspect it. Foreign Affairs (/foreign) tracks Cyvathon's allied and rival micronations — fellow nations can register at signup and request an alliance, which the President confirms.
 
-ACCOUNT SECURITY: passwords must be at least 8 characters, can't be your username, and can't be one of the commonly guessed ones. Change yours on your ID card (/profile) under Security — changing it signs out every other device. Five wrong passwords in a row lock an account for 15 minutes (the lock is on the account, so trying from another network doesn't help), and the citizen is told. You're also told when your account is signed in to from a place it hasn't been used from before, and your last ten sign-ins are listed on your ID card. A PAYMENT PIN (4–6 digits, set under Security) is asked for on bank transfers over 500 CB — that threshold is a President-tunable lever — and five wrong PINs pause large payments for 15 minutes; setting or changing the PIN always needs your password. The President has a Security Desk in the admin panel: look up any citizen to see their sign-in history, sign every device out, issue a one-time password (the citizen must then set their own before they can do anything), or lock and unlock the account. If a citizen thinks their account was broken into: change the password immediately, then tell the President.
+ACCOUNT SECURITY: passwords must be at least 8 characters, can't be your username, and can't be one of the commonly guessed ones. Change yours on your ID card (/profile) under Security — changing it signs out every other device. Five wrong passwords in a row lock an account for 15 minutes (the lock is on the account, so trying from another network doesn't help), and the citizen is told. You're also told when your account is signed in to from a place it hasn't been used from before, and your last ten sign-ins are listed on your ID card. Every citizen without a PIN is told once, the first time they sign in, what one is and where to set it; the President can also announce it to everyone from the admin panel ("Address the Nation" has a security preset). A PAYMENT PIN (4–6 digits, set under Security) is asked for on bank transfers over 500 CB — that threshold is a President-tunable lever — and five wrong PINs pause large payments for 15 minutes; setting or changing the PIN always needs your password. The President has a Security Desk in the admin panel: look up any citizen to see their sign-in history, sign every device out, issue a one-time password (the citizen must then set their own before they can do anything), or lock and unlock the account. If a citizen thinks their account was broken into: change the password immediately, then tell the President.
 
 CITIZEN SITES (/sites): a directory of the websites citizens have built — portfolios, blogs, projects, games, businesses, tools, art. Each citizen can list up to 5 (https links only; a site can only be listed once). Others can search it, filter by category, sort by Top / New / Most visited, star the ones they like (not their own), and visit them — visits are counted. The most-starred site of the last seven days is Site of the Week. A site whose owner has a live Cyvapay link can show a "Takes Cyvapay" badge. Anyone can report a broken or unsuitable site; three reports take it down until the President restores or removes it. Your listed sites also appear on your ID card.
 
@@ -11877,6 +11878,26 @@ def _end_sessions(username, user=None, by=None):
     return nxt
 
 
+def _pin_nudge(user):
+    """The first time a citizen signs in without a payment PIN, tell them what
+    one is. Once each, ever — the sign-in log remembers that we've said it, so
+    it needs no column of its own and stays quiet before the migration."""
+    me = user["username"]
+    if user.get("pin_hash"):
+        return
+    try:
+        told = supabase.table("login_events").select("id").eq("username", me) \
+            .eq("kind", "pin-nudge").limit(1).execute().data or []
+    except Exception:
+        return                      # no log yet: say nothing rather than say it daily
+    if told:
+        return
+    _log_login(me, True, "pin-nudge")
+    notify(me, f"🔐 Set a payment PIN. It's 4 digits, it takes a moment, and it means nobody "
+               f"can send more than {PIN_THRESHOLD:g} CB of your money but you — even if they "
+               f"get into your account. Your ID card has it under Security.", "/profile")
+
+
 def _pin_gate(user, value_cb, pin):
     """None if a payment of this size may go ahead, else (payload, status)."""
     if value_cb <= PIN_THRESHOLD + 1e-9:
@@ -13069,6 +13090,18 @@ ANNOUNCEMENT_PRESETS = [
      "message": "\U0001F3DB\uFE0F Vacant ministries are open for applications. Apply, and once "
                 "enough citizens stand, an election opens automatically.",
      "link": "/ministries"},
+
+    {"key": "security", "label": "Security: set a PIN & change your password",
+     "message": "\U0001F510 Cyvathon accounts just got safer. Set a 4-digit payment PIN so nobody "
+                "can move your money but you, and change your password while you're there \u2014 "
+                "your ID card has both, under Security.",
+     "link": "/profile"},
+
+    {"key": "password_reset", "label": "Security: everyone change your password",
+     "message": "\U0001F510 Please change your password now \u2014 an account was broken into. Your ID "
+                "card has the form under Security. Changing it signs out every other device, "
+                "including anyone else's.",
+     "link": "/profile"},
 ]
 
 
