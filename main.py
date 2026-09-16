@@ -5480,7 +5480,7 @@ def economy():
         citizen_count = max(0, total - banned)
         companies = supabase.table("companies").select("id", count="exact").execute()
         return {
-            "success": True, "gdp": compute_gdp(), "treasury": t["balance"],
+            "success": True, "gdp": compute_gdp(), "treasury": t.get("balance") or 0,
             "citizens": citizen_count, "companies": companies.count or 0,
             "rates": {"pufb_per_cybuck": PUFB_PER_CYBUCK, "aquilines_per_pufb": AQUILINES_PER_PUFB},
         }

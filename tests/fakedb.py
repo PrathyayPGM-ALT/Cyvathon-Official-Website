@@ -10,11 +10,16 @@ import itertools
 
 
 class _Result:
-    def __init__(self, data): self.data = data
+    # `count` is what Supabase returns for select(..., count="exact"): the number
+    # of rows matching the filters, before any limit. Without it, code that reads
+    # `.count` raises here but works against the real database.
+    def __init__(self, data, count=None):
+        self.data = data
+        self.count = count
 
 
 class _Query:
-    def __init__(self, db, table, kind, payload=None):
+    def __init__(self, db, table, kind, payload=None, count=None):
         self.db, self.table_name, self.kind = db, table, kind
         self.payload = payload
         self.filters = []          # (op, col, val)
@@ -22,6 +27,7 @@ class _Query:
         self._desc = False
         self._limit = None
         self._negate_next = False
+        self._count = count        # "exact" when the caller asked for a row count
 
     # ---- filters ----
     def eq(self, c, v):  self.filters.append(("eq", c, v));  return self
@@ -64,12 +70,13 @@ class _Query:
         rows = self.db.data.setdefault(self.table_name, [])
         if self.kind == "select":
             out = [dict(r) for r in rows if self._match(r)]
+            total = len(out)                   # the count is before the limit
             if self._order:
                 out.sort(key=lambda r: (r.get(self._order) is None, r.get(self._order)),
                          reverse=self._desc)
             if self._limit:
                 out = out[:self._limit]
-            return _Result(out)
+            return _Result(out, total if self._count else None)
 
         if self.kind == "insert":
             payload = self.payload if isinstance(self.payload, list) else [self.payload]
@@ -107,7 +114,7 @@ class _Query:
 
 class _Table:
     def __init__(self, db, name): self.db, self.name = db, name
-    def select(self, *a, **k): return _Query(self.db, self.name, "select")
+    def select(self, *a, **k): return _Query(self.db, self.name, "select", count=k.get("count"))
     def insert(self, payload):  return _Query(self.db, self.name, "insert", payload)
     def update(self, payload):  return _Query(self.db, self.name, "update", payload)
     def delete(self):           return _Query(self.db, self.name, "delete")
@@ -130,6 +137,9 @@ class FakeSupabase:
             "loans":   {"repaid": False, "defaulted": False},
             "court_cases": {"status": "open", "fine": 0, "jail_days": 0},
             "notifications": {"read": False},
+            # get_treasury() inserts a bare {"id": 1}; the real table fills the
+            # rest in from its column defaults, so this does too.
+            "treasury": {"balance": 0, "pufb": 0, "aquilines": 0, "cybits": 0, "gdp": 500000},
         }
 
     def table(self, name): return _Table(self, name)
