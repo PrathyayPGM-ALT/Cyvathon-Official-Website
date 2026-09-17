@@ -115,7 +115,20 @@ function renderNav(active, user) {
   const host = document.getElementById("nav");
   if (host) host.outerHTML = html;
   syncThemeBtn();
-  if (user) { refreshNotifBadge(); revealAthena(); startToasts(); }
+  if (user) { refreshNotifBadge(); revealAthena(); startToasts(); loadMusic(user.username); }
+}
+
+/* Theme music: a floating player on every page that has the nav. Loaded on
+   its own after the nav, so nothing that goes wrong in it can take the nav
+   down with it. */
+function loadMusic(username) {
+  if (window.__cyvMusicLoading) return;
+  window.__cyvMusicLoading = true;
+  window.CYV_MUSIC_USER = username;
+  const s = document.createElement("script");
+  s.src = "/static/music.js";
+  s.defer = true;
+  document.body.appendChild(s);
 }
 
 /* Pop a toast when a new notification (DM, mention, approval, referral…) arrives. */

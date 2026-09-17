@@ -237,6 +237,36 @@ from TheSportsDB or the owner's own photo of the card in their hand. Update
 
 ---
 
+### 15. Theme music
+A floating music button in the bottom-left corner of every page with the nav
+opens a player, so citizens can have soothing music on while they use the site.
+
+- **Four built-in themes:** *Still Water*, *Night Sky*, *Rainfall* and *Ocean*.
+  They're composed live in the browser with the Web Audio API, from chords,
+  bells, filtered noise and a generated reverb, so there are no audio files to
+  host and nothing to license. Each one plays indefinitely without repeating
+  exactly.
+- **Upload your own songs.** MP3, M4A, OGG, WAV, FLAC or WebM; up to 12 songs,
+  40 MB each. They're stored in the browser's IndexedDB, tagged with the citizen
+  who added them, so on a shared computer each citizen only sees their own.
+  **They never leave the device.** Nothing is uploaded to Cyvathon, so there's
+  no storage cost and no copyrighted music being redistributed. The trade-off is
+  that a song added on one device isn't on another.
+- **Plays throughout.** The site is separate pages, so sound can't literally
+  continue through a page change. The player remembers the track, where a song
+  had got to and the volume, and picks it back up on the next page with a short
+  fade. Browsers only allow sound to start after a tap or key press. When a page
+  isn't allowed yet, the button turns gold and the first tap anywhere resumes it.
+- **Off by default.** Nothing plays until a citizen presses play.
+- With Cyvathon open in two tabs, the music follows the tab being used. It also
+  shows in the operating system's media controls where supported.
+
+The player lives in `static/music.js` and is loaded by `renderNav` for signed-in
+citizens, so it never appears on the login page, in jail, or on the Cyvapay
+checkout that other websites use. The one server change is `blob:` in the CSP's
+`media-src`, which is how a browser plays a file from its own storage. No
+migration is needed.
+
 ### 14. Account security
 What guards an account, beyond the hashed passwords, hardened session cookie,
 CSP/HSTS headers and IP firewall the site already had.
