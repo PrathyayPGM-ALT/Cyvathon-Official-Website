@@ -166,7 +166,7 @@ and whoever holds it works the Armoury. Needs `migration_cabinet_powers.sql`.
 ### Weekly salary
 | Designation | CB / week |
 |---|---|
-| Prime Minister | 1000 |
+| Vice President · Chancellor | 1000 |
 | Minister · Judge · Security Minister | 900 |
 | Founder · Head of Coding · Head of Hacking | 800 |
 | Employee | 500 |

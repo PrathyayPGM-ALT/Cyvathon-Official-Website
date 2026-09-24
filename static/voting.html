@@ -40,13 +40,13 @@
 
   <div class="wrap" style="max-width:720px;">
     <h2 class="section-title"><i class="fas fa-check-to-slot"></i> National Voting</h2>
-    <p class="section-sub">Cyvathon elects its Prime Minister and other roles by the people's vote.</p>
+    <p class="section-sub">Cyvathon elects its Chancellor, its Judge and other roles by the people's vote.</p>
 
     <!-- PRESIDENT: create a poll -->
     <div class="panel" id="adminBox" style="display:none; margin-bottom:2rem;">
       <h3><i class="fas fa-crown"></i> Create a Vote (President only)</h3>
-      <input id="pTitle" placeholder="Vote title (e.g. Prime Minister Election 2025)">
-      <input id="pPosition" placeholder="Position being elected" value="Prime Minister">
+      <input id="pTitle" placeholder="Vote title (e.g. Chancellor Election 2026)">
+      <input id="pPosition" placeholder="Position being elected" value="Chancellor">
       <textarea id="pOptions" rows="3" placeholder="Candidates — one per line"></textarea>
       <button onclick="createPoll()">Open Vote</button>
       <p id="adminMsg" class="small" style="text-align:center;"></p>
@@ -97,7 +97,7 @@
 
     async function createPoll(){
       const title=document.getElementById("pTitle").value.trim();
-      const position=document.getElementById("pPosition").value.trim()||"Prime Minister";
+      const position=document.getElementById("pPosition").value.trim()||"Chancellor";
       const options=document.getElementById("pOptions").value.split("\n").map(s=>s.trim()).filter(Boolean);
       const am = document.getElementById("adminMsg");
       if(!title||options.length<2){ am.textContent="Need a title and at least 2 candidates."; am.style.color="var(--red)"; return; }

@@ -110,8 +110,8 @@ ARTICLES = [
             ("The ballot",
              "Every citizen has one vote in every election and one vote on every bill, cast once "
              "and final. Every citizen may stand for any vacant ministry, unless they are serving "
-             "a sentence, carry a conviction on their record, or still owe a loan. For the Prime "
-             "Minister and the Judge the President convenes the vote and names the candidates on "
+             "a sentence, carry a conviction on their record, or still owe a loan. For the "
+             "Chancellor and the Judge the President convenes the vote and names the candidates on "
              "the ballot; the citizens choose between them."),
             ("The law",
              "Every citizen may table a bill before the Legislature, may bring a case before the "
@@ -138,8 +138,9 @@ ARTICLES = [
             ("Powers",
              "The President: administers the National Treasury and sets the national levers of "
              "the economy; gives or withholds assent to bills passed by the Legislature; issues "
-             "decrees within the law; convenes national votes for the Prime Minister and the "
-             "Judge and names the candidates; may appoint a citizen to a ministry, or dismiss a "
+             "decrees within the law; names the Vice President; convenes national votes for the "
+             "Chancellor and the Judge and names the candidates, and may name a Chancellor to "
+             "serve until the citizens elect one; may appoint a citizen to a ministry, or dismiss a "
              "minister; reviews new citizens and approves couriers; confirms alliances with "
              "other nations; may sit in the Court, and sits alone when no Judge is elected; may "
              "detain a citizen by order, for a stated reason and a stated term; may release or "
@@ -157,13 +158,18 @@ ARTICLES = [
             ("No salary",
              "The President draws no salary. The Treasury is held for the nation and spent on "
              "it, and the person who holds it takes nothing from it."),
+            ("The Vice President",
+             "The Vice President is named by the President and stands beside them, deputising "
+             "at the President's request and in their absence from the ceremonies of state. The "
+             "office carries none of the President's powers by right."),
         ],
     },
     {
         "num": "V", "title": "The Cabinet and the Ministries",
         "sections": [
-            ("The Prime Minister",
-             "The Prime Minister is elected by national vote and leads the Cabinet."),
+            ("The Chancellor",
+             "The Chancellor leads the Cabinet. The office is filled by national vote, which the "
+             "President convenes; until one is held, the President may name a Chancellor."),
             ("Ministries",
              "Ministries are created by law and run their departments on budgets drawn from the "
              "Treasury. A ministry's brief follows its name: Defence, Finance, Transport &amp; "
@@ -241,8 +247,8 @@ ARTICLES = [
              "the Republic may set an insurance levy only if payouts outrun revenue, and must "
              "publish it. No tax may be laid on a citizen for what they believe."),
             ("Salaries",
-             "Salaries are paid weekly from the Treasury by office: the Prime Minister 1,000 "
-             "CB; a Minister, the Security Minister and the Judge 900; the Head of Coding, the "
+             "Salaries are paid weekly from the Treasury by office: the Vice President and the "
+             "Chancellor 1,000 CB; a Minister, the Security Minister and the Judge 900; the Head of Coding, the "
              "Head of Hacking and a company Founder 800; an Employee 500; a Citizen 100. "
              "Couriers of Cyvazon draw 500 CB besides. The President draws nothing."),
             ("Credit",

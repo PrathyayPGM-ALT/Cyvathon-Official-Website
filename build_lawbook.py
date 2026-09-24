@@ -109,7 +109,8 @@ CHAPTERS = [
          "Goods are bought and sold in the national Import &amp; Export hub and in each state's "
          "own marketplace. A sale raises a Cyvazon delivery so the goods actually change hands."),
         ("Salaries",
-         "Salaries are paid weekly from the Treasury by office: Prime Minister 1,000 CB; "
+         "Salaries are paid weekly from the Treasury by office: Vice President and Chancellor "
+         "1,000 CB; "
          "Minister, Security Minister and Judge 900; Head of Coding, Head of Hacking and "
          "Founder 800; Employee 500; Citizen 100. Approved couriers draw 500 CB besides. "
          "The President draws nothing."),
@@ -164,7 +165,7 @@ CHAPTERS = [
     ("CHAPTER 7 — ELECTIONS AND OFFICE", [
         ("Voting",
          "Every citizen has one vote in every election and on every bill. A vote cast is "
-         "final. Elections for the Prime Minister and the Judge are convened by the President, "
+         "final. Elections for the Chancellor and the Judge are convened by the President, "
          "who names the candidates on the ballot; a vacant ministry opens its own election the "
          "moment four eligible citizens stand. The President may also appoint a citizen to a "
          "ministry, or dismiss a minister."),
