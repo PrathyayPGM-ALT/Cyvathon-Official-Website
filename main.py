@@ -5043,8 +5043,15 @@ def athena_report():
 SURVEIL_TARGETS = {
     "aquilithia": os.environ.get("SURVEIL_AQUILITHIA", "https://aquilithia.onrender.com/"),
 }
+# The key stays "aquilithia" (their live URL); the name we show and file is the
+# one the nation actually uses.
+SURVEIL_NAMES = {"aquilithia": "Aqualithia"}
 SURVEIL_MIN_GAP = 15          # never re-ping a target more often than this (be a good netizen)
 _surveil = {}                 # target key -> {"state": last check, "log": [recent checks]}
+
+
+def _surveil_name(key):
+    return SURVEIL_NAMES.get(key, key.title())
 
 
 def _do_surveil(key):
@@ -5093,15 +5100,29 @@ def _do_surveil(key):
 
     prev = slot["state"]
     if prev:      # auto-file intel when the target changes
+        name = _surveil_name(key)
         if res.get("version") and prev.get("version") and res["version"] != prev["version"]:
-            _surveil_intel(key, f"{key.title()} updated: v{prev['version']} → v{res['version']}",
+            _surveil_intel(key, f"{name} updated: v{prev['version']} → v{res['version']}",
                            "Surveillance detected a version change on the target's homepage.")
         elif res["up"] != prev.get("up"):
-            _surveil_intel(key, f"{key.title()} is now {'ONLINE' if res['up'] else 'OFFLINE'}",
+            # A status change is the one thing worth a permanent, dated record —
+            # so file it to the Registry (CONFIDENTIAL), not just the intel feed.
+            now_up = res["up"]
+            _surveil_intel(key, f"{name} is now {'ONLINE' if now_up else 'OFFLINE'}",
                            f"Target status changed (HTTP {res['code']}).")
+            _surveil_registry(
+                f"Enemy Watch — {name} went {'ONLINE' if now_up else 'OFFLINE'}",
+                f"Athena's passive watch on {name}'s public homepage ({SURVEIL_TARGETS[key]}) "
+                f"recorded a status change at {_now().strftime('%Y-%m-%d %H:%M')} UTC.\n\n"
+                f"STATUS: {'ONLINE' if now_up else 'OFFLINE'} (HTTP {res['code']}"
+                f"{', ' + str(res['ms']) + 'ms' if now_up and res.get('ms') else ''}"
+                f"{', ' + res['err'] if res.get('err') else ''}).\n"
+                f"PREVIOUS: {'ONLINE' if prev.get('up') else 'OFFLINE'}.\n\n"
+                "Source: a single request to their public homepage, the same page any "
+                "visitor sees. Passive watch only.")
         newlinks = set(res.get("links") or []) - set(prev.get("links") or [])
         if newlinks:
-            _surveil_intel(key, f"{key.title()}: new public route(s) detected",
+            _surveil_intel(key, f"{name}: new public route(s) detected",
                            "Newly advertised on their homepage: " + ", ".join(sorted(newlinks)[:8]))
     slot["state"] = res
     slot["log"].insert(0, res)
@@ -5113,6 +5134,20 @@ def _surveil_intel(key, title, detail):
     try:
         supabase.table("athena_intel").insert({
             "agent": "Athena", "kind": "report", "title": title, "detail": detail, "reward": 0
+        }).execute()
+    except Exception:
+        pass
+
+
+def _surveil_registry(title, body):
+    """File an Athena watch note into the Registry as CONFIDENTIAL, so only
+    cleared officers and the President ever read it. Fails quietly if the
+    Registry tables aren't migrated yet."""
+    try:
+        supabase.table("registry_files").insert({
+            "title": title[:160], "subject": "Aqualithia", "directorate": "Foreign Affairs",
+            "classification": "CONFIDENTIAL", "visibility": "cleared", "allowed": "",
+            "author": "Athena", "body": body[:20000],
         }).execute()
     except Exception:
         pass
