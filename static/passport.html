@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Passport &amp; Citizenship · Cyvathon" />
@@ -29,7 +34,7 @@
     .tabs{ display:flex; gap:.5rem; justify-content:center; margin-bottom:1.6rem; }
     .tabs button{ width:auto; margin:0; padding:.55rem 1.3rem; border-radius:30px; font-size:.9rem;
       background:var(--panel-2); color:var(--text); border:1px solid var(--panel-border); box-shadow:none; }
-    .tabs button.on{ background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; border-color:transparent; }
+    .tabs button.on{ background:var(--grad-accent); color:var(--btn-ink); border-color:transparent; }
 
     /* ---------- CITIZENSHIP CERTIFICATE ---------- */
     .cert{ position:relative; max-width:600px; margin:0 auto; border-radius:16px; overflow:hidden;

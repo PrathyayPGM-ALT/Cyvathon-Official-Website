@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "Cyvathon",
+  "short_name": "Cyvathon",
+  "description": "The Republic of Cyvathon in your pocket — your bank, your chats, your votes and everything else.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070c18",
+  "theme_color": "#070c18",
+  "categories": ["social", "finance", "education"],
+  "icons": [
+    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Bank", "short_name": "Bank", "description": "Send and convert money", "url": "/bank",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Chat", "short_name": "Chat", "description": "Talk with citizens", "url": "/chat",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Cyvazon", "short_name": "Cyvazon", "description": "Your parcels and deliveries", "url": "/cyvazon",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "ID Card", "short_name": "ID Card", "description": "Your record, balances and security", "url": "/profile",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

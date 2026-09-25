@@ -35,7 +35,7 @@ db.seed("cybucks", [
      "home_class": "10A", "home_area": "Library"},
     {"id": 3, "username": "Kabir", "designation": "Citizen", "balance": 20, "approved": True},
 ])
-db.seed("treasury", [{"id": 1, "balance": 100000, "pufb": 0, "aquilines": 0, "cybits": 0}])
+db.seed("treasury", [{"id": 1, "balance": 100000, "crystallines": 0, "cybits": 0}])
 
 PASS = FAIL = 0
 def check(label, got, want):

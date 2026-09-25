@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Cyvathon — Code. Conquer. Cause Creativity." />
@@ -27,8 +32,10 @@
   <link rel="stylesheet" href="/static/theme.css">
   <style>
     .hero{ text-align:center; padding:5.5rem 1.5rem 3rem; max-width:900px; margin:auto; position:relative; }
+    /* The glow scales down with the screen: a fixed 600px circle hung off both
+       sides of a phone and made the whole dashboard zoom out to fit it. */
     .hero::before{ content:""; position:absolute; top:-40px; left:50%; transform:translateX(-50%);
-      width:600px; height:600px; background:radial-gradient(circle,rgba(88,196,255,.18),transparent 70%); z-index:-1; }
+      width:min(600px, 100%); aspect-ratio:1; background:radial-gradient(circle,rgba(88,196,255,.18),transparent 70%); z-index:-1; }
     .hero h2{ font-size:3rem; font-weight:700; margin-bottom:1rem;
       background:linear-gradient(90deg,var(--accent),var(--accent2));
       -webkit-background-clip:text; background-clip:text; color:transparent; }
@@ -478,8 +485,7 @@
     ];
     const CUR = [
       ["balance","Cybucks","fa-coins","var(--c-cybucks)"],
-      ["pufb","Pufferbucks","fa-fish-fins","var(--c-pufb)"],
-      ["aquilines","Aquilines","fa-feather-pointed","var(--c-aquilines)"],
+      ["crystallines","Crystallines","fa-gem","var(--c-crys)"],
       ["cybits","Cybits","fa-bolt","var(--c-cybits)"],
     ];
 
@@ -894,7 +900,7 @@
           <div class="stat">GDP <b>${fmt(e.gdp)} CB</b></div>
           <div class="stat">Citizens <b>${e.citizens}</b></div>
           <div class="stat">Companies <b>${e.companies}</b></div>
-          <div class="stat">1 CB = <b>1 PUFB = 10 AQ</b></div>`;
+          <div class="stat">1 CB = <b>1 CRY = 50 CBT</b></div>`;
       }catch{}
     }
 

@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Cyvathon National Treasury" />
@@ -35,9 +40,8 @@
     .cur{ background:rgba(255,255,255,0.03); border:1px solid var(--panel-border);
       border-left:4px solid var(--accent); border-radius:10px; padding:1rem 1.2rem;
       min-width:0; overflow:hidden; }
-    .cur.pufb{ border-left-color:var(--gold); }
-    .cur.cybucks{ border-left-color:var(--accent); }
-    .cur.aquilines{ border-left-color:var(--green); }
+    .cur.crys{ border-left-color:var(--c-crys); }
+    .cur.cybucks{ border-left-color:var(--c-cybucks); }
     .cur.cybit{ border-left-color:#a78bfa; }
     .cur .l{ font-size:.72rem; letter-spacing:1px; color:var(--muted); text-transform:uppercase; }
     /* big figures scale with width and wrap instead of spilling out of the card */
@@ -47,14 +51,14 @@
     .pos{ color:var(--green); } .neg{ color:var(--red); }
     .summary{ display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.6rem; }
     .scard{ flex:1 1 170px; min-width:0; overflow:hidden; padding:1.1rem 1.3rem; border-radius:14px;
-      background:linear-gradient(135deg,rgba(88,196,255,.08),var(--panel)); border:1px solid var(--panel-border); }
+      background:linear-gradient(135deg,rgba(var(--m),.08),var(--panel)); border:1px solid var(--panel-border); }
     .scard .l{ color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:1px; }
     .scard .v{ font-size:clamp(1.1rem, 3.2vw, 1.6rem); font-weight:800; color:var(--accent);
       line-height:1.2; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
     table{ width:100%; border-collapse:collapse; margin-top:.4rem; }
     th,td{ text-align:left; padding:.6rem .5rem; border-bottom:1px solid rgba(255,255,255,.06); font-size:.9rem; }
     th{ color:var(--muted); font-weight:600; text-transform:uppercase; font-size:.72rem; letter-spacing:1px; }
-    .kind{ font-size:.7rem; padding:.15rem .55rem; border-radius:20px; background:rgba(88,196,255,.12); color:var(--accent); }
+    .kind{ font-size:.7rem; padding:.15rem .55rem; border-radius:20px; background:rgba(var(--m),.12); color:var(--accent); }
     .deny{ text-align:center; padding:4rem 1rem; }
   </style>
 </head>
@@ -132,9 +136,9 @@
 
   <script src="/static/app.js"></script>
   <script>
-    const ORDER = ["cybucks","pufb","aquilines","cybit"];
-    const LABEL = { cybucks:"Cybucks", pufb:"Pufferbucks", aquilines:"Aquilines", cybit:"Cybits" };
-    const CBVAL = { cybucks:1, pufb:1, aquilines:0.1, cybit:0.02 };
+    const ORDER = ["cybucks","crys","cybit"];
+    const LABEL = { cybucks:"Cybucks", crys:"Crystallines", cybit:"Cybits" };
+    const CBVAL = { cybucks:1, crys:1, cybit:0.02 };
 
     function curCards(host, data, opts={}){
       document.getElementById(host).innerHTML = ORDER.map(k=>{

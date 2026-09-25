@@ -5,23 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cyvathon Bank</title>
   <!-- social / SEO metadata -->
-  <meta name="description" content="The Cybucks Bank — check your balance, transfer money to other citizens, and convert between Cybucks, Pufferbucks, Aquilines and Cybits." />
+  <meta name="description" content="The Cybucks Bank — check your balance, transfer money to other citizens, and convert between Cybucks, Crystallines and Cybits." />
   <link rel="canonical" href="https://cyvathon.onrender.com/bank" />
   <meta name="theme-color" content="#58c4ff" />
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Cyvathon Bank" />
-  <meta property="og:description" content="The Cybucks Bank — check your balance, transfer money to other citizens, and convert between Cybucks, Pufferbucks, Aquilines and Cybits." />
+  <meta property="og:description" content="The Cybucks Bank — check your balance, transfer money to other citizens, and convert between Cybucks, Crystallines and Cybits." />
   <meta property="og:url" content="https://cyvathon.onrender.com/bank" />
   <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Cyvathon Bank" />
-  <meta name="twitter:description" content="The Cybucks Bank — check your balance, transfer money to other citizens, and convert between Cybucks, Pufferbucks, Aquilines and Cybits." />
+  <meta name="twitter:description" content="The Cybucks Bank — check your balance, transfer money to other citizens, and convert between Cybucks, Crystallines and Cybits." />
   <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
@@ -38,7 +43,7 @@
 
   <div class="wrap" style="max-width:640px;">
     <h2 class="section-title"><i class="fas fa-building-columns"></i> Cyvathon Bank</h2>
-    <p class="section-sub">1 Cybuck = 1 Pufferbuck = 10 Aquilines = 50 Cybits</p>
+    <p class="section-sub">1 Cybuck = 1 Crystalline = 50 Cybits</p>
 
     <div class="bank-card noprint" id="bankCard" style="display:none;">
       <div id="cardMount"></div>
@@ -60,8 +65,7 @@
       <select id="recipient"><option value="">Select recipient</option></select>
       <select id="sendCurrency">
         <option value="cybucks">Cybucks</option>
-        <option value="pufb">Pufferbucks</option>
-        <option value="aquilines">Aquilines</option>
+        <option value="crys">Crystallines</option>
         <option value="cybit">Cybits</option>
       </select>
       <input id="sendAmount" type="number" min="0" step="0.01" placeholder="Amount to send">
@@ -74,14 +78,12 @@
       <div class="row">
         <select id="fromC">
           <option value="cybucks">Cybucks</option>
-          <option value="pufb">Pufferbucks</option>
-          <option value="aquilines">Aquilines</option>
+          <option value="crys">Crystallines</option>
           <option value="cybit">Cybits</option>
         </select>
         <select id="toC">
-          <option value="pufb">Pufferbucks</option>
+          <option value="crys">Crystallines</option>
           <option value="cybucks">Cybucks</option>
-          <option value="aquilines">Aquilines</option>
           <option value="cybit">Cybits</option>
         </select>
       </div>
@@ -124,16 +126,15 @@
   <script src="/static/app.js"></script>
   <script src="/static/card.js"></script>
   <script>
-    const RATE = { cybucks:1, pufb:1, aquilines:0.1, cybit:0.02 };
-    const NAME = { cybucks:"Cybucks", pufb:"Pufferbucks", aquilines:"Aquilines", cybit:"Cybits" };
+    const RATE = { cybucks:1, crys:1, cybit:0.02 };
+    const NAME = { cybucks:"Cybucks", crys:"Crystallines", cybit:"Cybits" };
     let me;
 
     function paint(u){
       me = u;
       document.getElementById("balances").innerHTML = `
         <div class="bal"><div class="v">${fmt(u.balance)}</div><div class="l">Cybucks</div></div>
-        <div class="bal"><div class="v">${fmt(u.pufb)}</div><div class="l">Pufferbucks</div></div>
-        <div class="bal"><div class="v">${fmt(u.aquilines)}</div><div class="l">Aquilines</div></div>
+        <div class="bal"><div class="v">${fmt(u.crystallines)}</div><div class="l">Crystallines</div></div>
         <div class="bal"><div class="v">${fmt(u.cybits)}</div><div class="l">Cybits</div></div>`;
     }
     const msg = (t,err=true)=>{ const m=document.getElementById("msg");

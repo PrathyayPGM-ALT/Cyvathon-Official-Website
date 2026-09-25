@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Border Control · Cyvathon" />
@@ -48,7 +53,7 @@
       display:flex; align-items:center; justify-content:center; color:var(--accent); }
     .scanner .doc{ font-size:2.6rem; opacity:.5; }
     .scanline{ position:absolute; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,var(--accent),transparent);
-      box-shadow:0 0 14px 3px rgba(88,196,255,.6); top:0; display:none; }
+      box-shadow:0 0 14px 3px rgba(var(--m),.6); top:0; display:none; }
     .scanning .scanline{ display:block; animation:scan 1.1s ease-in-out infinite; }
     @keyframes scan{ 0%{ top:6%; } 50%{ top:90%; } 100%{ top:6%; } }
     .scanlog{ font-family:"Courier New",monospace; font-size:.78rem; color:var(--green); min-height:1.2em; text-align:center; }
@@ -62,7 +67,7 @@
     /* ---------- STATE MARKET ---------- */
     .market-grid{ display:grid; gap:1.4rem; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
     .item{ background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; overflow:hidden; transition:.25s; }
-    .item:hover{ transform:translateY(-5px); border-color:rgba(88,196,255,.35); box-shadow:0 8px 25px rgba(0,0,0,.35); }
+    .item:hover{ transform:translateY(-5px); border-color:rgba(var(--m),.35); box-shadow:0 8px 25px rgba(0,0,0,.35); }
     .item img{ width:100%; height:160px; object-fit:cover; background:#0f141b; display:block; }
     .item .noimg{ height:160px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:2.5rem; background:#0f141b; }
     .item .body{ padding:1rem 1.1rem; }
@@ -98,7 +103,7 @@
   <script>
     const qs = new URLSearchParams(location.search);
     const SID = qs.get("id");
-    const CUR = { cybucks:"CB", pufb:"PUFB", aquilines:"AQ", cybit:"CBT" };
+    const CUR = { cybucks:"CB", crys:"CRY", cybit:"CBT" };
     const esc = (s)=>(s||"").replace(/</g,"&lt;");
     const msg = (t,err=true)=>{ const m=document.getElementById("msg"); m.textContent=t; m.style.color=err?"var(--red)":"var(--green)"; };
     let S = null, scanDone = false, ME = null;
@@ -255,8 +260,7 @@
             <input id="mPrice" type="number" min="0" step="0.01" placeholder="Price">
             <select id="mCurrency">
               <option value="cybucks">Cybucks</option>
-              <option value="pufb">Pufferbucks</option>
-              <option value="aquilines">Aquilines</option>
+              <option value="crys">Crystallines</option>
               <option value="cybit">Cybits</option>
             </select>
           </div>

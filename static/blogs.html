@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Blogs · Cyvathon" />
@@ -45,8 +50,8 @@
       border-top:1px solid var(--panel-border); font-size:.86rem; }
     .me-card .stat b{ color:var(--accent); font-size:1rem; } .me-card .stat span{ color:var(--muted); }
     .me-card .idbtn{ display:block; margin-top:1.1rem; padding:.65rem; border-radius:12px; text-decoration:none; text-align:center;
-      font-weight:700; font-size:.9rem; color:var(--accent); border:1px solid rgba(88,196,255,.4); transition:.15s; }
-    .me-card .idbtn:hover{ background:rgba(88,196,255,.1); }
+      font-weight:700; font-size:.9rem; color:var(--accent); border:1px solid rgba(var(--m),.4); transition:.15s; }
+    .me-card .idbtn:hover{ background:rgba(var(--m),.1); }
 
     /* ---- right rail ---- */
     .rc{ padding:1.2rem 1.3rem; }
@@ -66,7 +71,7 @@
       font-weight:700; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
     .composer .pill{ flex:1; text-align:left; background:var(--panel-2); border:1px solid var(--panel-border); color:var(--muted);
       border-radius:999px; padding:.85rem 1.3rem; font-weight:600; font-size:.95rem; box-shadow:none; margin:0; width:auto; }
-    .composer .pill:hover{ background:rgba(88,196,255,.08); color:var(--text); transform:none; border-color:rgba(88,196,255,.35); }
+    .composer .pill:hover{ background:rgba(var(--m),.08); color:var(--text); transform:none; border-color:rgba(var(--m),.35); }
     .writer{ display:none; margin-top:1rem; }
     .writer.on{ display:block; }
     .writer input, .writer textarea{ margin-top:.7rem; }
@@ -78,7 +83,7 @@
     /* ---- post card ---- */
     .post{ padding:1.35rem 1.5rem 1.1rem; transition:border-color .18s, box-shadow .18s, transform .18s; }
     .post.click{ cursor:pointer; }
-    .post.click:hover{ border-color:rgba(88,196,255,.4); box-shadow:0 10px 30px rgba(0,0,0,.28); transform:translateY(-2px); }
+    .post.click:hover{ border-color:rgba(var(--m),.4); box-shadow:0 10px 30px rgba(0,0,0,.28); transform:translateY(-2px); }
     .phead{ display:flex; align-items:center; gap:.75rem; }
     .phead .av{ width:50px; height:50px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
       font-weight:700; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); text-decoration:none; }

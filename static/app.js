@@ -8,6 +8,26 @@
     document.documentElement.setAttribute("data-theme", "light"); } catch (e) {}
 })();
 
+/* Each part of the Republic has its own colour — the one its dashboard tile
+   wears — and theme.css tints the page's light, buttons and headings with it.
+   Money pages keep the national blue, so they need no mood. Pages with a look
+   of their own (the dashboard, Wrapped, Cyvalend, the Registry) are left out. */
+const PAGE_MOOD = {
+  gold:    ["government", "ministries", "cabinet", "legislature", "gazette", "constitution",
+            "voting", "timeline", "treasury", "admin", "court", "rules", "leaderboard"],
+  emerald: ["company", "jobs", "states", "state", "marketplace", "packet"],
+  cyan:    ["exchange", "portfolio", "shield", "ai", "flightsim", "passport"],
+  violet:  ["blogs", "news", "foreign", "sites", "cyvapay"],
+  rose:    ["videos", "fir", "jail", "pens", "warroom", "athena"],
+  pink:    ["casino", "profile", "invite"],
+  orange:  ["cyvazon"],
+};
+(function () {
+  const page = location.pathname.split("/")[1].replace(/\.html$/, "");
+  for (const mood in PAGE_MOOD)
+    if (PAGE_MOOD[mood].includes(page)) document.documentElement.setAttribute("data-mood", mood);
+})();
+
 function toggleTheme() {
   const light = document.documentElement.getAttribute("data-theme") === "light";
   if (light) document.documentElement.removeAttribute("data-theme");
@@ -116,7 +136,34 @@ function renderNav(active, user) {
   if (host) host.outerHTML = html;
   syncThemeBtn();
   if (user) { refreshNotifBadge(); revealAthena(); startToasts(); loadMusic(user.username); }
+  loadShell(user);
 }
+
+/* The app shell: on a phone, a bottom tab bar and a menu sheet instead of
+   the long stacked menu, plus the "install the app" offer. Loaded on its own,
+   like the music, so nothing in it can take the nav down. */
+function loadShell(user) {
+  window.CYV_SHELL_USER = user ? { username: user.username, avatar: user.avatar || null } : null;
+  if (window.CyvShell) { window.CyvShell.refresh(); return; }
+  if (window.__cyvShellLoading) return;
+  window.__cyvShellLoading = true;
+  const s = document.createElement("script");
+  s.src = "/static/appshell.js";
+  s.defer = true;
+  document.body.appendChild(s);
+}
+
+/* Cyvathon as an installable app. The service worker gives it an offline
+   screen; the browser's install offer is held here until the shell decides
+   when to show it, because the browser can fire it before the shell loads. */
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
+}
+addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  window.__cyvInstall = e;
+  document.dispatchEvent(new Event("cyv:installable"));
+});
 
 /* Theme music: a floating player on every page that has the nav. Loaded on
    its own after the nav, so nothing that goes wrong in it can take the nav

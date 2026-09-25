@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Citizen Sites · Cyvathon" />
@@ -29,8 +34,8 @@
     /* ---- hero ---- */
     .s-hero{ text-align:center; margin:0 auto 2rem; max-width:760px; }
     .s-kick{ display:inline-flex; align-items:center; gap:.5rem; padding:.4rem 1rem; border-radius:30px;
-      font-size:.82rem; font-weight:700; color:var(--accent); background:rgba(88,196,255,.12);
-      border:1px solid rgba(88,196,255,.32); }
+      font-size:.82rem; font-weight:700; color:var(--accent); background:rgba(var(--m),.12);
+      border:1px solid rgba(var(--m),.32); }
     .s-hero h2{ font-size:clamp(2.2rem, 6vw, 3.4rem); font-weight:900; letter-spacing:-1.5px; margin:.7rem 0 .6rem;
       background:linear-gradient(95deg,var(--accent),var(--cyan) 55%,var(--green)); -webkit-background-clip:text;
       background-clip:text; color:transparent; }
@@ -51,7 +56,7 @@
     .addp{ background:var(--panel); border:1px solid var(--panel-border); border-radius:20px; padding:1.3rem 1.3rem 1.4rem; }
     .addp h3{ display:flex; align-items:center; gap:.6rem; font-size:1.12rem; margin:0 0 .5rem; }
     .addp h3 i{ display:grid; place-items:center; width:32px; height:32px; border-radius:10px; font-size:.9rem;
-      color:var(--accent); background:rgba(88,196,255,.13); border:1px solid rgba(88,196,255,.3); }
+      color:var(--accent); background:rgba(var(--m),.13); border:1px solid rgba(var(--m),.3); }
     .meter{ font-size:.82rem; color:var(--muted); margin:0 0 .9rem; }
     .meter .track{ display:block; height:6px; border-radius:6px; margin-top:.4rem; background:var(--panel-2); overflow:hidden; }
     .meter .track i{ display:block; height:100%; border-radius:6px; background:var(--grad-accent, linear-gradient(90deg,var(--accent),var(--cyan)));
@@ -65,7 +70,7 @@
     .catpick button{ width:auto; margin:0; padding:.42rem .7rem; font-size:.78rem; font-weight:600; border-radius:20px;
       background:var(--panel-2); color:var(--muted); border:1px solid var(--panel-border); box-shadow:none; }
     .catpick button:hover{ color:var(--text); transform:none; box-shadow:none; }
-    .catpick button[aria-pressed="true"]{ background:rgba(88,196,255,.16); color:var(--accent); border-color:rgba(88,196,255,.5); }
+    .catpick button[aria-pressed="true"]{ background:rgba(var(--m),.16); color:var(--accent); border-color:rgba(var(--m),.5); }
     .addp label.chk{ display:flex; align-items:center; gap:.55rem; font-size:.86rem; font-weight:500; color:var(--text-dim); margin-top:1rem; }
     .addp label.chk input{ width:auto; margin:0; accent-color:var(--accent); }
     .pv-l{ font-size:.72rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:1.1rem 0 .5rem; }
@@ -86,19 +91,19 @@
     .seg{ display:flex; gap:.25rem; padding:.3rem; border-radius:14px; background:var(--panel); border:1px solid var(--panel-border); }
     .seg button{ width:auto; margin:0; padding:.48rem .9rem; font-size:.84rem; font-weight:700; border-radius:10px;
       background:transparent; color:var(--muted); box-shadow:none; }
-    .seg button:hover{ color:var(--text); transform:none; box-shadow:none; background:rgba(88,196,255,.08); }
+    .seg button:hover{ color:var(--text); transform:none; box-shadow:none; background:rgba(var(--m),.08); }
     .seg button[aria-pressed="true"]{ background:linear-gradient(135deg,var(--accent),var(--accent-deep)); color:#fff; }
     .chips{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:1.3rem; }
     .chips button{ width:auto; margin:0; padding:.45rem .85rem; font-size:.82rem; font-weight:600; border-radius:20px;
       background:var(--panel); color:var(--muted); border:1px solid var(--panel-border); box-shadow:none; }
     .chips button:hover{ color:var(--text); transform:none; box-shadow:none; border-color:var(--panel-border-2); }
-    .chips button[aria-pressed="true"]{ background:rgba(88,196,255,.15); color:var(--accent); border-color:rgba(88,196,255,.5); }
+    .chips button[aria-pressed="true"]{ background:rgba(var(--m),.15); color:var(--accent); border-color:rgba(var(--m),.5); }
     .chips button em{ font-style:normal; opacity:.7; margin-left:.25rem; }
 
     /* ---- site of the week ---- */
     .spot{ position:relative; overflow:hidden; border-radius:22px; padding:1.4rem 1.5rem; margin-bottom:1.5rem;
-      background:linear-gradient(135deg,rgba(88,196,255,.16),rgba(34,211,238,.06) 60%,rgba(31,214,166,.1));
-      border:1px solid rgba(88,196,255,.35); }
+      background:linear-gradient(135deg,rgba(var(--m),.16),rgba(34,211,238,.06) 60%,rgba(31,214,166,.1));
+      border:1px solid rgba(var(--m),.35); }
     .spot::before{ content:""; position:absolute; right:-60px; top:-60px; width:220px; height:220px; border-radius:50%;
       background:radial-gradient(circle,rgba(255,206,86,.25),transparent 70%); pointer-events:none; }
     .spot-k{ display:inline-flex; align-items:center; gap:.5rem; font-size:.74rem; font-weight:800; letter-spacing:.14em;
@@ -118,7 +123,7 @@
       transition:transform .2s, border-color .2s, box-shadow .2s;
       animation:cardIn .45s cubic-bezier(.2,.9,.25,1) both; animation-delay:calc(min(var(--i,0),12) * 45ms); }
     @keyframes cardIn{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
-    @media (hover:hover){ .site:hover{ transform:translateY(-4px); border-color:rgba(88,196,255,.45);
+    @media (hover:hover){ .site:hover{ transform:translateY(-4px); border-color:rgba(var(--m),.45);
       box-shadow:0 16px 38px rgba(0,0,0,.28); } }
     .site.is-hidden{ opacity:.62; border-style:dashed; }
     .ribbon{ position:absolute; top:10px; right:-30px; transform:rotate(35deg); padding:.22rem 2.2rem; font-size:.66rem;
@@ -146,7 +151,7 @@
     .tag2{ display:inline-flex; align-items:center; gap:.35rem; padding:.22rem .6rem; border-radius:20px; font-size:.72rem;
       font-weight:700; color:var(--muted); background:var(--panel-2); border:1px solid var(--panel-border); }
     .tag2.pay{ color:var(--green); background:rgba(31,214,166,.12); border-color:rgba(31,214,166,.36); }
-    .tag2.new{ color:var(--accent); background:rgba(88,196,255,.12); border-color:rgba(88,196,255,.36); }
+    .tag2.new{ color:var(--accent); background:rgba(var(--m),.12); border-color:rgba(var(--m),.36); }
     .site-foot{ display:flex; align-items:center; gap:.6rem; margin-top:auto; padding-top:.7rem;
       border-top:1px solid var(--panel-border); font-size:.8rem; }
     .owner{ display:inline-flex; align-items:center; gap:.45rem; color:var(--text); text-decoration:none; font-weight:700;

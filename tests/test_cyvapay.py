@@ -37,7 +37,7 @@ db.seed("cybucks", [
 ])
 db.seed("companies", [{"id": 50, "name": "Saka Prints", "founder": "Meera", "balance": 0,
                        "cofounders": ""}])
-db.seed("treasury", [{"id": 1, "balance": 100000, "pufb": 0, "aquilines": 0, "cybits": 0}])
+db.seed("treasury", [{"id": 1, "balance": 100000, "crystallines": 0, "cybits": 0}])
 
 PASS = FAIL = 0
 def check(label, got, want):

@@ -49,7 +49,7 @@ db.seed("ministries", [
     {"id": 13, "name": "Ministry of Justice",  "minister": "Dev",    "rank": 4},
     {"id": 14, "name": "Ministry of Culture",  "minister": "Aarav",  "rank": 5},
 ])
-db.seed("treasury", [{"id": 1, "balance": 100000, "pufb": 0, "aquilines": 0,
+db.seed("treasury", [{"id": 1, "balance": 100000, "crystallines": 0,
                       "cybits": 0, "pens": 0}])
 db.seed("config", [{"id": 1, "vat_rate": 0.10, "gdp_multiplier": 1, "pen_rate": 400,
                     "courier_wage": 500, "insurance_levy": 0}])

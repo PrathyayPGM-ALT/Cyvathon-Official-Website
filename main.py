@@ -40,22 +40,21 @@ def _log_threat(ip, path, ua):
     del _threats[60:]
 
 # --- Economy constants -------------------------------------
-PUFB_PER_CYBUCK      = 1        # Treaty peg: 1 Pufferbuck = 1 Cybuck
-AQUILINES_PER_PUFB   = 10       # 10 Aquilines   = 1 Pufferbuck
+CRYS_PER_CYBUCK      = 1        # Crystonia peg: 1 Crystalline = 1 Cybuck
 CYBITS_PER_CYBUCK    = 50       # 50 Cybits      = 1 Cybuck
 # Value of one unit expressed in Cybucks:
 CYBUCK_VALUE = {
     "cybucks":   1.0,
-    "pufb":      1.0 / PUFB_PER_CYBUCK,                        # 1.0
-    "aquilines": 1.0 / (PUFB_PER_CYBUCK * AQUILINES_PER_PUFB), # 0.1
+    "crys":      1.0 / CRYS_PER_CYBUCK,                        # 1.0
     "cybit":     1.0 / CYBITS_PER_CYBUCK,                      # 0.02
 }
 
 # Maps a currency code -> the actual DB column. Cybucks live in "balance".
+# Pufferbucks and Aquilines were withdrawn in September 2026; every holding
+# was turned into Crystallines (migration_crystallines.sql).
 CURRENCY_COLUMN = {
     "cybucks":   "balance",
-    "pufb":      "pufb",
-    "aquilines": "aquilines",
+    "crys":      "crystallines",
     "cybit":     "cybits",
 }
 
@@ -456,24 +455,24 @@ def compute_gdp():
     if _gdp_cache["v"] is not None and time() - _gdp_cache["t"] < 300:
         return _gdp_cache["v"]
     try:
-        vp, va, vc = CYBUCK_VALUE["pufb"], CYBUCK_VALUE["aquilines"], CYBUCK_VALUE["cybit"]
+        vx, vc = CYBUCK_VALUE["crys"], CYBUCK_VALUE["cybit"]
         total = 0.0
-        for c in (supabase.table("cybucks").select("balance,pufb,aquilines,cybits,savings,banned").execute().data or []):
+        for c in (supabase.table("cybucks").select("balance,crystallines,cybits,savings,banned").execute().data or []):
             if c.get("banned"):      # frozen accounts aren't part of the economy
                 continue
             total += (c.get("balance") or 0) + (c.get("savings") or 0) \
-                   + (c.get("pufb") or 0) * vp + (c.get("aquilines") or 0) * va + (c.get("cybits") or 0) * vc
+                   + (c.get("crystallines") or 0) * vx + (c.get("cybits") or 0) * vc
         t = get_treasury()
-        total += (t.get("balance") or 0) + (t.get("pufb") or 0) * vp \
-               + (t.get("aquilines") or 0) * va + (t.get("cybits") or 0) * vc
+        total += (t.get("balance") or 0) + (t.get("crystallines") or 0) * vx \
+               + (t.get("cybits") or 0) * vc
         # Armoury stock is national materiel, valued at what the Republic
         # pays for a round.
         total += (t.get("pens") or 0) * PEN_RATE
         for c in (supabase.table("companies")
-                  .select("balance,pufb,aquilines,cybits,shares,last_price,ipo_price,is_public")
+                  .select("balance,crystallines,cybits,shares,last_price,ipo_price,is_public")
                   .execute().data or []):
-            total += (c.get("balance") or 0) + (c.get("pufb") or 0) * vp \
-                   + (c.get("aquilines") or 0) * va + (c.get("cybits") or 0) * vc
+            total += (c.get("balance") or 0) + (c.get("crystallines") or 0) * vx \
+                   + (c.get("cybits") or 0) * vc
             if c.get("is_public"):
                 total += (c.get("last_price") or c.get("ipo_price") or 0) * (c.get("shares") or 0)
         gdp = round(total * (GDP_MULTIPLIER or 1), 2)
@@ -484,15 +483,15 @@ def compute_gdp():
         return GDP
 
 
-def treasury_add(cybucks=0, pufb=0, aquilines=0, cybits=0, counterparty=None, kind="manual"):
+def treasury_add(cybucks=0, crys=0, cybits=0, counterparty=None, kind="manual"):
     """Move money in/out of the Treasury (atomically) and log each currency as a flow.
     The Treasury may run a deficit (negative) — that records true national debt
     instead of silently 'minting' the shortfall by flooring at zero."""
     get_treasury()   # ensure the row exists
-    for col, delta in (("balance", cybucks), ("pufb", pufb), ("aquilines", aquilines), ("cybits", cybits)):
+    for col, delta in (("balance", cybucks), ("crystallines", crys), ("cybits", cybits)):
         if delta:
             cas_num("treasury", [("id", 1)], col, delta, allow_negative=True)
-    for cur, delta in (("cybucks", cybucks), ("pufb", pufb), ("aquilines", aquilines), ("cybit", cybits)):
+    for cur, delta in (("cybucks", cybucks), ("crys", crys), ("cybit", cybits)):
         if delta:
             try:
                 supabase.table("treasury_flows").insert({
@@ -587,22 +586,19 @@ def _run_economics(user):
         levy = DELIVERY_LEVY if DELIVERY_OPEN else 0
         rate = VAT_RATE + levy
         tax_cb = round((user.get("balance")   or 0) * rate, 2)
-        tax_pf = round((user.get("pufb")      or 0) * rate, 2)
-        tax_aq = round((user.get("aquilines") or 0) * rate, 2)
+        tax_cx = round((user.get("crystallines") or 0) * rate, 2)
         tax_cy = round((user.get("cybits")    or 0) * rate, 2)
         if tax_cb: updates["balance"]   = round((user.get("balance")   or 0) - tax_cb, 2)
-        if tax_pf: updates["pufb"]      = round((user.get("pufb")      or 0) - tax_pf, 2)
-        if tax_aq: updates["aquilines"] = round((user.get("aquilines") or 0) - tax_aq, 2)
+        if tax_cx: updates["crystallines"] = round((user.get("crystallines") or 0) - tax_cx, 2)
         if tax_cy: updates["cybits"]    = round((user.get("cybits")    or 0) - tax_cy, 2)
-        if tax_cb or tax_pf or tax_aq or tax_cy:
+        if tax_cb or tax_cx or tax_cy:
             share = (levy / rate) if rate else 0          # portion of the take that is the levy
             lev_cb = round(tax_cb * share, 2)
             if lev_cb:
                 treasury_add(cybucks=lev_cb, counterparty=username, kind="delivery_levy")
-            treasury_add(cybucks=round(tax_cb - lev_cb, 2), pufb=tax_pf,
-                         aquilines=tax_aq, cybits=tax_cy,
+            treasury_add(cybucks=round(tax_cb - lev_cb, 2), crys=tax_cx, cybits=tax_cy,
                          counterparty=username, kind="vat")
-            note = f"Paid monthly VAT: {tax_cb} CB / {tax_pf} PUFB / {tax_aq} AQ / {tax_cy} CBT to the Treasury."
+            note = f"Paid monthly VAT: {tax_cb} CB / {tax_cx} CRY / {tax_cy} CBT to the Treasury."
             if lev_cb:
                 note += f" ({lev_cb} CB of it the Cyvazon delivery levy.)"
             add_record(username, note)
@@ -671,13 +667,11 @@ def _run_economics(user):
         if due and now > due:
             # Seize EVERYTHING and record it
             seized_cb  = updates.get("balance", user.get("balance") or 0)
-            seized_pufb = user.get("pufb") or 0
-            seized_aq   = user.get("aquilines") or 0
-            treasury_add(cybucks=seized_cb, pufb=seized_pufb, aquilines=seized_aq,
+            seized_cx  = updates.get("crystallines", user.get("crystallines") or 0)
+            treasury_add(cybucks=seized_cb, crys=seized_cx,
                          counterparty=username, kind="seizure")
             updates["balance"] = 0
-            updates["pufb"] = 0
-            updates["aquilines"] = 0
+            updates["crystallines"] = 0
             supabase.table("loans").update({"defaulted": True}).eq("id", loan["id"]).execute()
             add_record(username,
                        f"DEFAULTED on a {loan['amount']} CB loan. All assets seized by the Treasury.")
@@ -761,8 +755,7 @@ def public_user(user):
     return {
         "username":    user["username"],
         "balance":     user.get("balance") or 0,
-        "pufb":        user.get("pufb") or 0,
-        "aquilines":   user.get("aquilines") or 0,
+        "crystallines": user.get("crystallines") or 0,
         "cybits":      user.get("cybits") or 0,
         "designation": user.get("designation") or "Citizen",
         "avatar":      user.get("avatar"),
@@ -1474,12 +1467,11 @@ def company_founders(c):
 
 
 def user_net_worth(username):
-    u = supabase.table("cybucks").select("balance,pufb,aquilines,cybits").eq("username", username).execute().data
+    u = supabase.table("cybucks").select("balance,crystallines,cybits").eq("username", username).execute().data
     if not u:
         return 0
     u = u[0]
-    nw = (u.get("balance") or 0) + (u.get("pufb") or 0) * CYBUCK_VALUE["pufb"] \
-        + (u.get("aquilines") or 0) * CYBUCK_VALUE["aquilines"] \
+    nw = (u.get("balance") or 0) + (u.get("crystallines") or 0) * CYBUCK_VALUE["crys"] \
         + (u.get("cybits") or 0) * CYBUCK_VALUE["cybit"]
     hs = supabase.table("holdings").select("shares,company_id").eq("username", username).execute().data or []
     for h in hs:
@@ -1540,6 +1532,25 @@ def robots():
         body += f"Disallow: {p}\n"
     body += "Allow: /\nSitemap: https://cyvathon.onrender.com/sitemap.xml\n"
     return app.response_class(body, mimetype="text/plain")
+
+
+@app.route("/manifest.webmanifest")
+def web_manifest():
+    """What a phone reads to install Cyvathon as an app: name, icons, colours."""
+    resp = app.send_static_file("manifest.webmanifest")
+    resp.mimetype = "application/manifest+json"
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
+
+
+@app.route("/sw.js")
+def service_worker():
+    """The app's service worker. Served from the root rather than /static,
+    because a service worker only looks after pages at or below its own path."""
+    resp = app.send_static_file("sw.js")
+    resp.mimetype = "application/javascript"
+    resp.headers["Cache-Control"] = "no-cache"        # updates reach phones straight away
+    return resp
 
 
 @app.route("/")
@@ -1838,8 +1849,7 @@ def register():
         "username":    username,
         "password":    hashed,
         "balance":     STARTING_GRANT,
-        "pufb":        STARTING_GRANT,
-        "aquilines":   STARTING_GRANT,
+        "crystallines": STARTING_GRANT,
         "cybits":      STARTING_GRANT,
         "designation": designation,
         "last_tax":    _now().isoformat(),
@@ -1904,8 +1914,8 @@ def register():
     session.permanent = True
     session["username"] = username
     new_user = {
-        "username": username, "balance": STARTING_GRANT, "pufb": STARTING_GRANT,
-        "aquilines": STARTING_GRANT, "cybits": STARTING_GRANT, "designation": designation, "company_id": None
+        "username": username, "balance": STARTING_GRANT, "crystallines": STARTING_GRANT,
+        "cybits": STARTING_GRANT, "designation": designation, "company_id": None
     }
     return jsonify(success=True, user=public_user(new_user), admin=is_treasury_admin(new_user), cia=is_cia(new_user))
 
@@ -2201,10 +2211,9 @@ def _transferable_value(sender):
     (make accounts, funnel the free grant to one account, repeat) and works
     across all three currencies, so converting first doesn't bypass it."""
     wealth = ((sender.get("balance") or 0)
-              + (sender.get("pufb") or 0) * CYBUCK_VALUE["pufb"]
-              + (sender.get("aquilines") or 0) * CYBUCK_VALUE["aquilines"]
+              + (sender.get("crystallines") or 0) * CYBUCK_VALUE["crys"]
               + (sender.get("cybits") or 0) * CYBUCK_VALUE["cybit"])
-    grant_locked = STARTING_GRANT * (1 + CYBUCK_VALUE["pufb"] + CYBUCK_VALUE["aquilines"] + CYBUCK_VALUE["cybit"])
+    grant_locked = STARTING_GRANT * (1 + CYBUCK_VALUE["crys"] + CYBUCK_VALUE["cybit"])
     return wealth - grant_locked - _outstanding_loan(sender["username"])
 
 
@@ -2258,8 +2267,8 @@ def transfer():
 @app.route("/convert", methods=["POST"])
 @limiter.limit("30/minute")
 def convert():
-    """Convert between cybucks / pufb / aquilines.
-       1 Cybuck = 1 Pufferbuck = 10 Aquilines."""
+    """Convert between cybucks / crystallines / cybits.
+       1 Cybuck = 1 Crystalline = 50 Cybits."""
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
@@ -2303,20 +2312,20 @@ def treasury_data():
     # Treasury is public to all citizens (read-only).
 
     t = get_treasury()
-    reserves = {"cybucks": t["balance"] or 0, "pufb": t["pufb"] or 0,
-                "aquilines": t["aquilines"] or 0, "cybit": t.get("cybits") or 0}
+    reserves = {"cybucks": t["balance"] or 0, "crys": t.get("crystallines") or 0,
+                "cybit": t.get("cybits") or 0}
 
     # --- Money supply: what citizens hold + what the Treasury holds ---
     # Banned accounts are frozen — exclude their currency and holder count.
-    citizens = supabase.table("cybucks").select("balance,pufb,aquilines,cybits,banned").execute().data or []
-    held = {"cybucks": 0.0, "pufb": 0.0, "aquilines": 0.0, "cybit": 0.0}
+    citizens = supabase.table("cybucks").select("balance,crystallines,cybits,banned").execute().data or []
+    held = {"cybucks": 0.0, "crys": 0.0, "cybit": 0.0}
     holders = 0
     for c in citizens:
         if c.get("banned"):
             continue
-        cb, pf, aq, cy = (c.get("balance") or 0), (c.get("pufb") or 0), (c.get("aquilines") or 0), (c.get("cybits") or 0)
-        held["cybucks"] += cb; held["pufb"] += pf; held["aquilines"] += aq; held["cybit"] += cy
-        if cb or pf or aq or cy:
+        cb, cx, cy = (c.get("balance") or 0), (c.get("crystallines") or 0), (c.get("cybits") or 0)
+        held["cybucks"] += cb; held["crys"] += cx; held["cybit"] += cy
+        if cb or cx or cy:
             holders += 1
     supply = {k: round(held[k] + reserves[k], 2) for k in reserves}
 
@@ -2325,9 +2334,10 @@ def treasury_data():
     def totals(kind):
         rows = supabase.table("treasury_flows").select("currency,amount") \
             .eq("kind", kind).gte("created_at", year_start).execute().data or []
-        out = {"cybucks": 0.0, "pufb": 0.0, "aquilines": 0.0, "cybit": 0.0}
+        out = {"cybucks": 0.0, "crys": 0.0, "cybit": 0.0}
         for r in rows:
-            out[r["currency"]] = round(out.get(r["currency"], 0) + (r["amount"] or 0), 2)
+            if r["currency"] in out:      # withdrawn currencies stay in the ledger, not the totals
+                out[r["currency"]] = round(out[r["currency"]] + (r["amount"] or 0), 2)
         return out
 
     flows = supabase.table("treasury_flows").select("*") \
@@ -2796,10 +2806,9 @@ def portfolio_data():
             "founder": c["founder"], "is_founder": me in company_founders(c),
         })
     holdings.sort(key=lambda x: -x["market_value"])
-    cash = {"cybucks": user.get("balance") or 0, "pufb": user.get("pufb") or 0,
-            "aquilines": user.get("aquilines") or 0, "cybits": user.get("cybits") or 0}
-    cash_cb = round(cash["cybucks"] + cash["pufb"] * CYBUCK_VALUE["pufb"]
-                    + cash["aquilines"] * CYBUCK_VALUE["aquilines"]
+    cash = {"cybucks": user.get("balance") or 0, "crystallines": user.get("crystallines") or 0,
+            "cybits": user.get("cybits") or 0}
+    cash_cb = round(cash["cybucks"] + cash["crystallines"] * CYBUCK_VALUE["crys"]
                     + cash["cybits"] * CYBUCK_VALUE["cybit"], 2)
     return jsonify(success=True, holdings=holdings,
                    market_total=round(market_total, 2), book_total=round(book_total, 2),
@@ -3071,8 +3080,8 @@ def company_info(cid):
     trades = supabase.table("trades").select("created_at,price").eq("company_id", cid) \
         .order("created_at").limit(50).execute().data or []
     history = [{"t": t["created_at"], "p": t["price"]} for t in trades]
-    net_worth = round((c.get("balance") or 0) + (c.get("pufb") or 0) * CYBUCK_VALUE["pufb"]
-                      + (c.get("aquilines") or 0) * CYBUCK_VALUE["aquilines"], 2)
+    net_worth = round((c.get("balance") or 0) + (c.get("crystallines") or 0) * CYBUCK_VALUE["crys"]
+                      + (c.get("cybits") or 0) * CYBUCK_VALUE["cybit"], 2)
 
     return jsonify(
         success=True,
@@ -3081,7 +3090,7 @@ def company_info(cid):
             "description": c.get("description", ""), "founder": c["founder"],
             "cofounders": [x for x in founders if x != c["founder"]],
             "balance": c.get("balance") or 0,
-            "pufb": c.get("pufb") or 0, "aquilines": c.get("aquilines") or 0,
+            "crystallines": c.get("crystallines") or 0, "cybits": c.get("cybits") or 0,
             "is_public": c.get("is_public", False), "shares": shares,
             "last_price": lp, "ipo_price": c.get("ipo_price") or 0,
             "market_cap": round(lp * shares, 2),
@@ -5486,7 +5495,7 @@ def economy():
         return {
             "success": True, "gdp": compute_gdp(), "treasury": t.get("balance") or 0,
             "citizens": citizen_count, "companies": companies.count or 0,
-            "rates": {"pufb_per_cybuck": PUFB_PER_CYBUCK, "aquilines_per_pufb": AQUILINES_PER_PUFB},
+            "rates": {"crys_per_cybuck": CRYS_PER_CYBUCK, "cybits_per_cybuck": CYBITS_PER_CYBUCK},
         }
     return jsonify(cached_json("economy", 45, build))
 
@@ -6534,18 +6543,17 @@ def leaderboard_data():
         return jsonify(success=False, error="Not logged in"), 401
     try:
         cits = supabase.table("cybucks") \
-            .select("username,balance,pufb,aquilines,cybits,banned,avatar,referred_by") \
+            .select("username,balance,crystallines,cybits,banned,avatar,referred_by") \
             .execute().data or []
     except Exception:      # avatar / referred_by columns not migrated yet
         cits = supabase.table("cybucks") \
-            .select("username,balance,pufb,aquilines,cybits,banned").execute().data or []
+            .select("username,balance,crystallines,cybits,banned").execute().data or []
     avatar = {c["username"]: c.get("avatar") for c in cits}
     active = [c for c in cits if not c.get("banned")]
 
     def wealth(c):
         return round((c.get("balance") or 0)
-                     + (c.get("pufb") or 0) * CYBUCK_VALUE["pufb"]
-                     + (c.get("aquilines") or 0) * CYBUCK_VALUE["aquilines"]
+                     + (c.get("crystallines") or 0) * CYBUCK_VALUE["crys"]
                      + (c.get("cybits") or 0) * CYBUCK_VALUE["cybit"], 2)
 
     richest = sorted(active, key=lambda c: -wealth(c))[:10]
@@ -7224,7 +7232,7 @@ ABOUT CYVATHON — a micronation with a live economy and an elected government, 
 
 HISTORY & TERRITORY: Cyvathon was founded on 26 May 2025 and its website went live five days later, on 31 May 2025. It signed a treaty with Crystonia on 14 June 2026. On 2 September 2026 the Treaty of Anti-Anarchism made class 8E at TISB the Republic's first territory — by the unanimous agreement of everyone in the class, held by their consent and never by conquest, and any resident can withdraw at any time — so Cyvathon now holds REAL territory and is no longer a nation of the web alone. The full record is at /timeline, and the President can add to it. (Note: the five in-world states — Neonhaven, Cryptvale, Silica Plains, Portus Mare and Aetheris — are separate from this; 8E is the nation's actual ground.)
 
-CURRENCIES: The Cybuck (CB) is the main currency. Pegs: 1 CB = 1 Pufferbuck (PUFB) = 10 Aquilines (AQ) = 50 Cybits (CBT). Cybits are the small "change" of a Cybuck — fractional Cybucks are automatically kept as Cybits so Cybuck balances stay whole. New citizens receive 100 of each currency.
+CURRENCIES: The Cybuck (CB) is the main currency. There are exactly three currencies. Pegs: 1 CB = 1 Crystalline (CRY) = 50 Cybits (CBT). Crystallines come from our ally Crystonia (1:1 with the Cybuck). Pufferbucks and Aquilines were withdrawn in September 2026 because of the war; every holding was turned into Crystallines at full value (1 Pufferbuck = 1 Crystalline, 10 Aquilines = 1 Crystalline), and every citizen was given 100 Crystallines by the Treasury. If asked about Pufferbucks or Aquilines, explain this. Cybits are the small "change" of a Cybuck — fractional Cybucks are automatically kept as Cybits so Cybuck balances stay whole. New citizens receive 100 of each currency.
 
 MONEY — the Bank (/bank): send money to other citizens, convert between the four currencies, a Savings account (5% monthly interest), Government Bonds (+10% after 30 days), and Loans up to 5000 CB (/loans). A 10% VAT is collected monthly into the Treasury, plus a 5% Cyvazon delivery levy on top while the delivery service is running — that levy is what keeps delivery free for everyone. Borrowed money and your welcome grant can't be transferred away — only money you've earned. All these rates are set by the President and can change.
 
@@ -7240,7 +7248,9 @@ INTERESTS: when you sign up (and on your ID Card) you pick what you love to do. 
 
 GOVERNMENT: a President leads the nation, with a Vice President (currently Srikrish) at their side — named by the President, standing in for them when asked, but holding none of the President's powers by right. The Chancellor (currently Arjun Soni) leads the Cabinet; the office replaced the old Prime Minister. The Chancellor and the Judge are chosen by national vote (/voting), which the President convenes, and until one is held the President may name a Chancellor. A national presidential vote is held once every six years. The Legislature (/legislature) is where citizens table and vote on bills — any citizen can table one, and with more Ayes than Nays it goes to the President for assent and becomes a numbered Act; the Gazette (/gazette) records laws and decrees; the National Court (/court) rules on cases; report a crime with an FIR (/fir); Ministries (/ministries) run departments with budgets; the Treasury (/treasury) holds national funds and anyone can inspect it. Foreign Affairs (/foreign) tracks Cyvathon's allied and rival micronations — fellow nations can register at signup and request an alliance, which the President confirms.
 
-THEME MUSIC: the round music button in the bottom-left corner of every page opens the theme-music player. Four soothing themes — Still Water (slow warm chords), Night Sky (soft chimes over a hum), Rainfall (gentle rain with a quiet chord) and Ocean (waves) — are composed live in the browser, so there's nothing to download and nothing copyrighted. Citizens can also upload their own songs (MP3, M4A, OGG, WAV and so on; up to 12 songs, 40 MB each). Those are kept only in that browser on that device, visible only to the citizen who added them, and are never uploaded to Cyvathon — so they won't appear on another device. Music is off until you press play. It remembers what was playing and where as you move between pages and picks it back up; if the browser needs a tap first, the button turns gold and the first tap anywhere resumes it. There's a volume slider, and with Cyvathon open in two tabs the music follows the one you're using.
+THE CYVATHON APP: Cyvathon can be installed as an app on a phone (or computer), with its own icon on the home screen, opening full-screen without the browser bar. On Android (Chrome) an "Install" offer appears, or use the browser menu's "Install app"; on iPhone/iPad open the site in Safari, tap Share, then "Add to Home Screen"; on a computer, "Get the app" appears in the menu. There's nothing to download from a store, and it always has every feature because it is the website. On a phone the menu becomes a bottom tab bar — Home, Bank, Chat, Alerts (with the unread count) and More, which opens every page grouped by colour, plus light/dark mode, installing and log out. With no connection it shows an offline screen and reconnects by itself; balances, chat and votes are never stored offline, so they're always live. Long-pressing the app icon offers shortcuts to the Bank, Chat, Cyvazon and your ID card.
+
+THEME MUSIC: the round music button in the bottom-left corner of every page opens the theme-music player (on a phone it's the music note in the top bar instead, next to your profile picture). Four soothing themes — Still Water (slow warm chords), Night Sky (soft chimes over a hum), Rainfall (gentle rain with a quiet chord) and Ocean (waves) — are composed live in the browser, so there's nothing to download and nothing copyrighted. Citizens can also upload their own songs (MP3, M4A, OGG, WAV and so on; up to 12 songs, 40 MB each). Those are kept only in that browser on that device, visible only to the citizen who added them, and are never uploaded to Cyvathon — so they won't appear on another device. Music is off until you press play. It remembers what was playing and where as you move between pages and picks it back up; if the browser needs a tap first, the button turns gold and the first tap anywhere resumes it. There's a volume slider, and with Cyvathon open in two tabs the music follows the one you're using.
 
 ACCOUNT SECURITY: passwords must be at least 8 characters, can't be your username, and can't be one of the commonly guessed ones. Change yours on your ID card (/profile) under Security — changing it signs out every other device. Five wrong passwords in a row lock an account for 15 minutes (the lock is on the account, so trying from another network doesn't help), and the citizen is told. You're also told when your account is signed in to from a place it hasn't been used from before, and your last ten sign-ins are listed on your ID card. Every citizen without a PIN is told once, the first time they sign in, what one is and where to set it; the President can also announce it to everyone from the admin panel ("Address the Nation" has a security preset). A PAYMENT PIN (4–6 digits, set under Security) is asked for on bank transfers over 500 CB — that threshold is a President-tunable lever — and five wrong PINs pause large payments for 15 minutes; setting or changing the PIN always needs your password. The President has a Security Desk in the admin panel: look up any citizen to see their sign-in history, sign every device out, issue a one-time password (the citizen must then set their own before they can do anything), or lock and unlock the account. If a citizen thinks their account was broken into: change the password immediately, then tell the President.
 
@@ -7260,7 +7270,7 @@ CYVAZON (/cyvazon) — the national delivery service. Delivery is FREE for whoev
 
 CABINET POWERS (/cabinet): ministers hold real authority, split two ways. DUTIES are delegated outright — the Defence Minister works the Armoury desk, the Transport Minister vets Cyvazon couriers, the Justice Minister rules on Cyvashield claims — and need no approval. POLICY is proposed, never imposed: a minister who wants to move a national lever (tax rate, GDP multiplier, courier wage, Armoury rate, insurance levy…) raises a proposal, and nothing changes until the President assents. A ministry picks up its brief from its name. Weekly salary: Vice President and Chancellor 1000 CB, Minister/Judge 900, Founder 800, Employee 500, Citizen 100; the President draws nothing because they hold the Treasury and spend it on the nation. Couriers draw 500 CB on top of their salary.
 
-JUSTICE: the Court (/court) can fine a citizen and jail them, for up to 365 days; the elected Judge presides, and the President may also sit. The President can also jail a citizen by order without a case, for a stated reason and up to 365 days — it goes on the public record and counts as a conviction, and the Constitution (Article IV) names this power and its limits so nobody is surprised by it. A jailed citizen can only reach the jail page (/jail) until their sentence is served. Convictions are recorded on a criminal record and bar a citizen from standing for office; the President can pardon. Defaulting on a loan means the Treasury takes ALL your Cybucks, Pufferbucks and Aquilines — say so plainly if asked about loans. Ministry seats are filled by application (/ministries) — once enough eligible citizens apply, an election opens automatically.
+JUSTICE: the Court (/court) can fine a citizen and jail them, for up to 365 days; the elected Judge presides, and the President may also sit. The President can also jail a citizen by order without a case, for a stated reason and up to 365 days — it goes on the public record and counts as a conviction, and the Constitution (Article IV) names this power and its limits so nobody is surprised by it. A jailed citizen can only reach the jail page (/jail) until their sentence is served. Convictions are recorded on a criminal record and bar a citizen from standing for office; the President can pardon. Defaulting on a loan means the Treasury takes ALL your Cybucks and Crystallines — say so plainly if asked about loans. Ministry seats are filled by application (/ministries) — once enough eligible citizens apply, an election opens automatically.
 
 GROW CYVATHON: invite friends via /invite — you earn 500 CB for every friend who joins on your link and gets approved by the President. New signups are reviewed and approved by the President before they can log in, to keep bad actors out.
 """
@@ -7271,8 +7281,8 @@ def _ai_context(user):
         return "\nThe person asking is a guest (not logged in)."
     return (f"\nYou are helping the citizen {user['username']} "
             f"(role: {user.get('designation', 'Citizen')}). Their balances: "
-            f"{user.get('balance', 0)} CB, {user.get('pufb', 0)} PUFB, "
-            f"{user.get('aquilines', 0)} AQ, {user.get('cybits', 0)} Cybits. "
+            f"{user.get('balance', 0)} CB, {user.get('crystallines', 0)} Crystallines, "
+            f"{user.get('cybits', 0)} Cybits. "
             f"Address them by name when natural.")
 
 
@@ -11487,12 +11497,13 @@ def _wr_count(table, filters=(), win=None, time_col="created_at"):
 
 
 def _wr_cb(amount, currency):
-    """Any of the four currencies, in Cybuck value."""
+    """Any currency, in Cybuck value — including the withdrawn Pufferbucks and
+    Aquilines, which still turn up in this year's history."""
     cur = (currency or "cybucks").lower()
     if cur == "cybits":
         cur = "cybit"
     try:
-        return float(amount or 0) * CYBUCK_VALUE.get(cur, 0.0)
+        return float(amount or 0) * CYBUCK_VALUE.get(cur, {"pufb": 1.0, "aquilines": 0.1}.get(cur, 0.0))
     except (TypeError, ValueError):
         return 0.0
 

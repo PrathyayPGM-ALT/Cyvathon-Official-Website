@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Leaderboards · Cyvathon" />
@@ -35,7 +40,7 @@
     .board{ max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:.6rem; }
     .lbrow{ display:flex; align-items:center; gap:1rem; background:var(--panel); border:1px solid var(--panel-border);
       border-radius:14px; padding:.85rem 1.1rem; transition:.18s; }
-    .lbrow:hover{ transform:translateX(3px); border-color:rgba(88,196,255,.35); }
+    .lbrow:hover{ transform:translateX(3px); border-color:rgba(var(--m),.35); }
     .lbrow.me{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
     .rank{ width:2rem; text-align:center; font-weight:800; font-size:1.1rem; color:var(--muted); flex-shrink:0; }
     .lbrow.top1 .rank{ color:#ffce56; } .lbrow.top2 .rank{ color:#cdd6e0; } .lbrow.top3 .rank{ color:#e8a06a; }

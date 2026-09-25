@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Cyvathon Stock Exchange" />
@@ -27,6 +32,9 @@
   <link rel="stylesheet" href="/static/theme.css">
   <style>
     table{ width:100%; border-collapse:collapse; }
+    /* On a phone the market table is wider than the screen: let it scroll
+       sideways inside its panel instead of widening the whole page. */
+    @media(max-width:600px){ .panel > table{ display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; } }
     th,td{ text-align:left; padding:.7rem .6rem; border-bottom:1px solid rgba(255,255,255,.06); font-size:.92rem; }
     th{ color:var(--muted); text-transform:uppercase; font-size:.72rem; letter-spacing:1px; }
     .sector{ color:var(--accent); font-size:.72rem; letter-spacing:1px; }

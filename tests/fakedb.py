@@ -139,7 +139,7 @@ class FakeSupabase:
             "notifications": {"read": False},
             # get_treasury() inserts a bare {"id": 1}; the real table fills the
             # rest in from its column defaults, so this does too.
-            "treasury": {"balance": 0, "pufb": 0, "aquilines": 0, "cybits": 0, "gdp": 500000},
+            "treasury": {"balance": 0, "crystallines": 0, "cybits": 0, "gdp": 500000},
         }
 
     def table(self, name): return _Table(self, name)

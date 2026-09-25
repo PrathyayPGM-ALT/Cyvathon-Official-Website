@@ -72,9 +72,11 @@ CHAPTERS = [
     ]),
     ("CHAPTER 2 — MONEY", [
         ("Legal tender",
-         "The lawful currencies are the Cybuck (CB), the Pufferbuck (PUFB), the Aquiline (AQ) "
-         "and the Cybit (CBT). One Cybuck equals one Pufferbuck, ten Aquilines and fifty "
-         "Cybits. Cybits are the small change of a Cybuck and are kept automatically."),
+         "The lawful currencies are the Cybuck (CB), the Crystalline (CRY) and the Cybit "
+         "(CBT). One Cybuck equals one Crystalline and fifty Cybits. Cybits are the small "
+         "change of a Cybuck and are kept automatically. Crystallines come from our ally "
+         "Crystonia. Pufferbucks and Aquilines were withdrawn in September 2026 and turned "
+         "into Crystallines at full value."),
         ("The welcome grant",
          "Every new citizen receives one hundred (100) of each currency. The grant cannot be "
          "sent to anyone else — it is yours to start with, not to give away."),
@@ -122,7 +124,7 @@ CHAPTERS = [
          "you have earned can."),
         ("Falling behind",
          "A loan not repaid by the end of its term is called in: the Treasury takes your "
-         "Cybucks, Pufferbucks and Aquilines in settlement — all of them, not only what you "
+         "Cybucks and Crystallines in settlement — all of them, not only what you "
          "owe — and the default goes on your record. It is the hardest rule in the Republic, "
          "so do not borrow what you cannot repay in thirty days. While a loan is still owed you "
          "may not stand for office; once it is repaid or called in, you may."),

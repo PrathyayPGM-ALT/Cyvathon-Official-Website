@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Card Packets · Cyvathon" />
@@ -146,7 +151,7 @@
     .collectors{ display:grid; gap:.9rem; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); }
     .col-c{ display:flex; align-items:center; gap:.8rem; padding:.9rem 1rem; border-radius:14px; cursor:pointer;
       background:var(--panel); border:1px solid var(--panel-border); transition:.2s; text-align:left; }
-    .col-c:hover{ transform:translateY(-3px); border-color:rgba(88,196,255,.4); }
+    .col-c:hover{ transform:translateY(-3px); border-color:rgba(var(--m),.4); }
     .col-c .av{ width:42px; height:42px; border-radius:50%; flex:none; display:grid; place-items:center;
       background:linear-gradient(135deg,var(--accent),var(--accent-deep)); color:#fff; font-weight:700; }
     .col-c b{ display:block; font-size:.95rem; }
@@ -157,7 +162,7 @@
     .res-c{ display:flex; gap:.7rem; align-items:center; padding:.6rem .7rem; border-radius:12px; cursor:pointer;
       background:var(--panel); border:1px solid var(--panel-border); transition:.15s; }
     .res-c:hover{ border-color:var(--accent); }
-    .res-c.on{ border-color:var(--accent); background:rgba(88,196,255,.1); }
+    .res-c.on{ border-color:var(--accent); background:rgba(var(--m),.1); }
     .res-c img{ width:44px; height:44px; border-radius:9px; object-fit:cover; background:#0b1019; flex:none; }
     .res-c b{ display:block; font-size:.86rem; }
     .res-c span{ font-size:.72rem; color:var(--muted); }
@@ -196,7 +201,7 @@
     .picklist{ display:flex; flex-wrap:wrap; gap:.4rem; max-height:190px; overflow:auto; }
     .pick{ padding:.35rem .6rem; border-radius:9px; cursor:pointer; font-size:.76rem;
       background:#0b1019; border:1px solid var(--panel-border); }
-    .pick.on{ border-color:var(--accent); background:rgba(88,196,255,.14); }
+    .pick.on{ border-color:var(--accent); background:rgba(var(--m),.14); }
     .empty{ color:var(--muted); text-align:center; padding:2.2rem 1rem; grid-column:1/-1; }
 
     @media (prefers-reduced-motion: reduce){

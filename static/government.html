@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Cyvathon Government" />
@@ -28,12 +33,12 @@
   <style>
     .gov-card{ text-align:center; }
     .gov-card .seat{ font-size:2.3rem; color:var(--accent); margin-bottom:.6rem;
-      filter:drop-shadow(0 0 12px rgba(88,196,255,.35)); }
+      filter:drop-shadow(0 0 12px rgba(var(--m),.35)); }
     .gov-card .pos{ color:var(--muted); text-transform:uppercase; letter-spacing:1px; font-size:.78rem; }
     .gov-card .holder{ font-size:1.35rem; font-weight:700; color:var(--text); margin-top:.3rem; }
     .gov-card .holder a{ color:var(--text); }
     .gov-card .holder a:hover{ color:var(--accent); }
-    .president{ grid-column:1/-1; background:linear-gradient(135deg,rgba(88,196,255,.12),rgba(255,255,255,.02)); }
+    .president{ grid-column:1/-1; background:linear-gradient(135deg,rgba(var(--m),.12),rgba(255,255,255,.02)); }
     .min-card .seat{ font-size:1.9rem; }
     .min-card .mandate{ color:var(--muted); font-size:.85rem; margin-top:.5rem; }
     .min-card .budget{ font-size:.78rem; color:var(--accent); margin-top:.4rem; }

@@ -39,7 +39,7 @@
   --grad-text:linear-gradient(90deg,var(--accent),var(--cyan));
 
   /* --- the four currencies, so money reads consistently everywhere --- */
-  --c-cybucks:#58c4ff; --c-pufb:#ffce56; --c-aquilines:#1fd6a6; --c-cybits:#a78bfa;
+  --c-cybucks:#58c4ff; --c-crys:#3fe0d0; --c-cybits:#a78bfa;
 
   --text:#e8eef6;
   --text-dim:#c3d0e0;
@@ -49,6 +49,9 @@
   --shadow:0 18px 50px rgba(3,8,20,.55);
   --shadow-card:0 10px 30px rgba(3,8,20,.35);
   --glow-accent:0 10px 30px rgba(58,160,238,.30);
+
+  /* --- the page's mood: its colour as an "r,g,b" triplet (see PAGE MOODS) --- */
+  --m:88,196,255; --m2:34,211,238; --btn-ink:#04223b;
 }
 
 html{ scroll-behavior:smooth; }
@@ -67,7 +70,7 @@ body{
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
 
-::selection{ background:rgba(88,196,255,.30); color:#fff; }
+::selection{ background:rgba(var(--m),.30); color:#fff; }
 
 /* scrollbar */
 *::-webkit-scrollbar{ width:10px; height:10px; }
@@ -136,9 +139,9 @@ nav{ max-width:1250px; margin:auto; display:flex; justify-content:space-between;
   box-shadow:0 1px 0 rgba(255,255,255,.05) inset, var(--shadow-card);
   padding:2.05rem; transition:transform .22s ease, border-color .22s, box-shadow .22s; }
 .card:hover{ transform:translateY(-6px); border-color:var(--panel-border-2);
-  box-shadow:0 18px 42px rgba(3,8,20,.5), 0 0 0 1px rgba(88,196,255,.22); }
+  box-shadow:0 18px 42px rgba(3,8,20,.5), 0 0 0 1px rgba(var(--m),.22); }
 .card .icon{ font-size:2.1rem; color:var(--accent); margin-bottom:.85rem;
-  filter:drop-shadow(0 0 14px rgba(88,196,255,.45)); }
+  filter:drop-shadow(0 0 14px rgba(var(--m),.45)); }
 .card h3{ color:#eaf2fc; margin-bottom:.45rem; font-weight:600; letter-spacing:-.2px; }
 .card p{ color:var(--muted); font-size:.92rem; }
 
@@ -149,15 +152,15 @@ input,select,textarea{ background:rgba(5,10,22,.72); color:var(--text); border:1
 input::placeholder,textarea::placeholder{ color:#6b7d94; }
 input:hover,select:hover,textarea:hover{ border-color:rgba(140,180,255,.34); }
 input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(88,196,255,.20); background:rgba(9,17,32,.9); }
+  box-shadow:0 0 0 3px rgba(var(--m),.20); background:rgba(9,17,32,.9); }
 /* A label above a field is worth more than a placeholder that vanishes. */
 label{ display:block; font-size:.8rem; color:var(--muted); font-weight:600; letter-spacing:.2px; }
 .hint{ font-size:.78rem; color:var(--muted); margin-top:.35rem; line-height:1.5; }
 
 button{ border:none; cursor:pointer; font-weight:600; letter-spacing:.2px;
-  background:var(--grad-accent); color:#04223b;
+  background:var(--grad-accent); color:var(--btn-ink);
   box-shadow:var(--glow-accent); }
-button:hover{ transform:translateY(-1px); box-shadow:0 13px 30px rgba(58,160,238,.45); filter:brightness(1.07); }
+button:hover{ transform:translateY(-1px); box-shadow:0 13px 30px rgba(var(--m),.45); filter:brightness(1.07); }
 button:active{ transform:translateY(0) scale(.99); }
 /* Without this a disabled button still looks and feels clickable. */
 button:disabled,button[disabled]{ opacity:.5; cursor:not-allowed; filter:grayscale(.35);
@@ -168,16 +171,16 @@ button.success{ background:var(--grad-green); color:#04231a; box-shadow:0 8px 22
 button.warn{ background:var(--grad-warm); color:#2b1d02; box-shadow:0 8px 22px rgba(255,159,67,.3); }
 button.cyan{ background:var(--grad-cyan); color:#04222b; box-shadow:0 8px 22px rgba(34,211,238,.3); }
 button.violet{ background:var(--grad-violet); color:#1c1030; box-shadow:0 8px 22px rgba(167,139,250,.32); }
-button.ghost{ background:transparent; border:1px solid rgba(88,196,255,.45); color:var(--accent); box-shadow:none; }
-button.ghost:hover{ background:rgba(88,196,255,.12); box-shadow:none; }
+button.ghost{ background:transparent; border:1px solid rgba(var(--m),.45); color:var(--accent); box-shadow:none; }
+button.ghost:hover{ background:rgba(var(--m),.12); box-shadow:none; }
 .row{ display:flex; gap:12px; }
 .row>*{ flex:1; }
 
 /* ---- BADGES / PILLS ---- */
 .pill{ display:inline-block; padding:.4rem 1.05rem; border-radius:30px; font-size:.85rem; font-weight:500;
-  border:1px solid rgba(88,196,255,.34); color:var(--accent); background:rgba(88,196,255,.09); }
+  border:1px solid rgba(var(--m),.34); color:var(--accent); background:rgba(var(--m),.09); }
 .tag{ font-size:.74rem; padding:.22rem .7rem; border-radius:20px; font-weight:600;
-  background:rgba(88,196,255,.14); color:var(--accent); }
+  background:rgba(var(--m),.14); color:var(--accent); }
 /* Status colours, so "good" and "bad" don't both come out blue. */
 .tag.good,.pill.good{ background:rgba(31,214,166,.15); color:var(--green); border-color:rgba(31,214,166,.35); }
 .tag.bad,.pill.bad{ background:rgba(255,93,108,.15); color:var(--red); border-color:rgba(255,93,108,.35); }
@@ -187,7 +190,7 @@ button.ghost:hover{ background:rgba(88,196,255,.12); box-shadow:none; }
 /* ---- CURRENCY STRIP ---- */
 .balances{ display:flex; gap:1.3rem; flex-wrap:wrap; justify-content:center; margin:1.7rem 0; }
 .bal{ flex:1; min-width:130px; text-align:center; padding:1.15rem 1rem; border-radius:14px;
-  background:linear-gradient(170deg,rgba(88,196,255,.13),rgba(120,170,255,.02));
+  background:linear-gradient(170deg,rgba(var(--m),.13),rgba(120,170,255,.02));
   border:1px solid var(--panel-border); transition:transform .2s, border-color .2s, box-shadow .2s; }
 .bal:hover{ transform:translateY(-3px); border-color:var(--panel-border-2);
   box-shadow:0 10px 26px rgba(3,8,20,.4); }
@@ -206,7 +209,7 @@ tbody tr:hover{ background:rgba(120,170,255,.05); }
 .empty{ color:var(--muted); text-align:center; padding:2.4rem 1rem; }
 
 .chat-img{ max-width:220px; max-height:220px; border-radius:8px; margin:.2rem 0; display:block; }
-.mention{ background:rgba(88,196,255,.18); color:var(--accent); border-radius:5px; padding:0 3px; font-weight:600; }
+.mention{ background:rgba(var(--m),.18); color:var(--accent); border-radius:5px; padding:0 3px; font-weight:600; }
 .mention.me{ background:rgba(255,206,86,.26); color:var(--gold); }
 .small{ font-size:13px; color:var(--muted); margin-top:8px; }
 .muted{ color:var(--muted); }
@@ -242,11 +245,12 @@ html[data-theme="light"]{
   --violet:#6c4ed9; --violet2:#8b6bea;
   --text:#10243f; --text-dim:#2c3f5c; --muted:#566a83;
   --green:#0f9d72; --red:#e23b49; --gold:#c98a06; --orange:#d97a1a;
-  --c-cybucks:#1769c9; --c-pufb:#c98a06; --c-aquilines:#0f9d72; --c-cybits:#6c4ed9;
+  --c-cybucks:#1769c9; --c-crys:#0e9488; --c-cybits:#6c4ed9;
   --grad-text:linear-gradient(90deg,#1769c9,#0e8fb5);
   --shadow:0 16px 44px rgba(20,45,90,.16);
   --shadow-card:0 8px 24px rgba(20,45,90,.10);
   --glow-accent:0 8px 22px rgba(23,105,201,.26);
+  --m:23,105,201; --m2:14,143,181;
 }
 html[data-theme="light"] body{
   background:var(--bg);
@@ -293,3 +297,68 @@ html[data-theme="light"] ::selection{ background:rgba(23,105,201,.22); color:#0a
 @media(prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } html{ scroll-behavior:auto; } }
 @media(max-width:600px){ nav{ flex-direction:column; } .row{ flex-direction:column; }
   .section-title{ font-size:1.7rem; } .wrap{ padding:2.4rem 1.1rem; } }
+
+/* ============================================================
+   PAGE MOODS  —  <html data-mood="gold"> (set by app.js from the page)
+   Same navy Republic everywhere; what changes is the light in the room.
+   Each part of the nation takes the colour of its dashboard tile:
+   Government glows gold, Business emerald, Community violet, and so on.
+   A mood sets --m / --m2 (r,g,b triplets) and the accent; everything
+   that used to be hard-wired blue follows them. The header, the phone
+   tab bar and the menu sheet stay Cyvathon blue on every page.
+============================================================ */
+html[data-mood="gold"]    { --m:255,206,86;  --m2:255,159,67;  --accent:#ffce56; --accent2:#ffe08a; --btn-ink:#2b1d02; }
+html[data-mood="emerald"] { --m:31,214,166;  --m2:34,211,238;  --accent:#2ee0b0; --accent2:#7cf0cf; --btn-ink:#03261c; }
+html[data-mood="cyan"]    { --m:34,211,238;  --m2:88,196,255;  --accent:#3fdcf0; --accent2:#8ceaf8; --btn-ink:#03222b; }
+html[data-mood="violet"]  { --m:167,139,250; --m2:124,92,255;  --accent:#b9a2ff; --accent2:#d6c9ff; --btn-ink:#170c33; }
+html[data-mood="rose"]    { --m:255,93,108;  --m2:255,143,112; --accent:#ff7a86; --accent2:#ffb0b7; --btn-ink:#2e0409; }
+html[data-mood="pink"]    { --m:255,143,176; --m2:167,139,250; --accent:#ff8fb0; --accent2:#ffc3d4; --btn-ink:#33091a; }
+html[data-mood="orange"]  { --m:255,153,0;   --m2:255,206,86;  --accent:#ffa53d; --accent2:#ffca85; --btn-ink:#2b1600; }
+
+html[data-theme="light"][data-mood="gold"]    { --m:201,138,6;   --m2:217,122,26;  --accent:#a86f00; --accent2:#c98a06; }
+html[data-theme="light"][data-mood="emerald"] { --m:15,157,114;  --m2:14,143,181;  --accent:#0b8a63; --accent2:#0f9d72; }
+html[data-theme="light"][data-mood="cyan"]    { --m:14,143,181;  --m2:23,105,201;  --accent:#0e7fa3; --accent2:#0e8fb5; }
+html[data-theme="light"][data-mood="violet"]  { --m:108,78,217;  --m2:124,92,255;  --accent:#6c4ed9; --accent2:#8b6bea; }
+html[data-theme="light"][data-mood="rose"]    { --m:226,59,73;   --m2:230,110,70;  --accent:#d02f3e; --accent2:#e23b49; }
+html[data-theme="light"][data-mood="pink"]    { --m:201,58,106;  --m2:108,78,217;  --accent:#c93a6a; --accent2:#dd5a86; }
+html[data-theme="light"][data-mood="orange"]  { --m:196,106,0;   --m2:201,138,6;   --accent:#c46a00; --accent2:#d97a1a; }
+
+html[data-mood]{
+  --grad-accent:linear-gradient(135deg,rgb(var(--m)),rgb(var(--m2)));
+  --grad-text:linear-gradient(90deg,rgb(var(--m)),rgb(var(--m2)));
+  --glow-accent:0 10px 30px rgba(var(--m),.30);
+  --panel-border:rgba(var(--m),.17);
+  --panel-border-2:rgba(var(--m),.34);
+}
+html[data-mood] body{
+  background-image:
+    radial-gradient(1100px 620px at 50% -12%, rgba(var(--m),.20), transparent 62%),
+    radial-gradient(820px 560px at 100% 2%,  rgba(var(--m2),.13), transparent 58%),
+    radial-gradient(760px 560px at 0% 14%,   rgba(var(--m),.09), transparent 55%),
+    radial-gradient(900px 700px at 50% 108%, rgba(var(--m2),.12), transparent 62%);
+}
+html[data-theme="light"][data-mood] body{
+  background-image:
+    radial-gradient(1100px 620px at 50% -12%, rgba(var(--m),.16), transparent 62%),
+    radial-gradient(820px 560px at 100% 2%,  rgba(var(--m2),.10), transparent 58%),
+    radial-gradient(760px 560px at 0% 14%,   rgba(var(--m),.07), transparent 55%);
+}
+html[data-mood] .section-title{ text-shadow:0 0 42px rgba(var(--m),.38); }
+html[data-mood] .section-title::after{ width:88px; box-shadow:0 0 16px rgba(var(--m),.6); }
+html[data-mood]:not([data-theme="light"]) .panel,
+html[data-mood]:not([data-theme="light"]) .card{
+  background:linear-gradient(165deg,rgba(var(--m),.085),rgba(120,170,255,.02) 60%);
+  box-shadow:0 1px 0 rgba(var(--m),.16) inset, var(--shadow-card); }
+html[data-mood] .card:hover{ box-shadow:0 18px 42px rgba(3,8,20,.5), 0 0 0 1px rgba(var(--m),.3); }
+html[data-theme="light"][data-mood] .panel{ box-shadow:0 1px 2px rgba(20,45,90,.05), 0 10px 28px rgba(var(--m),.10); }
+html[data-mood] ::selection{ background:rgba(var(--m),.30); }
+
+/* Cyvathon's own chrome keeps the national blue on every page. */
+html[data-mood] header, html[data-mood] .cyv-tabbar, html[data-mood] .m-sheet{
+  --m:88,196,255; --m2:34,211,238; --accent:#58c4ff; --accent2:#8dd1ff; --btn-ink:#04223b;
+  --grad-accent:linear-gradient(135deg,#5ec5ff,#3aa0ee); --grad-text:linear-gradient(90deg,#58c4ff,#22d3ee);
+  --panel-border:rgba(140,180,255,.14); }
+html[data-theme="light"][data-mood] header, html[data-theme="light"][data-mood] .cyv-tabbar,
+html[data-theme="light"][data-mood] .m-sheet{
+  --m:23,105,201; --m2:14,143,181; --accent:#1769c9; --accent2:#3b8de4; --panel-border:rgba(15,50,110,.14);
+  --grad-text:linear-gradient(90deg,#1769c9,#0e8fb5); }

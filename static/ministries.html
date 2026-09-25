@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Ministries · Cyvathon" />
@@ -37,10 +42,10 @@
     .ctrl .row3{ display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-bottom:.5rem; }
     .ctrl input{ margin:0; width:auto; flex:1; min-width:120px; padding:.5rem .7rem; }
     .ctrl button{ margin:0; width:auto; padding:.5rem 1rem; font-size:.85rem; }
-    .tag-min{ font-size:.72rem; padding:.18rem .6rem; border-radius:20px; background:rgba(88,196,255,.12); color:var(--accent); }
+    .tag-min{ font-size:.72rem; padding:.18rem .6rem; border-radius:20px; background:rgba(var(--m),.12); color:var(--accent); }
 
     /* --- vacancy applications --- */
-    .vac{ border:1px solid rgba(88,196,255,.35); background:rgba(88,196,255,.05);
+    .vac{ border:1px solid rgba(var(--m),.35); background:rgba(var(--m),.05);
       border-radius:12px; padding:.9rem 1rem; margin-top:.9rem; }
     .vac h4{ margin:0 0 .4rem; font-size:.75rem; letter-spacing:1.2px;
       text-transform:uppercase; color:var(--accent); }

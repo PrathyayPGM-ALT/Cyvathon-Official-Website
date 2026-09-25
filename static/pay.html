@@ -12,6 +12,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Pay by Card · Cyvathon" />
@@ -70,8 +75,7 @@
           <input id="amount" type="number" min="0.01" step="0.01" placeholder="0.00">
           <select id="currency">
             <option value="cybucks">CB — Cybucks</option>
-            <option value="pufb">PB — Pufferbucks</option>
-            <option value="aquilines">AQ — Aquilines</option>
+            <option value="crys">CRY — Crystallines</option>
             <option value="cybit">cb — Cybits</option>
           </select>
         </div>
@@ -153,7 +157,7 @@
       ME = user;
       renderNav("/pay", user);
       document.getElementById("bal").textContent =
-        `${fmt(user.balance)} CB · ${fmt(user.pufb)} PB · ${fmt(user.aquilines)} AQ · ${fmt(user.cybits)} cb`;
+        `${fmt(user.balance)} CB · ${fmt(user.crystallines)} CRY · ${fmt(user.cybits)} cb`;
 
       const c = new URLSearchParams(location.search).get("c");
       if(c){

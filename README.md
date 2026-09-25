@@ -237,6 +237,75 @@ from TheSportsDB or the owner's own photo of the card in their hand. Update
 
 ---
 
+### 18. Page colours
+Every page keeps the same navy design, but each part of the Republic has its own
+colour, the one its dashboard tile wears. It tints the page's glow, buttons,
+headings and panel edges: Government gold, Business emerald, markets and tools
+cyan, writing and diplomacy violet, justice and defence rose, fun pink, Cyvazon
+orange. Money pages keep the national blue.
+
+| | |
+|---|---|
+| **Where** | `PAGE_MOOD` at the top of `static/app.js` sets `<html data-mood="…">` from the page's address; the colours are the **PAGE MOODS** block at the end of `static/theme.css`, with a light-mode version of each. |
+| **What stays blue** | The header, the logo, the phone tab bar and the menu sheet, on every page. |
+| **Left alone** | The dashboard, Wrapped, Cyvalend and the Registry, which have designs of their own. |
+| **Adding a page** | Put its name in the right list in `PAGE_MOOD`. In a page's own CSS, write `rgba(var(--m),.3)` rather than a fixed blue, so it follows the page's colour. |
+
+---
+
+### 17. Three currencies: Cybucks, Cybits and Crystallines
+Because of the war, **Pufferbucks and Aquilines were withdrawn in September 2026**.
+Cyvathon now has exactly three currencies:
+
+| Currency | Code | Worth |
+|---|---|---|
+| Cybuck (CB) | `cybucks` | 1 CB |
+| Crystalline (CRY) | `crys` | 1 CB, from our ally Crystonia |
+| Cybit (CBT) | `cybit` | 0.02 CB (50 = 1 CB) |
+
+**Run `migration_crystallines.sql` in Supabase *before* deploying this code.** The
+code reads a `crystallines` column that only the migration creates. The migration:
+- turns every Pufferbuck and Aquiline into Crystallines at full value
+  (1 PUFB = 1 CRY, 10 AQ = 1 CRY), for citizens, companies and the Treasury;
+- gives every citizen who isn't banned 100 Crystallines from the Treasury, logged as a grant;
+- re-prices market listings and Cyvapay links that were priced in the old money;
+- writes what each holder had and got to `currency_conversion`, adds a line to every
+  citizen's record and sends them a notification.
+
+It's safe to run twice: nobody is converted or granted twice. Old Pufferbuck and
+Aquiline entries stay in the ledgers as history, and Wrapped still values them.
+
+---
+
+### 16. The Cyvathon app
+Cyvathon installs as an app on phones and computers. It's a Progressive Web App:
+the app *is* the website, so it has every feature the moment it ships, with no
+separate codebase and no store review.
+
+| | |
+|---|---|
+| **Installing** | Android/Chrome: an "Install" offer appears a few seconds after signing in (dismissed offers stay quiet for 21 days), or use the browser menu. iPhone/iPad: Safari → Share → **Add to Home Screen**; the offer says exactly that. Computers: "Get the app" in the menu. |
+| **Icon & shortcuts** | `build_app_icons.py` redraws the site's mark at 192px and 512px, plus a full-bleed maskable version for Android. Long-pressing the icon offers Bank, Chat, Cyvazon and ID Card. |
+| **On a phone** | The stacked menu becomes a bottom **tab bar**: Home, Bank, Chat, Alerts (with the unread count) and **More**. More opens a sheet with every page grouped in the dashboard's colours, plus light/dark mode, install and log out. The sheet is built from the real menu each time it opens, so it can't fall out of step. Theme music moves from the floating button to a music note in the top bar, so nothing floats over the chat box. Desktop is unchanged. |
+| **Offline** | `sw.js` keeps only the app's own files (styles, scripts, icons) and an offline screen that reconnects by itself. It never stores balances, chat, votes or any other server data: those always go to the network, so money is always live. |
+
+`/manifest.webmanifest` and `/sw.js` are served from the site root (a service
+worker only covers pages at or below its own path). The manifest link and
+iPhone tags are in every page's `<head>`, except the Cyvapay checkout, which
+other websites send people to. The tab bar sits below every page pop-up, lifts
+notification toasts above itself, and hides during Wrapped. As a safety net,
+each top-level section of a page clips its own sideways overflow on phones
+(`overflow-x: clip`), so nothing can widen the screen and push **More** off the
+edge. Mobile Chrome ignores `overflow-x: hidden` on the page root for this, and
+`clip`, unlike `hidden`, keeps the sticky header working. No migration is needed. Tests: `python tests/test_mobile_app.py`.
+
+**Putting it in the Play Store:** paste `https://cyvathon.onrender.com` into
+[PWABuilder](https://www.pwabuilder.com), download the Android package, and
+upload it with a Google Play developer account (a one-time $25). PWABuilder
+gives you an `assetlinks.json` file, which has to be served at
+`/.well-known/assetlinks.json` so the app opens without a browser bar. The App
+Store needs a paid Apple developer account ($99 a year) and a Mac.
+
 ### 15. Theme music
 A floating music button in the bottom-left corner of every page with the nav
 opens a player, so citizens can have soothing music on while they use the site.

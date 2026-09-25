@@ -237,9 +237,11 @@ ARTICLES = [
              "forfeitures flow and from which every salary and public service is paid. Its "
              "holdings are published, and every citizen may read them at any time."),
             ("Currency",
-             "The lawful currencies are the Cybuck (CB), the Pufferbuck (PUFB), the Aquiline "
-             "(AQ) and the Cybit (CBT), pegged at one Cybuck to one Pufferbuck, ten Aquilines "
-             "and fifty Cybits. Cybits are the change of a Cybuck."),
+             "The lawful currencies are the Cybuck (CB), the Crystalline (CRY) and the Cybit "
+             "(CBT), pegged at one Cybuck to one Crystalline and fifty Cybits. Cybits are the "
+             "change of a Cybuck. The Crystalline is shared with our ally Crystonia. The "
+             "Pufferbuck and the Aquiline were withdrawn in September 2026, and every holding "
+             "of them was turned into Crystallines at full value."),
             ("Taxation",
              "A Value-Added Tax is levied monthly on every citizen's holdings, at a rate set by "
              "law and published — ten percent (10%) at the adoption of this Constitution — "
@@ -255,7 +257,7 @@ ARTICLES = [
              "A citizen may borrow up to five thousand (5,000) Cybucks from the Treasury, to be "
              "repaid within thirty (30) days. Borrowed money may not be sent away. A loan not "
              "repaid by the end of its term is called in: the Treasury takes the citizen's "
-             "Cybucks, Pufferbucks and Aquilines in settlement — the whole of them, not only the "
+             "Cybucks and Crystallines in settlement — the whole of them, not only the "
              "sum owed — and the default is entered on the record. This is the hardest rule in "
              "the Republic and it is written here so that no one borrows without knowing it. "
              "While a loan is still owed a citizen may not stand for office; once it is repaid "

@@ -12,6 +12,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Portfolio · Cyvathon" />
@@ -35,7 +40,7 @@
     .sc .s{ font-size:.72rem; color:var(--muted); margin-top:.2rem; }
     .hgrid{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); }
     .h{ background:var(--panel); border:1px solid var(--panel-border); border-radius:16px; padding:1.2rem 1.3rem; transition:.2s; }
-    .h:hover{ transform:translateY(-4px); border-color:rgba(88,196,255,.35); box-shadow:0 12px 30px rgba(0,0,0,.3); }
+    .h:hover{ transform:translateY(-4px); border-color:rgba(var(--m),.35); box-shadow:0 12px 30px rgba(0,0,0,.3); }
     .h .top{ display:flex; align-items:center; gap:.75rem; margin-bottom:.7rem; }
     .h .logo{ width:44px; height:44px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
       font-weight:800; font-size:1.15rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
@@ -45,8 +50,8 @@
     .h .rows .r .k{ color:var(--muted); }
     .h .mv{ color:var(--accent); font-weight:700; }
     .h a{ display:block; text-align:center; margin-top:.8rem; padding:.5rem; border-radius:10px; text-decoration:none;
-      background:var(--panel-2); color:var(--accent); border:1px solid rgba(88,196,255,.3); font-size:.85rem; font-weight:600; }
-    .h a:hover{ background:rgba(88,196,255,.12); }
+      background:var(--panel-2); color:var(--accent); border:1px solid rgba(var(--m),.3); font-size:.85rem; font-weight:600; }
+    .h a:hover{ background:rgba(var(--m),.12); }
     .empty{ text-align:center; padding:3rem 1rem; color:var(--muted); }
   </style>
 </head>

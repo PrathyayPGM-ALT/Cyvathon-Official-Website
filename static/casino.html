@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Casino · Cyvathon" />
@@ -38,7 +43,7 @@
     .pick{ display:flex; gap:.4rem; flex-wrap:wrap; justify-content:center; }
     .pick button{ margin:0; width:auto; padding:.4rem .8rem; font-size:.85rem; background:var(--panel-2);
       color:var(--text); border:1px solid var(--panel-border); box-shadow:none; }
-    .pick button.on{ background:linear-gradient(135deg,#5ec5ff,#3aa0ee); color:#04223b; border-color:transparent; }
+    .pick button.on{ background:var(--grad-accent); color:var(--btn-ink); border-color:transparent; }
     .res{ min-height:1.4em; font-weight:600; text-align:center; font-size:.92rem; }
 
     /* coin */

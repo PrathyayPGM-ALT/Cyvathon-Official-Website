@@ -11,6 +11,11 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Cyvathon" />
   <meta property="og:title" content="Invite Friends · Cyvathon" />
@@ -34,7 +39,7 @@
     .linkbox button{ width:auto; margin:0; padding:.7rem 1.3rem; white-space:nowrap; }
     .stats{ display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; margin:2rem auto; max-width:560px; }
     .stat{ flex:1; min-width:150px; text-align:center; padding:1.3rem; border-radius:16px;
-      background:linear-gradient(180deg,rgba(88,196,255,.08),rgba(255,255,255,.02)); border:1px solid var(--panel-border); }
+      background:linear-gradient(180deg,rgba(var(--m),.08),rgba(255,255,255,.02)); border:1px solid var(--panel-border); }
     .stat .v{ font-size:2rem; font-weight:800; color:var(--accent); }
     .stat .l{ font-size:.74rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:.2rem; }
     .steps{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); max-width:820px; margin:0 auto 2.4rem; }
