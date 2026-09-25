@@ -1225,6 +1225,11 @@ def registry_data():
     _reg_seed_if_empty()
     officer, prez = _reg_is_officer(user), is_treasury_admin(user)
     can_manage = officer or prez
+    if can_manage:
+        try:
+            _athena_daily_brief()      # a cleared reader opening the Registry files today's brief
+        except Exception:
+            pass
 
     try:
         files = supabase.table("registry_files").select("*").order("id", desc=True).limit(250).execute().data or []
@@ -4836,6 +4841,10 @@ def athena_data():
         return jsonify(success=False, error="Not logged in"), 401
     if not is_cia(user):
         return jsonify(success=False, error="CLASSIFIED — clearance denied"), 403
+    try:
+        _athena_daily_brief()      # file today's brief if a cleared officer is the first in
+    except Exception:
+        pass
     roster = supabase.table("cia_agents").select("*").order("created_at").execute().data or []
     firs = supabase.table("firs").select("*").order("created_at", desc=True).limit(100).execute().data or []
     firs = [{**f, "log": _fir_log(f["id"], agent_view=True)} for f in firs]
@@ -5139,18 +5148,94 @@ def _surveil_intel(key, title, detail):
         pass
 
 
-def _surveil_registry(title, body):
-    """File an Athena watch note into the Registry as CONFIDENTIAL, so only
-    cleared officers and the President ever read it. Fails quietly if the
-    Registry tables aren't migrated yet."""
+def _surveil_registry(title, body, subject="Aqualithia", directorate="Foreign Affairs"):
+    """File an Athena note into the Registry as CONFIDENTIAL, so only cleared
+    officers and the President ever read it. Returns True on success; fails
+    quietly (False) if the Registry tables aren't migrated yet."""
     try:
         supabase.table("registry_files").insert({
-            "title": title[:160], "subject": "Aqualithia", "directorate": "Foreign Affairs",
+            "title": title[:160], "subject": subject, "directorate": directorate,
             "classification": "CONFIDENTIAL", "visibility": "cleared", "allowed": "",
             "author": "Athena", "body": body[:20000],
         }).execute()
+        return True
     except Exception:
-        pass
+        return False
+
+
+_brief_state = {"date": None}
+
+
+def _within_24h(ts, cutoff):
+    d = _parse(ts)
+    if d is None:
+        return False
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    return d >= cutoff
+
+
+def _athena_daily_brief():
+    """Compile one CONFIDENTIAL 'Athena Daily Brief' per calendar day: the
+    passive Enemy Watch status, and Cyvathon's own defensive log for the day.
+    The host has no scheduler, so this runs when a cleared officer opens the
+    Athena or Registry page; it files at most one brief a day (UTC), and only
+    ever from data we already hold — the rival's public homepage, and our own
+    sign-in and firewall records. It never reaches into their systems."""
+    today = _now().strftime("%Y-%m-%d")
+    if _brief_state["date"] == today:
+        return
+    title = f"Athena Daily Brief — {today}"
+    try:
+        recent = supabase.table("registry_files").select("title") \
+            .eq("author", "Athena").order("id", desc=True).limit(40).execute().data or []
+    except Exception:
+        return      # Registry not migrated yet — try again next load
+    if any((r.get("title") or "") == title for r in recent):
+        _brief_state["date"] = today        # already filed today
+        return
+
+    cutoff = _now() - timedelta(hours=24)
+    name = _surveil_name("aquilithia")
+    st = _surveil.get("aquilithia", {}).get("state")
+    if st:
+        watch = f"{name}: {'ONLINE' if st['up'] else 'OFFLINE'}"
+        if st.get("up") and st.get("ms"):
+            watch += f", {st['ms']}ms"
+        if st.get("version"):
+            watch += f", v{st['version']}"
+        watch += f" (last checked {int(time() - st['ts'])}s ago)."
+    else:
+        watch = f"{name}: not checked yet — open Foreign Surveillance and Ping to establish a baseline."
+
+    changes = sum(1 for i in _athena_intel(60)
+                  if ("ONLINE" in (i.get("title") or "") or "OFFLINE" in (i.get("title") or ""))
+                  and _within_24h(i.get("created_at"), cutoff))
+
+    try:
+        ev = supabase.table("login_events").select("*").order("id", desc=True).limit(300).execute().data or []
+    except Exception:
+        ev = []
+    ev = [e for e in ev if _within_24h(e.get("created_at"), cutoff)]
+    logins = sum(1 for e in ev if e.get("kind") == "login" and e.get("ok"))
+    fails = sum(1 for e in ev if not e.get("ok"))
+    lockouts = sum(1 for e in ev if e.get("kind") == "lockout")
+    probes = len(_threats)
+
+    body = (
+        f"ATHENA DAILY BRIEF — {today}\n"
+        f"Compiled {_now().strftime('%H:%M')} UTC. CONFIDENTIAL — cleared officers and the President only.\n\n"
+        "ENEMY WATCH (passive; their public homepage only)\n"
+        f"  {watch}\n"
+        f"  Up/down changes recorded in the last 24h: {changes}.\n\n"
+        "HOME FRONT (Cyvathon's own records)\n"
+        f"  Sign-ins: {logins}. Failed password attempts: {fails}. Lockouts: {lockouts}.\n"
+        f"  Hostile probes the firewall is currently holding: {probes}.\n\n"
+        "Athena watches and records. It reads only what any visitor to their homepage sees, "
+        "and our own logs. It does not reach into foreign systems."
+    )
+    if _surveil_registry(title, body, subject="Daily Brief", directorate="Counter-Intelligence"):
+        _brief_state["date"] = today
 
 
 def _surveil_payload():

@@ -82,9 +82,11 @@ check("  it says ONLINE", "ONLINE" in f["title"], True)
 
 
 print("\n=== 3. only cleared eyes may read it ===")
-def can_read(username):
+def can_read_file(file, username):
     u = [r for r in db.data["cybucks"] if r["username"] == username][0]
-    return main._reg_can_read(u, f)
+    return main._reg_can_read(u, file)
+def can_read(username):
+    return can_read_file(f, username)
 check("the President can read it", can_read("Prathyay"), True)
 check("a cleared officer can read it", can_read("Officer"), True)
 check("an ordinary citizen cannot", can_read("Riya"), False)
@@ -96,6 +98,37 @@ at = open(os.path.join(ROOT, "static", "athena.html"), encoding="utf-8").read()
 check("the War Room has an Enemy Watch with ONLINE/OFFLINE",
       "Enemy Watch" in wr and "ONLINE" in wr and "OFFLINE" in wr, True)
 check("Athena shows the same surveillance", "Foreign Surveillance" in at and "renderSurveil" in at, True)
+
+print("\n=== 5. the daily brief ===")
+import datetime as _dt
+today = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+db.seed("login_events", [
+    {"id": 1, "username": "Riya", "ok": True, "kind": "login", "created_at": main._now().isoformat()},
+    {"id": 2, "username": "Riya", "ok": False, "kind": "fail", "created_at": main._now().isoformat()},
+])
+main._brief_state["date"] = None
+before = len(reg_files())
+main._athena_daily_brief()
+briefs = [f for f in reg_files() if (f.get("title") or "").startswith("Athena Daily Brief")]
+check("opening the desk files one daily brief", len(briefs), 1)
+b = briefs[0]
+check("  dated today", today in b["title"], True)
+check("  it is CONFIDENTIAL, cleared officers only",
+      (b["classification"], b["visibility"]), ("CONFIDENTIAL", "cleared"))
+check("  filed by Athena", b["author"], "Athena")
+check("  it carries the Enemy Watch line", "ENEMY WATCH" in b["body"], True)
+check("  and our own sign-in tally", "Sign-ins:" in b["body"] and "Failed password attempts:" in b["body"], True)
+
+main._athena_daily_brief()
+check("opening it again the same day files no second brief",
+      len([f for f in reg_files() if (f.get("title") or "").startswith("Athena Daily Brief")]), 1)
+main._brief_state["date"] = None      # even with the in-process guard cleared,
+main._athena_daily_brief()            # the Registry itself stops a duplicate
+check("  a restart mid-day still won't double-file",
+      len([f for f in reg_files() if (f.get("title") or "").startswith("Athena Daily Brief")]), 1)
+
+check("an ordinary citizen still can't read the brief", can_read_file(b, "Riya"), False)
+check("a cleared officer can", can_read_file(b, "Officer"), True)
 
 print(f"\n{PASS} passed, {FAIL} failed")
 sys.exit(1 if FAIL else 0)
