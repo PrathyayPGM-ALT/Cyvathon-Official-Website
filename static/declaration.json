@@ -1,0 +1,65 @@
+{
+ "title": "Declaration on the Pufferbuck Debt",
+ "subtitle": "An acknowledgement of wrong, a standing offer of repayment, and the banishment of Aqualithia",
+ "date": "25 September 2026",
+ "ref": "Presidential Declaration No. 1 of 2026",
+ "preamble": "A nation that asks its citizens to be honest must first be honest about itself. This Declaration sets down, for the record and for every citizen who comes after, a wrong that was done at the very beginning of the Republic, what the Republic did when it learned of it, and why the Republic now stands apart from Aqualithia.",
+ "articles": [
+  {
+   "no": "I",
+   "head": "The wrong we acknowledge",
+   "text": "In the earliest days of the Republic, before its laws and its institutions stood, certain persons of the old order took 5,000 Pufferbucks that belonged to Aqualithia. That money became the seed of the Republic's first economy. The Republic did not know of it at the time, but ignorance is not innocence: Cyvathon began with money that was not its own. The Republic accepts this, plainly and without excuse, and accepts as a nation the duty to put it right."
+  },
+  {
+   "no": "II",
+   "head": "Justice was done at home",
+   "text": "Those responsible were brought before Cyvathonian justice and jailed. They are not named in this Declaration. The Republic punishes wrongdoers; it does not parade them. Their crime is recorded so that it is never repeated, not so that it follows them."
+  },
+  {
+   "no": "III",
+   "head": "The repayment we offered",
+   "text": "The moment the President learned of the theft, the Republic offered to repay Aqualithia in full, with fifty percent interest: 7,500 Pufferbucks for the 5,000 taken. It was offered freely, before any demand was made, because it was owed."
+  },
+  {
+   "no": "IV",
+   "head": "The answer we received",
+   "text": "Aqualithia refused the repayment. It did not want its money back. It wanted war, and it declared it. Since then its intelligence service has probed the Republic's systems without pause, and an account of our own was broken into. The Republic answered with defence and never with attack, and it will keep to that."
+  },
+  {
+   "no": "V",
+   "head": "Banishment",
+   "text": "The Republic of Aqualithia is hereby banished. From this day Cyvathon extends to it no recognition, no treaty, no trade, no embassy and no welcome. Its agents are barred at the border, and every attempt against the Republic will be recorded. Banishment is a judgement on Aqualithia's government and its war, not on its people."
+  },
+  {
+   "no": "VI",
+   "head": "The offer still stands",
+   "text": "Banishment does not cancel a debt. A debt is not wiped away because the one it is owed to chose anger over payment. The Pufferbuck has since been withdrawn, so the Republic will pay 7,500 Crystallines, the same value in full, from the National Treasury on the day Aqualithia lays down its war and asks for what it is owed. This offer has no expiry. It is recorded here so that no future government of Cyvathon may quietly forget it."
+  }
+ ],
+ "closing": "Cyvathon was not born clean. It is choosing to become honest. It has admitted the wrong, punished those who did it, and offered more than was taken. The rest is Aqualithia's to decide.",
+ "ledger": [
+  [
+   "",
+   "Pufferbucks",
+   "Today"
+  ],
+  [
+   "Taken at the founding",
+   "5,000 PUFB",
+   "5,000 CRY"
+  ],
+  [
+   "Interest offered (50%)",
+   "2,500 PUFB",
+   "2,500 CRY"
+  ],
+  [
+   "Repayment offered",
+   "7,500 PUFB",
+   "7,500 CRY"
+  ]
+ ],
+ "signed_by": "Prathyay",
+ "signed_as": "President of the Republic of Cyvathon",
+ "pdf": "/static/cyvathon-declaration-pufferbuck-debt.pdf"
+}

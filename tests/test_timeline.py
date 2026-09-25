@@ -99,7 +99,7 @@ check("  and it says when that was",
       "2025-05-26" in r.get_json()["error"], True)
 
 r = client_as("Prathyay").post("/timeline/add", json={
-    "on": "2026-09-10", "kind": "treaty", "title": "Treaty with Aquilithia",
+    "on": "2026-09-10", "kind": "treaty", "title": "Treaty with Aqualithia",
     "body": "Recognition and free movement between the two republics."})
 check("the President can write a line", r.status_code, 200)
 ev = r.get_json()["event"]

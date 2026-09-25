@@ -57,7 +57,7 @@ function cyCardBack(c){
     <div class="cy-fine">
       Property of the <b>Republic of Cyvathon</b>. This card identifies its holder
       so other citizens may pay them — it cannot be used to withdraw funds.
-      Honoured in <b>Aquilithia</b> at treaty par, 1 PB = 1 CB.
+      Honoured in <b>Crystonia</b> at par, 1 CRY = 1 CB.
       Found it? Return it to the Treasury.
     </div>
   </div></div></div>`;

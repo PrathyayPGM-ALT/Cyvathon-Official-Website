@@ -3,9 +3,11 @@ from flask_cors import CORS
 from supabase import create_client
 from werkzeug.security import generate_password_hash, check_password_hash
 import io
+import json
 import os
 import logging
 import math
+from concurrent.futures import ThreadPoolExecutor
 import random
 import re
 import secrets
@@ -1170,10 +1172,10 @@ def _reg_seed_if_empty():
          "of five classifications, from UNCLASSIFIED to EYES ONLY. Bulletins carry the "
          "day-to-day wire traffic of the service.\n\n"
          "The Registry keeps what the Republic knows. Read carefully."},
-        {"title": "Foreign Assessment — The Aquilithian Republic", "subject": "Aquilithia",
+        {"title": "Foreign Assessment — The Aqualithian Republic", "subject": "Aqualithia",
          "directorate": "Foreign Affairs", "classification": "CONFIDENTIAL", "visibility": "cleared", "allowed": "",
          "author": author, "body":
-         "SUMMARY. Aquilithia is a neighbouring micronation of comparable ambition and "
+         "SUMMARY. Aqualithia is a neighbouring micronation of comparable ambition and "
          "a rival tradition of statecraft. Relations are correct but cool.\n\n"
          "POSTURE. Their intelligence apparatus presents a public reading room of its own. "
          "The Republic's standing instruction is plain: we out-build them in record and in "
@@ -1968,23 +1970,53 @@ def login():
         return jsonify(success=False,
                        error="Your citizenship application is awaiting Presidential approval. Please check back later."), 403
 
-    ip = seen = client_ip()
-    history = _login_history(username, 40)
-    strange = bool(history) and not any(e.get("ok") and e.get("ip") == ip for e in history)
     session.clear()                 # never carry anything from a previous session over
     session.permanent = True
     session["username"] = username
     session["sv"] = int(user.get("session_version") or 0)
-    _set_user(username, {"login_fails": 0, "login_locked_until": None})
-    _log_login(username, True, "login")
-    _pin_nudge(user)
-    if strange:
-        notify(username, f"🔐 Your account was signed in to from a new place ({seen}) at "
-                         f"{_now().strftime('%H:%M')} UTC. If that wasn't you, change your "
-                         f"password now.", "/profile")
-    user = apply_economics(user)
+    # Everything else about a sign-in is bookkeeping — the log, the new-place
+    # alert, the PIN nudge — and each is a round trip to the database. Doing
+    # them before answering kept citizens staring at the login page for
+    # seconds, so they run just after. Tax and salary run on the dashboard's
+    # /me, which is the next thing the browser asks for anyway.
+    _in_background(_after_login, user, client_ip(), request.headers.get("User-Agent") or "", password)
     return jsonify(success=True, user=public_user(user), admin=is_treasury_admin(user),
                    cia=is_cia(user), must_change=bool(user.get("must_change_pw")))
+
+
+_bg_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="after-login")
+
+
+def _in_background(fn, *args):
+    """Run fn after the response. Inline under tests, so they can see its effects."""
+    if app.config.get("TESTING"):
+        return fn(*args)
+    fut = _bg_pool.submit(fn, *args)
+    fut.add_done_callback(lambda f: f.exception() and logging.warning(
+        "background %s failed: %s", fn.__name__, f.exception()))
+    return fut
+
+
+def _after_login(user, ip, ua, password):
+    username = user["username"]
+    history = _login_history(username, 40)
+    strange = bool(history) and not any(e.get("ok") and e.get("ip") == ip for e in history)
+    patch = {}
+    if user.get("login_fails") or user.get("login_locked_until"):
+        patch.update({"login_fails": 0, "login_locked_until": None})
+    # Old accounts were hashed with PBKDF2 at a million rounds, which is slow to
+    # check on a small server. Re-hash with scrypt (faster to check here, and
+    # harder to crack) the first time the right password is typed.
+    if str(user.get("password") or "").startswith("pbkdf2:"):
+        patch["password"] = generate_password_hash(password)
+    if patch:
+        _set_user(username, patch)
+    _log_login(username, True, "login", ip=ip, ua=ua)
+    _pin_nudge(user, ip=ip, ua=ua)
+    if strange:
+        notify(username, f"🔐 Your account was signed in to from a new place ({ip}) at "
+                         f"{_now().strftime('%H:%M')} UTC. If that wasn't you, change your "
+                         f"password now.", "/profile")
 
 
 @app.route("/logout", methods=["POST"])
@@ -4505,11 +4537,28 @@ def legislature_assent():
 # ============================================================
 #  OFFICIAL GAZETTE
 # ============================================================
+def _standing_declarations():
+    """Presidential Declarations that stay pinned to the top of the Gazette.
+    Their words live in static/declaration.json, written by
+    build_declaration.py next to the PDF, so the page and the PDF never differ."""
+    try:
+        with open(os.path.join(app.static_folder, "declaration.json"), encoding="utf-8") as f:
+            d = json.load(f)
+    except Exception:
+        return []
+    return [{
+        "ref": d["ref"], "kind": "declaration", "title": d["title"],
+        "body": d["subtitle"] + ".\n\n" + d["preamble"],
+        "issued_by": d["signed_by"], "created_at": "2026-09-25T12:00:00+00:00",
+        "doc": d["pdf"], "pinned": True,
+    }]
+
+
 @app.route("/gazette/list")
 def gazette_listing():
     rows = supabase.table("gazette").select("*").order("created_at", desc=True).limit(100).execute().data or []
     user = get_current_user(run_economics=False)
-    return jsonify(success=True, entries=rows,
+    return jsonify(success=True, entries=_standing_declarations() + rows,
                    is_president=is_treasury_admin(user) if user else False)
 
 
@@ -7246,7 +7295,7 @@ IDENTITY: your ID Card (/profile) shows your record and balances; set a profile 
 
 INTERESTS: when you sign up (and on your ID Card) you pick what you love to do. Cyvathon then shows personalized "Recommended for you" features on your dashboard and drops you into interest-based group chats with like-minded citizens.
 
-GOVERNMENT: a President leads the nation, with a Vice President (currently Srikrish) at their side — named by the President, standing in for them when asked, but holding none of the President's powers by right. The Chancellor (currently Arjun Soni) leads the Cabinet; the office replaced the old Prime Minister. The Chancellor and the Judge are chosen by national vote (/voting), which the President convenes, and until one is held the President may name a Chancellor. A national presidential vote is held once every six years. The Legislature (/legislature) is where citizens table and vote on bills — any citizen can table one, and with more Ayes than Nays it goes to the President for assent and becomes a numbered Act; the Gazette (/gazette) records laws and decrees; the National Court (/court) rules on cases; report a crime with an FIR (/fir); Ministries (/ministries) run departments with budgets; the Treasury (/treasury) holds national funds and anyone can inspect it. Foreign Affairs (/foreign) tracks Cyvathon's allied and rival micronations — fellow nations can register at signup and request an alliance, which the President confirms.
+GOVERNMENT: a President leads the nation, with a Vice President (currently Srikrish) at their side — named by the President, standing in for them when asked, but holding none of the President's powers by right. The Chancellor (currently Arjun Soni) leads the Cabinet; the office replaced the old Prime Minister. The Chancellor and the Judge are chosen by national vote (/voting), which the President convenes, and until one is held the President may name a Chancellor. A national presidential vote is held once every six years. The Legislature (/legislature) is where citizens table and vote on bills — any citizen can table one, and with more Ayes than Nays it goes to the President for assent and becomes a numbered Act; the Gazette (/gazette) records laws and decrees; the National Court (/court) rules on cases; report a crime with an FIR (/fir); Ministries (/ministries) run departments with budgets; the Treasury (/treasury) holds national funds and anyone can inspect it. Foreign Affairs (/foreign) tracks Cyvathon's allied and rival micronations — fellow nations can register at signup and request an alliance, which the President confirms. THE PUFFERBUCK DEBT: at the founding, people of the old order (unnamed; they were caught and jailed) stole 5,000 Pufferbucks from Aqualithia, and that money seeded Cyvathon's first economy. When the President learned of it, the Republic offered to repay 7,500 Pufferbucks (the full sum plus 50% interest). Aqualithia refused and declared war. On 25 September 2026 the President's Declaration on the Pufferbuck Debt admitted the wrong, banished Aqualithia (no recognition, treaty, trade or embassy), and kept the offer open with no expiry: 7,500 Crystallines, paid by the Treasury the day Aqualithia makes peace and asks. It is on Foreign Affairs, pinned in the Gazette, and at /static/cyvathon-declaration-pufferbuck-debt.pdf. Answer questions about it honestly; Cyvathon does not hide it.
 
 THE CYVATHON APP: Cyvathon can be installed as an app on a phone (or computer), with its own icon on the home screen, opening full-screen without the browser bar. On Android (Chrome) an "Install" offer appears, or use the browser menu's "Install app"; on iPhone/iPad open the site in Safari, tap Share, then "Add to Home Screen"; on a computer, "Get the app" appears in the menu. There's nothing to download from a store, and it always has every feature because it is the website. On a phone the menu becomes a bottom tab bar — Home, Bank, Chat, Alerts (with the unread count) and More, which opens every page grouped by colour, plus light/dark mode, installing and log out. With no connection it shows an offline screen and reconnects by itself; balances, chat and votes are never stored offline, so they're always live. Long-pressing the app icon offers shortcuts to the Bank, Chat, Cyvazon and your ID card.
 
@@ -11853,11 +11902,13 @@ def _set_user(username, patch):
         return False
 
 
-def _log_login(username, ok, kind="login", note=""):
+def _log_login(username, ok, kind="login", note="", ip=None, ua=None):
     try:
+        if ip is None:
+            ip, ua = client_ip(), request.headers.get("User-Agent") or ""
         supabase.table("login_events").insert({
-            "username": username, "ok": bool(ok), "kind": kind, "ip": client_ip(),
-            "ua": (request.headers.get("User-Agent") or "")[:180],
+            "username": username, "ok": bool(ok), "kind": kind, "ip": ip,
+            "ua": (ua or "")[:180],
             "note": (note or "")[:120], "created_at": _now().isoformat()}).execute()
     except Exception:
         pass
@@ -11894,7 +11945,7 @@ def _end_sessions(username, user=None, by=None):
     return nxt
 
 
-def _pin_nudge(user):
+def _pin_nudge(user, ip=None, ua=None):
     """The first time a citizen signs in without a payment PIN, tell them what
     one is. Once each, ever — the sign-in log remembers that we've said it, so
     it needs no column of its own and stays quiet before the migration."""
@@ -11908,7 +11959,7 @@ def _pin_nudge(user):
         return                      # no log yet: say nothing rather than say it daily
     if told:
         return
-    _log_login(me, True, "pin-nudge")
+    _log_login(me, True, "pin-nudge", ip=ip, ua=ua)
     notify(me, f"🔐 Set a payment PIN. It's 4 digits, it takes a moment, and it means nobody "
                f"can send more than {PIN_THRESHOLD:g} CB of your money but you — even if they "
                f"get into your account. Your ID card has it under Security.", "/profile")

@@ -123,7 +123,7 @@
       // Enemy surveillance
       const aq=(d.surveil||{}).aquilithia, s=aq&&aq.state;
       html+=`<div class="panel" style="margin-bottom:1.6rem;">
-        <h3><i class="fas fa-satellite-dish"></i> Enemy Watch — Aquilithia</h3>
+        <h3><i class="fas fa-satellite-dish"></i> Enemy Watch — Aqualithia</h3>
         ${s?`<p style="margin:.4rem 0;"><span class="sb ${s.up?'up':'down'}">${s.up?'● ONLINE':'● OFFLINE'}</span>
             <span class="small muted">&nbsp; ${s.version?'v'+esc(s.version):'v?'} · ${s.up?s.ms+'ms':'unreachable'} · checked ${s.ago}s ago</span></p>
           <p class="small muted">${esc(aq.target)}</p>`

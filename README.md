@@ -237,6 +237,18 @@ from TheSportsDB or the owner's own photo of the card in their hand. Update
 
 ---
 
+### 19. The Declaration on the Pufferbuck Debt
+The Republic's account of the 5,000 Pufferbucks taken from Aqualithia at the
+founding, the 7,500 offered back (+50%), Aqualithia's refusal and war, and its
+banishment. The offer stands with no expiry: 7,500 Crystallines.
+
+| | |
+|---|---|
+| **Where** | A card at the top of Foreign Affairs (read it in full on the page, or as a PDF), pinned first in the Gazette, and known to the Cyvathon AI. |
+| **Editing it** | Change the text in `build_declaration.py` and run `python build_declaration.py`. It writes both the PDF and `static/declaration.json`, which the pages read, so they never disagree. |
+
+---
+
 ### 18. Page colours
 Every page keeps the same navy design, but each part of the Republic has its own
 colour, the one its dashboard tile wears. It tints the page's glow, buttons,

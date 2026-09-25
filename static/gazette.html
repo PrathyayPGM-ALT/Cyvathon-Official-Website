@@ -39,6 +39,12 @@
     .entry h3{ margin:.25rem 0; }
     .entry .meta{ font-size:.78rem; color:var(--muted); margin-bottom:.5rem; }
     .entry .body{ white-space:pre-wrap; color:#cdd6e0; }
+    .entry.declaration{ border-left-color:var(--gold); border-color:rgba(255,206,86,.35);
+      background:linear-gradient(160deg,rgba(255,206,86,.10),var(--panel) 60%); }
+    .entry.declaration .ref{ color:var(--gold); }
+    .entry .pin{ float:right; font-size:.72rem; font-weight:700; color:var(--gold); letter-spacing:.5px; }
+    .entry .doc{ display:inline-flex; align-items:center; gap:.45rem; margin-top:.8rem; padding:.55rem 1rem;
+      border-radius:30px; font-weight:700; font-size:.85rem; text-decoration:none; color:#2b1d02; background:var(--grad-warm); }
     .seal{ text-align:center; color:var(--accent); font-size:2rem; margin-bottom:.4rem; }
   </style>
 </head>
@@ -73,10 +79,12 @@
       if(!d.entries.length){ host.innerHTML=`<p class="muted">The Gazette is empty. No laws have yet been enacted.</p>`; return; }
       host.innerHTML=d.entries.map(e=>`
         <div class="entry ${e.kind}">
-          <div class="ref">${esc(e.ref)} · ${e.kind==='act'?'Act of the Legislature':'Presidential Decree'}</div>
+          ${e.pinned?`<span class="pin"><i class="fas fa-thumbtack"></i> STANDING</span>`:''}
+          <div class="ref">${esc(e.ref)}${e.kind==='declaration'?'':' · '+(e.kind==='act'?'Act of the Legislature':'Presidential Decree')}</div>
           <h3>${esc(e.title)}</h3>
           <div class="meta">Issued by ${esc(e.issued_by)} · ${new Date(e.created_at).toLocaleDateString()}</div>
           ${e.body?`<div class="body">${esc(e.body)}</div>`:''}
+          ${e.doc && /^\/static\/[\w.-]+\.pdf$/.test(e.doc)?`<a class="doc" href="${e.doc}" target="_blank" rel="noopener"><i class="fas fa-file-pdf"></i> Read the full Declaration</a>`:''}
         </div>`).join("");
     }
     async function issue(){

@@ -357,7 +357,11 @@
         body.interests = Array.from(selInterests);
         if(REF) body.ref = REF;
       }
-      $("submitBtn").disabled = true;
+      // Say something is happening the instant it's pressed.
+      const btn = $("submitBtn"), label = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> ${mode==="login" ? "Signing you in…" : "Sending your application…"}`;
+      let leaving = false;
       try{
         const r = await api(path, {method:"POST", body:JSON.stringify(body)});
         if(r.pending){
@@ -368,6 +372,8 @@
         }
         // A one-time password from the President: straight to Security, where
         // they must set their own before they can do anything else.
+        leaving = true;
+        btn.innerHTML = `<i class="fas fa-circle-check"></i> Welcome back — opening Cyvathon…`;
         window.location.href = r.must_change ? "/profile?pw=1" : nextUrl();
       }catch(e){
         $("msg").style.color = "var(--red)";
@@ -376,7 +382,7 @@
           if(TS_ON) tsReset();
           else { loadCaptcha(); $("captchaA").value=""; }
         }
-      }finally{ $("submitBtn").disabled = false; }
+      }finally{ if(!leaving){ btn.disabled = false; btn.innerHTML = label; } }
     }
 
     /* Where to go once you're in. Only ever a path on this site — following

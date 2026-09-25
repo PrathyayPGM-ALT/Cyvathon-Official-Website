@@ -130,6 +130,37 @@
     .dfooter{ margin-top:1.4rem; padding:.9rem 1.1rem; border-radius:12px; display:flex; gap:.75rem; align-items:flex-start; }
     .dfooter i{ margin-top:.15rem; font-size:1.05rem; }
     .dfooter div{ font-size:.9rem; color:#cdd6e0; line-height:1.55; }
+
+    /* ---- the Declaration on the Pufferbuck Debt ---- */
+    .decl{ position:relative; overflow:hidden; border-radius:20px; padding:1.7rem 1.8rem; margin-bottom:2.4rem;
+      border:1px solid rgba(255,206,86,.38);
+      background:linear-gradient(150deg,rgba(255,206,86,.16),rgba(255,159,67,.06) 55%,rgba(255,93,108,.06)); }
+    .decl::after{ content:"\f70e"; font-family:"Font Awesome 6 Free"; font-weight:900; position:absolute; right:-10px; top:-22px;
+      font-size:9rem; color:rgba(255,206,86,.07); pointer-events:none; }
+    .decl-ref{ font-size:.72rem; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:var(--gold); }
+    .decl h3{ margin:.35rem 0 .45rem; font-size:1.45rem; font-weight:900; letter-spacing:-.4px; }
+    .decl p{ margin:0; color:var(--text-dim); line-height:1.65; max-width:720px; position:relative; z-index:1; }
+    .decl-ledger{ display:flex; flex-wrap:wrap; gap:.55rem; margin:1.1rem 0 1.2rem; position:relative; z-index:1; }
+    .dl{ padding:.5rem .85rem; border-radius:12px; background:rgba(0,0,0,.22); border:1px solid rgba(255,206,86,.22); }
+    .dl b{ display:block; font-size:1.05rem; font-weight:800; }
+    .dl span{ font-size:.66rem; letter-spacing:.7px; text-transform:uppercase; color:var(--muted); }
+    .dl.bad b{ color:#ff8a96; } .dl.good b{ color:var(--gold); }
+    .decl-actions{ display:flex; gap:.6rem; flex-wrap:wrap; position:relative; z-index:1; }
+    .decl-actions a, .decl-actions button{ width:auto; margin:0; padding:.6rem 1.1rem; border-radius:30px; font-weight:700;
+      font-size:.86rem; display:inline-flex; align-items:center; gap:.45rem; text-decoration:none; cursor:pointer; }
+    .decl-read{ background:var(--grad-warm); color:#2b1d02; border:none; }
+    .decl-pdf{ background:transparent; color:var(--gold); border:1px solid rgba(255,206,86,.45); }
+    .darticle{ margin:0 0 1rem; }
+    .darticle h4{ margin:0 0 .3rem; font-size:.95rem; color:var(--gold); }
+    .darticle p{ margin:0; color:#cdd6e0; line-height:1.68; }
+    .dledger{ width:100%; border-collapse:collapse; margin:.2rem 0 1.1rem; font-size:.88rem; }
+    .dledger td, .dledger th{ padding:.45rem .6rem; border-bottom:1px solid var(--panel-border); text-align:right; }
+    .dledger td:first-child, .dledger th:first-child{ text-align:left; }
+    .dledger tr:last-child td{ font-weight:800; color:var(--gold); border-bottom:none; }
+    .dsign{ margin-top:1.3rem; padding-top:.9rem; border-top:1px solid var(--panel-border); font-size:.88rem; color:var(--muted); }
+    .dsign b{ color:var(--text); display:block; font-size:1rem; }
+    html[data-theme="light"] .decl p, html[data-theme="light"] .darticle p{ color:var(--text-dim); }
+    html[data-theme="light"] .dl{ background:rgba(255,255,255,.7); }
   </style>
 </head>
 <body>
@@ -146,6 +177,25 @@
             <p>Cyvathon's standing with the nations of the cyber-world.</p>
           </div>
           <div class="fh-stats" id="fstats"></div>
+        </div>
+      </div>
+
+      <div class="decl" id="decl">
+        <div class="decl-ref"><i class="fas fa-landmark"></i> Presidential Declaration · 25 September 2026</div>
+        <h3>The Pufferbuck Debt</h3>
+        <p>At its founding, people of the old order stole 5,000 Pufferbucks from Aqualithia, and that money
+          started our economy. They were jailed. The moment the President found out, the Republic offered
+          to pay it all back with 50% interest. Aqualithia refused, and chose war. Cyvathon admits the wrong,
+          banishes Aqualithia, and keeps the offer open.</p>
+        <div class="decl-ledger">
+          <div class="dl bad"><b>5,000 PUFB</b><span>Taken at the founding</span></div>
+          <div class="dl good"><b>7,500 PUFB</b><span>Offered back (+50%)</span></div>
+          <div class="dl bad"><b>Refused</b><span>Aqualithia chose war</span></div>
+          <div class="dl good"><b>7,500 CRY</b><span>Still on offer, no expiry</span></div>
+        </div>
+        <div class="decl-actions">
+          <button class="decl-read" onclick="openDeclaration()"><i class="fas fa-book-open"></i> Read the Declaration</button>
+          <a class="decl-pdf" href="/static/cyvathon-declaration-pufferbuck-debt.pdf" target="_blank" rel="noopener"><i class="fas fa-file-pdf"></i> PDF</a>
         </div>
       </div>
 
@@ -178,35 +228,69 @@
         stats:[["Status","Allied"],["Relations since","2025"],["Treaty","Concord of the Chair"],["Threat","None"]],
         story:[
           "Crystonia and Cyvathon were forged in the same season, by builders who believed a nation should be <b>coded into existence</b>, not inherited. From the very first handshake, the two republics recognised one another as equals and kindred spirits — same faith in creation, same distaste for tyranny.",
-          "When Aquiline aggression first tested the Republic's borders, Crystonia did not hesitate. It was the first foreign power to stand openly beside Cyvathon, and that loyalty was soon sealed in writing."
+          "When Aqualithian aggression first tested the Republic's borders, Crystonia did not hesitate. It was the first foreign power to stand openly beside Cyvathon, and that loyalty was soon sealed in writing."
         ],
         timeline:[
           ["Mutual recognition","Crystonia formally recognised Cyvathon's sovereignty and the Office of the President."],
           ["The Concord of the Chair","A treaty of open borders, shared intelligence, and mutual defence — signed by both heads of state."],
-          ["Shared vigilance","Crystonia and Athena now trade intelligence on Aquiline movements."]
+          ["Shared vigilance","Crystonia and Athena now trade intelligence on Aqualithian movements."]
         ],
         footer:{icon:"fa-handshake", text:"Bound by the Concord of the Chair — open borders, shared intelligence, and mutual defence. An attack on one is answered by both."}
       },
       aquilithia: {
-        name:"Aquilithia", flag:"🔴", col:"#ff5d6c", rel:"Hostile · Rival", chipCls:"c-rival", chipIcon:"fa-triangle-exclamation",
-        tagline:"The rival that would not recognise us.",
-        short:"A hostile state with a history of aggression. Every probe it throws is logged by Athena.",
-        stats:[["Status","Hostile"],["Relations","No treaty"],["Trade","Embargoed"],["Threat","Elevated"]],
+        name:"Aqualithia", flag:"🔴", col:"#ff5d6c", rel:"Hostile", chipCls:"c-rival", chipIcon:"fa-triangle-exclamation",
+        tagline:"Offered its money back with interest. Chose war instead.",
+        short:"Banished by Presidential Declaration. It refused repayment of the Pufferbuck Debt and declared war. Every probe it throws is logged by Athena.",
+        stats:[["Status","Banished"],["Relations","None"],["Trade","None"],["Debt offered","7,500 CRY"]],
         story:[
-          "Aquilithia has never accepted Cyvathon as an equal. What began as border provocations hardened into open hostility when Aquilithia <b>declared war</b> upon the Republic — a declaration Cyvathon met not with panic, but with preparation.",
-          "Its intelligence service, the AIA, runs a relentless campaign of probes against the Republic's systems. Every scan and every intrusion attempt is caught and logged by <b>Athena</b>, Cyvathon's own agency. Aquilithia even published a mock exchange rate valuing a single Pufferbuck at an absurd sum — a public taunt dressed up as economics.",
+          "Aqualithia has never accepted Cyvathon as an equal. What began as border provocations hardened into open hostility when Aqualithia <b>declared war</b> upon the Republic — a declaration Cyvathon met not with panic, but with preparation.",
+          "Its intelligence service, the AIA, runs a relentless campaign of probes against the Republic's systems. Every scan and every intrusion attempt is caught and logged by <b>Athena</b>, Cyvathon's own agency. Aqualithia even published a mock exchange rate valuing a single Pufferbuck at an absurd sum — a public taunt dressed up as economics.",
           "The Republic's answer is doctrine, not aggression: watch every move, bar every hostile address at the border, and out-build them citizen by citizen. Cyvathon does not strike first. It simply refuses to fall."
         ],
         timeline:[
+          ["The Pufferbuck theft","At the founding, people of the old order took 5,000 Pufferbucks from Aqualithia. They were caught and jailed."],
+          ["Repayment offered","The President offered 7,500 Pufferbucks: everything taken, plus 50% interest."],
+          ["Refused","Aqualithia turned the money down and chose war."],
           ["Border provocations","Early incursions and posturing against the Republic's frontier."],
-          ["Declaration of war","Aquilithia formally declared war upon Cyvathon."],
+          ["Declaration of war","Aqualithia formally declared war upon Cyvathon."],
           ["The AIA campaign","Continuous intrusion attempts against Cyvathon's systems — each one logged by Athena."],
-          ["The spite rate","A mock exchange rate published to belittle the Pufferbuck; economics wielded as an insult."]
+          ["The spite rate","A mock exchange rate published to belittle the Pufferbuck; economics wielded as an insult."],
+          ["Banished","The Declaration on the Pufferbuck Debt admits the wrong and banishes Aqualithia. The 7,500 Crystalline offer stands."]
         ],
         footer:{icon:"fa-eye", col:"#ff8a96", text:"Under continuous surveillance by Athena. Hostile addresses are logged and barred at the border. Defence, never offence."}
       }
     };
     const KNOWN_ORDER = ["crystonia","aquilithia"];
+
+    /* The Declaration reads from the same file the PDF is built from. */
+    async function openDeclaration(){
+      let d;
+      try{ d = await (await fetch("/static/declaration.json")).json(); }
+      catch(e){ window.open("/static/cyvathon-declaration-pufferbuck-debt.pdf", "_blank"); return; }
+      const [head, ...rows] = d.ledger;
+      document.getElementById("dmodal").innerHTML = `
+        <div class="dbanner" style="--dc:#b8860b">
+          <div class="dgrid"></div>
+          <span class="dclose" onclick="closeDossier()">&times;</span>
+          <div style="position:relative;z-index:1;">
+            <div class="decl-ref" style="color:#fff3c4">${esc(d.ref)} · ${esc(d.date)}</div>
+            <div class="dtitle">${esc(d.title)}</div>
+            <div class="dtag">${esc(d.subtitle)}</div>
+          </div>
+        </div>
+        <div class="dbody" style="--dc:#ffce56">
+          <p style="font-style:italic;color:var(--text-dim);line-height:1.7;margin:0 0 1.1rem">${esc(d.preamble)}</p>
+          ${d.articles.map(a => `<div class="darticle"><h4>Article ${esc(a.no)}: ${esc(a.head)}</h4><p>${esc(a.text)}</p></div>
+            ${a.no === "III" ? `<table class="dledger"><tr>${head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>
+              ${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</table>` : ""}`).join("")}
+          <p style="font-style:italic;color:var(--text-dim);line-height:1.7">${esc(d.closing)}</p>
+          <div class="dsign"><b>${esc(d.signed_by)}</b>${esc(d.signed_as)}</div>
+          <div class="decl-actions" style="margin-top:1.1rem">
+            <a class="decl-pdf" href="/static/cyvathon-declaration-pufferbuck-debt.pdf" target="_blank" rel="noopener"><i class="fas fa-file-pdf"></i> Download the PDF</a>
+          </div>
+        </div>`;
+      document.getElementById("dossier").classList.add("on");
+    }
 
     function knownCard(key){
       const d=DOSSIERS[key];
