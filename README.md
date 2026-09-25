@@ -284,7 +284,7 @@ separate codebase and no store review.
 
 | | |
 |---|---|
-| **Installing** | Android/Chrome: an "Install" offer appears a few seconds after signing in (dismissed offers stay quiet for 21 days), or use the browser menu. iPhone/iPad: Safari → Share → **Add to Home Screen**; the offer says exactly that. Computers: "Get the app" in the menu. |
+| **Installing** | Android/Chrome: an "Install" offer appears a few seconds after signing in (dismissed offers stay quiet for 21 days), or use the browser menu. iPhone/iPad: Safari → Share → **Add to Home Screen**; the offer says exactly that. Computers: the round **Get the app** button in the bottom-right corner, opposite the music button. |
 | **Icon & shortcuts** | `build_app_icons.py` redraws the site's mark at 192px and 512px, plus a full-bleed maskable version for Android. Long-pressing the icon offers Bank, Chat, Cyvazon and ID Card. |
 | **On a phone** | The stacked menu becomes a bottom **tab bar**: Home, Bank, Chat, Alerts (with the unread count) and **More**. More opens a sheet with every page grouped in the dashboard's colours, plus light/dark mode, install and log out. The sheet is built from the real menu each time it opens, so it can't fall out of step. Theme music moves from the floating button to a music note in the top bar, so nothing floats over the chat box. Desktop is unchanged. |
 | **Offline** | `sw.js` keeps only the app's own files (styles, scripts, icons) and an offline screen that reconnects by itself. It never stores balances, chat, votes or any other server data: those always go to the network, so money is always live. |

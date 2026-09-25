@@ -180,7 +180,20 @@
     font-weight:800; font-size:.85rem; color:#0b2a4a; background:#fff; box-shadow:none; white-space:nowrap; }
   .m-install .x{ width:32px !important; height:32px; margin:0; padding:0; border:none; border-radius:50%; cursor:pointer;
     color:#fff; background:rgba(255,255,255,.18); box-shadow:none; flex:none; }
-  #navInstall{ color:var(--accent,#58c4ff); font-weight:700; }
+  /* "Get the app": a round button in the bottom-right corner, mirroring the
+     music button in the bottom-left. The label slides out on hover. */
+  .app-fab{ position:fixed; right:18px; bottom:18px; z-index:900; width:auto !important; height:56px; margin:0;
+    min-width:56px; padding:0 18px; border:none; border-radius:30px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:.9rem; background:linear-gradient(135deg,#1769c9,#22d3ee);
+    box-shadow:0 12px 30px rgba(34,211,238,.35), inset 0 1px 0 rgba(255,255,255,.3) !important;
+    transition:transform .2s, box-shadow .2s; }
+  .app-fab i{ font-size:1.2rem; }
+  .app-fab span{ max-width:0; margin-left:0; overflow:hidden; white-space:nowrap; transition:max-width .3s ease, margin-left .3s ease; }
+  .app-fab:hover{ transform:translateY(-3px); box-shadow:0 16px 38px rgba(34,211,238,.55) !important; }
+  .app-fab:hover span, .app-fab:focus-visible span{ max-width:120px; margin-left:.55rem; }
+  .app-fab .x{ display:none; }
+  body.has-app-fab .toast-wrap{ bottom:88px; }
+  body.playing .app-fab{ display:none; }
   @media (prefers-reduced-motion: reduce){ .m-sheet, .m-card, .m-install{ animation:none !important; } }`;
 
   // ---------------- the tab bar and compact header ----------------
@@ -366,7 +379,7 @@
       try { await ev.userChoice; } catch (e) {}
       window.__cyvInstall = null;
       hideBanner();
-      const d = $("#navInstall"); if (d) d.remove();
+      const d = $("#navInstall"); if (d) d.remove(); document.body.classList.remove("has-app-fab");
       return;
     }
     if (howEl) howEl.hidden = false;           // iPhone: Safari has no button, only Share → Add to Home Screen
@@ -403,17 +416,20 @@
 
   function hideBanner() { const b = $("#mInstall"); if (b) b.remove(); }
 
-  // A computer gets a quiet "Get the app" link in the menu instead.
+  // A computer gets a round "Get the app" button in the bottom-right corner,
+  // opposite the music button, so the top bar stays one line.
   function offerDesktop() {
     if (phone() || standalone() || !window.__cyvInstall || $("#navInstall")) return;
-    const links = $("header .nav-links"), theme = $("#themeToggle");
-    if (!links) return;
-    const a = document.createElement("a");
-    a.href = "#";
-    a.id = "navInstall";
-    a.innerHTML = '<i class="fas fa-download"></i> Get the app';
-    a.addEventListener("click", e => { e.preventDefault(); install(); });
-    links.insertBefore(a, theme || null);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.id = "navInstall";
+    b.className = "app-fab";
+    b.title = "Install Cyvathon as an app";
+    b.setAttribute("aria-label", "Get the Cyvathon app");
+    b.innerHTML = '<i class="fas fa-download"></i><span>Get the app</span>';
+    b.addEventListener("click", () => install());
+    document.body.appendChild(b);
+    document.body.classList.add("has-app-fab");
   }
 
   // Inside the installed app, the phone's status bar follows the theme.
@@ -441,7 +457,7 @@
   addEventListener("appinstalled", () => {
     window.__cyvInstall = null;
     hideBanner();
-    const d = $("#navInstall"); if (d) d.remove();
+    const d = $("#navInstall"); if (d) d.remove(); document.body.classList.remove("has-app-fab");
   });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
   new MutationObserver(statusBar).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });

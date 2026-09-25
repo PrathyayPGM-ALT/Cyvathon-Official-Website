@@ -116,6 +116,8 @@ check("nothing on a page may widen a phone's screen",
       "overflow-x:clip" in shelljs, True)
 check("the menu sheet is built from the real nav, so it can't drift from it",
       "header .nav-links .nav-group" in shelljs, True)
+check("on a computer, 'Get the app' sits in the bottom-right corner, not in the nav",
+      "right:18px; bottom:18px" in shelljs and "links.insertBefore" not in shelljs, True)
 
 
 print("\n=== 6. every part of the Republic has its own colour ===")
