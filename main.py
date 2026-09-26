@@ -10262,16 +10262,57 @@ PEN_OPEN = True
 # perfectly well but can't sign a field order, so it's issued for drill.
 PEN_CONDITIONS = [
     {"key": "working", "label": "Live round",  "share": 1.0,
-     "blurb": "Writes and flies. Full front-line rate."},
+     "blurb": "Full working order — the full front-line rate. (A pen that still writes; kit that still works.)"},
     {"key": "dry",     "label": "Drill round", "share": 0.25,
-     "blurb": "Out of ink but still flies true — issued for training."},
+     "blurb": "Past its best but still usable — issued for training, at a quarter rate. (A dry pen; worn kit.)"},
     {"key": "broken",  "label": "Salvage",     "share": 0.1,
-     "blurb": "Cracked barrel or missing clip. Stripped for spares."},
+     "blurb": "Broken or incomplete. Stripped for spares, at a token rate."},
 ]
 PEN_COND_BY_KEY = {c["key"]: c for c in PEN_CONDITIONS}
 
+# The Armoury's divisions. Citizens hand ordnance in to whichever division it
+# belongs to, and each pays its own rate per unit (a G2 is worth far more than a
+# rubber band). Cyvathon's own set — the pen launcher stays the standard arm.
+# Rename, re-rate or add divisions here; nothing else needs to change.
+# `rate` is CB per serviceable unit; grades (live/drill/salvage) scale it.
+ARMOURY_DIVISIONS = [
+    {"key": "launchers", "label": "Pen Launchers", "icon": "fa-pen-nib", "color": "#ffce56", "rate": 400,
+     "blurb": "The standard arm of the Corps. The G2 is the front-line round.",
+     "items": ["G2 biro cannon", "cap flicker", "spring-barrel launcher", "two-part pen launcher"]},
+    {"key": "elastic", "label": "Elastic Ordnance", "icon": "fa-bullseye", "color": "#1fd6a6", "rate": 120,
+     "blurb": "Stored energy and questionable aim — the cheap, reliable backbone.",
+     "items": ["rubber-band artillery", "finger catapult", "elastic sling", "peg shooter"]},
+    {"key": "paper", "label": "Paper Ordnance", "icon": "fa-paper-plane", "color": "#58c4ff", "rate": 60,
+     "blurb": "Folded, thrown and gloriously imprecise. Endless supply.",
+     "items": ["paper planes", "paper darts", "folded fortune-mines", "pellet rounds"]},
+    {"key": "siege", "label": "Desk Artillery", "icon": "fa-chess-rook", "color": "#a78bfa", "rate": 150,
+     "blurb": "Scale engines built from rulers, lolly sticks and sheer spite.",
+     "items": ["ruler catapult", "mini trebuchet", "pencil ballista", "matchstick tower"]},
+    {"key": "foam", "label": "Foam Brigade", "icon": "fa-crosshairs", "color": "#ff8fb0", "rate": 100,
+     "blurb": "Shop-bought soft blasters and anything else that fires foam.",
+     "items": ["foam blaster", "suction darts", "pool-noodle sabre", "sponge shot"]},
+    {"key": "water", "label": "Water Corps", "icon": "fa-droplet", "color": "#22d3ee", "rate": 80,
+     "blurb": "Strictly for summer parades and settling arguments outdoors.",
+     "items": ["water pistol", "spray bottle", "water balloons", "soaker tank"]},
+    {"key": "optics", "label": "Sights & Targeting", "icon": "fa-binoculars", "color": "#5ec5ff", "rate": 90,
+     "blurb": "Sighting gear, none of it attached to anything dangerous.",
+     "items": ["cardboard scope", "target boards", "rangefinder cards", "tripod"]},
+    {"key": "stores", "label": "Quartermaster's Stores", "icon": "fa-boxes-stacked", "color": "#9db0c6", "rate": 50,
+     "blurb": "The unglamorous half of any armoury: storage, spares and repairs.",
+     "items": ["ammo tin", "pouches", "repair tape", "spare elastics", "toolkit"]},
+    {"key": "colours", "label": "Colours & Ceremony", "icon": "fa-flag", "color": "#e8b400", "rate": 70,
+     "blurb": "Parade dress for state occasions. Purely for show.",
+     "items": ["parade shield", "banners", "crests", "sashes", "medals"]},
+]
+DIVISION_BY_KEY = {d["key"]: d for d in ARMOURY_DIVISIONS}
+DEFAULT_DIVISION = "launchers"
+
 MAX_PENS_PER_PLEDGE = 20
 MAX_OPEN_PLEDGES    = 3
+
+
+def _division(key):
+    return DIVISION_BY_KEY.get(key or DEFAULT_DIVISION, DIVISION_BY_KEY[DEFAULT_DIVISION])
 
 
 def is_pen_registrar(user):
@@ -10299,9 +10340,11 @@ def pen_value(count, condition, rate=None):
 
 def _pen_public(row):
     cond = PEN_COND_BY_KEY.get(row.get("condition") or "working", PEN_CONDITIONS[0])
+    div = _division(row.get("division"))
     return {
         "id": row.get("id"), "username": row.get("username"),
         "count": row.get("count") or 0,
+        "division": div["key"], "division_label": div["label"], "division_icon": div["icon"],
         "condition": cond["key"], "condition_label": cond["label"], "share": cond["share"],
         "note": row.get("note") or "", "status": row.get("status") or "pledged",
         "rate": row.get("rate") or PEN_RATE,
@@ -10336,13 +10379,23 @@ def pens_config():
         return jsonify(success=False, error="Not logged in"), 401
     held = _reserve_holdings()
     try:
-        rows = supabase.table("pen_donations").select("username,status,counted,amount_paid") \
+        rows = supabase.table("pen_donations").select("username,status,counted,amount_paid,division") \
             .execute().data or []
     except Exception:
         rows = []
     mine = [r for r in rows if r["username"] == user["username"]]
+    # The Racks: for each division, how much has actually been logged in.
+    racks = []
+    for d in ARMOURY_DIVISIONS:
+        recv = [r for r in rows if (r.get("division") or DEFAULT_DIVISION) == d["key"]
+                and r["status"] == "received"]
+        racks.append({**{k: d[k] for k in ("key", "label", "icon", "color", "rate", "blurb", "items")},
+                      "entries": len(recv),
+                      "units": sum(r.get("counted") or 0 for r in recv),
+                      "donors": len({r["username"] for r in recv})})
     return jsonify(success=True, rate=PEN_RATE, open=bool(PEN_OPEN),
                    conditions=PEN_CONDITIONS, me=user["username"],
+                   divisions=ARMOURY_DIVISIONS, racks=racks, default_division=DEFAULT_DIVISION,
                    registrar=PEN_REGISTRAR,
                    is_admin=is_pen_registrar(user),
                    max_per_pledge=MAX_PENS_PER_PLEDGE, max_open=MAX_OPEN_PLEDGES,
@@ -10380,6 +10433,11 @@ def pens_pledge():
     if condition not in PEN_COND_BY_KEY:
         return jsonify(success=False, error="Unknown condition"), 400
 
+    division = (d.get("division") or DEFAULT_DIVISION).strip()
+    if division not in DIVISION_BY_KEY:
+        return jsonify(success=False, error="Unknown division"), 400
+    div = DIVISION_BY_KEY[division]
+
     try:
         openp = supabase.table("pen_donations").select("id").eq("username", me) \
             .eq("status", "pledged").execute().data or []
@@ -10390,27 +10448,32 @@ def pens_pledge():
                        error=f"You already have {MAX_OPEN_PLEDGES} handovers waiting to be "
                              "logged in. Deliver those first."), 400
 
-    row = {"username": me, "count": count, "condition": condition, "rate": PEN_RATE,
-           "note": (d.get("note") or "").strip()[:200]}
+    row = {"username": me, "count": count, "condition": condition, "rate": div["rate"],
+           "division": division, "note": (d.get("note") or "").strip()[:200]}
     try:
         made = supabase.table("pen_donations").insert(row).execute().data[0]
     except Exception:
-        return _pen_missing()
+        # `division` column may be missing before the migration — retry without it.
+        row.pop("division", None)
+        try:
+            made = supabase.table("pen_donations").insert(row).execute().data[0]
+        except Exception:
+            return _pen_missing()
 
     parcel = None
     if d.get("deliver") and me != PEN_REGISTRAR:
         # Cyvazon carries them straight to the Registrar, so a donor doesn't
         # have to go and find them.
         parcel = raise_parcel("pens", made["id"],
-                              f"{count} G2 round(s) for the Armoury",
+                              f"{count} unit(s) for the Armoury — {div['label']}",
                               me, PEN_REGISTRAR, me,
-                              notes="Ordnance for the Corps — to be logged in.")
+                              notes=f"{div['label']} for the Corps — to be logged in.")
         if parcel:
             supabase.table("pen_donations").update({"delivery_id": parcel["id"]}) \
                 .eq("id", made["id"]).execute()
 
     notify(PEN_REGISTRAR,
-           f"\U0001F58A️ {me} is handing in {count} G2 round(s) for the Armoury.",
+           f"\U0001F6E1️ {me} is handing in {count} unit(s) to the Armoury — {div['label']}.",
            "/pens?tab=registry")
     return jsonify(success=True, donation=_pen_public(made),
                    delivery=(_delivery_public(parcel) if parcel else None))
@@ -10574,11 +10637,12 @@ def pens_registry_decide():
         cas_adjust(don["username"], "balance", award, allow_negative=False)
         treasury_add(cybucks=-award, counterparty=don["username"], kind="pen_reserve")
         log_txn("pens", "Cyvathon Armoury", don["username"], award, "cybucks",
-                f"{counted} G2 round(s) logged into the Armoury")
+                f"{counted} unit(s) logged into the Armoury — {_division(don.get('division'))['label']}")
+    div_label = _division(don.get("division"))["label"]
     add_record(don["username"],
-               f"Armed the Republic with {counted} G2 round(s) for {award:g} CB.")
+               f"Armed the Republic with {counted} unit(s) for the {div_label} for {award:g} CB.")
     notify(don["username"],
-           f"\U0001F58A️ The Quartermaster logged in {counted} round(s) — {award:g} CB paid. "
+           f"\U0001F6E1️ The Quartermaster logged in {counted} unit(s) to the {div_label} — {award:g} CB paid. "
            "The Corps thanks you." + (f" {note}" if note else ""), "/pens")
     return jsonify(success=True, status="received", counted=counted, paid=award,
                    reserve_pens=_reserve_holdings())

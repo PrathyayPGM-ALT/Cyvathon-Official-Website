@@ -19,7 +19,7 @@ db = FakeSupabase()
 main.supabase = db
 db.defaults["pen_donations"] = {"status": "pledged", "count": 1, "condition": "working",
                                 "rate": 400, "counted": 0, "amount_paid": 0,
-                                "note": "", "decision_note": ""}
+                                "division": "launchers", "note": "", "decision_note": ""}
 db.defaults["deliveries"] = {"status": "open", "kind": "custom"}
 
 db.seed("cybucks", [
@@ -91,7 +91,7 @@ check("  it quotes what's expected", don["expected"], 1200)
 check("  NOTHING is paid on a pledge", cyb("Aarav")["balance"], before)
 check("  and nothing enters the armoury", vault(), 0)
 check("  the Quartermaster is told",
-      any("handing in 3 G2 round" in n["message"] and n["username"] == "Prathyay"
+      any("handing in 3 unit" in n["message"] and n["username"] == "Prathyay"
           for n in db.data.get("notifications", [])), True)
 
 
@@ -137,7 +137,7 @@ check("  the rounds entered the armoury", vault(), 2)
 check("  from the Treasury",
       any(f["kind"] == "pen_reserve" for f in db.data.get("treasury_flows", [])), True)
 check("  and the citizen was told",
-      any("logged in 2 round" in n["message"] for n in db.data["notifications"]), True)
+      any("logged in 2 unit" in n["message"] for n in db.data["notifications"]), True)
 r = client_as("Prathyay").post("/pens/registry/decide",
     json={"donation_id": did, "action": "receive"})
 check("a settled handover can't be paid twice", r.status_code, 400)
@@ -199,6 +199,37 @@ main._gdp_cache["v"] = None
 d = client_as("Aarav").get("/pens/board").get_json()
 check("the roll of honour ranks by rounds",
       [(x["username"], x["pens"]) for x in d["donors"]], [("Meera", 4), ("Aarav", 2)])
+
+
+print("\n=== 9b. the Armoury has divisions ===")
+cfg = client_as("Aarav").get("/pens/config").get_json()
+keys = [d["key"] for d in cfg["divisions"]]
+check("nine divisions are offered", len(cfg["divisions"]), 9)
+check("  the pen launcher is one of them", "launchers" in keys, True)
+check("  each division has example kit", all(d.get("items") for d in cfg["divisions"]), True)
+check("  the racks report per-division counts", len(cfg["racks"]), 9)
+launch = next(d for d in cfg["divisions"] if d["key"] == "launchers")
+water = next(d for d in cfg["divisions"] if d["key"] == "water")
+check("  a launcher still pays 400", launch["rate"], 400)
+check("  a cheaper division pays less", water["rate"] < launch["rate"], True)
+
+db.seed("cybucks", [{"id": 9, "username": "Riya", "designation": "Citizen", "balance": 0, "approved": True}])
+r = client_as("Riya").post("/pens/pledge",
+    json={"count": 2, "condition": "working", "division": "water"})
+check("you can hand in to a division", r.status_code, 200)
+did = r.get_json()["donation"]["id"]
+check("  the handover records its division", r.get_json()["donation"]["division"], "water")
+check("  and quotes that division's rate (2 x 80)", r.get_json()["donation"]["expected"], 160)
+r = client_as("Riya").post("/pens/pledge",
+    json={"count": 1, "condition": "working", "division": "trebuchets"})
+check("an unknown division is refused", r.status_code, 400)
+# The Quartermaster logs the water kit in and pays that division's rate.
+client_as("Prathyay").post("/pens/registry/decide",
+    json={"donation_id": did, "action": "receive"})
+row = [x for x in db.data["pen_donations"] if x["id"] == did][0]
+check("  logged in and paid at the water rate", row["amount_paid"], 160)
+racks = {r["key"]: r for r in client_as("Aarav").get("/pens/config").get_json()["racks"]}
+check("  and the Water Corps rack now shows it", racks["water"]["units"], 2)
 
 
 print("\n=== 10. the desk survives an un-migrated database ===")

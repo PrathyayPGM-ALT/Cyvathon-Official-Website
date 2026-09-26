@@ -136,9 +136,20 @@ The Republic buys G2 pens as **ammunition**, at 400 CB a round (`/pens`):
 - Armoury stock counts toward national GDP, because materiel is national
   property. Doctrine is unchanged: defence, not invasion
 
-Needs `migration_pen_reserve.sql`. The rate is tunable from the Presidential
-Admin Panel; set `PEN_REGISTRAR` in the environment to change who holds the
-armoury.
+**Nine divisions (The Racks).** The Armoury takes more than pens now. Every
+handover is filed to a division, and each pays its own rate per serviceable
+unit: Pen Launchers (400), Desk Artillery (150), Elastic Ordnance (120), Foam
+Brigade (100), Sights & Targeting (90), Water Corps (80), Colours & Ceremony
+(70), Paper Ordnance (60), Quartermaster's Stores (50). The **Racks** tab shows
+every division with its example kit and how much has been logged in; the donate
+form has a division picker that re-prices the quote. Divisions are defined in
+one place — `ARMOURY_DIVISIONS` in `main.py` — so renaming, re-rating or adding
+one is a single edit. The Quartermaster still counts and pays each handover by
+hand, which is what keeps a cheap division from becoming a faucet.
+
+Needs `migration_pen_reserve.sql`, and `migration_armoury_divisions.sql` for the
+divisions. The pen rate is tunable from the Presidential Admin Panel; set
+`PEN_REGISTRAR` in the environment to change who holds the armoury.
 
 ---
 

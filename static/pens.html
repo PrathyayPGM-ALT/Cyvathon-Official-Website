@@ -107,6 +107,25 @@
       -webkit-background-clip:text; background-clip:text; color:transparent; }
     .payout span{ display:block; font-size:.74rem; color:var(--pn-muted); margin-top:.2rem; }
 
+    /* ---- the racks (divisions) ---- */
+    .racks{ display:grid; gap:1rem; grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr)); }
+    .rack{ position:relative; overflow:hidden; color:var(--pn-text); cursor:pointer;
+      background:linear-gradient(165deg,var(--pn-ink),var(--pn-ink-2));
+      border:1px solid var(--pn-line); border-radius:16px; padding:1.15rem 1.2rem;
+      transition:transform .2s ease, border-color .2s, box-shadow .2s; }
+    .rack::before{ content:""; position:absolute; left:0; top:0; right:0; height:4px; background:var(--rc,#ffce56); }
+    .rack::after{ content:""; position:absolute; top:-50px; right:-40px; width:150px; height:150px;
+      border-radius:50%; background:var(--rc,#ffce56); opacity:.08; pointer-events:none; }
+    .rack:hover{ transform:translateY(-4px); border-color:var(--rc,rgba(217,180,92,.5));
+      box-shadow:0 16px 34px rgba(3,8,20,.45); }
+    .rack .rh{ display:flex; align-items:center; gap:.6rem; margin-bottom:.5rem; }
+    .rack .rh i{ font-size:1.2rem; color:var(--rc,#ffce56); }
+    .rack .rh b{ font-size:1.05rem; letter-spacing:-.2px; }
+    .rack .rb{ font-size:.86rem; color:var(--pn-muted); line-height:1.5; min-height:2.6em; }
+    .rack .items{ margin:.6rem 0 .7rem; font-size:.78rem; color:var(--pn-muted); }
+    .rack .foot{ display:flex; align-items:center; gap:.5rem; font-size:.8rem; }
+    .rack .foot .n{ font-weight:800; color:var(--rc,#ffce56); }
+    .rack .rate{ margin-left:auto; font-size:.74rem; color:var(--pn-muted); }
     /* ---- handover rows ---- */
     .dons{ display:grid; gap:.9rem; }
     .don{ position:relative; overflow:hidden; color:var(--pn-text);
@@ -237,7 +256,10 @@
           front of them and log them in — an armoury is only an armoury if the ammunition is
           actually in it. <b>Cyvazon will carry them</b> so you don't have to go and find them.</p>
         <div class="svc-grid2">
-          <div><label class="lbl">How many rounds</label>
+          <div class="full"><label class="lbl">Division</label>
+            <select id="dDiv" onchange="onDivChange()"></select></div>
+          <div class="full" id="divNote" style="font-size:.8rem;color:var(--pn-muted);margin-top:-.3rem;"></div>
+          <div><label class="lbl">How many units</label>
             <input id="dCount" type="number" min="1" value="1" oninput="quote()"></div>
           <div><label class="lbl">Grade</label>
             <select id="dCond" onchange="quote()"></select></div>
@@ -253,6 +275,13 @@
         <button style="margin-top:1rem;" onclick="pledge()"><i class="fas fa-shield-halved"></i> Arm the Republic</button>
         <p id="pledgeMsg" class="svc-alert"></p>
       </div>
+    </section>
+
+    <!-- THE RACKS -->
+    <section id="tab-racks" class="pnpane" style="display:none;">
+      <h3 class="svc-head"><i class="fas fa-warehouse"></i> The Racks</h3>
+      <p class="svc-note">Nine divisions. Every division takes handovers and pays its own rate.</p>
+      <div class="racks" id="racks"></div>
     </section>
 
     <!-- MY DONATIONS -->
@@ -275,7 +304,8 @@
 
   <script src="/static/app.js"></script>
   <script>
-    let ME=null, CFG=null, TAB="donate", CONDS=[];
+    let ME=null, CFG=null, TAB="donate", CONDS=[], DIVS=[];
+    const division=(k)=>DIVS.find(d=>d.key===k)||DIVS[0]||{key:"launchers",label:"Pen Launchers",rate:400,items:[],blurb:""};
     const esc=(s)=>(s==null?"":String(s))
       .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
       .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -287,7 +317,8 @@
     function drawTabs(c){
       c = c || {};
       const defs = [
-        ["donate","Hand in rounds","fa-shield-halved",0],
+        ["donate","Hand in kit","fa-shield-halved",0],
+        ["racks","The Racks","fa-warehouse",0],
         ["mine","My handovers","fa-receipt",c.mine_open||0],
         ["board","Roll of Honour","fa-medal",0],
       ];
@@ -302,10 +333,11 @@
       TAB=tab;
       document.querySelectorAll(".pnpane").forEach(p=>p.style.display="none");
       document.getElementById("tab-"+tab).style.display="block";
-      const order = ["donate","mine","board"].concat(CFG && CFG.is_admin?["registry"]:[]);
+      const order = ["donate","racks","mine","board"].concat(CFG && CFG.is_admin?["registry"]:[]);
       document.querySelectorAll("#tabs button").forEach((b,i)=>
         b.classList.toggle("on", order[i]===tab));
       msg("");
+      if(tab==="racks")    loadRacks();
       if(tab==="mine")     loadMine();
       if(tab==="board")    loadBoard();
       if(tab==="registry") loadRegistry();
@@ -313,19 +345,29 @@
     }
 
     /* ---- donate ---- */
+    function curDiv(){ return division(document.getElementById("dDiv").value); }
+    function onDivChange(){
+      const d = curDiv();
+      document.getElementById("divNote").innerHTML =
+        `${esc(d.blurb)} <span style="color:var(--pn-gold)">${d.rate} CB per serviceable unit.</span>`
+        + (d.items&&d.items.length ? `<br><span style="opacity:.85">e.g. ${d.items.map(esc).join(" · ")}</span>` : "");
+      quote();
+    }
     function quote(){
       const n = Math.max(0, +document.getElementById("dCount").value || 0);
       const c = cond(document.getElementById("dCond").value);
-      document.getElementById("quoteVal").textContent = fmtCB(n * CFG.rate * c.share);
+      const rate = curDiv().rate;
+      document.getElementById("quoteVal").textContent = fmtCB(n * rate * c.share);
       document.getElementById("quoteSub").textContent =
         c.share === 1 ? "if all of them are logged in"
-                      : `${n} × ${CFG.rate} CB × ${c.share} — if all of them are logged in`;
+                      : `${n} × ${rate} CB × ${c.share} — if all of them are logged in`;
       document.getElementById("condNote").textContent = c.blurb || "";
     }
     async function pledge(){
       const body = {
         count: document.getElementById("dCount").value,
         condition: document.getElementById("dCond").value,
+        division: document.getElementById("dDiv").value,
         note: document.getElementById("dNote").value.trim(),
         deliver: document.getElementById("dDeliver").checked,
       };
@@ -360,7 +402,7 @@
       return `<div class="don ${esc(d.status)}">
         <div class="top">
           <div>
-            <div class="n"><i class="fas fa-pen"></i> ${esc(d.count)} G2 round${d.count==1?"":"s"}</div>
+            <div class="n"><i class="fas ${esc(d.division_icon||'fa-box')}"></i> ${esc(d.count)} unit${d.count==1?"":"s"}${d.division_label?` · ${esc(d.division_label)}`:""}</div>
             <div class="meta">${admin?`<b>${esc(d.username)}</b> · `:""}${esc(d.condition_label)}${
               d.status==="received"&&d.counted!==d.count?` · ${esc(d.counted)} of ${esc(d.count)} accepted`:""}${
               d.delivery_id?` · by Cyvazon`:""}${
@@ -479,13 +521,13 @@
         document.getElementById("rateBig").textContent = c.rate;
         document.getElementById("vault").innerHTML = `
           <div class="svc-stat"><i class="fas fa-boxes-stacked"></i>
-            <b>${esc(c.reserve_pens)}</b><span>Rounds in the armoury</span></div>
+            <b>${esc(c.reserve_pens)}</b><span>Units in the armoury</span></div>
           <div class="svc-stat"><i class="fas fa-scale-balanced"></i>
             <b>${esc(fmtCB(c.reserve_value))}</b><span>Materiel value</span></div>
           <div class="svc-stat plain"><i class="fas fa-users"></i>
             <b>${esc(c.donors)}</b><span>Citizens who've armed the Corps</span></div>
-          <div class="svc-stat"><i class="fas fa-pen"></i>
-            <b>${esc(c.my_pens)}</b><span>Your rounds in the armoury</span></div>
+          <div class="svc-stat"><i class="fas fa-warehouse"></i>
+            <b>${esc(c.my_pens)}</b><span>Your units in the armoury</span></div>
           <div class="svc-stat good"><i class="fas fa-sack-dollar"></i>
             <b>${esc(fmtCB(c.my_earned))}</b><span>What you've earned</span></div>`;
       }catch{}
@@ -495,14 +537,38 @@
       try{ drawTabs(await api("/pens/summary")); }catch{ drawTabs({}); }
     }
 
+    /* ---- the racks ---- */
+    function loadRacks(){
+      const racks = (CFG && CFG.racks) || DIVS;
+      document.getElementById("racks").innerHTML = racks.map(r=>`
+        <div class="rack" style="--rc:${esc(r.color||'#ffce56')}" onclick="pickDivision('${esc(r.key)}')">
+          <div class="rh"><i class="fas ${esc(r.icon||'fa-box')}"></i><b>${esc(r.label)}</b></div>
+          <div class="rb">${esc(r.blurb||"")}</div>
+          <div class="items">${(r.items||[]).slice(0,4).map(esc).join(" · ")}</div>
+          <div class="foot"><span class="n">${esc(r.entries||0)}</span> logged ·
+            <span>${esc(r.units||0)} unit${(r.units===1)?"":"s"}</span>
+            <span class="rate">${esc(r.rate)} CB/unit</span></div>
+        </div>`).join("");
+    }
+    function pickDivision(key){
+      const sel = document.getElementById("dDiv");
+      if(sel){ sel.value = key; onDivChange(); }
+      go("donate");
+    }
+
     (async function(){
       ME = await requireAuth(); if(!ME) return;
       renderNav("/pens", ME);
       try{ CFG = await api("/pens/config"); }
       catch(e){ return msg(e.message); }
       CONDS = CFG.conditions || [];
+      DIVS = CFG.divisions || [];
       document.getElementById("dCond").innerHTML =
         CONDS.map(c=>`<option value="${esc(c.key)}">${esc(c.label)}</option>`).join("");
+      document.getElementById("dDiv").innerHTML =
+        DIVS.map(d=>`<option value="${esc(d.key)}">${esc(d.label)} — ${esc(d.rate)} CB/unit</option>`).join("");
+      document.getElementById("dDiv").value = CFG.default_division || (DIVS[0] && DIVS[0].key) || "launchers";
+      onDivChange();
       document.getElementById("dCount").max = CFG.max_per_pledge;
       document.getElementById("rateBig").textContent = CFG.rate;
       [ "regName", "regName2" ].forEach(id=>{
@@ -513,7 +579,7 @@
       await loadVault();
       await refresh();
       const t = new URLSearchParams(location.search).get("tab");
-      go(["donate","mine","board","registry"].includes(t) ? t : "donate");
+      go(["donate","racks","mine","board","registry"].includes(t) ? t : "donate");
     })();
   </script>
 </body>
