@@ -328,6 +328,17 @@ def _security_headers(resp):
         "frame-src https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com; "
         "connect-src 'self' https://challenges.cloudflare.com; "
         "frame-ancestors 'none'; base-uri 'self'; object-src 'none'")
+    # Let the browser keep static assets so moving between pages doesn't
+    # re-download the shared scripts, stylesheet and icons every single time.
+    # Pages (served from routes, not /static/) and API JSON are left uncached
+    # so content stays live; the service worker (/sw.js) sets its own headers.
+    p = request.path
+    if p.startswith("/static/"):      # overwrite Flask's default no-cache on assets
+        if p.endswith((".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico", ".gif",
+                       ".woff", ".woff2", ".ttf", ".pdf")):
+            resp.headers["Cache-Control"] = "public, max-age=86400"        # a day — these rarely change
+        elif p.endswith((".js", ".css")):
+            resp.headers["Cache-Control"] = "public, max-age=600"          # ten minutes — quick to pick up a deploy
     return resp
 
 
@@ -550,7 +561,10 @@ def log_txn(kind, from_party, to_party, amount, currency, detail=""):
 
 
 _econ_seen = {}          # username -> last full-run timestamp
-ECON_MIN_INTERVAL = 60   # seconds; tax/salary are daily/weekly so this is harmless
+# Tax is monthly and salary weekly, so the lazy economics pass only needs to run
+# occasionally. Running it once an hour (in the background, off /me) keeps it off
+# the critical path of every page load.
+ECON_MIN_INTERVAL = 3600   # seconds
 
 def apply_economics(user):
     """Run economics, but never let a failure (e.g. a missing table/column
@@ -696,6 +710,7 @@ def _run_economics(user):
 
     if updates:
         supabase.table("cybucks").update(updates).eq("username", username).execute()
+        _invalidate_user(username)
         user = {**user, **updates}
     return user
 
@@ -727,14 +742,41 @@ def _sweep_cybits(user):
     return user
 
 
+# A citizen's account row is read on EVERY authenticated request, and a single
+# page fires many at once (the nav, the notification badge, the page's own data,
+# the chat/mail polls). Caching the row for a few seconds means that burst shares
+# one database read instead of a dozen. It's invalidated the instant the row is
+# written (see cas_num / _set_user / _invalidate_user), so balances never look
+# stale after a transaction.
+_user_cache = {}                 # username -> (row, ts)
+USER_CACHE_TTL = 4               # seconds
+
+
+def _cached_user_row(username):
+    """(row, was_cached). Falls back to a live read on a miss or stale entry."""
+    hit = _user_cache.get(username)
+    if hit and time() - hit[1] < USER_CACHE_TTL:
+        return hit[0], True
+    res = supabase.table("cybucks").select("*").eq("username", username).execute()
+    if not res.data:
+        _user_cache.pop(username, None)
+        return None, False
+    _user_cache[username] = (res.data[0], time())
+    return res.data[0], False
+
+
+def _invalidate_user(username):
+    if username:
+        _user_cache.pop(username, None)
+
+
 def get_current_user(run_economics=True):
     username = session.get("username")
     if not username:
         return None
-    result = supabase.table("cybucks").select("*").eq("username", username).execute()
-    if not result.data:
+    user, cached = _cached_user_row(username)
+    if not user:
         return None
-    user = result.data[0]
     if user.get("banned"):        # banned accounts are logged out everywhere
         return None
     if user.get("locked"):        # locked by the President, pending a look
@@ -747,7 +789,8 @@ def get_current_user(run_economics=True):
     if int(user.get("session_version") or 0) != int(session.get("sv") or 0):
         return None
     _presence[username] = time()               # any authenticated request = "online"
-    user = _sweep_cybits(user)                  # Cybucks whole; fraction -> Cybits
+    if not cached:
+        user = _sweep_cybits(user)             # Cybucks whole; fraction -> Cybits (rare write)
     if run_economics:
         user = apply_economics(user)
     return user
@@ -2032,9 +2075,21 @@ def logout():
 
 @app.route("/me")
 def me():
-    user = get_current_user()
+    # /me is called on every page load (the nav guard). Keep it off the DB-heavy
+    # economics path — read the row cheaply, answer at once, and let the lazy
+    # tax/salary pass run in the background (throttled to once an hour).
+    user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
+    uname = user["username"]
+    if time() - _econ_seen.get(uname, 0) >= ECON_MIN_INTERVAL:
+        _econ_seen[uname] = time()      # claim the slot so other pages don't double-run
+        def _econ(u=dict(user)):
+            try:
+                _run_economics(u)       # tax / salary / loans — off the request path
+            except Exception as e:
+                logging.warning("background economics for %s: %s", uname, e)
+        _in_background(_econ)
     return jsonify(success=True, user=public_user(user), admin=is_treasury_admin(user),
                    cia=is_cia(user), war=_war_cleared(user), registry=_me_registry(user))
 
@@ -2481,6 +2536,10 @@ def cas_num(table, filters, col, delta, allow_negative=False, places=2):
         for k, v in filters:
             u = u.eq(k, v)
         if u.eq(col, old).execute().data:      # stuck = nobody changed it first
+            if table == "cybucks":
+                for k, v in filters:
+                    if k == "username":
+                        _invalidate_user(v)
             return True
     return False
 
@@ -12016,6 +12075,7 @@ def _set_user(username, patch):
     """Update a citizen row. Missing columns (pre-migration) fail quietly."""
     try:
         supabase.table("cybucks").update(patch).eq("username", username).execute()
+        _invalidate_user(username)
         return True
     except Exception as ex:
         logging.warning("security: updating %s failed: %s", username, ex)
