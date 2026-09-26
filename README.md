@@ -147,6 +147,16 @@ one place — `ARMOURY_DIVISIONS` in `main.py` — so renaming, re-rating or add
 one is a single edit. The Quartermaster still counts and pays each handover by
 hand, which is what keeps a cheap division from becoming a faucet.
 
+**The Corps (enlist).** The Armoury has an **Enlist** tab where citizens apply
+to defend the Republic in one of two branches: the **Field Corps** (carries the
+pen launchers) or the **Cyber Corps** (helps defend the Republic's systems — for
+coders and ethical/defensive-security folk, who must state their experience). The
+Quartermaster accepts or turns each applicant away; an accepted soldier is paid a
+one-time 500 CB and wears a **Corps badge** on their profile (Field or Cyber).
+The badge is recorded with a mark (`[corps:field]` / `[corps:cyber]`) the way the
+passport and oath badges are. It's a roster and a badge — it grants no power over
+anyone. Defined in `CORPS_BRANCHES` in `main.py`; needs `migration_corps.sql`.
+
 Needs `migration_pen_reserve.sql`, and `migration_armoury_divisions.sql` for the
 divisions. The pen rate is tunable from the Presidential Admin Panel; set
 `PEN_REGISTRAR` in the environment to change who holds the armoury.

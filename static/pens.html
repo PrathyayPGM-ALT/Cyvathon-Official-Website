@@ -284,6 +284,11 @@
       <div class="racks" id="racks"></div>
     </section>
 
+    <!-- ENLIST -->
+    <section id="tab-enlist" class="pnpane" style="display:none;">
+      <div id="enlistBody"></div>
+    </section>
+
     <!-- MY DONATIONS -->
     <section id="tab-mine" class="pnpane" style="display:none;">
       <div class="dons svc-anim" id="myDons"></div>
@@ -319,6 +324,7 @@
       const defs = [
         ["donate","Hand in kit","fa-shield-halved",0],
         ["racks","The Racks","fa-warehouse",0],
+        ["enlist","Enlist","fa-user-shield",0],
         ["mine","My handovers","fa-receipt",c.mine_open||0],
         ["board","Roll of Honour","fa-medal",0],
       ];
@@ -333,11 +339,12 @@
       TAB=tab;
       document.querySelectorAll(".pnpane").forEach(p=>p.style.display="none");
       document.getElementById("tab-"+tab).style.display="block";
-      const order = ["donate","racks","mine","board"].concat(CFG && CFG.is_admin?["registry"]:[]);
+      const order = ["donate","racks","enlist","mine","board"].concat(CFG && CFG.is_admin?["registry"]:[]);
       document.querySelectorAll("#tabs button").forEach((b,i)=>
         b.classList.toggle("on", order[i]===tab));
       msg("");
       if(tab==="racks")    loadRacks();
+      if(tab==="enlist")   loadEnlist();
       if(tab==="mine")     loadMine();
       if(tab==="board")    loadBoard();
       if(tab==="registry") loadRegistry();
@@ -556,6 +563,115 @@
       go("donate");
     }
 
+    /* ---- enlist in the Corps ---- */
+    let ENLIST=null;
+    async function loadEnlist(){
+      const host=document.getElementById("enlistBody");
+      host.innerHTML=`<p class="svc-note">Loading…</p>`;
+      try{ ENLIST = await api("/corps/data"); }
+      catch(e){ host.innerHTML=`<p class="svc-alert">${esc(e.message)}</p>`; return; }
+      const E=ENLIST;
+      if(!E.enabled){
+        host.innerHTML=`<div class="svc-panel"><h3><i class="fas fa-user-shield"></i> The Corps</h3>
+          <p class="sub">Enlistment isn't set up yet — an admin needs to run <b>migration_corps.sql</b>.</p></div>`;
+        return;
+      }
+      const branchCard=(b)=>`
+        <div class="rack" style="--rc:${esc(b.color)};cursor:default">
+          <div class="rh"><i class="fas ${esc(b.icon)}"></i><b>${esc(b.label)}</b>
+            <span class="rate" style="margin-left:auto">${esc((E.counts||{})[b.key]||0)} serving</span></div>
+          <div class="rb">${esc(b.blurb)}</div>
+          <div class="items">Issued: ${(b.kit||[]).map(esc).join(" · ")}</div>
+        </div>`;
+
+      // My standing
+      let mineHtml="";
+      const m=E.mine;
+      if(m && m.status==="accepted"){
+        mineHtml=`<div class="svc-panel" style="border-color:rgba(31,214,166,.4)">
+          <h3><i class="fas ${esc(m.branch_icon)}" style="color:${esc(m.branch_color)}"></i> You serve in the ${esc(m.branch_label)}</h3>
+          <p class="sub">Your Corps badge is on your <a class="link" href="/profile">profile</a>. The Republic thanks you.</p></div>`;
+      } else if(m && m.status==="pending"){
+        mineHtml=`<div class="svc-panel"><h3><i class="fas fa-hourglass-half"></i> Application with the Quartermaster</h3>
+          <p class="sub">You've applied to the ${esc(m.branch_label)}. You'll hear back soon.</p></div>`;
+      }
+
+      // Application form (hidden if already serving/pending)
+      let formHtml="";
+      if(!m || m.status==="rejected"){
+        const opts=E.branches.map(b=>`<option value="${esc(b.key)}">${esc(b.label)}</option>`).join("");
+        formHtml=`<div class="svc-panel">
+          <h3><i class="fas fa-pen-to-square"></i> Apply to serve</h3>
+          <p class="sub">Accepted soldiers are paid a one-time <b>${esc(E.pay)} CB</b> and wear a Corps badge.
+            ${m&&m.status==="rejected"?`<br>Your last application wasn't accepted${m.note?`: "${esc(m.note)}"`:""}. You may apply again.`:""}</p>
+          <div class="svc-grid2">
+            <div class="full"><label class="lbl">Branch</label>
+              <select id="eBranch" onchange="enlistBranchChange()">${opts}</select></div>
+            <div class="full" id="eBranchNote" style="font-size:.8rem;color:var(--pn-muted);margin-top:-.3rem;"></div>
+            <div class="full" id="eExpWrap" style="display:none">
+              <label class="lbl">Your coding / ethical-security experience</label>
+              <textarea id="eExp" rows="3" placeholder="e.g. 'I build sites in Python and Flask, and I've done defensive CTF challenges…'"></textarea>
+              <p class="hint">The Cyber Corps is for coders and defenders. Tell the Quartermaster what you bring.</p></div>
+          </div>
+          <button style="margin-top:1rem" onclick="enlistApply()"><i class="fas fa-user-shield"></i> Apply to the Corps</button>
+          <p id="enlistMsg" class="svc-alert"></p>
+        </div>`;
+      }
+
+      // Admin: pending applications
+      let adminHtml="";
+      if(E.is_admin && (E.pending||[]).length){
+        adminHtml=`<div class="svc-panel"><h3><i class="fas fa-clipboard-check"></i> Applications
+          <span class="svc-badge">${E.pending.length} waiting</span></h3>
+          <div class="dons">${E.pending.map(p=>`
+            <div class="don pledged"><div class="top"><div>
+              <div class="n"><i class="fas ${esc(p.branch_icon)}"></i> ${esc(p.username)} — ${esc(p.branch_label)}</div>
+              ${p.experience?`<div class="note">"${esc(p.experience)}"</div>`:`<div class="meta">No note</div>`}
+            </div></div>
+            <div class="acts">
+              <button onclick="corpsDecide(${p.id},'accept')"><i class="fas fa-check"></i> Accept &amp; pay ${esc(E.pay)} CB</button>
+              <button class="danger" onclick="corpsDecide(${p.id},'reject')">Turn away</button>
+            </div></div>`).join("")}</div></div>`;
+      }
+
+      // Roster
+      const roster=(E.roster||[]);
+      const rosterHtml=`<h3 class="svc-head" style="margin-top:1.6rem"><i class="fas fa-users-line"></i> The Corps (${roster.length})</h3>`+
+        (roster.length?`<div class="dons">${roster.map(r=>`
+          <div class="don received" style="display:flex;justify-content:space-between;align-items:center;gap:.6rem">
+            <span style="font-weight:700"><i class="fas ${esc(r.branch_icon)}" style="color:${esc(r.branch_color)}"></i>
+              ${esc(r.username)}</span>
+            <span class="state received">${esc(r.branch_label)}</span></div>`).join("")}</div>`
+          :`<p class="svc-note">No one has enlisted yet. Be the first.</p>`);
+
+      host.innerHTML=`<h3 class="svc-head"><i class="fas fa-user-shield"></i> Defend the Republic</h3>
+        <p class="svc-note">Enlist in the Corps. The Quartermaster issues your kit; every soldier accepted is paid ${esc(E.pay)} CB and wears a badge.</p>
+        <div class="racks" style="margin-bottom:1.2rem">${E.branches.map(branchCard).join("")}</div>
+        ${mineHtml}${formHtml}${adminHtml}${rosterHtml}`;
+      enlistBranchChange();
+    }
+    function enlistBranchChange(){
+      const sel=document.getElementById("eBranch"); if(!sel||!ENLIST) return;
+      const b=(ENLIST.branches||[]).find(x=>x.key===sel.value)||{};
+      const note=document.getElementById("eBranchNote"); if(note) note.textContent=b.blurb||"";
+      const wrap=document.getElementById("eExpWrap"); if(wrap) wrap.style.display=b.needs_experience?"block":"none";
+    }
+    async function enlistApply(){
+      const branch=document.getElementById("eBranch").value;
+      const exp=(document.getElementById("eExp")||{}).value||"";
+      try{
+        await api("/corps/apply",{method:"POST",body:JSON.stringify({branch,experience:exp.trim()})});
+        msg("Application sent to the Quartermaster.",true,"enlistMsg");
+        setTimeout(loadEnlist,700);
+      }catch(e){ msg(e.message,false,"enlistMsg"); }
+    }
+    async function corpsDecide(id,action){
+      try{
+        await api("/corps/decide",{method:"POST",body:JSON.stringify({id,action})});
+        loadEnlist();
+      }catch(e){ alert(e.message); }
+    }
+
     (async function(){
       ME = await requireAuth(); if(!ME) return;
       renderNav("/pens", ME);
@@ -579,7 +695,7 @@
       await loadVault();
       await refresh();
       const t = new URLSearchParams(location.search).get("tab");
-      go(["donate","racks","mine","board","registry"].includes(t) ? t : "donate");
+      go(["donate","racks","enlist","mine","board","registry"].includes(t) ? t : "donate");
     })();
   </script>
 </body>

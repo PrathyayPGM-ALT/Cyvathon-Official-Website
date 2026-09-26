@@ -3883,6 +3883,8 @@ def _achievements(user, records, net_worth):
         low = " ".join((r.get("entry") or "").lower() for r in records)
         has_passport = PASSPORT_MARK in low
         has_oath = OATH_MARK in low
+        corps_field = CORPS_FIELD_MARK in low
+        corps_cyber = CORPS_CYBER_MARK in low
         visas = len(set(re.findall(r"\[visa:([a-z0-9_]+)\]", low)))
         companies = _count_rows("companies", "founder", me)
         referrals = _count_rows("cybucks", "referred_by", me)
@@ -3911,6 +3913,10 @@ def _achievements(user, records, net_worth):
         ("recruiter", "Recruiter", "fa-user-plus", "#ff8fb0", "Invite a friend who joins", referrals >= 1),
         ("patriot", "Patriot", "fa-flag", "#ff5d6c", "Recruit 5+ citizens", referrals >= 5),
         ("statesman", "Statesman", "fa-landmark", "#ffce56", "Hold a government office", office),
+        ("corps_field", "Field Corps", "fa-shield-halved", "#ffce56",
+         "Enlisted to defend the Republic — Field Corps", corps_field),
+        ("corps_cyber", "Cyber Corps", "fa-shield-virus", "#22d3ee",
+         "Enlisted to defend the Republic — Cyber Corps", corps_cyber),
     ]
     return [{"key": k, "name": n, "icon": i, "color": c, "desc": d, "earned": bool(e)}
             for (k, n, i, c, d, e) in defs]
@@ -10671,6 +10677,187 @@ def pens_summary():
                    donated=sum(1 for r in rows
                                if r["username"] == me and r["status"] == "received"),
                    reserve_pens=_reserve_holdings())
+
+
+# ============================================================
+#  THE CORPS — enlist to defend the Republic
+# ============================================================
+#  Two branches. The Field Corps carries the pen launchers; the Cyber Corps
+#  defends the Republic's systems and needs a real background in coding or
+#  ethical (defensive) security. The Quartermaster accepts or turns applicants
+#  away; an accepted soldier is paid once and wears a Corps badge on their
+#  profile. This is a roster and a badge — it grants no powers over anyone.
+CORPS_BADGE_PAY = 500
+CORPS_FIELD_MARK = "[corps:field]"
+CORPS_CYBER_MARK = "[corps:cyber]"
+CORPS_BRANCHES = [
+    {"key": "field", "label": "Field Corps", "icon": "fa-shield-halved", "color": "#ffce56",
+     "blurb": "The line of the Republic. You carry the pen launchers and stand the parades.",
+     "needs_experience": False,
+     "kit": ["G2 pen launcher", "spare rounds", "Corps sash"]},
+    {"key": "cyber", "label": "Cyber Corps", "icon": "fa-shield-virus", "color": "#22d3ee",
+     "blurb": "Athena's own. You help keep the Republic's systems standing. "
+              "For coders and ethical (defensive) security folk.",
+     "needs_experience": True,
+     "kit": ["Athena clearance (on merit)", "a defender's toolkit", "Corps sash"]},
+]
+CORPS_BRANCH_BY_KEY = {b["key"]: b for b in CORPS_BRANCHES}
+
+
+def _corps_branch(key):
+    return CORPS_BRANCH_BY_KEY.get(key or "field", CORPS_BRANCHES[0])
+
+
+def _corps_missing():
+    return jsonify(success=False,
+                   error="Enlistment isn't enabled yet — the database needs a quick "
+                         "update (run migration_corps.sql)."), 503
+
+
+def _corps_public(row, admin=False):
+    b = _corps_branch(row.get("branch"))
+    out = {"id": row.get("id"), "username": row.get("username"),
+           "branch": b["key"], "branch_label": b["label"], "branch_icon": b["icon"],
+           "branch_color": b["color"], "status": row.get("status") or "pending",
+           "created_at": row.get("created_at"), "decided_at": row.get("decided_at"),
+           "note": row.get("decision_note") or row.get("note") or ""}
+    if admin:      # only the Quartermaster sees the written-in experience
+        out["experience"] = row.get("experience") or ""
+    return out
+
+
+def _corps_latest(username):
+    try:
+        r = supabase.table("corps_members").select("*").eq("username", username) \
+            .order("id", desc=True).limit(1).execute().data
+        return r[0] if r else None
+    except Exception:
+        return None
+
+
+@app.route("/corps/data")
+@limiter.limit("60/minute")
+def corps_data():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    admin = is_pen_registrar(user)
+    try:
+        rows = supabase.table("corps_members").select("*").order("id", desc=True) \
+            .limit(400).execute().data or []
+    except Exception:
+        return jsonify(success=True, enabled=False, is_admin=admin,
+                       branches=CORPS_BRANCHES, pay=CORPS_BADGE_PAY, mine=None,
+                       roster=[], pending=[])
+    me = user["username"]
+    mine = next((r for r in rows if r["username"] == me), None)
+    roster = [_corps_public(r) for r in rows if r.get("status") == "accepted"]
+    pending = [_corps_public(r, admin=True) for r in rows if r.get("status") == "pending"] if admin else []
+    return jsonify(success=True, enabled=True, is_admin=admin,
+                   branches=CORPS_BRANCHES, pay=CORPS_BADGE_PAY,
+                   registrar=PEN_REGISTRAR,
+                   mine=_corps_public(mine, admin=(mine and mine["username"] == me)) if mine else None,
+                   roster=roster, pending=pending,
+                   counts={b["key"]: sum(1 for r in roster if r["branch"] == b["key"])
+                           for b in CORPS_BRANCHES})
+
+
+@app.route("/corps/apply", methods=["POST"])
+@limiter.limit("10/minute")
+def corps_apply():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    d = request.get_json() or {}
+    branch = (d.get("branch") or "").strip()
+    if branch not in CORPS_BRANCH_BY_KEY:
+        return jsonify(success=False, error="Pick a branch — Field or Cyber."), 400
+    b = CORPS_BRANCH_BY_KEY[branch]
+    experience = (d.get("experience") or "").strip()[:1000]
+    if b["needs_experience"] and len(experience) < 20:
+        return jsonify(success=False,
+                       error="The Cyber Corps needs a few words on your coding or "
+                             "ethical-security experience (at least a sentence)."), 400
+
+    try:
+        cur = _corps_latest(me)
+        supabase.table("corps_members").select("id").limit(1).execute()   # table exists?
+    except Exception:
+        return _corps_missing()
+    if cur and cur.get("status") == "accepted":
+        return jsonify(success=False, error="You're already enlisted in the Corps."), 400
+    if cur and cur.get("status") == "pending":
+        return jsonify(success=False, error="Your application is already with the Quartermaster."), 400
+
+    try:
+        made = supabase.table("corps_members").insert({
+            "username": me, "branch": branch, "experience": experience,
+            "status": "pending"}).execute().data[0]
+    except Exception:
+        return _corps_missing()
+    notify(PEN_REGISTRAR, f"\U0001F396️ {me} has applied to the {b['label']}.", "/pens?tab=enlist")
+    return jsonify(success=True, application=_corps_public(made, admin=True))
+
+
+@app.route("/corps/decide", methods=["POST"])
+@limiter.limit("30/minute")
+def corps_decide():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not is_pen_registrar(user):
+        return jsonify(success=False, error="Quartermaster only"), 403
+    d = request.get_json() or {}
+    action = (d.get("action") or "").strip()
+    if action not in ("accept", "reject"):
+        return jsonify(success=False, error="Unknown action"), 400
+    try:
+        cid = int(d.get("id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad application"), 400
+    note = (d.get("note") or "").strip()[:300]
+
+    try:
+        r = supabase.table("corps_members").select("*").eq("id", cid).execute().data
+    except Exception:
+        return _corps_missing()
+    if not r:
+        return jsonify(success=False, error="Application not found"), 404
+    app_row = r[0]
+    if (app_row.get("status") or "pending") != "pending":
+        return jsonify(success=False, error="That application is already settled"), 400
+    me, now = user["username"], _now()
+    b = _corps_branch(app_row.get("branch"))
+    who = app_row["username"]
+
+    if action == "reject":
+        supabase.table("corps_members").update(
+            {"status": "rejected", "decided_by": me, "decided_at": now.isoformat(),
+             "decision_note": note}).eq("id", cid).eq("status", "pending").execute()
+        notify(who, f"The Quartermaster didn't accept your {b['label']} application."
+               + (f" {note}" if note else ""), "/pens?tab=enlist")
+        return jsonify(success=True, status="rejected")
+
+    # ---- accept: pay the one-time badge stipend, and mark the profile ----
+    claimed = supabase.table("corps_members").update(
+        {"status": "accepted", "decided_by": me, "decided_at": now.isoformat(),
+         "decision_note": note, "badge_paid": True}).eq("id", cid).eq("status", "pending").execute().data
+    if not claimed:
+        return jsonify(success=False, error="That application is already settled"), 400
+
+    # Pay once (guarded by the status flip above, which only one caller can win).
+    cas_adjust(who, "balance", CORPS_BADGE_PAY, allow_negative=True)
+    treasury_add(cybucks=-CORPS_BADGE_PAY, counterparty=who, kind="corps_badge")
+    mark = CORPS_CYBER_MARK if b["key"] == "cyber" else CORPS_FIELD_MARK
+    add_record(who, f"Enlisted in the {b['label']} of Cyvathon. {mark}")
+    log_txn("corps", "Cyvathon Corps", who, CORPS_BADGE_PAY, "cybucks",
+            f"Enlisted in the {b['label']}")
+    notify(who, f"\U0001F396️ You're in — welcome to the {b['label']}. {CORPS_BADGE_PAY} CB "
+           "paid, and your Corps badge is on your profile." + (f" {note}" if note else ""),
+           "/profile")
+    return jsonify(success=True, status="accepted", paid=CORPS_BADGE_PAY)
+
 
 # ============================================================
 #  CABINET POWERS — what a minister may actually do
