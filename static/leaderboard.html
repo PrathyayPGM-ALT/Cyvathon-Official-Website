@@ -31,30 +31,50 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/static/theme.css">
   <style>
-    .lb-tabs{ display:flex; gap:.5rem; justify-content:center; flex-wrap:wrap; margin:0 auto 1.8rem; }
-    .lb-tab{ padding:.55rem 1.1rem; border-radius:999px; background:var(--panel); border:1px solid var(--panel-border);
-      color:var(--muted); font-weight:600; cursor:pointer; transition:.18s; font-size:.92rem; display:flex; align-items:center; gap:.5rem; }
-    .lb-tab:hover{ color:var(--text); border-color:var(--accent); }
-    .lb-tab.on{ color:#06223a; background:linear-gradient(135deg,var(--tc,#58c4ff),var(--tc2,#3aa0ee)); border-color:transparent; }
+    /* jump chips — scroll to any board */
+    .lb-jump{ display:flex; gap:.5rem; justify-content:center; flex-wrap:wrap; margin:0 auto 2rem; max-width:960px; }
+    .lb-chip{ padding:.45rem 1rem; border-radius:999px; background:var(--panel); border:1px solid var(--panel-border);
+      color:var(--muted); font-weight:600; cursor:pointer; transition:.18s; font-size:.85rem; display:inline-flex; align-items:center; gap:.45rem; text-decoration:none; }
+    .lb-chip:hover{ color:var(--text); border-color:var(--bc,var(--accent)); transform:translateY(-1px); }
+    .lb-chip i{ color:var(--bc,var(--accent)); }
 
-    .board{ max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:.6rem; }
-    .lbrow{ display:flex; align-items:center; gap:1rem; background:var(--panel); border:1px solid var(--panel-border);
-      border-radius:14px; padding:.85rem 1.1rem; transition:.18s; }
-    .lbrow:hover{ transform:translateX(3px); border-color:rgba(var(--m),.35); }
-    .lbrow.me{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
-    .rank{ width:2rem; text-align:center; font-weight:800; font-size:1.1rem; color:var(--muted); flex-shrink:0; }
-    .lbrow.top1 .rank{ color:#ffce56; } .lbrow.top2 .rank{ color:#cdd6e0; } .lbrow.top3 .rank{ color:#e8a06a; }
-    .medal-ico{ font-size:1.25rem; }
-    .av{ width:44px; height:44px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
-      font-weight:700; font-size:1.05rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
+    /* the grid of boards */
+    .lb-grid{ display:grid; gap:1.3rem; grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));
+      max-width:1180px; margin:0 auto; align-items:start; }
+    .lbcard{ position:relative; overflow:hidden; scroll-margin-top:90px;
+      background:linear-gradient(168deg,rgba(var(--m),.06),rgba(120,170,255,.02) 55%);
+      border:1px solid var(--panel-border); border-radius:20px; padding:1.4rem 1.4rem 1rem;
+      box-shadow:0 1px 0 rgba(255,255,255,.05) inset, var(--shadow-card); }
+    .lbcard::before{ content:""; position:absolute; left:0; top:0; right:0; height:4px;
+      background:linear-gradient(90deg,var(--bc),transparent 85%); }
+    .lbcard::after{ content:""; position:absolute; top:-40px; right:-30px; width:150px; height:150px;
+      border-radius:50%; background:var(--bc); opacity:.07; pointer-events:none; }
+    .lbhead{ display:flex; align-items:center; gap:.7rem; margin-bottom:.2rem; }
+    .lbhead .ic{ width:40px; height:40px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-size:1.1rem; color:#06121f; background:linear-gradient(135deg,var(--bc),var(--bc)); box-shadow:0 6px 16px rgba(0,0,0,.3); }
+    .lbhead h3{ font-size:1.15rem; font-weight:800; letter-spacing:-.3px; }
+    .lbsub{ font-size:.8rem; color:var(--muted); margin:.1rem 0 1rem; line-height:1.5; }
+
+    .lbrows{ display:flex; flex-direction:column; gap:.35rem; }
+    .lbrow{ display:flex; align-items:center; gap:.75rem; border-radius:12px; padding:.5rem .55rem; transition:.15s; }
+    .lbrow:hover{ background:rgba(var(--m),.06); }
+    .lbrow.me{ background:linear-gradient(90deg,color-mix(in srgb,var(--bc) 22%,transparent),transparent);
+      box-shadow:0 0 0 1px var(--bc) inset; }
+    .rank{ width:1.7rem; text-align:center; font-weight:800; font-size:.95rem; color:var(--muted); flex-shrink:0; }
+    .lbrow.t1 .rank{ color:#ffd34d; } .lbrow.t2 .rank{ color:#cfd8e3; } .lbrow.t3 .rank{ color:#e8a06a; }
+    .medal{ font-size:1.05rem; }
+    .av{ width:38px; height:38px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:.95rem; color:#fff; background:linear-gradient(135deg,var(--bc),color-mix(in srgb,var(--bc) 55%,#000)); }
     .who{ flex:1; min-width:0; }
-    .who .nm{ font-weight:700; font-size:1.02rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .who .nm a{ color:var(--text); text-decoration:none; } .who .nm a:hover{ color:var(--accent); }
-    .who .sub{ font-size:.78rem; color:var(--muted); }
-    .val{ font-weight:800; font-size:1.05rem; text-align:right; flex-shrink:0; color:var(--tc,#58c4ff); }
-    .val .u{ font-size:.72rem; color:var(--muted); font-weight:600; margin-left:.2rem; }
-    .youtag{ font-size:.66rem; color:var(--accent); font-weight:700; margin-left:.35rem; }
-    .empty{ text-align:center; color:var(--muted); padding:2rem; }
+    .who .nm{ font-weight:700; font-size:.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .who .nm a{ color:var(--text); text-decoration:none; } .who .nm a:hover{ color:var(--bc); }
+    .who .role{ font-size:.72rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .val{ font-weight:800; font-size:1rem; text-align:right; flex-shrink:0; color:var(--bc); }
+    .val .u{ font-size:.66rem; color:var(--muted); font-weight:700; margin-left:.25rem; text-transform:uppercase; letter-spacing:.4px; }
+    .youtag{ font-size:.6rem; color:var(--bc); font-weight:800; margin-left:.3rem; letter-spacing:.5px; }
+    .lbempty{ font-size:.84rem; color:var(--muted); padding:.8rem .2rem 1rem; }
+    .lbmore{ margin-top:.5rem; font-size:.78rem; font-weight:700; color:var(--bc); background:none; border:none;
+      cursor:pointer; padding:.3rem; width:auto; }
   </style>
 </head>
 <body>
@@ -62,67 +82,66 @@
 
   <div class="wrap">
     <h2 class="section-title"><i class="fas fa-ranking-star"></i> Leaderboards</h2>
-    <p class="section-sub">The richest, the busiest founders, and the citizens who built the Republic by bringing others in.</p>
+    <p class="section-sub">Every way there is to be first in Cyvathon — money, law, enterprise, trade, and service to the Republic.</p>
 
-    <div class="lb-tabs" id="tabs"></div>
-    <div class="board" id="board"></div>
+    <div class="lb-jump" id="jump"></div>
+    <div class="lb-grid" id="grid"></div>
   </div>
 
   <script src="/static/app.js"></script>
   <script>
-    let ME=null, DATA={};
+    let ME=null, META=[], BOARDS={}, EXPANDED={};
     const esc=(s)=>(s||"").replace(/</g,"&lt;");
     const enc=encodeURIComponent;
+    const fmtVal=(v,money)=> money ? fmt(v) : (Math.round(v*100)/100).toLocaleString();
 
-    const BOARDS = [
-      { key:"richest",    label:"Richest",       icon:"fa-coins",      c1:"#ffce56", c2:"#f0a92c", unit:"CB",       sub:"net cash worth",   fmtv:(v)=>fmt(v) },
-      { key:"founders",   label:"Top Founders",  icon:"fa-building",   c1:"#1fd6a6", c2:"#12a37c", unit:"companies",sub:"companies founded",fmtv:(v)=>v },
-      { key:"recruiters", label:"Top Recruiters",icon:"fa-user-plus",  c1:"#a78bfa", c2:"#7c5cf0", unit:"citizens", sub:"citizens recruited",fmtv:(v)=>v },
-    ];
-    let current = "richest";
-
-    function renderTabs(){
-      document.getElementById("tabs").innerHTML = BOARDS.map(b=>
-        `<div class="lb-tab ${b.key===current?'on':''}" style="--tc:${b.c1};--tc2:${b.c2}" onclick="pick('${b.key}')">
-           <i class="fas ${b.icon}"></i> ${b.label}</div>`).join("");
+    function rowHtml(r,i,b){
+      const you = r.username===ME;
+      const medal = i<3 ? `<span class="medal">${["🥇","🥈","🥉"][i]}</span>` : (i+1);
+      return `<div class="lbrow ${you?'me':''} ${i<3?'t'+(i+1):''}">
+        <div class="rank">${medal}</div>
+        <div class="av" ${avatarStyle(r.avatar)}>${r.avatar?'':esc((r.username||'?')[0].toUpperCase())}</div>
+        <div class="who">
+          <div class="nm"><a href="${you?'/profile':'/profile?user='+enc(r.username)}">${esc(r.username)}</a>${you?'<span class="youtag">YOU</span>':''}</div>
+          <div class="role">${esc(r.role||'Citizen')}</div>
+        </div>
+        <div class="val">${fmtVal(r.value,b.money)}<span class="u">${esc(b.unit)}</span></div>
+      </div>`;
     }
 
-    function pick(k){ current=k; renderTabs(); renderBoard(); }
+    function cardHtml(b){
+      const list = BOARDS[b.key] || [];
+      const open = EXPANDED[b.key];
+      const shown = open ? list : list.slice(0,5);
+      const body = list.length
+        ? `<div class="lbrows">${shown.map((r,i)=>rowHtml(r,i,b)).join("")}</div>`
+          + (list.length>5 ? `<button class="lbmore" onclick="toggle('${b.key}')">${open?'Show less':`Show all ${list.length}`}</button>` : "")
+        : `<p class="lbempty">Nobody's on this board yet — be the first.</p>`;
+      return `<section class="lbcard" id="b-${b.key}" style="--bc:${b.color}">
+        <div class="lbhead"><span class="ic"><i class="fas ${b.icon}"></i></span><h3>${esc(b.title)}</h3></div>
+        <p class="lbsub">${esc(b.sub)}</p>
+        ${body}
+      </section>`;
+    }
 
-    function renderBoard(){
-      const b = BOARDS.find(x=>x.key===current);
-      const list = DATA[current] || [];
-      const box = document.getElementById("board");
-      box.style.setProperty("--tc", b.c1);
-      if(!list.length){ box.innerHTML = `<p class="empty">Nobody's on this board yet — be the first.</p>`; return; }
-      const trophy = ["🥇","🥈","🥉"];
-      box.innerHTML = list.map((r,i)=>{
-        const you = r.username===ME;
-        const rankCell = i<3 ? `<span class="medal-ico">${trophy[i]}</span>` : (i+1);
-        return `<div class="lbrow ${you?'me':''} ${i<3?'top'+(i+1):''}" style="--tc:${b.c1}">
-          <div class="rank">${rankCell}</div>
-          <div class="av" ${avatarStyle(r.avatar)}>${r.avatar?'':esc((r.username||'?')[0].toUpperCase())}</div>
-          <div class="who">
-            <div class="nm"><a href="${you?'/profile':'/profile?user='+enc(r.username)}">${esc(r.username)}</a>${you?'<span class="youtag">YOU</span>':''}</div>
-            <div class="sub">${b.sub}</div>
-          </div>
-          <div class="val">${b.fmtv(r.value)}<span class="u">${b.unit}</span></div>
-        </div>`;
-      }).join("");
+    function toggle(k){ EXPANDED[k]=!EXPANDED[k]; render(); }
+
+    function render(){
+      document.getElementById("jump").innerHTML = META.map(b=>
+        `<a class="lb-chip" style="--bc:${b.color}" href="#b-${b.key}"><i class="fas ${b.icon}"></i> ${esc(b.title)}</a>`).join("");
+      document.getElementById("grid").innerHTML = META.map(cardHtml).join("");
     }
 
     (async function(){
       const user=await requireAuth(); if(!user) return;
       ME=user.username; renderNav("/leaderboard", user);
-      renderTabs();
-      document.getElementById("board").innerHTML=spinner("Tallying the rankings…");
+      document.getElementById("grid").innerHTML=spinner("Tallying the rankings…");
       try{
         const d=await api("/leaderboard_data");
-        ME=d.me||ME;
-        DATA={ richest:d.richest||[], founders:d.founders||[], recruiters:d.recruiters||[] };
-        renderBoard();
+        ME=d.me||ME; META=d.meta||[]; BOARDS=d.boards||{};
+        render();
       }catch(e){
-        document.getElementById("board").innerHTML=`<p class="empty">${esc(e.message)}</p>`;
+        document.getElementById("grid").innerHTML=`<p class="lbempty" style="text-align:center">${esc(e.message)}</p>`;
       }
     })();
   </script>

@@ -6770,54 +6770,111 @@ def activity_feed():
 
 
 # ---- Leaderboards ----------------------------------------------------------
+# The leaderboard's boards. Each is defined once here — key, title, subtitle, the
+# unit each value is counted in, and an icon/colour — so the page can render them
+# uniformly and adding a board is a small change in one place.
+LEADERBOARD_BOARDS = [
+    {"key": "richest",       "title": "Wealthiest Citizens", "sub": "All three currencies combined. Standings only — balances stay private.",
+     "unit": "CB",        "icon": "fa-sack-dollar",     "color": "#ffce56", "money": True},
+    {"key": "lawmakers",     "title": "Lawmakers",          "sub": "Bills sponsored that passed into law.",
+     "unit": "bills",     "icon": "fa-scale-balanced",  "color": "#a78bfa"},
+    {"key": "civic",         "title": "Most Civic",         "sub": "Votes cast in polls, bills and elections.",
+     "unit": "votes",     "icon": "fa-check-to-slot",   "color": "#22d3ee"},
+    {"key": "industrialists","title": "Industrialists",     "sub": "Companies founded.",
+     "unit": "companies", "icon": "fa-city",            "color": "#1fd6a6"},
+    {"key": "shareholders",  "title": "Shareholders",       "sub": "Shares held across every company.",
+     "unit": "shares",    "icon": "fa-arrow-trend-up",  "color": "#58c4ff"},
+    {"key": "traders",       "title": "Traders",            "sub": "Marketplace orders fulfilled.",
+     "unit": "sales",     "icon": "fa-store",           "color": "#ff9f43"},
+    {"key": "armourers",     "title": "The Corps' Suppliers","sub": "Ordnance logged into the Armoury.",
+     "unit": "units",     "icon": "fa-shield-halved",   "color": "#e8b400"},
+    {"key": "couriers",      "title": "Cyvazon Couriers",   "sub": "Parcels delivered across the Republic.",
+     "unit": "parcels",   "icon": "fa-truck-fast",      "color": "#ff8fb0"},
+    {"key": "collectors",    "title": "Card Collectors",    "sub": "Match Attax cards in the collection.",
+     "unit": "cards",     "icon": "fa-futbol",          "color": "#34d399"},
+    {"key": "writers",       "title": "Writers",            "sub": "Blog posts published.",
+     "unit": "posts",     "icon": "fa-feather-pointed",  "color": "#c4b1ff"},
+    {"key": "recruiters",    "title": "Recruiters",         "sub": "Citizens brought in on their invite.",
+     "unit": "recruits",  "icon": "fa-user-plus",       "color": "#ff5d6c"},
+]
+
+
+def _leaderboards():
+    """Every board, computed in one pass over the tables. Cached, and each table
+    read is guarded so an un-migrated feature just yields an empty board."""
+    def rows(table, cols):
+        try:
+            return supabase.table(table).select(cols).execute().data or []
+        except Exception:
+            return []
+
+    try:
+        cits = supabase.table("cybucks") \
+            .select("username,balance,crystallines,cybits,banned,avatar,referred_by,designation") \
+            .execute().data or []
+    except Exception:
+        cits = supabase.table("cybucks").select("username,balance,crystallines,cybits,banned").execute().data or []
+    avatar = {c["username"]: c.get("avatar") for c in cits}
+    role = {c["username"]: (c.get("designation") or "Citizen") for c in cits}
+    active = [c for c in cits if not c.get("banned")]
+    live = {c["username"] for c in active}      # banned names are kept off every board
+
+    def board(pairs, as_float=False):
+        top = sorted(((u, v) for u, v in pairs if u in live and v),
+                     key=lambda x: -x[1])[:10]
+        return [{"username": u, "avatar": avatar.get(u), "role": role.get(u, "Citizen"),
+                 "value": round(v, 2) if as_float else int(v)} for u, v in top]
+
+    def tally(items, key):
+        c = {}
+        for r in items:
+            k = r.get(key)
+            if k:
+                c[k] = c.get(k, 0) + 1
+        return c.items()
+
+    def wealth(c):
+        return round((c.get("balance") or 0) + (c.get("crystallines") or 0) * CYBUCK_VALUE["crys"]
+                     + (c.get("cybits") or 0) * CYBUCK_VALUE["cybit"], 2)
+
+    out = {"richest": board(((c["username"], wealth(c)) for c in active), as_float=True)}
+    out["industrialists"] = board(tally(rows("companies", "founder"), "founder"))
+    out["recruiters"] = board(tally(cits, "referred_by"))
+    out["lawmakers"] = board(tally([b for b in rows("bills", "sponsor,status")
+                                    if b.get("status") == "enacted"], "sponsor"))
+    out["civic"] = board(tally(rows("ballots", "voter"), "voter"))
+    out["traders"] = board(tally([m for m in rows("market_items", "seller,status")
+                                  if m.get("status") == "sold"], "seller"))
+    out["writers"] = board(tally(rows("blogs", "username"), "username"))
+    out["couriers"] = board(tally([d for d in rows("deliveries", "courier,status")
+                                   if d.get("status") == "delivered"], "courier"))
+
+    def sums(items, key, field):
+        c = {}
+        for r in items:
+            k = r.get(key)
+            if k:
+                c[k] = c.get(k, 0) + (r.get(field) or 0)
+        return c.items()
+
+    out["shareholders"] = board(sums(rows("holdings", "username,shares"), "username", "shares"), as_float=True)
+    out["collectors"] = board(sums(rows("card_packet", "owner,quantity"), "owner", "quantity"))
+    out["armourers"] = board(sums([p for p in rows("pen_donations", "username,counted,status")
+                                   if p.get("status") == "received"], "username", "counted"))
+    return out
+
+
 @app.route("/leaderboard_data")
 def leaderboard_data():
     user = get_current_user(run_economics=False)
     if not user:
         return jsonify(success=False, error="Not logged in"), 401
-    try:
-        cits = supabase.table("cybucks") \
-            .select("username,balance,crystallines,cybits,banned,avatar,referred_by") \
-            .execute().data or []
-    except Exception:      # avatar / referred_by columns not migrated yet
-        cits = supabase.table("cybucks") \
-            .select("username,balance,crystallines,cybits,banned").execute().data or []
-    avatar = {c["username"]: c.get("avatar") for c in cits}
-    active = [c for c in cits if not c.get("banned")]
-
-    def wealth(c):
-        return round((c.get("balance") or 0)
-                     + (c.get("crystallines") or 0) * CYBUCK_VALUE["crys"]
-                     + (c.get("cybits") or 0) * CYBUCK_VALUE["cybit"], 2)
-
-    richest = sorted(active, key=lambda c: -wealth(c))[:10]
-    richest = [{"username": c["username"], "avatar": avatar.get(c["username"]),
-                "value": wealth(c)} for c in richest]
-
-    # Top founders — companies started per citizen.
-    try:
-        comps = supabase.table("companies").select("founder").execute().data or []
-    except Exception:
-        comps = []
-    fc = {}
-    for c in comps:
-        f = c.get("founder")
-        if f:
-            fc[f] = fc.get(f, 0) + 1
-    founders = sorted(fc.items(), key=lambda x: -x[1])[:10]
-    founders = [{"username": u, "avatar": avatar.get(u), "value": n} for u, n in founders]
-
-    # Top recruiters — citizens brought in via referrals.
-    rc = {}
-    for c in cits:
-        rb = c.get("referred_by")
-        if rb:
-            rc[rb] = rc.get(rb, 0) + 1
-    recruiters = sorted(rc.items(), key=lambda x: -x[1])[:10]
-    recruiters = [{"username": u, "avatar": avatar.get(u), "value": n} for u, n in recruiters]
-
-    return jsonify(success=True, me=user["username"],
-                   richest=richest, founders=founders, recruiters=recruiters)
+    boards = cached_json("leaderboards", 60, _leaderboards)
+    return jsonify(success=True, me=user["username"], meta=LEADERBOARD_BOARDS, boards=boards,
+                   # kept for older cached clients
+                   richest=boards.get("richest", []),
+                   founders=boards.get("industrialists", []),
+                   recruiters=boards.get("recruiters", []))
 
 
 # ============================================================
