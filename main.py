@@ -377,6 +377,19 @@ def _now():
     return datetime.now(timezone.utc)
 
 
+# Cyvathon keeps its clock in UTC (correct for storage), but the Republic runs on
+# Indian school time, so anything shown to a citizen is displayed in IST.
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def _ist(dt=None):
+    """A datetime in Indian Standard Time, for display."""
+    dt = dt or _now()
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(IST)
+
+
 def _parse(ts):
     """Parse a Supabase timestamptz string into an aware datetime."""
     if not ts:
@@ -2063,7 +2076,7 @@ def _after_login(user, ip, ua, password):
     _pin_nudge(user, ip=ip, ua=ua)
     if strange:
         notify(username, f"🔐 Your account was signed in to from a new place ({ip}) at "
-                         f"{_now().strftime('%H:%M')} UTC. If that wasn't you, change your "
+                         f"{_ist().strftime('%H:%M')} IST. If that wasn't you, change your "
                          f"password now.", "/profile")
 
 
@@ -5187,7 +5200,7 @@ def _do_surveil(key):
             _surveil_registry(
                 f"Enemy Watch — {name} went {'ONLINE' if now_up else 'OFFLINE'}",
                 f"Athena's passive watch on {name}'s public homepage ({SURVEIL_TARGETS[key]}) "
-                f"recorded a status change at {_now().strftime('%Y-%m-%d %H:%M')} UTC.\n\n"
+                f"recorded a status change at {_ist().strftime('%Y-%m-%d %H:%M')} IST.\n\n"
                 f"STATUS: {'ONLINE' if now_up else 'OFFLINE'} (HTTP {res['code']}"
                 f"{', ' + str(res['ms']) + 'ms' if now_up and res.get('ms') else ''}"
                 f"{', ' + res['err'] if res.get('err') else ''}).\n"
@@ -5247,7 +5260,7 @@ def _athena_daily_brief():
     Athena or Registry page; it files at most one brief a day (UTC), and only
     ever from data we already hold — the rival's public homepage, and our own
     sign-in and firewall records. It never reaches into their systems."""
-    today = _now().strftime("%Y-%m-%d")
+    today = _ist().strftime("%Y-%m-%d")      # one brief per Indian calendar day
     if _brief_state["date"] == today:
         return
     title = f"Athena Daily Brief — {today}"
@@ -5289,7 +5302,7 @@ def _athena_daily_brief():
 
     body = (
         f"ATHENA DAILY BRIEF — {today}\n"
-        f"Compiled {_now().strftime('%H:%M')} UTC. CONFIDENTIAL — cleared officers and the President only.\n\n"
+        f"Compiled {_ist().strftime('%H:%M')} IST. CONFIDENTIAL — cleared officers and the President only.\n\n"
         "ENEMY WATCH (passive; their public homepage only)\n"
         f"  {watch}\n"
         f"  Up/down changes recorded in the last 24h: {changes}.\n\n"
@@ -9463,7 +9476,7 @@ def print_order():
             f"Print: {pages}p ×{copies}, {'colour' if color else 'B&W'}")
 
     now = _now()
-    due = _next_business_day_end(now)
+    due = _next_business_day_end(_ist(now))   # weekends by the Indian calendar
     home = {"class": user.get("home_class") or "", "area": user.get("home_area") or ""}
     kind_label = f"🖨️ Print: {name} — {pages}p ×{copies}, {'colour' if color else 'B&W'}"
     delivery_id = None
@@ -12220,7 +12233,7 @@ def cyvapay_summary():
 from collections import Counter, defaultdict
 import threading
 
-WRAPPED_TZ = timezone(timedelta(hours=5, minutes=30))   # India; no daylight saving
+WRAPPED_TZ = IST                                        # India; no daylight saving
 WRAPPED_MONTH = 9
 WRAPPED_FIRST_EDITION = 2026
 WRAPPED_FOUNDED = datetime(2025, 5, 26, tzinfo=WRAPPED_TZ)

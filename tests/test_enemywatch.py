@@ -101,7 +101,7 @@ check("Athena shows the same surveillance", "Foreign Surveillance" in at and "re
 
 print("\n=== 5. the daily brief ===")
 import datetime as _dt
-today = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d")
+today = main._ist().strftime("%Y-%m-%d")      # the brief is dated by the Indian day
 db.seed("login_events", [
     {"id": 1, "username": "Riya", "ok": True, "kind": "login", "created_at": main._now().isoformat()},
     {"id": 2, "username": "Riya", "ok": False, "kind": "fail", "created_at": main._now().isoformat()},
