@@ -100,6 +100,17 @@
     /* red flash when you take a hit */
     .killflash{ position:absolute; inset:0; pointer-events:none; background:radial-gradient(circle,transparent 40%,rgba(255,40,40,.45)); opacity:0; transition:opacity .1s; }
     .killflash.on{ opacity:1; transition:none; }
+    /* War-Thunder-style movable aim reticle (mouse mode) */
+    .aimret{ position:absolute; width:30px; height:30px; margin:-15px 0 0 -15px; pointer-events:none; z-index:4;
+      border:2px solid rgba(120,220,255,.9); border-radius:50%; box-shadow:0 0 10px rgba(120,220,255,.6); }
+    .aimret::after{ content:""; position:absolute; left:50%; top:50%; width:3px; height:3px; margin:-1.5px 0 0 -1.5px;
+      background:#7fdcff; border-radius:50%; }
+    /* control-mode selector on the start screen */
+    .ctrlsel{ display:flex; align-items:center; gap:.5rem; justify-content:center; margin:.2rem 0 .6rem; flex-wrap:wrap; }
+    .ctrlsel>span{ font-size:.78rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+    .cmbtn{ width:auto; margin:0; padding:.5rem 1rem; border-radius:10px; font-weight:700; font-size:.9rem; cursor:pointer;
+      background:var(--panel); color:var(--muted); border:1px solid var(--panel-border); }
+    .cmbtn.on{ background:linear-gradient(135deg,#3fb0ff,#2b6cb0); color:#04223b; border-color:transparent; }
     /* kill / event banner */
     .lockmsg{ position:absolute; top:22%; left:50%; transform:translateX(-50%); font-weight:900; font-size:1.4rem;
       letter-spacing:1px; color:#ffce56; text-shadow:0 2px 10px rgba(0,0,0,.7); opacity:0; transition:opacity .3s; pointer-events:none; }
@@ -136,6 +147,7 @@
             <div class="g"><b id="gScore">0</b><span>score</span></div>
           </div>
           <div class="gunsight" id="gunsight"><i></i><i></i><i></i><i></i><span class="ring"></span></div>
+          <div class="aimret" id="aimret" style="display:none"></div>
           <div class="killflash" id="killflash"></div>
           <div class="lockmsg" id="lockmsg"></div>
         </div>
@@ -145,11 +157,21 @@
           <p><b>Throttle up</b>, build speed, then <b>ease back</b> to rotate and climb. Then hunt:
              line an <b style="color:#ff6b6b">enemy fighter</b> up in your gunsight and <b>fire</b>, or <b>drop bombs</b>
              on their ground bases. Keep your speed up or you'll <b>stall</b> — and don't hit the ground.</p>
-          <div class="keys">
+          <div class="ctrlsel">
+            <span>Controls</span>
+            <button type="button" id="cmKb" class="cmbtn" onclick="setControl('keyboard')">⌨️ Keyboard</button>
+            <button type="button" id="cmMouse" class="cmbtn" onclick="setControl('mouse')">🖱️ Mouse aim</button>
+          </div>
+          <div class="keys" id="keysKb">
             <span class="kbd">W / S — throttle</span><span class="kbd">↑ / ↓ — pitch</span>
             <span class="kbd">← / → — roll</span><span class="kbd">A / D — rudder</span>
             <span class="kbd">Space — guns</span><span class="kbd">B — drop bomb</span>
             <span class="kbd">Shift — boost</span><span class="kbd">C — cockpit / chase</span>
+          </div>
+          <div class="keys" id="keysMouse" style="display:none">
+            <span class="kbd">Move mouse — fly toward the reticle</span><span class="kbd">Left-click — guns</span>
+            <span class="kbd">Right-click — drop bomb</span><span class="kbd">W / S — throttle</span>
+            <span class="kbd">A / D — rudder</span><span class="kbd">Shift — boost</span><span class="kbd">C — view</span>
           </div>
           <button class="big" onclick="startGame()"><i class="fas fa-play"></i> Scramble</button>
           <p id="loadNote" class="small" style="opacity:.7"></p>
@@ -216,6 +238,19 @@
     let _fwd, _up, _side, _v3, _euler;
     const keys={};
     let state="ready", last=0, raf=null, touchPitch=0, touchRoll=0, touching=false, crashReason="";
+    // mouse-aim ("War Thunder" style) control
+    let controlMode="keyboard", mAim={x:0,y:0}, mouseFire=false;
+    try{ controlMode = localStorage.getItem("fs-control")==="mouse" ? "mouse" : "keyboard"; }catch(e){}
+    function setControl(mode){
+      controlMode = mode==="mouse" ? "mouse" : "keyboard";
+      try{ localStorage.setItem("fs-control", controlMode); }catch(e){}
+      const mouse = controlMode==="mouse";
+      document.getElementById("cmKb").classList.toggle("on", !mouse);
+      document.getElementById("cmMouse").classList.toggle("on", mouse);
+      document.getElementById("keysKb").style.display = mouse ? "none" : "flex";
+      document.getElementById("keysMouse").style.display = mouse ? "flex" : "none";
+      const ret=document.getElementById("aimret"); if(ret) ret.style.display = (mouse && state==="playing") ? "block" : "none";
+    }
 
     function init(){
       if(!window.THREE){ document.getElementById("loadNote").textContent="3D engine failed to load — check your connection and refresh."; return false; }
@@ -516,6 +551,7 @@
       plane.quat.identity(); plane.throttle=0; plane.onGround=true; plane.dist=0;
       plane.kills=0; plane.groundKills=0; plane.bombs=START_BOMBS; plane.hp=100; plane.stall=false;
       touchPitch=0; touchRoll=0; crashReason="";
+      mAim.x=0; mAim.y=0; mouseFire=false;
       clearPilots(); presT=0;
       gunHeat=0; gunCool=0; fireCd=0; bombCd=0;
       for(const b of bullets){ b.life=0; b.m.visible=false; }
@@ -525,6 +561,10 @@
       document.getElementById("startScreen").classList.add("hide");
       document.getElementById("overScreen").classList.add("hide");
       document.getElementById("hud").style.display="block";
+      const ret=document.getElementById("aimret");
+      if(ret){ if(controlMode==="mouse"){ const r=stage.getBoundingClientRect();
+          ret.style.left=r.width/2+"px"; ret.style.top=r.height/2+"px"; ret.style.display="block"; }
+        else ret.style.display="none"; }
       state="playing"; last=performance.now();
       if(raf) cancelAnimationFrame(raf); raf=requestAnimationFrame(loop);
     }
@@ -625,8 +665,15 @@
 
     function step(dt){
       // ---- control inputs ----
-      const pitchIn=(keys["ArrowUp"]?1:0)-(keys["ArrowDown"]?1:0)+touchPitch;   // + = nose up
-      const rollIn =(keys["ArrowRight"]?1:0)-(keys["ArrowLeft"]?1:0)+touchRoll;
+      let pitchIn, rollIn;
+      if(controlMode==="mouse" && !touching){
+        // Pure mouse aim (War Thunder style): the plane flies toward the reticle.
+        // Just hold W for throttle; the nose chases wherever you point the mouse.
+        pitchIn=mAim.y; rollIn=mAim.x;
+      } else {
+        pitchIn=(keys["ArrowUp"]?1:0)-(keys["ArrowDown"]?1:0)+touchPitch;   // + = nose up
+        rollIn =(keys["ArrowRight"]?1:0)-(keys["ArrowLeft"]?1:0)+touchRoll;
+      }
       const yawIn  =(keys["KeyD"]?1:0)-(keys["KeyA"]?1:0);
       const thrIn  =(keys["KeyW"]?1:0)-(keys["KeyS"]?1:0);
       const boost  =(keys["ShiftLeft"]||keys["ShiftRight"])?1:0; plane._boost=boost;
@@ -709,7 +756,7 @@
       fireCd-=dt; bombCd-=dt;
       if(gunCool>0) gunCool-=dt;
       gunHeat=Math.max(0, gunHeat - dt*(gunCool>0?0.25:0.5));
-      if(keys["Space"]) fireGun();
+      if(keys["Space"] || mouseFire) fireGun();
       if(muzzle.visible){ muzzle.material.opacity*=0.72; if(muzzle.material.opacity<0.05) muzzle.visible=false; }
 
       _fwd.set(0,0,-1).applyQuaternion(plane.quat);
@@ -825,6 +872,29 @@
     stage.addEventListener("touchmove",tmove,{passive:false});
     window.addEventListener("touchend",()=>{ touching=false; touchPitch=0; touchRoll=0; });
 
+    // ---- mouse aim (War Thunder style) ----
+    function mouseAim(e){
+      if(controlMode!=="mouse") return;
+      const r=stage.getBoundingClientRect();
+      let nx=((e.clientX-r.left)/r.width-0.5)*2, ny=((e.clientY-r.top)/r.height-0.5)*2;  // -1..1 from centre
+      const dz=0.07;                                  // small dead zone so the nose sits still when centred
+      const sq=(v)=>{ const a=Math.abs(v); return a<dz?0:Math.sign(v)*(a-dz)/(1-dz); };
+      mAim.x=clamp(sq(nx)*1.35,-1,1);                 // mouse right -> roll right
+      mAim.y=clamp(-sq(ny)*1.35,-1,1);                // mouse up -> nose up
+      const ret=document.getElementById("aimret");
+      if(ret){ ret.style.left=clamp(e.clientX-r.left,0,r.width)+"px"; ret.style.top=clamp(e.clientY-r.top,0,r.height)+"px"; }
+    }
+    stage.addEventListener("mousemove", mouseAim);
+    stage.addEventListener("mousedown", e=>{
+      if(controlMode!=="mouse" || state!=="playing") return;
+      if(e.button===0) mouseFire=true;
+      else if(e.button===2) dropBomb();
+      e.preventDefault();
+    });
+    window.addEventListener("mouseup", e=>{ if(e.button===0) mouseFire=false; });
+    stage.addEventListener("contextmenu", e=>{ if(controlMode==="mouse") e.preventDefault(); });
+    stage.addEventListener("mouseleave", ()=>{ mouseFire=false; });
+
     async function gameOver(){
       if(state!=="playing") return;
       state="over";
@@ -863,6 +933,7 @@
     (async function(){
       const user=await requireAuth(); if(!user) return;
       ME=user.username; renderNav("/flightsim", user);
+      setControl(controlMode);        // reflect the saved choice on the start screen
       init();
       try{ const d=await api("/flight/board"); BEST=d.best||0; ME=d.me||ME;
         document.getElementById("best").textContent=BEST||"—"; renderBoard(d.board||[]);
