@@ -7333,11 +7333,19 @@ def get_messages():
         return jsonify(success=False, error="Not logged in"), 401
 
     since_id = request.args.get("since_id", type=int)
-    query = supabase.table("messages").select("*").order("id", desc=False)
-    if since_id is not None:
-        query = query.gt("id", since_id)
-    res = query.limit(50).execute()
-    public = [m for m in res.data if m["recipient"] is None and not m.get("group_id")]
+    if since_id:
+        # Polling: just the public messages newer than what the client has.
+        rows = supabase.table("messages").select("*").gt("id", since_id) \
+            .order("id").limit(120).execute().data or []
+        public = [m for m in rows if m.get("recipient") is None and not m.get("group_id")]
+    else:
+        # First load: the LATEST public messages, not the oldest — so the feed
+        # shows the live conversation at once. Pull a recent window newest-first,
+        # keep the public ones, and hand them back oldest-first for display.
+        rows = supabase.table("messages").select("*").order("id", desc=True) \
+            .limit(160).execute().data or []
+        public = [m for m in rows if m.get("recipient") is None and not m.get("group_id")][:60]
+        public.reverse()
     return jsonify(success=True, messages=public)
 
 

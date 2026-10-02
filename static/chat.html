@@ -129,6 +129,8 @@
 
     /* reply / quote */
     .bubble{ position:relative; }
+    .bubble .time{ font-size:.6rem; opacity:.55; margin-left:.45rem; vertical-align:baseline; white-space:nowrap; font-weight:600; }
+    .grp.me .bubble .time{ color:#053b5e; opacity:.65; }
     .replybtn{ position:absolute; top:-9px; right:-9px; width:24px; height:24px; border-radius:50%; display:none;
       align-items:center; justify-content:center; background:var(--bg-soft); border:1px solid var(--panel-border);
       color:var(--muted); cursor:pointer; font-size:.68rem; z-index:2; }
@@ -427,7 +429,9 @@
         ? `<div class="quote" onclick="jumpTo(${m.reply_to})"><b>${esc(m.reply_sender||'')}</b><span class="qt">${esc((m.reply_text||'').slice(0,120))}</span></div>` : "";
       const status = m.sender===ME
         ? `<span class="status">${opts.pending?'<i class="fas fa-clock"></i>':'<i class="fas fa-check"></i>'}</span>` : "";
-      b.innerHTML=quote+renderRich(m.content)+status
+      const ts = m.created_at || (opts.pending ? new Date().toISOString() : null);
+      const timeEl = `<span class="time" title="${ts?esc(new Date(ts).toLocaleString()):''}">${tm(ts)}</span>`;
+      b.innerHTML=quote+renderRich(m.content)+status+timeEl
         +`<div class="reacts"></div>`
         +`<span class="replybtn" title="Reply" onclick="startReplyEl(this)"><i class="fas fa-reply"></i></span>`
         +`<span class="reactbtn" title="React" onclick="openReactPicker(this)"><i class="fas fa-face-smile"></i></span>`;
@@ -469,6 +473,8 @@
       el.classList.remove("sending");
       const s=el.querySelector(".status"); if(s) s.innerHTML='<i class="fas fa-check"></i>';
       if(m&&m.id){ lastId=Math.max(lastId,m.id); el.dataset.mid=m.id; if(el._msg) el._msg.id=m.id; }
+      const tEl=el.querySelector(".time");
+      if(tEl && m && m.created_at){ tEl.textContent=tm(m.created_at); tEl.title=new Date(m.created_at).toLocaleString(); }
     }
     function markFail(el,content){
       el.classList.remove("sending");
@@ -782,14 +788,20 @@
       // measure the top nav's height so the sidebar can lay exactly over it
       const _setNavH=()=>{ const h=document.querySelector("header"); if(h) document.documentElement.style.setProperty("--navh", h.offsetHeight+"px"); };
       _setNavH(); window.addEventListener("resize", _setNavH);
-      try{ const me=await api("/me"); ADMIN=!!me.admin; if(me.user&&me.user.avatar) AVATARS[ME]=me.user.avatar; }catch{}
-      try{ const d=await api("/citizens/list"); citizens=d.citizens||[]; citizens.forEach(c=>{ if(c.avatar) AVATARS[c.username]=c.avatar; }); }catch{}
-      await loadGroups();
+      if(user.avatar) AVATARS[ME]=user.avatar;
+
       const qs=new URLSearchParams(location.search);
       const dm=qs.get("dm"), gid=qs.get("group");
+
+      // Paint the conversation FIRST; the roster, groups and admin flag load in
+      // parallel behind it and refresh the sidebar when they arrive. No more
+      // waiting on four calls in a row before the first message shows.
       if(dm) openDM(encodeURIComponent(dm));
-      else if(gid) openGroup(parseInt(gid));
-      else openPublic();
+      else if(!gid) openPublic();
+      fetchMe().then(me=>{ if(me){ ADMIN=!!me.admin; if(me.user&&me.user.avatar) AVATARS[ME]=me.user.avatar; } }).catch(()=>{});
+      api("/citizens/list").then(d=>{ citizens=d.citizens||[]; citizens.forEach(c=>{ if(c.avatar) AVATARS[c.username]=c.avatar; }); renderSide(); }).catch(()=>{});
+      const grpP=loadGroups();
+      if(gid) grpP.then(()=>openGroup(parseInt(gid)));
 
       const t=document.getElementById("msg");
       t.addEventListener("input",()=>{ autogrow(t); updateMention(); sendTyping(); });
