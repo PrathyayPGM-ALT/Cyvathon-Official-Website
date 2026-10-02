@@ -48,10 +48,6 @@
     .hud .frame::before,.hud .frame::after{ content:""; position:absolute; top:0; bottom:22%; width:7%;
       background:linear-gradient(90deg, rgba(10,16,26,.85), rgba(10,16,26,0)); }
     .hud .frame::before{ left:0; } .hud .frame::after{ right:0; transform:scaleX(-1); }
-    .cross{ position:absolute; top:42%; left:50%; width:60px; height:20px; margin:-10px 0 0 -30px; opacity:.85; }
-    .cross i{ position:absolute; top:50%; height:2px; background:#ffd24a; }
-    .cross i:nth-child(1){ left:0; width:20px; } .cross i:nth-child(2){ right:0; width:20px; }
-    .cross i:nth-child(3){ left:50%; width:6px; height:6px; margin:-3px 0 0 -3px; background:#ffd24a; border-radius:50%; }
     .stallw{ position:absolute; top:8%; left:50%; transform:translateX(-50%); background:#c0182b; color:#fff;
       font-weight:900; letter-spacing:2px; padding:.25rem .8rem; border-radius:6px; display:none; animation:blink .6s steps(1) infinite; }
     .warnp{ position:absolute; top:15%; left:50%; transform:translateX(-50%); background:#c47a10; color:#fff;
@@ -91,6 +87,23 @@
       font-weight:700; font-size:.85rem; color:#06223a; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
     .pnm{ flex:1; font-weight:600; } .pnm a{ color:var(--text); text-decoration:none; } .pnm a:hover{ color:var(--accent); }
     .psc{ font-weight:800; color:var(--accent); }
+    /* gunsight (fighter reticle) */
+    .gunsight{ position:absolute; top:50%; left:50%; width:90px; height:90px; margin:-45px 0 0 -45px; pointer-events:none; opacity:.9; }
+    .gunsight .ring{ position:absolute; inset:18px; border:2px solid rgba(255,210,74,.55); border-radius:50%; }
+    .gunsight i{ position:absolute; background:#ffd24a; box-shadow:0 0 6px rgba(255,210,74,.8); }
+    .gunsight i:nth-child(1){ left:50%; top:0; width:2px; height:14px; margin-left:-1px; }
+    .gunsight i:nth-child(2){ left:50%; bottom:0; width:2px; height:14px; margin-left:-1px; }
+    .gunsight i:nth-child(3){ left:0; top:50%; width:14px; height:2px; margin-top:-1px; }
+    .gunsight i:nth-child(4){ right:0; top:50%; width:14px; height:2px; margin-top:-1px; }
+    .gunsight.lock .ring{ border-color:#ff5b5b; box-shadow:0 0 14px rgba(255,91,91,.9); }
+    .gunsight.lock i{ background:#ff5b5b; box-shadow:0 0 8px rgba(255,91,91,.9); }
+    /* red flash when you take a hit */
+    .killflash{ position:absolute; inset:0; pointer-events:none; background:radial-gradient(circle,transparent 40%,rgba(255,40,40,.45)); opacity:0; transition:opacity .1s; }
+    .killflash.on{ opacity:1; transition:none; }
+    /* kill / event banner */
+    .lockmsg{ position:absolute; top:22%; left:50%; transform:translateX(-50%); font-weight:900; font-size:1.4rem;
+      letter-spacing:1px; color:#ffce56; text-shadow:0 2px 10px rgba(0,0,0,.7); opacity:0; transition:opacity .3s; pointer-events:none; }
+    .lockmsg.show{ opacity:1; transition:none; }
   </style>
 </head>
 <body>
@@ -107,7 +120,6 @@
         <canvas id="view"></canvas>
         <div class="hud" id="hud">
           <div class="frame"></div>
-          <div class="cross"><i></i><i></i><i></i></div>
           <div id="pilotsBadge" style="display:none;position:absolute;top:14px;left:50%;transform:translateX(-50%);align-items:center;gap:.4rem;background:rgba(8,14,26,.6);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:.35rem .9rem;font-size:.85rem;font-weight:700;backdrop-filter:blur(6px);z-index:5;"><i class="fas fa-users" style="color:#58c4ff"></i> <span id="pilotsOnline">0</span> flying</div>
           <canvas class="mini" id="mini" width="150" height="150"></canvas>
           <div class="stallw" id="stallw">STALL</div>
@@ -116,30 +128,37 @@
             <div class="adi"><div class="horizon" id="adiH"></div></div>
             <div class="g"><b id="gSpd">0</b><span>km/h</span></div>
             <div class="g"><b id="gAlt">0</b><span>alt m</span></div>
-            <div class="g"><b id="gVs">0</b><span>v/s</span></div>
             <div class="g"><b id="gHdg">0</b><span>hdg</span></div>
+            <div class="g"><b id="gKills" style="color:#ff6b6b">0</b><span>kills</span></div>
+            <div class="g"><b id="gBombs" style="color:#ffce56">6</b><span>bombs</span></div>
             <div class="thr-wrap"><div class="thr-lbl">Throttle</div><div class="thr"><i id="gThr"></i></div></div>
+            <div class="thr-wrap"><div class="thr-lbl">Guns <span id="gGunState" style="float:right;color:#8fe">READY</span></div><div class="thr"><i id="gGun" style="background:linear-gradient(90deg,#ff6b6b,#ffce56)"></i></div></div>
             <div class="g"><b id="gScore">0</b><span>score</span></div>
           </div>
+          <div class="gunsight" id="gunsight"><i></i><i></i><i></i><i></i><span class="ring"></span></div>
+          <div class="killflash" id="killflash"></div>
+          <div class="lockmsg" id="lockmsg"></div>
         </div>
 
         <div class="overlay" id="startScreen">
-          <h3>✈️ Flight Simulator</h3>
-          <p>You're on the runway. <b>Throttle up</b>, build speed, then <b>ease back</b> to rotate and climb.
-             Fly through rings for score — but keep your speed up or you'll <b>stall</b>. Don't hit the ground.</p>
+          <h3>✈️ Air Combat</h3>
+          <p><b>Throttle up</b>, build speed, then <b>ease back</b> to rotate and climb. Then hunt:
+             line an <b style="color:#ff6b6b">enemy fighter</b> up in your gunsight and <b>fire</b>, or <b>drop bombs</b>
+             on their ground bases. Keep your speed up or you'll <b>stall</b> — and don't hit the ground.</p>
           <div class="keys">
             <span class="kbd">W / S — throttle</span><span class="kbd">↑ / ↓ — pitch</span>
             <span class="kbd">← / → — roll</span><span class="kbd">A / D — rudder</span>
-            <span class="kbd">Shift — boost</span><span class="kbd">C — cockpit / chase view</span>
+            <span class="kbd">Space — guns</span><span class="kbd">B — drop bomb</span>
+            <span class="kbd">Shift — boost</span><span class="kbd">C — cockpit / chase</span>
           </div>
-          <button class="big" onclick="startGame()"><i class="fas fa-play"></i> Start engines</button>
+          <button class="big" onclick="startGame()"><i class="fas fa-play"></i> Scramble</button>
           <p id="loadNote" class="small" style="opacity:.7"></p>
         </div>
         <div class="overlay hide" id="overScreen">
           <h3 id="overTitle">Flight ended</h3>
           <div class="scoreline">
             <div><b id="finalScore">0</b><span>Score</span></div>
-            <div><b id="finalRings">0</b><span>Rings</span></div>
+            <div><b id="finalRings">0</b><span>Kills</span></div>
             <div><b id="finalBest">0</b><span>Best</span></div>
           </div>
           <p id="rewardMsg" class="reward"></p>
@@ -171,7 +190,12 @@
 
     let renderer, scene, camera, sky, sun, ready=false;
     let water, aircraft, prop, composer=null, bloomPass=null, viewMode="chase", simTime=0;
-    let rings=[], coins=[];
+    // ---- combat state ----
+    let enemies=[], bullets=[], bombs=[], targets=[], effects=[];
+    let bulletMat, enemyBulletMat;
+    let gunHeat=0, gunCool=0, fireCd=0, bombCd=0;
+    let muzzle=null;
+    const BULLET_SPD=900, ENEMY_BULLET_SPD=620, GUN_RANGE=1400, MAX_ENEMIES=5, START_BOMBS=6;
     const stage=document.getElementById("stage"), cvs=document.getElementById("view");
 
     // ---- terrain height (used for the mesh AND for collision) ----
@@ -188,7 +212,7 @@
     }
 
     // ---- flight state ----
-    const plane={ pos:null, vel:null, quat:null, throttle:0, onGround:true, dist:0, ringsHit:0, coinsHit:0, stall:false };
+    const plane={ pos:null, vel:null, quat:null, throttle:0, onGround:true, dist:0, kills:0, groundKills:0, bombs:START_BOMBS, hp:100, stall:false };
     let _fwd, _up, _side, _v3, _euler;
     const keys={};
     let state="ready", last=0, raf=null, touchPitch=0, touchRoll=0, touching=false, crashReason="";
@@ -285,9 +309,27 @@
         g.position.set((Math.random()-0.5)*3400, 190+Math.random()*260, (Math.random()-0.5)*3400); scene.add(g);
       }
 
-      // rings + coins (bright — the bloom pass makes them glow)
-      for(let i=0;i<5;i++){ const m=new THREE.Mesh(new THREE.TorusGeometry(14,1.4,10,28), new THREE.MeshBasicMaterial({color:0x58f0ff})); scene.add(m); rings.push(m); }
-      for(let i=0;i<10;i++){ const m=new THREE.Mesh(new THREE.CylinderGeometry(3,3,0.5,16), new THREE.MeshBasicMaterial({color:0xffce56})); m.rotation.x=Math.PI/2; scene.add(m); coins.push(m); }
+      // ---- combat: build the shared materials, bullet/bomb/effect pools ----
+      bulletMat=new THREE.MeshBasicMaterial({color:0xfff2a0});          // your tracers (bright -> bloom)
+      enemyBulletMat=new THREE.MeshBasicMaterial({color:0xff5b5b});     // incoming fire
+      const bg=new THREE.BoxGeometry(0.5,0.5,9);
+      for(let i=0;i<60;i++){ const m=new THREE.Mesh(bg,bulletMat); m.visible=false; scene.add(m);
+        bullets.push({m,vel:new THREE.Vector3(),life:0,enemy:false}); }
+      // bombs
+      const bombG=THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.6,2.4,4,8) : new THREE.CylinderGeometry(0.6,0.6,3,8);
+      const bombMat=new THREE.MeshLambertMaterial({color:0x2c2c30});
+      for(let i=0;i<12;i++){ const m=new THREE.Mesh(bombG,bombMat); m.visible=false; scene.add(m);
+        bombs.push({m,vel:new THREE.Vector3(),live:false}); }
+      // explosion puffs (shared pool, bright for bloom)
+      for(let i=0;i<80;i++){ const m=new THREE.Mesh(new THREE.SphereGeometry(1,8,8),
+          new THREE.MeshBasicMaterial({color:0xffa23a,transparent:true,opacity:0,depthWrite:false})); m.visible=false; scene.add(m);
+        effects.push({m,vel:new THREE.Vector3(),life:0,max:1}); }
+      // muzzle flash at the nose
+      muzzle=new THREE.Mesh(new THREE.SphereGeometry(1.0,8,8), new THREE.MeshBasicMaterial({color:0xfff0b0,transparent:true,opacity:0,depthWrite:false}));
+      muzzle.visible=false; scene.add(muzzle);
+      // enemy ground bases (bomb targets): a bunker + fuel drums, with a health ring
+      for(let i=0;i<4;i++){ targets.push(makeGroundTarget()); }
+      enemies=[]; for(let i=0;i<MAX_ENEMIES;i++){ enemies.push(makeFighter()); }
 
       // the aircraft (visible in chase view)
       aircraft=new THREE.Group();
@@ -363,24 +405,123 @@
       }
     }
 
-    function aheadPos(minD,maxD,spread,loY,hiY){
-      _fwd.set(0,0,-1).applyQuaternion(plane.quat);
-      _side.crossVectors(_fwd, new THREE.Vector3(0,1,0)).normalize();
-      const d=minD+Math.random()*(maxD-minD);
-      const q=plane.pos.clone().addScaledVector(_fwd,d).addScaledVector(_side,(Math.random()-0.5)*spread);
-      q.y=Math.max(terrainH(q.x,q.z)+30, loY+Math.random()*(hiY-loY));
-      return q;
+    // ---------------- COMBAT ----------------
+    function makeFighter(){
+      const g=new THREE.Group();
+      const red=new THREE.MeshLambertMaterial({color:0xb5303a}), dark=new THREE.MeshLambertMaterial({color:0x3a3f46});
+      const body=new THREE.Mesh(new THREE.CylinderGeometry(1,0.7,8,12),red); body.rotation.x=Math.PI/2; g.add(body);
+      const nose=new THREE.Mesh(new THREE.ConeGeometry(1,3,12),dark); nose.rotation.x=-Math.PI/2; nose.position.z=-5.3; g.add(nose);
+      const wing=new THREE.Mesh(new THREE.BoxGeometry(13,0.3,2.4),red); wing.position.z=0.4; g.add(wing);
+      const tailH=new THREE.Mesh(new THREE.BoxGeometry(5,0.26,1.2),red); tailH.position.z=4.3; g.add(tailH);
+      const fin=new THREE.Mesh(new THREE.BoxGeometry(0.3,2.1,1.5),dark); fin.position.set(0,1.1,4.4); g.add(fin);
+      const canopy=new THREE.Mesh(new THREE.SphereGeometry(0.8,10,8), new THREE.MeshPhongMaterial({color:0x101418,shininess:80}));
+      canopy.position.set(0,0.7,-1.2); canopy.scale.set(1,0.7,1.8); g.add(canopy);
+      g.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
+      scene.add(g);
+      const e={g, pos:new THREE.Vector3(), vel:new THREE.Vector3(), dir:new THREE.Vector3(0,0,-1),
+               hp:2, alive:true, fireCd:1+Math.random()*2, respawn:0};
+      placeEnemy(e, true);
+      return e;
     }
-    function placeRing(m){ m.position.copy(aheadPos(300,650,300,70,240)); m.lookAt(plane.pos); }
-    function placeCoin(m){ m.position.copy(aheadPos(150,650,380,55,260)); }
+    function placeEnemy(e, far){
+      // Spawn ahead-ish of the player, at combat altitude, pointed roughly at them.
+      const ang=Math.random()*Math.PI*2, d=(far?1400:800)+Math.random()*1400;
+      e.pos.set(plane.pos.x+Math.cos(ang)*d, 120+Math.random()*320, plane.pos.z+Math.sin(ang)*d);
+      e.pos.y=Math.max(e.pos.y, terrainH(e.pos.x,e.pos.z)+90);
+      e.dir.copy(plane.pos).sub(e.pos).setY(0).normalize();
+      e.vel.copy(e.dir).multiplyScalar(95);
+      e.hp=2; e.alive=true; e.respawn=0; e.fireCd=1.5+Math.random()*2.5;
+      e.g.visible=true; e.g.position.copy(e.pos);
+    }
+    function makeGroundTarget(){
+      const g=new THREE.Group();
+      const wall=new THREE.MeshLambertMaterial({color:0x6b6256});
+      const bunker=new THREE.Mesh(new THREE.BoxGeometry(16,7,16),wall); bunker.position.y=3.5; g.add(bunker);
+      const roof=new THREE.Mesh(new THREE.CylinderGeometry(9,9,3,6),new THREE.MeshLambertMaterial({color:0x50483d})); roof.position.y=8; g.add(roof);
+      for(let i=0;i<3;i++){ const drum=new THREE.Mesh(new THREE.CylinderGeometry(1.4,1.4,3,10),new THREE.MeshLambertMaterial({color:0xc2402e}));
+        drum.position.set(10+i*3.2,1.5,-6+i*2); g.add(drum); }
+      const flag=new THREE.Mesh(new THREE.BoxGeometry(5,3,0.2),new THREE.MeshBasicMaterial({color:0xb5303a,side:THREE.DoubleSide}));
+      flag.position.set(0,13,0); g.add(flag);
+      g.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
+      scene.add(g);
+      const t={g, pos:new THREE.Vector3(), hp:3, alive:true};
+      placeTarget(t); return t;
+    }
+    function placeTarget(t){
+      for(let tries=0;tries<30;tries++){
+        const x=(Math.random()-0.5)*3600, z=(Math.random()-0.5)*3600, y=terrainH(x,z);
+        if(y>4 && y<70){ t.pos.set(x,y,z); break; }
+        if(tries===29){ t.pos.set(x,Math.max(y,4),z); }
+      }
+      t.hp=3; t.alive=true; t.g.visible=true; t.g.position.copy(t.pos);
+    }
+    function spawnExplosion(pos, big){
+      const n=big?22:12, sp=big?42:24;
+      for(let i=0;i<n;i++){ const e=effects.find(x=>x.life<=0); if(!e) break;
+        e.m.position.copy(pos); e.m.visible=true; e.life=1; e.max=0.6+Math.random()*0.5;
+        e.m.material.color.setHex(Math.random()<0.5?0xffa23a:0xff5a2a);
+        e.vel.set((Math.random()-0.5)*sp,(Math.random()*0.7+0.1)*sp,(Math.random()-0.5)*sp);
+        e.m.scale.setScalar(big?3:1.6); }
+    }
+    function flashKill(text){
+      const el=document.getElementById("lockmsg"); el.textContent=text; el.classList.add("show");
+      clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),900);
+    }
+    function takeDamage(amount){
+      plane.hp-=amount;
+      const f=document.getElementById("killflash"); f.classList.add("on");
+      clearTimeout(f._t); f._t=setTimeout(()=>f.classList.remove("on"),90);
+      if(plane.hp<=0){ crashReason="shot"; gameOver(); }
+    }
+    function fireGun(){
+      if(fireCd>0 || gunCool>0) return;
+      fireCd=0.09; gunHeat=Math.min(1, gunHeat+0.045);
+      if(gunHeat>=1){ gunCool=1.6; }     // overheat: brief forced cooldown
+      _fwd.set(0,0,-1).applyQuaternion(plane.quat);
+      _side.set(1,0,0).applyQuaternion(plane.quat);
+      for(const off of [-1.3,1.3]){     // twin cannon
+        const b=bullets.find(x=>x.life<=0); if(!b) break;
+        b.m.visible=true; b.enemy=false; b.m.material=bulletMat; b.life=1.6;
+        b.m.position.copy(plane.pos).addScaledVector(_fwd,6).addScaledVector(_side,off);
+        b.vel.copy(_fwd).multiplyScalar(BULLET_SPD).add(plane.vel);
+        b.m.quaternion.copy(plane.quat);
+      }
+      muzzle.visible=true; muzzle.material.opacity=0.9;
+      muzzle.position.copy(plane.pos).addScaledVector(_fwd,7);
+    }
+    function enemyFire(e){
+      _v3.copy(plane.pos).sub(e.pos);
+      const dist=_v3.length(); if(dist>1100) return;
+      _v3.normalize();
+      const b=bullets.find(x=>x.life<=0); if(!b) return;
+      b.m.visible=true; b.enemy=true; b.m.material=enemyBulletMat; b.life=1.8;
+      b.m.position.copy(e.pos).addScaledVector(_v3,6);
+      // lead the shot a little toward where the player is heading
+      _side.copy(plane.vel).multiplyScalar(dist/ENEMY_BULLET_SPD*0.5);
+      b.vel.copy(plane.pos).add(_side).sub(b.m.position).normalize().multiplyScalar(ENEMY_BULLET_SPD);
+      b.m.lookAt(_v3.copy(b.m.position).add(b.vel));
+    }
+    function dropBomb(){
+      if(bombCd>0 || plane.bombs<=0 || plane.onGround) return;
+      bombCd=0.6; plane.bombs--;
+      const b=bombs.find(x=>!x.live); if(!b) return;
+      b.live=true; b.m.visible=true;
+      b.m.position.copy(plane.pos).addScaledVector(_up.set(0,1,0).applyQuaternion(plane.quat),-1.5);
+      b.vel.copy(plane.vel).multiplyScalar(0.9);     // inherits the plane's momentum
+    }
 
     function startGame(){
       if(!ready && !init()) return;
       plane.pos.set(0,2,-620); plane.vel.set(0,0,0);
-      plane.quat.identity(); plane.throttle=0; plane.onGround=true; plane.dist=0; plane.ringsHit=0; plane.coinsHit=0; plane.stall=false;
+      plane.quat.identity(); plane.throttle=0; plane.onGround=true; plane.dist=0;
+      plane.kills=0; plane.groundKills=0; plane.bombs=START_BOMBS; plane.hp=100; plane.stall=false;
       touchPitch=0; touchRoll=0; crashReason="";
       clearPilots(); presT=0;
-      rings.forEach(placeRing); coins.forEach(placeCoin);
+      gunHeat=0; gunCool=0; fireCd=0; bombCd=0;
+      for(const b of bullets){ b.life=0; b.m.visible=false; }
+      for(const b of bombs){ b.live=false; b.m.visible=false; }
+      for(const e of effects){ e.life=0; e.m.visible=false; }
+      enemies.forEach(e=>placeEnemy(e,true)); targets.forEach(placeTarget);
       document.getElementById("startScreen").classList.add("hide");
       document.getElementById("overScreen").classList.add("hide");
       document.getElementById("hud").style.display="block";
@@ -551,44 +692,116 @@
       plane.gpws = !plane.onGround && (plane.pos.y-contactY)<55 && plane.vel.y<-5;   // ground-proximity warning
       if(plane.pos.y>1200) plane.pos.y=1200;
 
-      // ---- rings & coins ----
-      _fwd.set(0,0,-1).applyQuaternion(plane.quat);
-      for(const m of rings){ m.rotation.z+=dt*0.5;
-        const d=plane.pos.distanceTo(m.position);
-        if(d<13){ plane.ringsHit++; placeRing(m); }
-        else if(_fwd.dot(_v3.copy(m.position).sub(plane.pos))<-40) placeRing(m);
+      combat(dt);
+      hud(airspd, speed);
+    }
+
+    const _a=new THREE.Vector3(), _b=new THREE.Vector3();
+    function hitEnemy(e, dmg, pos){
+      e.hp-=dmg;
+      spawnExplosion(pos||e.pos, false);
+      if(e.hp<=0){
+        e.alive=false; e.g.visible=false; e.respawn=1.6+Math.random()*1.6;
+        spawnExplosion(e.pos, true); plane.kills++; flashKill("ENEMY DOWN +150");
       }
-      for(const m of coins){ m.rotation.z+=dt*3;
-        const d=plane.pos.distanceTo(m.position);
-        if(d<6){ plane.coinsHit++; placeCoin(m); }
-        else if(_fwd.dot(_v3.copy(m.position).sub(plane.pos))<-40) placeCoin(m);
+    }
+    function combat(dt){
+      fireCd-=dt; bombCd-=dt;
+      if(gunCool>0) gunCool-=dt;
+      gunHeat=Math.max(0, gunHeat - dt*(gunCool>0?0.25:0.5));
+      if(keys["Space"]) fireGun();
+      if(muzzle.visible){ muzzle.material.opacity*=0.72; if(muzzle.material.opacity<0.05) muzzle.visible=false; }
+
+      _fwd.set(0,0,-1).applyQuaternion(plane.quat);
+
+      // ---- bullets ----
+      for(const b of bullets){ if(b.life<=0) continue;
+        b.life-=dt; b.m.position.addScaledVector(b.vel, dt);
+        if(b.life<=0 || b.m.position.y < terrainH(b.m.position.x,b.m.position.z)){
+          if(b.m.position.y < terrainH(b.m.position.x,b.m.position.z)+1) spawnExplosion(b.m.position,false);
+          b.life=0; b.m.visible=false; continue; }
+        if(b.enemy){
+          if(b.m.position.distanceTo(plane.pos)<5){ b.life=0; b.m.visible=false; takeDamage(10); }
+        } else {
+          let hit=false;
+          for(const e of enemies){ if(e.alive && b.m.position.distanceTo(e.pos)<9){ hitEnemy(e,1,b.m.position); hit=true; break; } }
+          if(!hit) for(const t of targets){ if(t.alive && b.m.position.distanceTo(t.pos)<14){
+            t.hp-=1; spawnExplosion(b.m.position,false);
+            if(t.hp<=0){ t.alive=false; t.g.visible=false; spawnExplosion(t.pos,true); plane.groundKills++; flashKill("BASE HIT +100"); setTimeout(()=>placeTarget(t),9000); }
+            hit=true; break; } }
+          if(hit){ b.life=0; b.m.visible=false; }
+        }
       }
 
-      hud(airspd, speed);
+      // ---- bombs (gravity, then area damage on impact) ----
+      for(const b of bombs){ if(!b.live) continue;
+        b.vel.y-=9.8*dt*2.2; b.m.position.addScaledVector(b.vel,dt);
+        b.m.lookAt(_a.copy(b.m.position).add(b.vel));
+        const gh=terrainH(b.m.position.x,b.m.position.z);
+        if(b.m.position.y<=gh+1){ b.live=false; b.m.visible=false;
+          spawnExplosion(_a.set(b.m.position.x,gh+2,b.m.position.z), true); spawnExplosion(b.m.position,true);
+          for(const t of targets){ if(t.alive && t.pos.distanceTo(b.m.position)<70){
+            t.alive=false; t.g.visible=false; spawnExplosion(t.pos,true); plane.groundKills++; flashKill("BASE DESTROYED +100"); setTimeout(()=>placeTarget(t),9000); } }
+          for(const e of enemies){ if(e.alive && e.pos.distanceTo(b.m.position)<60) hitEnemy(e,2,e.pos); }
+        }
+      }
+
+      // ---- enemy fighters ----
+      let lock=false;
+      for(const e of enemies){
+        if(!e.alive){ e.respawn-=dt; if(e.respawn<=0) placeEnemy(e,true); continue; }
+        _a.copy(plane.pos).sub(e.pos); const dist=_a.length();
+        if(dist>4200){ placeEnemy(e,true); continue; }
+        _a.y*=0.5; _a.normalize();                       // steer mostly horizontally toward the player
+        e.dir.lerp(_a, Math.min(1,dt*0.8)).normalize();
+        const spd=100 + (dist>900?25:0);
+        e.vel.copy(e.dir).multiplyScalar(spd);
+        e.pos.addScaledVector(e.vel,dt);
+        e.pos.y=Math.max(e.pos.y, terrainH(e.pos.x,e.pos.z)+70);
+        e.g.position.copy(e.pos);
+        e.g.lookAt(_b.copy(e.pos).add(e.dir));
+        // fire back when roughly pointed at the player and in range
+        e.fireCd-=dt;
+        if(e.fireCd<=0 && dist<1100 && e.dir.dot(_a)>0.9){ enemyFire(e); e.fireCd=1.4+Math.random()*1.8; }
+        // gunsight lock when the player is pointed at this enemy
+        if(dist<GUN_RANGE && _fwd.dot(_b.copy(e.pos).sub(plane.pos).normalize())>0.985) lock=true;
+      }
+      document.getElementById("gunsight").classList.toggle("lock", lock);
+
+      // ---- explosion puffs ----
+      for(const e of effects){ if(e.life<=0) continue;
+        e.life-=dt/e.max; e.m.position.addScaledVector(e.vel,dt); e.vel.multiplyScalar(0.9); e.vel.y-=14*dt;
+        e.m.material.opacity=Math.max(0,e.life)*0.9; e.m.scale.addScalar(dt*(e.m.scale.x<6?22:4));
+        if(e.life<=0) e.m.visible=false;
+      }
     }
 
     function drawMini(){
       const c=document.getElementById("mini"); if(!c) return; const g=c.getContext("2d"); const S=150, R=S/2, sc=R/3600;
       g.clearRect(0,0,S,S); g.save(); g.translate(R,R);
       g.fillStyle="rgba(60,120,74,.5)"; g.beginPath(); g.arc(0,0,2400*sc,0,7); g.fill();
-      g.fillStyle="#58f0ff"; for(const m of rings){ const x=m.position.x*sc,y=m.position.z*sc; if(Math.hypot(x,y)<R-3){ g.beginPath(); g.arc(x,y,2.6,0,7); g.fill(); } }
-      g.fillStyle="rgba(255,206,86,.85)"; for(const m of coins){ const x=m.position.x*sc,y=m.position.z*sc; if(Math.hypot(x,y)<R-3){ g.beginPath(); g.arc(x,y,1.6,0,7); g.fill(); } }
+      g.fillStyle="rgba(255,160,60,.9)"; for(const t of targets){ if(!t.alive) continue; const x=t.pos.x*sc,y=t.pos.z*sc; if(Math.hypot(x,y)<R-3){ g.fillRect(x-2,y-2,4,4); } }
+      g.fillStyle="#ff5b5b"; for(const e of enemies){ if(!e.alive) continue; const x=e.pos.x*sc,y=e.pos.z*sc; if(Math.hypot(x,y)<R-3){ g.beginPath(); g.arc(x,y,2.8,0,7); g.fill(); } }
       _euler.setFromQuaternion(plane.quat,"YXZ");
       const px=clamp(plane.pos.x*sc,-R+7,R-7), py=clamp(plane.pos.z*sc,-R+7,R-7);
       g.translate(px,py); g.rotate(-_euler.y);
       g.fillStyle="#fff"; g.beginPath(); g.moveTo(0,-8); g.lineTo(5.5,7); g.lineTo(0,4); g.lineTo(-5.5,7); g.closePath(); g.fill();
       g.restore();
     }
-    function scoreNow(){ return plane.ringsHit*50 + plane.coinsHit*15 + Math.floor(plane.dist/16); }
+    function scoreNow(){ return plane.kills*150 + plane.groundKills*100 + Math.floor(plane.dist/16); }
     function hud(airspd, speed){
       document.getElementById("gSpd").textContent=Math.round(airspd*3.6);
       document.getElementById("gAlt").textContent=Math.round(plane.pos.y);
-      document.getElementById("gVs").textContent=(plane.vel.y>=0?"+":"")+Math.round(plane.vel.y);
       _euler.setFromQuaternion(plane.quat,"YXZ");
       let hdg=Math.round((-_euler.y*180/Math.PI)%360); if(hdg<0) hdg+=360;
       document.getElementById("gHdg").textContent=(""+hdg).padStart(3,"0")+"°";
+      document.getElementById("gKills").textContent=plane.kills;
+      document.getElementById("gBombs").textContent=plane.bombs;
       document.getElementById("gScore").textContent=scoreNow();
       document.getElementById("gThr").style.width=Math.round(plane.throttle*100)+"%";
+      document.getElementById("gGun").style.width=Math.round((1-gunHeat)*100)+"%";
+      document.getElementById("gGunState").textContent = gunCool>0?"OVERHEAT":(gunHeat>0.7?"HOT":"READY");
+      document.getElementById("gGunState").style.color = gunCool>0?"#ff5b5b":(gunHeat>0.7?"#ffce56":"#8fe");
       document.getElementById("adiH").style.transform=`translateY(${_euler.x*70}px) rotate(${-_euler.z}rad)`;
       document.getElementById("stallw").style.display=plane.stall?"block":"none";
       document.getElementById("warnp").style.display=plane.gpws?"block":"none";
@@ -598,6 +811,7 @@
     window.addEventListener("keydown",e=>{ keys[e.code]=true;
       if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
       if(e.code==="KeyC"){ viewMode = viewMode==="chase" ? "cockpit" : "chase"; document.getElementById("hud").classList.toggle("cockpitview", viewMode==="cockpit"); }
+      if((e.code==="KeyB"||e.code==="KeyE") && state==="playing") dropBomb();
       if(e.code==="Space" && state!=="playing") startGame();
     });
     window.addEventListener("keyup",e=>{ keys[e.code]=false; });
@@ -616,9 +830,10 @@
       state="over";
       leavePresence();
       const score=scoreNow();
-      document.getElementById("overTitle").textContent = crashReason==="crash" ? "💥 Crashed" : "Flight ended";
+      document.getElementById("overTitle").textContent =
+        crashReason==="crash" ? "💥 Crashed" : (crashReason==="shot" ? "💥 Shot down" : "Flight ended");
       document.getElementById("finalScore").textContent=score;
-      document.getElementById("finalRings").textContent=plane.ringsHit;
+      document.getElementById("finalRings").textContent=plane.kills;
       const rew=document.getElementById("rewardMsg"); rew.textContent="";
       document.getElementById("hud").style.display="none";
       try{
