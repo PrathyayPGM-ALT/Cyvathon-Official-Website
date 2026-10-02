@@ -82,6 +82,23 @@ to match your school. Class names are free text.
 
 ---
 
+### 4b. Cyvaprint — upload, print, deliver
+Upload a document (`/print`) and a Cyvazon courier prints it and runs it to you:
+- Pay by the page, up front, to the **Treasury**: **5 CB** a page black & white,
+  **10 CB** a page colour, times the number of copies. You choose colour or B&W.
+- **The promise:** if it isn't in your hands within **one working day** (weekends
+  don't count), it's **free** — the Treasury refunds the whole cost, whether it
+  arrived late or never. Cancel for a full refund until a courier starts printing.
+- It rides on the existing Cyvazon flow: ordering raises a parcel, a courier
+  claims and prints it, and the recipient confirms delivery. There's no scheduler
+  on the host, so the late-refund is settled the moment the order is next looked at.
+
+Needs `migration_printing.sql` and a **public** Storage bucket named `prints`
+(couriers open the file to print it; the app tries to create it). Rates and limits
+are `PRINT_PAGE_BW` / `PRINT_PAGE_COLOR` / `PRINT_MAX_PAGES` in `main.py`.
+
+---
+
 ### 5. Cyvashield — national insurance
 Free cover for every citizen (`/shield`):
 - Three plans — Basic, Standard, Full Cover — all free. The plan only sets the

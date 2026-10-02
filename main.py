@@ -7559,6 +7559,8 @@ CARD PACKETS (/packet): trade real Match Attax football cards with other citizen
 
 CYVAZON (/cyvazon) — the national delivery service. Delivery is FREE for whoever requests it, anywhere in school: say which class it's collected from and which class it's going to, and a courier runs it. Buying on the marketplace or accepting a card trade raises a parcel automatically, so nobody can take the money or the card and quietly keep the goods. Set your usual class once on the Cyvazon page and deliveries to you are addressed there automatically. Becoming a courier: apply on the Cyvazon page, and the President (or the Transport Minister) reviews and approves every applicant before they can carry other citizens' property. Approved couriers earn 500 CB per pay period on top of their normal salary — more than most jobs in Cyvathon — and are paid from the Treasury out of the delivery levy. Only the person RECEIVING a parcel can confirm it arrived; a courier cannot close their own run. Couriers can't carry their own parcels, and can't stand down while still holding one.
 
+CYVAPRINT (/print) — upload a document and a Cyvazon courier prints it and delivers it to you. You pay by the page, up front, to the Treasury: 5 CB a page in black & white, 10 CB a page in colour (times the number of copies). You choose black & white or colour. THE PROMISE: if it isn't in your hands within one working day (weekends don't count), it's free — the Treasury refunds the whole cost, whether it arrived late or never. You can cancel for a full refund until a courier starts printing. Needs Cyvazon couriers to be on duty. If asked how to print something, point them here.
+
 CABINET POWERS (/cabinet): ministers hold real authority, split two ways. DUTIES are delegated outright — the Defence Minister works the Armoury desk, the Transport Minister vets Cyvazon couriers, the Justice Minister rules on Cyvashield claims — and need no approval. POLICY is proposed, never imposed: a minister who wants to move a national lever (tax rate, GDP multiplier, courier wage, Armoury rate, insurance levy…) raises a proposal, and nothing changes until the President assents. A ministry picks up its brief from its name. Weekly salary: Vice President and Chancellor 1000 CB, Minister/Judge 900, Founder 800, Employee 500, Citizen 100; the President draws nothing because they hold the Treasury and spend it on the nation. Couriers draw 500 CB on top of their salary.
 
 JUSTICE: the Court (/court) can fine a citizen and jail them, for up to 365 days; the elected Judge presides, and the President may also sit. The President can also jail a citizen by order without a case, for a stated reason and up to 365 days — it goes on the public record and counts as a conviction, and the Constitution (Article IV) names this power and its limits so nobody is surprised by it. A jailed citizen can only reach the jail page (/jail) until their sentence is served. Convictions are recorded on a criminal record and bar a citizen from standing for office; the President can pardon. Defaulting on a loan means the Treasury takes ALL your Cybucks and Crystallines — say so plainly if asked about loans. Ministry seats are filled by application (/ministries) — once enough eligible citizens apply, an election opens automatically.
@@ -9084,6 +9086,8 @@ def cyvazon_status():
         notify(courier, f"✅ {me} confirmed delivery of '{p['item_label']}'.", "/cyvazon")
         add_record(courier, f"Delivered '{p['item_label']}' to {me}.")
     notify(p["sender"], f"✅ '{p['item_label']}' reached {me}.", "/cyvazon")
+    if (p.get("kind") or "") == "print":      # a print run: mark it, refund if it was late
+        _settle_print_for_delivery(did)
     return jsonify(success=True, status="delivered")
 
 
@@ -9241,6 +9245,311 @@ def cyvazon_summary():
                    to_hand_over=sum(1 for r in rows if r["sender"] == me
                                     and r["status"] in ("open", "claimed")),
                    carrying=sum(1 for r in rows if r.get("courier") == me))
+
+
+# ============================================================
+#  CYVAPRINT — upload a document, a courier prints and delivers it
+# ============================================================
+#  You upload a file, say how many pages and whether it's colour, and pay the
+#  Treasury up front. A Cyvazon courier prints it and runs it to you. The
+#  promise: if it isn't in your hands within one working day (weekends don't
+#  count), the print is free — the Treasury refunds you, whether it arrived
+#  late or not at all. There is no scheduler on the host, so the refund is
+#  settled the moment anyone looks at the job after its deadline.
+PRINT_OPEN      = True
+PRINT_PAGE_BW   = 5         # CB per page, black & white
+PRINT_PAGE_COLOR = 10       # CB per page, colour
+PRINT_MAX_PAGES = 50
+PRINT_MAX_COPIES = 10
+_PRINT_BUCKET   = "prints"
+
+
+def _print_rate(color):
+    return PRINT_PAGE_COLOR if color else PRINT_PAGE_BW
+
+
+def _print_cost(pages, copies, color):
+    return int(max(1, pages) * max(1, copies) * _print_rate(color))
+
+
+def _next_business_day_end(dt):
+    """One working day after dt, skipping Saturday and Sunday."""
+    d = dt + timedelta(days=1)
+    while d.weekday() >= 5:      # 5 = Sat, 6 = Sun
+        d += timedelta(days=1)
+    return d
+
+
+def _print_overdue(job, now=None):
+    due = _parse(job.get("due_at"))
+    if due is None:
+        return False
+    if due.tzinfo is None:
+        due = due.replace(tzinfo=timezone.utc)
+    delivered = _parse(job.get("delivered_at"))
+    if delivered is not None:
+        if delivered.tzinfo is None:
+            delivered = delivered.replace(tzinfo=timezone.utc)
+        return delivered > due              # arrived, but late
+    return (now or _now()) > due            # still not here, and the day is up
+
+
+def _print_settle(job):
+    """Refund a print whose working-day promise was missed. Idempotent."""
+    if job.get("refunded") or job.get("status") == "cancelled":
+        return job
+    if not _print_overdue(job):
+        return job
+    try:
+        if job.get("cost"):
+            cas_adjust(job["username"], "balance", job["cost"], allow_negative=True)
+            treasury_add(cybucks=-job["cost"], counterparty=job["username"], kind="print_refund")
+            log_txn("print", "Cyvaprint", job["username"], job["cost"], "cybucks",
+                    "Refund — print not delivered within a working day")
+        supabase.table("print_jobs").update({"refunded": True}).eq("id", job["id"]) \
+            .eq("refunded", False).execute()
+        job["refunded"] = True
+        notify(job["username"],
+               "🖨️ Your Cyvaprint order wasn't delivered within a working day, so it's on "
+               f"the house — {job['cost']:g} CB refunded.", "/print")
+    except Exception as ex:
+        logging.warning("print refund failed for %s: %s", job.get("id"), ex)
+    return job
+
+
+def _print_public(job):
+    return {"id": job.get("id"), "username": job.get("username"),
+            "file_url": job.get("file_url"), "file_name": job.get("file_name") or "document",
+            "pages": job.get("pages") or 0, "copies": job.get("copies") or 1,
+            "color": bool(job.get("color")), "cost": job.get("cost") or 0,
+            "status": job.get("status") or "ordered", "refunded": bool(job.get("refunded")),
+            "delivery_id": job.get("delivery_id"), "note": job.get("note") or "",
+            "created_at": job.get("created_at"), "due_at": job.get("due_at"),
+            "delivered_at": job.get("delivered_at")}
+
+
+def _print_missing():
+    return jsonify(success=False,
+                   error="Cyvaprint isn't enabled yet — the database needs a quick update "
+                         "(run migration_printing.sql)."), 503
+
+
+def _settle_print_for_delivery(delivery_id):
+    """Called when a parcel is confirmed delivered: if it was a print job, mark
+    it delivered and refund if it arrived after the working-day deadline."""
+    try:
+        r = supabase.table("print_jobs").select("*").eq("delivery_id", delivery_id).execute().data
+    except Exception:
+        return
+    if not r:
+        return
+    job = r[0]
+    now = _now()
+    try:
+        supabase.table("print_jobs").update(
+            {"status": "delivered", "delivered_at": now.isoformat()}).eq("id", job["id"]).execute()
+    except Exception:
+        return
+    job["status"], job["delivered_at"] = "delivered", now.isoformat()
+    _print_settle(job)
+
+
+@app.route("/print")
+def print_page():
+    return app.send_static_file("print.html")
+
+
+@app.route("/print/config")
+@limiter.limit("60/minute")
+def print_config():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        rows = supabase.table("print_jobs").select("*").eq("username", me) \
+            .order("id", desc=True).limit(30).execute().data or []
+    except Exception:
+        return jsonify(success=True, enabled=False, open=bool(PRINT_OPEN),
+                       rate_bw=PRINT_PAGE_BW, rate_color=PRINT_PAGE_COLOR,
+                       max_pages=PRINT_MAX_PAGES, max_copies=PRINT_MAX_COPIES,
+                       delivery_open=bool(DELIVERY_OPEN), me=me, jobs=[])
+    jobs = [_print_public(_print_settle(j)) for j in rows]     # refund any that are overdue
+    return jsonify(success=True, enabled=True, open=bool(PRINT_OPEN),
+                   rate_bw=PRINT_PAGE_BW, rate_color=PRINT_PAGE_COLOR,
+                   max_pages=PRINT_MAX_PAGES, max_copies=PRINT_MAX_COPIES,
+                   delivery_open=bool(DELIVERY_OPEN), me=me, jobs=jobs,
+                   home={"class": user.get("home_class") or "", "area": user.get("home_area") or ""})
+
+
+def _store_print(f, folder):
+    """Upload a document to print. PDFs and images only; kept in a public
+    bucket the courier can open to print. Returns (url, name, error)."""
+    data = f.read()
+    if not data:
+        return None, None, "Empty file"
+    if len(data) > 15 * 1024 * 1024:
+        return None, None, "File too large (max 15 MB)"
+    name = (f.filename or "document")[:120]
+    mime = (f.mimetype or "").split(";")[0].lower()
+    ext = {"application/pdf": "pdf", "image/png": "png", "image/jpeg": "jpg",
+           "image/webp": "webp"}.get(mime)
+    if not ext:
+        low = name.lower()
+        for e in ("pdf", "png", "jpg", "jpeg", "webp"):
+            if low.endswith("." + e):
+                ext = "jpg" if e == "jpeg" else e
+                break
+    if not ext:
+        return None, None, "PDFs and images only (pdf, png, jpg, webp)"
+    path = f"{folder}/{secrets.token_hex(10)}.{ext}"
+    try:
+        try:
+            supabase.storage.create_bucket(_PRINT_BUCKET, options={"public": True})
+        except Exception:
+            pass
+        supabase.storage.from_(_PRINT_BUCKET).upload(
+            path, data, {"content-type": mime or f"application/{ext}", "upsert": "true"})
+        url = supabase.storage.from_(_PRINT_BUCKET).get_public_url(path)
+    except Exception as ex:
+        logging.warning("print upload failed: %s", ex)
+        return None, None, "Upload failed — the public 'prints' Storage bucket may be missing."
+    return url.rstrip("?"), name, None
+
+
+@app.route("/print/order", methods=["POST"])
+@limiter.limit("12/minute")
+def print_order():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    if not PRINT_OPEN:
+        return jsonify(success=False, error="Cyvaprint is closed right now."), 403
+    if not DELIVERY_OPEN:
+        return jsonify(success=False, error="Cyvaprint needs Cyvazon couriers, who are off right now."), 403
+    me = user["username"]
+    f = request.files.get("file")
+    if not f:
+        return jsonify(success=False, error="Upload the document to print."), 400
+    try:
+        pages = int(request.form.get("pages") or 0)
+        copies = int(request.form.get("copies") or 1)
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="How many pages?"), 400
+    if pages < 1:
+        return jsonify(success=False, error="How many pages is it?"), 400
+    if pages > PRINT_MAX_PAGES:
+        return jsonify(success=False, error=f"Up to {PRINT_MAX_PAGES} pages per order."), 400
+    if copies < 1 or copies > PRINT_MAX_COPIES:
+        return jsonify(success=False, error=f"Between 1 and {PRINT_MAX_COPIES} copies."), 400
+    color = str(request.form.get("color") or "").lower() in ("1", "true", "yes", "color", "colour")
+    note = (request.form.get("note") or "").strip()[:200]
+    cost = _print_cost(pages, copies, color)
+
+    fresh = supabase.table("cybucks").select("balance").eq("username", me).execute().data
+    if not fresh or (fresh[0].get("balance") or 0) < cost:
+        return jsonify(success=False, error=f"That costs {cost} CB — more than you have."), 400
+
+    url, name, err = _store_print(f, me)
+    if err:
+        code = 400 if ("only" in err or "Empty" in err or "too large" in err) else 500
+        return jsonify(success=False, error=err), code
+
+    # Charge up front; the money sits with the Treasury unless we have to refund.
+    if not cas_adjust(me, "balance", -cost):
+        return jsonify(success=False, error="Insufficient funds — try again."), 400
+    treasury_add(cybucks=cost, counterparty=me, kind="print")
+    log_txn("print", me, "Cyvaprint", cost, "cybucks",
+            f"Print: {pages}p ×{copies}, {'colour' if color else 'B&W'}")
+
+    now = _now()
+    due = _next_business_day_end(now)
+    home = {"class": user.get("home_class") or "", "area": user.get("home_area") or ""}
+    kind_label = f"🖨️ Print: {name} — {pages}p ×{copies}, {'colour' if color else 'B&W'}"
+    delivery_id = None
+    try:
+        dl = supabase.table("deliveries").insert({
+            "kind": "print", "item_label": kind_label[:140],
+            "sender": "Cyvaprint", "recipient": me, "requested_by": me,
+            "pickup_class": "Cyvaprint", "pickup_area": "print & deliver",
+            "dropoff_class": home["class"][:40], "dropoff_area": _clean_area(home["area"]),
+            "notes": f"Print it, then deliver. File: {url}"[:200],
+        }).execute().data[0]
+        delivery_id = dl["id"]
+    except Exception as ex:
+        logging.warning("print parcel not raised: %s", ex)
+
+    try:
+        job = supabase.table("print_jobs").insert({
+            "username": me, "file_url": url, "file_name": name, "pages": pages,
+            "copies": copies, "color": color, "cost": cost, "status": "ordered",
+            "delivery_id": delivery_id, "note": note, "due_at": due.isoformat(),
+        }).execute().data[0]
+    except Exception:
+        # No table — undo the charge so nobody pays for a job we couldn't record.
+        cas_adjust(me, "balance", cost, allow_negative=True)
+        treasury_add(cybucks=-cost, counterparty=me, kind="print_refund")
+        return _print_missing()
+
+    notify(me, f"🖨️ Print ordered — {cost} CB. A courier will print and deliver it. "
+           "Free if it's not with you within a working day.", "/print")
+    return jsonify(success=True, job=_print_public(job), cost=cost,
+                   delivery=(_delivery_public(dl) if delivery_id else None))
+
+
+@app.route("/print/cancel", methods=["POST"])
+@limiter.limit("20/minute")
+def print_cancel():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    me = user["username"]
+    try:
+        jid = int((request.get_json() or {}).get("job_id"))
+    except (TypeError, ValueError):
+        return jsonify(success=False, error="Bad job"), 400
+    try:
+        r = supabase.table("print_jobs").select("*").eq("id", jid).execute().data
+    except Exception:
+        return _print_missing()
+    if not r:
+        return jsonify(success=False, error="Order not found"), 404
+    job = r[0]
+    if job["username"] != me:
+        return jsonify(success=False, error="That isn't your order"), 403
+    if job.get("status") not in ("ordered",):
+        return jsonify(success=False, error="Too late to cancel — it's already settled."), 400
+    # Only before a courier has started printing (parcel still open/claimed).
+    dl = None
+    if job.get("delivery_id"):
+        dr = supabase.table("deliveries").select("status").eq("id", job["delivery_id"]).execute().data
+        dl = dr[0] if dr else None
+    if dl and dl.get("status") in ("picked_up", "delivered"):
+        return jsonify(success=False, error="A courier is already printing it — too late to cancel."), 400
+    supabase.table("print_jobs").update(
+        {"status": "cancelled", "refunded": True}).eq("id", jid).eq("status", "ordered").execute()
+    if job.get("delivery_id"):
+        supabase.table("deliveries").update({"status": "cancelled"}) \
+            .eq("id", job["delivery_id"]).in_("status", ["open", "claimed"]).execute()
+    if not job.get("refunded") and job.get("cost"):
+        cas_adjust(me, "balance", job["cost"], allow_negative=True)
+        treasury_add(cybucks=-job["cost"], counterparty=me, kind="print_refund")
+    return jsonify(success=True, status="cancelled")
+
+
+@app.route("/print/summary")
+@limiter.limit("60/minute")
+def print_summary():
+    user = get_current_user(run_economics=False)
+    if not user:
+        return jsonify(success=False, error="Not logged in"), 401
+    try:
+        rows = supabase.table("print_jobs").select("username,status") \
+            .eq("username", user["username"]).in_("status", ["ordered"]).execute().data or []
+    except Exception:
+        return jsonify(success=True, enabled=False, open=bool(PRINT_OPEN), mine_open=0)
+    return jsonify(success=True, enabled=True, open=bool(PRINT_OPEN), mine_open=len(rows))
+
 
 # ============================================================
 #  CYVASHIELD — national insurance
@@ -12500,11 +12809,12 @@ def _password_gate():
     if request.method != "POST" or not session.get("username") or request.path in _PW_GATE_OPEN:
         return None
     try:
-        rows = supabase.table("cybucks").select("must_change_pw") \
-            .eq("username", session["username"]).execute().data or []
+        # Reuse the cached account row (the route's get_current_user shares it),
+        # so this guard adds no extra database round trip on every POST.
+        row, _ = _cached_user_row(session["username"])
     except Exception:
         return None
-    if rows and rows[0].get("must_change_pw"):
+    if row and row.get("must_change_pw"):
         return jsonify(success=False, must_change=True,
                        error="Set a new password before doing anything else."), 403
 

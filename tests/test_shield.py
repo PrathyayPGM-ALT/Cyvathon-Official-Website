@@ -14,7 +14,12 @@ os.chdir(ROOT)
 
 import main
 from fakedb import FakeSupabase
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
+
+# Pin the clock to just after the fake DB stamps its rows (2026-08-27 12:00),
+# so auto-stamped claims fall inside the 30-day monthly window regardless of the
+# real date the suite is run. (Same pattern as test_sites.)
+main._now = lambda: datetime(2026, 8, 28, 12, 0, tzinfo=timezone.utc)
 
 db = FakeSupabase()
 main.supabase = db

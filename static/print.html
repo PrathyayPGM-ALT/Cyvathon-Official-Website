@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyvaprint · Cyvathon</title>
+  <meta name="description" content="Upload a document, a Cyvazon courier prints it and brings it to you. Free if it's not there within a working day." />
+  <link rel="canonical" href="https://cyvathon.onrender.com/print" />
+  <meta name="theme-color" content="#6c8cff" />
+  <link rel="icon" href="/static/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Cyvathon" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Cyvathon" />
+  <meta property="og:title" content="Cyvaprint · Cyvathon" />
+  <meta property="og:description" content="Upload a document, a courier prints it and brings it to you. Free if late." />
+  <meta property="og:url" content="https://cyvathon.onrender.com/print" />
+  <meta property="og:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Cyvaprint · Cyvathon" />
+  <meta name="twitter:description" content="Upload a document, a courier prints it and brings it to you. Free if late." />
+  <meta name="twitter:image" content="https://cyvathon.onrender.com/static/og-image.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/service.css">
+  <style>
+    /* Cyvaprint — ink-blue on deep slate. Themes the shared service.css. */
+    .svc.pr{
+      --sv-accent:#6c8cff; --sv-accent-2:#9db4ff; --sv-accent-deep:#3f54c9;
+      --sv-accent-rgb:108,140,255; --sv-on-accent:#0a1022;
+    }
+    .pr .drop{ border:1.5px dashed rgba(var(--sv-accent-rgb),.5); border-radius:14px; padding:1.5rem;
+      text-align:center; cursor:pointer; transition:.18s; background:rgba(var(--sv-accent-rgb),.05); }
+    .pr .drop:hover,.pr .drop.over{ border-color:var(--sv-accent); background:rgba(var(--sv-accent-rgb),.1); }
+    .pr .drop i{ font-size:1.8rem; color:var(--sv-accent); }
+    .pr .drop .fn{ margin-top:.5rem; font-weight:700; color:var(--sv-text); word-break:break-all; }
+    .pr .seg{ display:flex; gap:.4rem; }
+    .pr .seg button{ flex:1; margin:0; padding:.6rem; border-radius:10px; font-size:.9rem;
+      background:var(--sv-ink-2); color:var(--sv-muted); border:1px solid var(--sv-line); box-shadow:none; }
+    .pr .seg button.on{ background:linear-gradient(135deg,var(--sv-accent),var(--sv-accent-deep));
+      color:var(--sv-on-accent); border-color:transparent; box-shadow:0 6px 16px rgba(var(--sv-accent-rgb),.3); }
+    .pr .cost{ text-align:center; margin:1.2rem 0 .2rem; padding:1rem; border-radius:14px;
+      background:rgba(var(--sv-accent-rgb),.08); border:1px solid rgba(var(--sv-accent-rgb),.22); }
+    .pr .cost b{ font-size:1.9rem; font-weight:800; color:var(--sv-accent); display:block; }
+    .pr .cost span{ font-size:.8rem; color:var(--sv-muted); }
+    .pr .promise{ display:flex; gap:.6rem; align-items:flex-start; margin-top:.9rem; padding:.8rem 1rem;
+      border-radius:12px; background:rgba(31,214,166,.1); border:1px solid rgba(31,214,166,.28); font-size:.86rem; }
+    .pr .promise i{ color:#2ee0b0; margin-top:.15rem; }
+    .jobs{ display:grid; gap:.8rem; }
+    .job{ position:relative; overflow:hidden; background:linear-gradient(165deg,var(--sv-ink),var(--sv-ink-2));
+      border:1px solid var(--sv-line); border-radius:14px; padding:1rem 1.15rem; }
+    .job::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--sv-accent); }
+    .job.delivered::before{ background:#2ee0b0; } .job.refunded::before{ background:#ffce56; }
+    .job.cancelled::before{ background:#ff5d6c; } .job.cancelled{ opacity:.7; }
+    .job .top{ display:flex; justify-content:space-between; gap:.8rem; align-items:flex-start; }
+    .job .nm{ font-weight:700; }
+    .job .meta{ font-size:.82rem; color:var(--sv-muted); margin-top:.15rem; }
+    .job .st{ font-size:.72rem; font-weight:700; padding:.2rem .6rem; border-radius:20px; white-space:nowrap;
+      background:rgba(var(--sv-accent-rgb),.15); color:var(--sv-accent-2); }
+    .job .st.delivered{ background:rgba(46,224,176,.18); color:#5ef0c8; }
+    .job .st.refunded{ background:rgba(255,206,86,.18); color:#ffce56; }
+    .job .st.cancelled{ background:rgba(255,93,108,.18); color:#ff8f9a; }
+    .job .acts{ margin-top:.7rem; display:flex; gap:.5rem; }
+    .job .acts a,.job .acts button{ width:auto; margin:0; padding:.4rem .9rem; font-size:.82rem; }
+  </style>
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="wrap svc pr">
+    <div class="svc-hero">
+      <h2 style="margin:0 0 .3rem;font-size:1.9rem;"><i class="fas fa-print"></i> Cyvaprint</h2>
+      <p>Upload a document and a <b>Cyvazon courier</b> prints it and brings it to you. Pay by the page.
+        <b>If it's not in your hands within one working day</b> (weekends don't count), it's free — the
+        Treasury refunds you, whether it turned up late or not at all.</p>
+    </div>
+
+    <p id="msg" class="svc-alert"></p>
+
+    <div class="svc-grid2" style="align-items:start;">
+      <!-- ORDER -->
+      <div class="svc-panel">
+        <h3 class="svc-head" style="margin-top:0;"><i class="fas fa-file-arrow-up"></i> New print job</h3>
+
+        <div class="drop" id="drop" onclick="document.getElementById('file').click()">
+          <i class="fas fa-cloud-arrow-up"></i>
+          <div class="fn" id="fileName">Tap to choose a PDF or image</div>
+          <div style="font-size:.78rem;color:var(--sv-muted);margin-top:.3rem;">PDF, PNG, JPG or WEBP · up to 15 MB</div>
+        </div>
+        <input type="file" id="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/*" style="display:none" onchange="onFile()">
+
+        <div class="svc-grid2" style="margin-top:.3rem;">
+          <div><label class="lbl">Pages</label>
+            <input id="pages" type="number" min="1" value="1" oninput="quote()"></div>
+          <div><label class="lbl">Copies</label>
+            <input id="copies" type="number" min="1" value="1" oninput="quote()"></div>
+        </div>
+
+        <label class="lbl">Colour</label>
+        <div class="seg">
+          <button type="button" id="bw" class="on" onclick="setColor(false)"><i class="fas fa-circle-half-stroke"></i> Black &amp; white</button>
+          <button type="button" id="color" onclick="setColor(true)"><i class="fas fa-palette"></i> Colour</button>
+        </div>
+
+        <label class="lbl">Note for the courier (optional)</label>
+        <input id="note" placeholder="e.g. 'staple top-left, double-sided'">
+
+        <div class="cost"><b id="costBig">5 CB</b><span id="costSub">1 page × 1 copy, black &amp; white</span></div>
+        <div class="promise"><i class="fas fa-shield-heart"></i>
+          <div>Delivered within a working day, or your money back. Paid to the Treasury up front.</div></div>
+
+        <button style="margin-top:1rem;" id="orderBtn" onclick="order()"><i class="fas fa-print"></i> Order print</button>
+        <p id="orderMsg" class="svc-alert"></p>
+      </div>
+
+      <!-- MY ORDERS -->
+      <div class="svc-panel">
+        <h3 class="svc-head" style="margin-top:0;"><i class="fas fa-receipt"></i> My orders</h3>
+        <div class="jobs" id="jobs"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    let ME=null, CFG=null, COLOR=false, FILE=null;
+    const esc=(s)=>(s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    const msg=(t,ok=false,el="msg")=>svcAlert(el,t,ok);
+
+    function onFile(){
+      const f=document.getElementById("file").files[0];
+      FILE=f||null;
+      document.getElementById("fileName").textContent = f ? f.name : "Tap to choose a PDF or image";
+    }
+    function setColor(c){
+      COLOR=c;
+      document.getElementById("color").classList.toggle("on", c);
+      document.getElementById("bw").classList.toggle("on", !c);
+      quote();
+    }
+    function quote(){
+      if(!CFG) return;
+      const pages=Math.max(1, +document.getElementById("pages").value||1);
+      const copies=Math.max(1, +document.getElementById("copies").value||1);
+      const rate=COLOR?CFG.rate_color:CFG.rate_bw;
+      document.getElementById("costBig").textContent=(pages*copies*rate)+" CB";
+      document.getElementById("costSub").textContent=
+        `${pages} page${pages==1?"":"s"} × ${copies} cop${copies==1?"y":"ies"}, ${COLOR?"colour":"black & white"} · ${rate} CB/page`;
+    }
+
+    async function order(){
+      if(!FILE){ msg("Choose a document to print first.",false,"orderMsg"); return; }
+      const fd=new FormData();
+      fd.append("file", FILE);
+      fd.append("pages", document.getElementById("pages").value||"1");
+      fd.append("copies", document.getElementById("copies").value||"1");
+      fd.append("color", COLOR?"true":"false");
+      fd.append("note", document.getElementById("note").value.trim());
+      const btn=document.getElementById("orderBtn"); btn.disabled=true;
+      const label=btn.innerHTML; btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Sending to the press…';
+      try{
+        const r=await fetch("/print/order",{method:"POST",credentials:"include",body:fd});
+        const d=await r.json();
+        if(!r.ok||d.success===false) throw new Error(d.error||("HTTP "+r.status));
+        msg(`Ordered — ${d.cost} CB. A courier will print and bring it.`,true,"orderMsg");
+        document.getElementById("file").value=""; onFile();
+        document.getElementById("note").value="";
+        load();
+      }catch(e){ msg(e.message,false,"orderMsg"); }
+      finally{ btn.disabled=false; btn.innerHTML=label; }
+    }
+
+    const STLABEL={ordered:"Printing & on the way", delivered:"Delivered", refunded:"Refunded — it was late", cancelled:"Cancelled"};
+    function jobRow(j){
+      const st=j.refunded && j.status!=="cancelled" ? "refunded" : j.status;
+      const due=j.due_at? new Date(j.due_at).toLocaleString([], {weekday:"short", hour:"2-digit", minute:"2-digit"}) : "";
+      return `<div class="job ${esc(st)}">
+        <div class="top">
+          <div>
+            <div class="nm"><i class="fas fa-file-lines"></i> ${esc(j.file_name)}</div>
+            <div class="meta">${esc(j.pages)}p × ${esc(j.copies)} · ${j.color?"colour":"B&W"} · ${esc(j.cost)} CB${
+              j.status==="ordered"&&due?` · due by ${esc(due)}`:""}${j.refunded?" · refunded":""}</div>
+          </div>
+          <span class="st ${esc(st)}">${esc(STLABEL[st]||st)}</span>
+        </div>
+        ${j.note?`<div class="meta">"${esc(j.note)}"</div>`:""}
+        ${j.status==="ordered"?`<div class="acts"><button class="danger" onclick="cancelJob(${j.id})">Cancel</button>
+          <a class="ghost" href="${esc(j.file_url)}" target="_blank" rel="noopener">View file</a></div>`:""}
+      </div>`;
+    }
+    async function cancelJob(id){
+      try{ await api("/print/cancel",{method:"POST",body:JSON.stringify({job_id:id})}); load(); }
+      catch(e){ alert(e.message); }
+    }
+
+    function render(){
+      if(!CFG.enabled){
+        document.getElementById("jobs").innerHTML=svcEmpty("fa-print","Cyvaprint isn't set up yet","An admin needs to run migration_printing.sql.");
+        return;
+      }
+      if(!CFG.delivery_open) msg("Heads up: Cyvazon couriers are off right now, so prints can't be delivered yet.",false,"msg");
+      const jobs=CFG.jobs||[];
+      document.getElementById("jobs").innerHTML = jobs.length
+        ? jobs.map(jobRow).join("")
+        : svcEmpty("fa-receipt","No orders yet","Upload a document and we'll print it.");
+    }
+
+    async function load(){
+      try{ CFG=await api("/print/config"); }
+      catch(e){ msg(e.message); return; }
+      quote(); render();
+    }
+
+    // drag & drop
+    (function(){
+      const d=document.getElementById("drop");
+      ["dragover","dragenter"].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.add("over");}));
+      ["dragleave","drop"].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.remove("over");}));
+      d.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f){ document.getElementById("file").files=e.dataTransfer.files; onFile(); } });
+    })();
+
+    (async function(){
+      const user=await requireAuth(); if(!user) return;
+      ME=user.username; renderNav("/print", user);
+      await load();
+    })();
+  </script>
+</body>
+</html>
